@@ -14,6 +14,7 @@ The original, working version of CHS lives in this same GitHub project, in the r
 - **Real registration and login, for every role** — Buyer, Tenant, Owner, Agent, and Property Manager all register through the one same, unified form. Agent and Manager correctly show their own extra fields only when selected, with real document uploads. Login requires selecting which role you're logging in as, and genuinely checks that against the real account
 - **A real, shared offers system — genuinely improved beyond the original app.** Making an offer on a For Sale property writes to a real, dedicated database table with proper access rules from the start, rather than the original app's approach (offers only ever lived in one browser's local memory, which caused a real, serious bug — an offer that admin and the owner could never see). An unregistered visitor trying to make an offer is sent to register first, and lands right back on the exact property they were looking at once they're done — not a generic homepage
 - **Real inspection booking, for every property type** — reuses the original schema's already-existing `inspections` table, including its genuine, database-enforced minimum 12-hour notice period. This app checks that same rule on the client side too, so someone gets a clear, immediate message instead of a confusing database error if they pick a time too soon
+- **Real rental application submission** — a genuine new database table (`rental_applications`), built from the start with the owner-decision fix already in place (CHS reviews documents first, but the property's real owner makes the actual final call on who moves in — not admin's own review being treated as final, which was a real gap found and fixed in the original app). **Honest scope note:** only the tenant-facing submission is built so far. The screens admin and the property owner would use to actually review and decide on an application don't exist yet, because the admin and owner dashboards themselves haven't been built in this rebuild yet — that's real, upcoming work, not something skipped by accident
 - A proper session system (React Context) tracking who's logged in and as which role, available anywhere in the app
 - All data-driven pages always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
 
@@ -30,7 +31,11 @@ Then open http://localhost:3000
 
 ## Backend setup
 
-In addition to the original app's `backend/` folder, this rebuild needs one more migration: `backend-v2/11_offers_table.sql`, which creates the real offers table described above. Run it the same way as the others, after `01_schema.sql`.
+In addition to the original app's `backend/` folder, this rebuild needs its own migrations, found in `backend-v2/`:
+- `11_offers_table.sql` — the real offers system
+- `12_rental_applications.sql` — the real rental application system
+
+Run both the same way as the original migrations, after `01_schema.sql`.
 
 ## Tech stack
 
@@ -42,4 +47,4 @@ In addition to the original app's `backend/` folder, this rebuild needs one more
 
 ## Status
 
-🚧 Homepage, property detail pages, registration/login for every role, a real Sale offer system, and real inspection booking (every property type) built and verified. Next: the full rental application process for Rent/Lease/Hire properties (guarantor details, move-in date, document review) — this needs its own new database table, since the original app never had a proper one for this specific step.
+🚧 Homepage, property detail pages, registration/login for every role, real Sale offers, real inspection booking, and real rental application submission built and verified. Next: the Owner and Admin dashboards — needed before anyone can actually act on an offer, inspection request, or rental application.

@@ -8,8 +8,9 @@ import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import CurrencyInput from "./CurrencyInput";
 import InspectionBookingForm from "./InspectionBookingForm";
+import RentalApplicationForm from "./RentalApplicationForm";
 
-type ActiveForm = "none" | "offer" | "inspection";
+type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication";
 
 export default function PropertyActions({ property }: { property: Property }) {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [error, setError] = useState<string | null>(null);
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [inspectionSuccess, setInspectionSuccess] = useState(false);
+  const [rentalApplicationSuccess, setRentalApplicationSuccess] = useState(false);
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -91,6 +93,18 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
+  if (rentalApplicationSuccess) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Application submitted</p>
+        <p className="text-xs text-gray-500">
+          CHS will review your documents, then the owner makes the final decision. You&apos;ll be
+          notified either way.
+        </p>
+      </div>
+    );
+  }
+
   if (activeForm === "offer" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -133,9 +147,22 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
+  if (activeForm === "rentalApplication" && session) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <RentalApplicationForm
+          propertyId={property.id}
+          session={session}
+          onSuccess={() => setRentalApplicationSuccess(true)}
+        />
+      </div>
+    );
+  }
+
   // Default state: show the real, relevant actions for this property's
   // purpose. Making an offer only makes sense for a sale property;
-  // booking an inspection is genuinely useful for every property type.
+  // booking an inspection is genuinely useful for every property type;
+  // starting a rental application only makes sense for rent/lease/hire.
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
       {property.purpose === "sale" && (
@@ -146,21 +173,20 @@ export default function PropertyActions({ property }: { property: Property }) {
           Make an offer
         </button>
       )}
+      {property.purpose !== "sale" && (
+        <button
+          onClick={() => requireLoginThen(() => setActiveForm("rentalApplication"))}
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
+        >
+          Start rental application
+        </button>
+      )}
       <button
         onClick={() => requireLoginThen(() => setActiveForm("inspection"))}
         className="w-full py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold"
       >
         Book inspection
       </button>
-      {/* Starting the actual rent/lease application process (guarantor
-          details, move-in date, admin document review) is its own
-          dedicated next piece — it needs a real table of its own,
-          not something to approximate here. */}
-      {property.purpose !== "sale" && (
-        <p className="text-[10px] text-gray-400 text-center pt-1">
-          Full rental application coming next — inspection booking works now.
-        </p>
-      )}
     </div>
   );
 }
