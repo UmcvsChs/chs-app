@@ -1,15 +1,38 @@
-export default function Home() {
-  return (
-    <main className="flex-1 flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-6 text-center">
-      <div className="mb-6 flex items-center justify-center w-24 h-24 rounded-3xl bg-black/20 border border-white/20">
-        <span className="font-serif text-4xl font-bold">CHS</span>
+import { supabase } from "@/lib/supabase";
+import HomePageClient from "@/components/HomePageClient";
+import { Property } from "@/types/property";
+
+// Forces this page to fetch fresh data on every single visit, rather
+// than being frozen as a one-time snapshot from whenever the site was
+// last built. A real, live marketplace of properties genuinely needs
+// this — without it, a property added five minutes ago simply wouldn't
+// exist yet as far as any visitor could see, until the next deployment.
+export const dynamic = "force-dynamic";
+
+// A real Server Component — this fetches actual property data from
+// Supabase on the server, before the page is ever sent to a visitor's
+// browser, rather than showing a loading spinner while the browser
+// fetches it afterward. This is genuinely how a modern, professional
+// Next.js app is built, not an approximation of it.
+export default async function Home() {
+  const { data: properties, error } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    // Honest, visible failure rather than a silent empty page — matches
+    // the same "never fail silently" discipline used throughout the
+    // original app's real Supabase-backed features.
+    return (
+      <div className="min-h-screen flex items-center justify-center text-center px-6">
+        <p className="text-sm text-gray-500">
+          Could not load properties right now. Please try again shortly.
+        </p>
       </div>
-      <h1 className="font-serif text-2xl font-bold mb-2">Complete Housing Solutions</h1>
-      <p className="text-sm text-white/70 italic mb-8">Your property, our commitment</p>
-      <p className="text-xs text-white/50 max-w-xs">
-        This is the foundation of the new, properly structured build — real features are being
-        added here one at a time, starting with the public homepage.
-      </p>
-    </main>
-  );
+    );
+  }
+
+  return <HomePageClient properties={(properties ?? []) as Property[]} />;
 }

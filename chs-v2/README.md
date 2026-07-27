@@ -8,12 +8,16 @@ The original, working version of CHS lives in this same GitHub project, in the r
 
 ## What's here so far
 
-Just the foundation — a real, working Next.js project, confirmed to build successfully with no errors, with CHS's actual brand colours and typography (Playfair Display + Inter, the steel-blue/charcoal/amber palette) already wired in from the start. No actual app features yet — those come next, one piece at a time.
+- The project foundation, confirmed to build successfully with CHS's real brand colours and typography wired in
+- **The real public homepage** — fetches genuine, live property data directly from the actual Supabase database, with purpose filtering (All / For Sale / For Rent / For Lease / For Hire), and correctly shows the "Under Verification — Not Yet Bookable" badge on properties still awaiting CHS's review, matching the original app's real behaviour
+- Configured to always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
 
 ## Getting started (for a developer running this locally)
 
 ```bash
 npm install
+cp .env.example .env.local
+# then fill in your real Supabase URL and anon key in .env.local
 npm run dev
 ```
 
@@ -25,7 +29,8 @@ Then open http://localhost:3000
 - **React** — the UI library
 - **TypeScript** — for type safety, catching a whole category of bugs before the code ever runs
 - **Tailwind CSS** — utility-based styling
+- **Supabase** — the real, same database and backend the original app uses
 
 ## Status
 
-🚧 Early foundation stage. Building out one real feature at a time, starting with the public homepage.
+🚧 Real homepage built and verified. Next: property detail pages, then registration and login.
