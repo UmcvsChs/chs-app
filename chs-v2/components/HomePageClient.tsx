@@ -34,6 +34,11 @@ export default function HomePageClient({ properties }: { properties: Property[] 
           {loading ? null : session && profile ? (
             <div className="flex items-center gap-2">
               <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
+              {[profile.role, ...(profile.secondary_roles || [])].includes("tenant") && (
+                <Link href="/tenant" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                  My Rentals
+                </Link>
+              )}
               {[profile.role, ...(profile.secondary_roles || [])].includes("owner") && (
                 <Link href="/owner" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                   My Properties
