@@ -7,16 +7,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import CurrencyInput from "./CurrencyInput";
+import InspectionBookingForm from "./InspectionBookingForm";
+
+type ActiveForm = "none" | "offer" | "inspection";
 
 export default function PropertyActions({ property }: { property: Property }) {
   const router = useRouter();
   const { session, loading } = useAuth();
-  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [amount, setAmount] = useState<number | "">("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [offerSuccess, setOfferSuccess] = useState(false);
+  const [inspectionSuccess, setInspectionSuccess] = useState(false);
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -60,11 +64,11 @@ export default function PropertyActions({ property }: { property: Property }) {
       return;
     }
 
-    setSuccess(true);
+    setOfferSuccess(true);
     setSubmitting(false);
   }
 
-  if (success) {
+  if (offerSuccess) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
         <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Offer submitted</p>
@@ -76,50 +80,87 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
-  if (property.purpose === "sale") {
+  if (inspectionSuccess) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        {!showOfferForm ? (
-          <button
-            onClick={() => requireLoginThen(() => setShowOfferForm(true))}
-            className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
-          >
-            Make an offer
-          </button>
-        ) : (
-          <form onSubmit={handleSubmitOffer} className="space-y-3">
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Your offer amount (₦)</label>
-              <CurrencyInput value={amount} onChange={setAmount} placeholder="e.g. 42,000,000" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Note to the owner (optional)</label>
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-              />
-            </div>
-            {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {submitting ? "Submitting..." : "Submit offer"}
-            </button>
-          </form>
-        )}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Inspection requested</p>
+        <p className="text-xs text-gray-500">
+          CHS and the owner will confirm your requested time shortly.
+        </p>
       </div>
     );
   }
 
-  // Rent/lease/hire booking actions are their own next piece — an
-  // honest placeholder here, not a fake button pretending to work.
+  if (activeForm === "offer" && session) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <form onSubmit={handleSubmitOffer} className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Your offer amount (₦)</label>
+            <CurrencyInput value={amount} onChange={setAmount} placeholder="e.g. 42,000,000" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Note to the owner (optional)</label>
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+            />
+          </div>
+          {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {submitting ? "Submitting..." : "Submit offer"}
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  if (activeForm === "inspection" && session) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <InspectionBookingForm
+          propertyId={property.id}
+          session={session}
+          onSuccess={() => setInspectionSuccess(true)}
+        />
+      </div>
+    );
+  }
+
+  // Default state: show the real, relevant actions for this property's
+  // purpose. Making an offer only makes sense for a sale property;
+  // booking an inspection is genuinely useful for every property type.
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-4 text-center text-sm text-gray-400">
-      Booking actions for this property type are coming next.
+    <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+      {property.purpose === "sale" && (
+        <button
+          onClick={() => requireLoginThen(() => setActiveForm("offer"))}
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
+        >
+          Make an offer
+        </button>
+      )}
+      <button
+        onClick={() => requireLoginThen(() => setActiveForm("inspection"))}
+        className="w-full py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold"
+      >
+        Book inspection
+      </button>
+      {/* Starting the actual rent/lease application process (guarantor
+          details, move-in date, admin document review) is its own
+          dedicated next piece — it needs a real table of its own,
+          not something to approximate here. */}
+      {property.purpose !== "sale" && (
+        <p className="text-[10px] text-gray-400 text-center pt-1">
+          Full rental application coming next — inspection booking works now.
+        </p>
+      )}
     </div>
   );
 }
