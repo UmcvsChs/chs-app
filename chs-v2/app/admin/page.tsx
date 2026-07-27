@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { RentalApplication } from "@/types/rentalApplication";
+import { Dispute } from "@/types/dispute";
+import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
   id: string;
@@ -24,7 +26,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties";
+type Tab = "registrations" | "applications" | "properties" | "disputes";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -33,6 +35,7 @@ export default function AdminDashboard() {
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
+  const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -55,14 +58,16 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
+    setOpenDisputes(disputesRes.data || []);
     setLoading(false);
   }
 
@@ -103,6 +108,16 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleDisputeRuling(disputeId: string, status: "ruled_for_tenant" | "ruled_for_owner", notes: string) {
+    setActionError(null);
+    const { error } = await supabase.from("disputes").update({ status, ruling_notes: notes || null }).eq("id", disputeId);
+    if (error) {
+      setActionError("Could not record this ruling. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -119,6 +134,7 @@ export default function AdminDashboard() {
           { key: "registrations", label: `Registrations (${pendingProfiles.length})` },
           { key: "applications", label: `Applications (${pendingApplications.length})` },
           { key: "properties", label: `Properties (${pendingProperties.length})` },
+          { key: "disputes", label: `Disputes (${openDisputes.length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -193,6 +209,36 @@ export default function AdminDashboard() {
                   <button onClick={() => handlePropertyVerification(prop.id, "rejected")}
                     className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                     Reject
+                  </button>
+                </div>
+              </div>
+            ))
+          ))}
+
+        {activeTab === "disputes" &&
+          (openDisputes.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No open disputes.</p>
+          ) : (
+            openDisputes.map((d) => (
+              <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-sm text-chs-charcoal">{d.description}</p>
+                {d.amount_in_dispute !== null && (
+                  <p className="text-xs font-semibold text-chs-charcoal mt-1">
+                    Amount in dispute: {formatNaira(d.amount_in_dispute)}
+                  </p>
+                )}
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => handleDisputeRuling(d.id, "ruled_for_tenant", "Ruled in the tenant's favour after review.")}
+                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
+                  >
+                    Rule for tenant
+                  </button>
+                  <button
+                    onClick={() => handleDisputeRuling(d.id, "ruled_for_owner", "Ruled in the owner's favour after review.")}
+                    className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold"
+                  >
+                    Rule for owner
                   </button>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 
 interface ApplicationWithProperty {
   id: string;
@@ -17,6 +18,7 @@ interface ApplicationWithProperty {
 
 interface TenancyWithProperty {
   id: string;
+  landlord_id: string;
   lease_start: string;
   lease_end: string;
   annual_rent: number;
@@ -46,6 +48,8 @@ export default function TenantDashboard() {
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [inspections, setInspections] = useState<InspectionWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [disputingTenancy, setDisputingTenancy] = useState<TenancyWithProperty | null>(null);
+  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -74,7 +78,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
+        .select("id, landlord_id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -116,8 +120,41 @@ export default function TenantDashboard() {
                 <span className="inline-block mt-1 text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full capitalize">
                   {t.status.replace(/_/g, " ")}
                 </span>
+                <button
+                  onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
+                  className="block mt-2 text-[10px] font-semibold text-chs-red underline"
+                >
+                  Raise a dispute about this tenancy
+                </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {disputingTenancy && session && (
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            {disputeSubmitted ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Dispute submitted</p>
+                <p className="text-xs text-gray-500 mb-3">CHS will review this and reach out to both parties.</p>
+                <button onClick={() => setDisputingTenancy(null)} className="text-xs font-semibold text-chs-red">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-chs-charcoal mb-3">
+                  Raise a dispute — {disputingTenancy.properties?.title}
+                </p>
+                <RaiseDisputeForm
+                  session={session}
+                  tenancyId={disputingTenancy.id}
+                  againstUserId={disputingTenancy.landlord_id}
+                  onSuccess={() => setDisputeSubmitted(true)}
+                  onCancel={() => setDisputingTenancy(null)}
+                />
+              </>
+            )}
           </div>
         )}
 

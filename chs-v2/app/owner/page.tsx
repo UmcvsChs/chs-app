@@ -10,6 +10,14 @@ import { Offer } from "@/types/offer";
 import { Inspection } from "@/types/inspection";
 import { RentalApplication } from "@/types/rentalApplication";
 import { formatNaira, purposeLabel } from "@/lib/format";
+import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+
+interface TenancyBasic {
+  id: string;
+  tenant_id: string;
+  property_id: string;
+  status: string;
+}
 
 interface PropertyWithActivity extends Property {
   offers: Offer[];
@@ -21,8 +29,11 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
+  const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [disputingTenancy, setDisputingTenancy] = useState<TenancyBasic | null>(null);
+  const [disputeSubmitted, setDisputeSubmitted] = useState(false);
 
   // A real access check — not just a UI nicety, since row-level security
   // on the actual database is the true protection here, but this stops
@@ -79,6 +90,12 @@ export default function OwnerDashboard() {
     );
 
     setProperties(withActivity);
+
+    const { data: ownedTenancies } = await supabase
+      .from("tenancies")
+      .select("id, tenant_id, property_id, status")
+      .eq("landlord_id", session.user.id);
+    setTenancies(ownedTenancies || []);
     setLoading(false);
   }
 
@@ -210,6 +227,50 @@ export default function OwnerDashboard() {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {tenancies.length > 0 && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">Active tenancies</p>
+          {tenancies.map((t) => (
+            <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
+              <span className="text-xs text-gray-500 capitalize">{t.status}</span>
+              <button
+                onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
+                className="text-[10px] font-semibold text-chs-red underline"
+              >
+                Raise a dispute
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {disputingTenancy && session && (
+        <div className="px-4 pb-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            {disputeSubmitted ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Dispute submitted</p>
+                <p className="text-xs text-gray-500 mb-3">CHS will review this and reach out to both parties.</p>
+                <button onClick={() => setDisputingTenancy(null)} className="text-xs font-semibold text-chs-red">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-chs-charcoal mb-3">Raise a dispute</p>
+                <RaiseDisputeForm
+                  session={session}
+                  tenancyId={disputingTenancy.id}
+                  againstUserId={disputingTenancy.tenant_id}
+                  onSuccess={() => setDisputeSubmitted(true)}
+                  onCancel={() => setDisputingTenancy(null)}
+                />
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
