@@ -29,6 +29,9 @@ export default function HomePageClient({ properties }: { properties: Property[] 
         <div>
           <h1 className="font-serif text-xl font-bold">CHS</h1>
           <p className="text-xs text-white/70">Complete Housing Solutions</p>
+          <Link href="/marketplace" className="text-[10px] text-white/60 underline mt-1 inline-block">
+            Visit the Marketplace →
+          </Link>
         </div>
         <div className="text-xs">
           {loading ? null : session && profile ? (
