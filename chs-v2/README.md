@@ -11,7 +11,7 @@ The original, working version of CHS lives in this same GitHub project, in the r
 - The project foundation, confirmed to build successfully with CHS's real brand colours and typography wired in
 - **The real public homepage** — fetches genuine, live property data directly from the actual Supabase database, with purpose filtering, and correctly shows the "Under Verification — Not Yet Bookable" badge on properties still awaiting CHS's review
 - **Real property detail pages** — a genuine page for each real property, with a proper "Not found" page for an invalid or deleted one
-- **Real registration and login** — registration calls the exact same, already-tested `register-user` backend function the original app uses. Login requires selecting which role you're logging in as, and genuinely checks that against the real account — including correctly supporting an account with more than one linked role — rather than a single generic login exposing every role
+- **Real registration and login, for every role** — Buyer, Tenant, Owner, Agent, and Property Manager all register through the one same, unified form (never a separate form embedded in a dashboard — the same principle already fixed in the original app). Agent and Manager correctly show their own extra fields (association membership, valid ID with a real file upload, professional certificates) only when that role is selected, and everything genuinely saves to the real database, including real document uploads to the same storage bucket the original app uses. Login requires selecting which role you're logging in as, and genuinely checks that against the real account — including correctly supporting an account with more than one linked role
 - A proper session system (React Context) tracking who's logged in and as which role, available anywhere in the app
 - Both data-driven pages always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
 
@@ -36,4 +36,4 @@ Then open http://localhost:3000
 
 ## Status
 
-🚧 Homepage, property detail pages, and registration/login (Buyer, Tenant, Owner) built and verified. Agent and Property Manager registration — which need their own extra fields (association membership, valid ID, professional certificates) — are their own dedicated next piece, the same way they needed special handling in the original app.
+🚧 Homepage, property detail pages, and registration/login for every role (Buyer, Tenant, Owner, Agent, Property Manager) built and verified. Next: the real booking/offer actions on the property detail page.
