@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import HomePageClient from "@/components/HomePageClient";
 import { Property } from "@/types/property";
 
@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 // fetches it afterward. This is genuinely how a modern, professional
 // Next.js app is built, not an approximation of it.
 export default async function Home() {
+  const supabase = await createClient();
   const { data: properties, error } = await supabase
     .from("properties")
     .select("*")

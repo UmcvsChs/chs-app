@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
@@ -10,6 +10,12 @@ import PropertyActions from "@/components/PropertyActions";
 export const dynamic = "force-dynamic";
 
 async function getProperty(id: string): Promise<Property | null> {
+  // The actual fix for the disclosed gap: this now genuinely knows who's
+  // asking, via the real session read from cookies — so an owner
+  // viewing their own not-yet-verified listing is correctly recognised
+  // by the database's own RLS rule (auth.uid() = owner_id), rather than
+  // always being treated as an anonymous stranger.
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("properties")
     .select("*")
