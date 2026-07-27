@@ -9,8 +9,9 @@ The original, working version of CHS lives in this same GitHub project, in the r
 ## What's here so far
 
 - The project foundation, confirmed to build successfully with CHS's real brand colours and typography wired in
-- **The real public homepage** — fetches genuine, live property data directly from the actual Supabase database, with purpose filtering (All / For Sale / For Rent / For Lease / For Hire), and correctly shows the "Under Verification — Not Yet Bookable" badge on properties still awaiting CHS's review, matching the original app's real behaviour
-- Configured to always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
+- **The real public homepage** — fetches genuine, live property data directly from the actual Supabase database, with purpose filtering (All / For Sale / For Rent / For Lease / For Hire), and correctly shows the "Under Verification — Not Yet Bookable" badge on properties still awaiting CHS's review
+- **Real property detail pages** — clicking any property card now takes you to a genuine detail page for that exact property, fetched fresh from the database by its real ID. A property that doesn't exist (deleted, or an invalid link) shows a proper, honest "Not found" page rather than a blank screen or a crash
+- Both pages always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
 
 ## Getting started (for a developer running this locally)
 
@@ -33,4 +34,4 @@ Then open http://localhost:3000
 
 ## Status
 
-🚧 Real homepage built and verified. Next: property detail pages, then registration and login.
+🚧 Homepage and property detail pages built and verified. Next: the real booking/offer actions on the detail page, then registration and login.

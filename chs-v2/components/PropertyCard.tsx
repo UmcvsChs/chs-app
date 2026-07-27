@@ -1,29 +1,14 @@
+import Link from "next/link";
 import { Property } from "@/types/property";
-
-// Formats a naira amount the same way the original app does throughout
-// — with proper comma separators, since a real, tested currency-format
-// bug was found and fixed in the original app's offer field for exactly
-// this kind of value. Getting this right from the start here.
-function formatNaira(amount: number): string {
-  return "₦" + amount.toLocaleString("en-NG");
-}
-
-function purposeLabel(purpose: Property["purpose"]): string {
-  const labels: Record<Property["purpose"], string> = {
-    rent: "For Rent",
-    sale: "For Sale",
-    lease: "For Lease",
-    hire: "For Hire",
-  };
-  return labels[purpose];
-}
+import { formatNaira, purposeLabel } from "@/lib/format";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const isUnderVerification = property.verification_status !== "verified";
 
   return (
-    <div
-      className={`rounded-2xl overflow-hidden bg-white shadow-sm border ${
+    <Link
+      href={`/property/${property.id}`}
+      className={`block rounded-2xl overflow-hidden bg-white shadow-sm border ${
         isUnderVerification ? "border-dashed border-chs-amber" : "border-gray-100"
       }`}
     >
@@ -74,6 +59,6 @@ export default function PropertyCard({ property }: { property: Property }) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }
