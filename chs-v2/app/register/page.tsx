@@ -163,11 +163,23 @@ export default function RegisterPage() {
           .eq("id", userId);
       }
 
-      router.push("/");
+      router.push(getReturnPath());
     } catch {
       setError("Could not reach CHS servers. Please check your connection and try again.");
       setSubmitting(false);
     }
+  }
+
+  // Resumes exactly where someone came from — e.g. a property page they
+  // were trying to make an offer on — rather than dropping them on a
+  // generic homepage after going through the trouble of registering.
+  function getReturnPath(): string {
+    const pending = sessionStorage.getItem("chs_pending_return_to");
+    if (pending) {
+      sessionStorage.removeItem("chs_pending_return_to");
+      return pending;
+    }
+    return "/";
   }
 
   return (

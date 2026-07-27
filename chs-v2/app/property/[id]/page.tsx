@@ -3,6 +3,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel } from "@/lib/format";
+import PropertyActions from "@/components/PropertyActions";
 
 // Always fetch fresh — a property's price, status, or vacancy could
 // change at any moment, and this page must never show stale data.
@@ -119,14 +120,9 @@ export default async function PropertyDetailPage({
           )}
         </div>
 
-        {/* Purpose-specific actions (Make an offer, Book inspection, Start
-            rent process, the full quotation/verification workflows) are
-            deliberately not built yet — this page's job right now is
-            proving real property data displays correctly end to end.
-            Those real, interactive actions are the next piece. */}
-        <div className="bg-white rounded-xl border border-gray-100 p-4 text-center text-sm text-gray-400">
-          Booking and offer actions are being rebuilt next — coming shortly.
-        </div>
+        {/* Real booking/offer actions — genuinely wired to the actual
+            database, not a placeholder claiming to work. */}
+        <PropertyActions property={property} />
       </div>
     </div>
   );
