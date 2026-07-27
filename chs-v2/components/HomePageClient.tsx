@@ -54,6 +54,11 @@ export default function HomePageClient({ properties }: { properties: Property[] 
                   My Properties
                 </Link>
               )}
+              {[profile.role, ...(profile.secondary_roles || [])].includes("manager") && (
+                <Link href="/manager" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                  Manager
+                </Link>
+              )}
               {profile.role === "admin" && (
                 <Link href="/admin" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                   Admin
