@@ -34,6 +34,9 @@ export default function HomePageClient({ properties }: { properties: Property[] 
           {loading ? null : session && profile ? (
             <div className="flex items-center gap-2">
               <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
+              <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Wallet
+              </Link>
               {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
                 <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                   My Referrals
