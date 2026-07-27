@@ -110,7 +110,12 @@ export default function OwnerDashboard() {
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Properties</h1>
+        <div className="flex justify-between items-center mt-1">
+          <h1 className="font-serif text-lg font-bold">My Properties</h1>
+          <Link href="/list-property" className="bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
+            + List a property
+          </Link>
+        </div>
       </div>
 
       {actionError && (
