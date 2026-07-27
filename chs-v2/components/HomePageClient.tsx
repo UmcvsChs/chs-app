@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Property, PropertyPurpose } from "@/types/property";
 import PropertyCard from "./PropertyCard";
+import { useAuth } from "@/contexts/AuthContext";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -14,6 +16,7 @@ const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
 
 export default function HomePageClient({ properties }: { properties: Property[] }) {
   const [activePurpose, setActivePurpose] = useState<PropertyPurpose | "all">("all");
+  const { session, profile, signOut, loading } = useAuth();
 
   const filteredProperties =
     activePurpose === "all"
@@ -22,9 +25,30 @@ export default function HomePageClient({ properties }: { properties: Property[] 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5">
-        <h1 className="font-serif text-xl font-bold">CHS</h1>
-        <p className="text-xs text-white/70">Complete Housing Solutions</p>
+      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
+        <div>
+          <h1 className="font-serif text-xl font-bold">CHS</h1>
+          <p className="text-xs text-white/70">Complete Housing Solutions</p>
+        </div>
+        <div className="text-xs">
+          {loading ? null : session && profile ? (
+            <div className="flex items-center gap-2">
+              <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
+              <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Log out
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Link href="/login" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Log in
+              </Link>
+              <Link href="/register" className="bg-chs-red px-3 py-1.5 rounded-full font-semibold">
+                Sign up
+              </Link>
+            </div>
+          )}
+        </div>
       </header>
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-3 bg-white border-b border-gray-100">
