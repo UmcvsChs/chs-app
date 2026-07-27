@@ -39,6 +39,11 @@ export default function HomePageClient({ properties }: { properties: Property[] 
                   My Properties
                 </Link>
               )}
+              {profile.role === "admin" && (
+                <Link href="/admin" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                  Admin
+                </Link>
+              )}
               <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                 Log out
               </button>
