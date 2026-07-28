@@ -147,9 +147,14 @@ export default function OwnerDashboard() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">My Properties</h1>
-          <Link href="/list-property" className="bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
-            + List a property
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/engage-chs" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Engage CHS
+            </Link>
+            <Link href="/list-property" className="bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
+              + List a property
+            </Link>
+          </div>
         </div>
       </div>
 
