@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Wallet, WalletTransaction } from "@/types/wallet";
 import { formatNaira } from "@/lib/format";
+import { startWalletFunding } from "@/lib/paystack";
+import CurrencyInput from "@/components/CurrencyInput";
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   main: "Main balance",
@@ -21,6 +23,10 @@ export default function WalletPage() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showFundForm, setShowFundForm] = useState(false);
+  const [fundAmount, setFundAmount] = useState<number | "">("");
+  const [funding, setFunding] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -51,6 +57,40 @@ export default function WalletPage() {
     setLoading(false);
   }
 
+  async function handleFundWallet(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fundAmount || fundAmount < 100) {
+      setFundError("Please enter an amount of at least ₦100.");
+      return;
+    }
+    setFundError(null);
+    setFunding(true);
+
+    try {
+      // Paystack works in kobo, not naira — the real, documented unit
+      // their API expects, not something to guess at.
+      await startWalletFunding(
+        fundAmount * 100,
+        () => {
+          // A real webhook (set up server-side) is what actually
+          // credits the wallet reliably — this success callback is just
+          // for immediate UI feedback, not the source of truth for the
+          // real balance update.
+          setFunding(false);
+          setShowFundForm(false);
+          setFundAmount("");
+          setTimeout(loadData, 2000); // give the webhook a moment to land
+        },
+        () => {
+          setFunding(false);
+        }
+      );
+    } catch {
+      setFundError("Could not start payment. Please try again.");
+      setFunding(false);
+    }
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -68,6 +108,32 @@ export default function WalletPage() {
             <div className="bg-gradient-to-br from-chs-steel-blue via-chs-charcoal to-chs-amber rounded-xl p-4 text-white">
               <p className="text-xs text-white/70">Main balance</p>
               <p className="text-2xl font-bold mt-1">{formatNaira(wallet.main_balance)}</p>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              {!showFundForm ? (
+                <button
+                  onClick={() => setShowFundForm(true)}
+                  className="w-full py-2.5 rounded-full bg-chs-red text-white text-xs font-semibold"
+                >
+                  Fund wallet
+                </button>
+              ) : (
+                <form onSubmit={handleFundWallet} className="space-y-2">
+                  <CurrencyInput value={fundAmount} onChange={setFundAmount} placeholder="Amount to fund (₦)" />
+                  {fundError && <p className="text-[10px] text-chs-red">{fundError}</p>}
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setShowFundForm(false)}
+                      className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={funding}
+                      className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                      {funding ? "Opening..." : "Continue to pay"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
