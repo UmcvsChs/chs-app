@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
 import { formatNaira } from "@/lib/format";
 
@@ -21,9 +22,14 @@ export default function MarketplaceClient({ products }: { products: MarketplaceP
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5">
-        <h1 className="font-serif text-xl font-bold">CHS Marketplace</h1>
-        <p className="text-xs text-white/70">Furnish and equip your space</p>
+      <div className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
+        <div>
+          <h1 className="font-serif text-xl font-bold">CHS Marketplace</h1>
+          <p className="text-xs text-white/70">Furnish and equip your space</p>
+        </div>
+        <Link href="/become-vendor" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
+          Sell here →
+        </Link>
       </div>
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-3 bg-white border-b border-gray-100">

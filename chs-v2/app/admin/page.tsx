@@ -9,6 +9,7 @@ import { RentalApplication } from "@/types/rentalApplication";
 import { Dispute } from "@/types/dispute";
 import { CommunityFeedback } from "@/types/communityFeedback";
 import { EngageRequest } from "@/types/engageRequest";
+import { MarketplaceVendor } from "@/types/marketplace";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -28,7 +29,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage";
+type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
+  const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -62,13 +64,14 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
     setPendingApplications(applicationsRes.data || []);
@@ -76,6 +79,7 @@ export default function AdminDashboard() {
     setOpenDisputes(disputesRes.data || []);
     setPendingFeedback(feedbackRes.data || []);
     setPendingEngage(engageRes.data || []);
+    setPendingVendors(vendorsRes.data || []);
     setLoading(false);
   }
 
@@ -146,6 +150,16 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleVendorVerification(vendorId: string, status: "verified" | "rejected") {
+    setActionError(null);
+    const { error } = await supabase.from("marketplace_vendors").update({ verification_status: status }).eq("id", vendorId);
+    if (error) {
+      setActionError("Could not update this vendor. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -165,6 +179,7 @@ export default function AdminDashboard() {
           { key: "disputes", label: `Disputes (${openDisputes.length})` },
           { key: "feedback", label: `Feedback (${pendingFeedback.length})` },
           { key: "engage", label: `Engage CHS (${pendingEngage.length})` },
+          { key: "vendors", label: `Vendors (${pendingVendors.length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -310,6 +325,29 @@ export default function AdminDashboard() {
                   className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                   Mark as contacted
                 </button>
+              </div>
+            ))
+          ))}
+
+        {activeTab === "vendors" &&
+          (pendingVendors.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No pending vendor registrations.</p>
+          ) : (
+            pendingVendors.map((v) => (
+              <div key={v.id} className="bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
+                <p className="text-xs text-gray-500">{v.category} — {v.location_state}</p>
+                {v.cac_number && <p className="text-xs text-gray-500">CAC: {v.cac_number}</p>}
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => handleVendorVerification(v.id, "verified")}
+                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    Verify
+                  </button>
+                  <button onClick={() => handleVendorVerification(v.id, "rejected")}
+                    className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                    Reject
+                  </button>
+                </div>
               </div>
             ))
           ))}

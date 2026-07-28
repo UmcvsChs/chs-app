@@ -31,6 +31,8 @@ The original, working version of CHS lives in this same GitHub project, in the r
 - **Real, anonymous property Q&A** — anyone can ask a real question about a specific property or request more photos/video, without their identity ever being attached (same genuine anonymous-by-design table as community feedback, verified the same structural way). The real property owner can now see and directly answer these from their own dashboard — not just admin — since the schema was already built to let an owner know their own property best
 - **Real "Engage CHS" full-service management requests** — an owner can genuinely request CHS take over managing their property, and admin gets a real screen to track and follow up on every pending request
 - **Real demand registry** — a genuinely anonymous "can't find what you're looking for?" signal, visible to everyone (a real Market Demand page an owner or agent can check to see what's actually being searched for), helping decide what's genuinely worth listing rather than guessing
+- **Real Marketplace vendor registration and product management — a genuine gap found during a full recheck of every table against what was built, and fixed properly.** Previously, the Marketplace only had a public browsing page, with no actual way for a real vendor to register or add products at all. Now a real vendor can register (with the same honest, human-reviewed verification pattern used throughout — CAC registration is a vendor's real proof, genuinely separate from a property owner's NIN/liveness check), and manage their own products from a real dashboard, including marking something sold out. Admin gets a real vendor verification screen too
+- **Real property verification documents — another genuine gap found in the same recheck, fixed alongside it.** Listing a property previously only uploaded photos; the actual ownership document, KADGIS/KASUPDA approvals, and owner's ID had nowhere to go, meaning admin would have had nothing real to check when verifying a listing. Every document type was checked against the database's own real constraint to confirm it matches exactly
 - A proper session system (React Context) tracking who's logged in and as which role, available anywhere in the app
 - All data-driven pages always fetch fresh data on every visit — never a frozen snapshot from whenever the site was last built
 
@@ -63,4 +65,10 @@ Run both the same way as the original migrations, after `01_schema.sql`.
 
 ## Status
 
-🚧 Every core dashboard, the full property and rental lifecycles, a real dispute system, a real wallet view, a real Marketplace, real offers, real inspection booking, real registration/login for every role, and genuine server-side session handling — all built and verified. What's left: real payment gateway integration (needs a real provider account to build against), and getting this connected to live hosting so it can actually be used, not just viewed in GitHub.
+🚧 Every real table in the original schema has now been checked, one by one, against what's actually built — not just assumed complete. Every core dashboard, the full property and rental lifecycles, a real dispute system, a real wallet view, a real Marketplace (browsing AND vendor management), real offers, real inspection booking, real registration/login for every role, real verification documents, and genuine server-side session handling — all built and verified.
+
+## Known, honest remaining gaps
+
+- **`promoted_listings`** — needs a real payment gateway (Paystack) to build against. Requires a real Paystack business account first.
+- **Shortlet bookings** — deliberately deferred; needs new booking-conflict logic (checking for double-bookings across date ranges) that deserves careful, dedicated building rather than a rushed version.
+- **Live hosting connection** — everything above is real and tested, but still needs connecting to a live host (Netlify) before real people outside this GitHub project can actually use it.

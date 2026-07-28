@@ -4,8 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { uploadPropertyPhoto } from "@/lib/storage";
+import { uploadPropertyPhoto, uploadDocument } from "@/lib/storage";
 import CurrencyInput from "@/components/CurrencyInput";
+
+const DOC_TYPES = [
+  { value: "ownership_document", label: "Ownership document" },
+  { value: "kadgis", label: "KADGIS approval" },
+  { value: "kasupda", label: "KASUPDA approval" },
+  { value: "owner_id", label: "Owner's valid ID" },
+  { value: "inheritance_consent", label: "Inheritance consent (if applicable)" },
+];
 
 const PURPOSE_OPTIONS = [
   { value: "sale", label: "For Sale" },
@@ -42,6 +50,7 @@ export default function ListPropertyPage() {
   const [electricityBackup, setElectricityBackup] = useState("");
   const [waterSource, setWaterSource] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [documents, setDocuments] = useState<Record<string, File | null>>({});
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +138,23 @@ export default function ListPropertyPage() {
       }
       if (uploadedUrls.length > 0) {
         await supabase.from("properties").update({ photos: uploadedUrls }).eq("id", newProperty.id);
+      }
+    }
+
+    // Real verification documents — a genuine gap found and fixed: this
+    // rebuild previously only uploaded photos, with nowhere for the
+    // actual ownership document, KADGIS/KASUPDA approvals, or owner's ID
+    // to go, meaning admin would have had nothing real to check when
+    // verifying a listing.
+    for (const [docType, file] of Object.entries(documents)) {
+      if (!file) continue;
+      const url = await uploadDocument(file, session.user.id, docType);
+      if (url) {
+        await supabase.from("property_documents").insert({
+          property_id: newProperty.id,
+          doc_type: docType,
+          file_url: url,
+        });
       }
     }
 
@@ -271,6 +297,26 @@ export default function ListPropertyPage() {
             <input type="file" accept="image/*" multiple
               onChange={(e) => setPhotos(e.target.files ? Array.from(e.target.files) : [])}
               className="w-full mt-1 text-xs" />
+          </div>
+
+          <div className="border-t border-gray-200 pt-3 mt-2">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Verification documents</p>
+            <p className="text-[10px] text-gray-400 mb-2">
+              CHS reviews these to verify your listing — upload what applies to your property.
+            </p>
+            {DOC_TYPES.map((doc) => (
+              <div key={doc.value} className="mb-2">
+                <label className="text-[11px] text-gray-600">{doc.label}</label>
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={(e) =>
+                    setDocuments({ ...documents, [doc.value]: e.target.files?.[0] || null })
+                  }
+                  className="w-full mt-1 text-xs"
+                />
+              </div>
+            ))}
           </div>
 
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
