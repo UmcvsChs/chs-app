@@ -11,6 +11,17 @@ import { AuthProvider } from "@/contexts/AuthContext";
 export const metadata: Metadata = {
   title: "CHS — Complete Housing Solutions",
   description: "Complete Housing Solutions — property platform for Kaduna State, Nigeria",
+  // manifest.ts (in this same folder) is automatically linked by
+  // Next.js — no manual <link> tag needed for that part.
+  appleWebApp: {
+    // iOS Safari doesn't use the manifest for its own home-screen
+    // install prompt the way Android does — this is the real, separate
+    // setting iOS specifically needs for "Add to Home Screen" to work
+    // properly there too.
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CHS",
+  },
 };
 
 export default function RootLayout({
