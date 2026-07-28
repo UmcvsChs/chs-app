@@ -5,7 +5,9 @@ import { Property } from "@/types/property";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
 import CommunityFeedback from "@/components/CommunityFeedback";
+import MediaRequests from "@/components/MediaRequests";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
+import { MediaRequest } from "@/types/mediaRequest";
 
 // Always fetch fresh — a property's price, status, or vacancy could
 // change at any moment, and this page must never show stale data.
@@ -48,6 +50,13 @@ export default async function PropertyDetailPage({
     .select("*")
     .eq("property_id", id)
     .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  const { data: mediaRequests } = await supabase
+    .from("media_requests")
+    .select("*")
+    .eq("property_id", id)
+    .eq("status", "answered")
     .order("created_at", { ascending: false });
 
   const isUnderVerification = property.verification_status !== "verified";
@@ -141,6 +150,8 @@ export default async function PropertyDetailPage({
         <PropertyActions property={property} />
 
         <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />
+
+        <MediaRequests propertyId={property.id} answeredRequests={(mediaRequests || []) as MediaRequest[]} />
       </div>
     </div>
   );

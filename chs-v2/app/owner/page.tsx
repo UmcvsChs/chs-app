@@ -9,6 +9,7 @@ import { Property } from "@/types/property";
 import { Offer } from "@/types/offer";
 import { Inspection } from "@/types/inspection";
 import { RentalApplication } from "@/types/rentalApplication";
+import { MediaRequest } from "@/types/mediaRequest";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 
@@ -23,6 +24,7 @@ interface PropertyWithActivity extends Property {
   offers: Offer[];
   inspections: Inspection[];
   rentalApplications: RentalApplication[];
+  mediaRequests: MediaRequest[];
 }
 
 export default function OwnerDashboard() {
@@ -75,16 +77,18 @@ export default function OwnerDashboard() {
     // the property's own details.
     const withActivity = await Promise.all(
       ownedProperties.map(async (property) => {
-        const [offersRes, inspectionsRes, applicationsRes] = await Promise.all([
+        const [offersRes, inspectionsRes, applicationsRes, mediaRequestsRes] = await Promise.all([
           supabase.from("offers").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
           supabase.from("inspections").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
           supabase.from("rental_applications").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
+          supabase.from("media_requests").select("*").eq("property_id", property.id).eq("status", "pending").order("created_at", { ascending: false }),
         ]);
         return {
           ...property,
           offers: offersRes.data || [],
           inspections: inspectionsRes.data || [],
           rentalApplications: applicationsRes.data || [],
+          mediaRequests: mediaRequestsRes.data || [],
         } as PropertyWithActivity;
       })
     );
@@ -114,6 +118,20 @@ export default function OwnerDashboard() {
     const { error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId);
     if (error) {
       setActionError("Could not update this application. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
+  async function handleAnswerRequest(requestId: string, answer: string) {
+    if (!answer.trim()) return;
+    setActionError(null);
+    const { error } = await supabase
+      .from("media_requests")
+      .update({ status: "answered", answer: answer.trim(), answered_at: new Date().toISOString() })
+      .eq("id", requestId);
+    if (error) {
+      setActionError("Could not save this answer. Please try again.");
       return;
     }
     loadData();
@@ -222,7 +240,18 @@ export default function OwnerDashboard() {
                 </div>
               )}
 
-              {property.offers.length === 0 && property.rentalApplications.length === 0 && property.inspections.length === 0 && (
+              {property.mediaRequests.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-bold text-chs-charcoal mb-1">
+                    Questions awaiting your answer ({property.mediaRequests.length})
+                  </p>
+                  {property.mediaRequests.map((req) => (
+                    <MediaRequestAnswerRow key={req.id} request={req} onAnswer={handleAnswerRequest} />
+                  ))}
+                </div>
+              )}
+
+              {property.offers.length === 0 && property.rentalApplications.length === 0 && property.inspections.length === 0 && property.mediaRequests.length === 0 && (
                 <p className="text-xs text-gray-400 mt-2">No activity on this property yet.</p>
               )}
             </div>
@@ -273,6 +302,40 @@ export default function OwnerDashboard() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// A small, self-contained answer row — keeps its own local input state,
+// only calling back up to the parent once a real answer is actually
+// submitted, rather than lifting every keystroke into the main
+// dashboard's state.
+function MediaRequestAnswerRow({
+  request,
+  onAnswer,
+}: {
+  request: MediaRequest;
+  onAnswer: (id: string, answer: string) => void;
+}) {
+  const [answer, setAnswer] = useState("");
+  return (
+    <div className="bg-gray-50 rounded-lg p-2.5 mb-2 text-xs">
+      <p className="font-semibold text-chs-charcoal">{request.description}</p>
+      <div className="flex gap-2 mt-2">
+        <input
+          type="text"
+          value={answer}
+          onChange={(e) => setAnswer(e.target.value)}
+          placeholder="Type your answer..."
+          className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
+        />
+        <button
+          onClick={() => onAnswer(request.id, answer)}
+          className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
+        >
+          Answer
+        </button>
+      </div>
     </div>
   );
 }
