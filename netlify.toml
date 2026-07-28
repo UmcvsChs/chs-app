@@ -1,0 +1,9 @@
+# The single, complete source of truth for how this site builds and
+# deploys — explicitly including the base directory here too, so no
+# separate UI setting is needed or can conflict with this file.
+[build]
+  base = "chs-v2"
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
