@@ -8,13 +8,14 @@ export interface Property {
   id: string;
   owner_id: string;
   title: string;
-  purpose: "rent" | "sale" | "lease" | "hire";
+  purpose: "rent" | "sale" | "lease" | "hire" | "shortlet";
   property_type: string;
   location_area: string;
   location_lga: string | null;
   location_state: string;
   price: number;
   price_period: string | null;
+  price_per_night: number | null;
 
   description: string | null;
   bedrooms: number | null;

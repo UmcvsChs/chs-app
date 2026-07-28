@@ -106,10 +106,19 @@ export default async function PropertyDetailPage({
         </p>
 
         <p className="text-2xl font-bold text-chs-charcoal mb-4">
-          {formatNaira(property.price)}
-          {property.price_period ? (
-            <span className="font-normal text-sm text-gray-500"> {property.price_period}</span>
-          ) : null}
+          {property.purpose === "shortlet" && property.price_per_night ? (
+            <>
+              {formatNaira(property.price_per_night)}
+              <span className="font-normal text-sm text-gray-500"> per night</span>
+            </>
+          ) : (
+            <>
+              {formatNaira(property.price)}
+              {property.price_period ? (
+                <span className="font-normal text-sm text-gray-500"> {property.price_period}</span>
+              ) : null}
+            </>
+          )}
         </p>
 
         {property.description && (

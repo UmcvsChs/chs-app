@@ -46,10 +46,19 @@ export default function PropertyCard({ property }: { property: Property }) {
         </p>
 
         <p className="font-bold text-chs-charcoal">
-          {formatNaira(property.price)}
-          {property.price_period ? (
-            <span className="font-normal text-xs text-gray-500"> {property.price_period}</span>
-          ) : null}
+          {property.purpose === "shortlet" && property.price_per_night ? (
+            <>
+              {formatNaira(property.price_per_night)}
+              <span className="font-normal text-xs text-gray-500"> per night</span>
+            </>
+          ) : (
+            <>
+              {formatNaira(property.price)}
+              {property.price_period ? (
+                <span className="font-normal text-xs text-gray-500"> {property.price_period}</span>
+              ) : null}
+            </>
+          )}
         </p>
 
         {(property.bedrooms || property.bathrooms) && (

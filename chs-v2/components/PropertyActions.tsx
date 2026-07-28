@@ -9,8 +9,9 @@ import { formatNaira } from "@/lib/format";
 import CurrencyInput from "./CurrencyInput";
 import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
+import ShortletBookingForm from "./ShortletBookingForm";
 
-type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication";
+type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet";
 
 export default function PropertyActions({ property }: { property: Property }) {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [offerSuccess, setOfferSuccess] = useState(false);
   const [inspectionSuccess, setInspectionSuccess] = useState(false);
   const [rentalApplicationSuccess, setRentalApplicationSuccess] = useState(false);
+  const [shortletSuccess, setShortletSuccess] = useState(false);
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -105,6 +107,15 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
+  if (shortletSuccess) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Booking confirmed</p>
+        <p className="text-xs text-gray-500">Your dates are genuinely secured — no one else can book over them.</p>
+      </div>
+    );
+  }
+
   if (activeForm === "offer" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -159,10 +170,24 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
+  if (activeForm === "shortlet" && session && property.price_per_night) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <ShortletBookingForm
+          propertyId={property.id}
+          pricePerNight={property.price_per_night}
+          session={session}
+          onSuccess={() => setShortletSuccess(true)}
+        />
+      </div>
+    );
+  }
+
   // Default state: show the real, relevant actions for this property's
   // purpose. Making an offer only makes sense for a sale property;
   // booking an inspection is genuinely useful for every property type;
-  // starting a rental application only makes sense for rent/lease/hire.
+  // starting a rental application only makes sense for rent/lease/hire;
+  // shortlet booking is its own, entirely separate purpose.
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
       {property.purpose === "sale" && (
@@ -173,7 +198,15 @@ export default function PropertyActions({ property }: { property: Property }) {
           Make an offer
         </button>
       )}
-      {property.purpose !== "sale" && (
+      {property.purpose === "shortlet" && property.price_per_night && (
+        <button
+          onClick={() => requireLoginThen(() => setActiveForm("shortlet"))}
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
+        >
+          Book now
+        </button>
+      )}
+      {property.purpose !== "sale" && property.purpose !== "shortlet" && (
         <button
           onClick={() => requireLoginThen(() => setActiveForm("rentalApplication"))}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
@@ -181,12 +214,14 @@ export default function PropertyActions({ property }: { property: Property }) {
           Start rental application
         </button>
       )}
-      <button
-        onClick={() => requireLoginThen(() => setActiveForm("inspection"))}
-        className="w-full py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold"
-      >
-        Book inspection
-      </button>
+      {property.purpose !== "shortlet" && (
+        <button
+          onClick={() => requireLoginThen(() => setActiveForm("inspection"))}
+          className="w-full py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold"
+        >
+          Book inspection
+        </button>
+      )}
     </div>
   );
 }

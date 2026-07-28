@@ -20,6 +20,7 @@ const PURPOSE_OPTIONS = [
   { value: "rent", label: "For Rent" },
   { value: "lease", label: "For Lease" },
   { value: "hire", label: "For Hire" },
+  { value: "shortlet", label: "Shortlet" },
 ];
 const PROPERTY_TYPES = ["Apartment", "Duplex", "Bungalow", "Terrace", "Land", "Commercial"];
 const NIGERIAN_STATES = ["Kaduna", "Abuja (FCT)", "Kano", "Lagos"];
@@ -40,6 +41,7 @@ export default function ListPropertyPage() {
   const [locationLga, setLocationLga] = useState("");
   const [locationState, setLocationState] = useState("Kaduna");
   const [price, setPrice] = useState<number | "">("");
+  const [pricePerNight, setPricePerNight] = useState<number | "">("");
   const [pricePeriod, setPricePeriod] = useState("per year");
   const [description, setDescription] = useState("");
   const [bedrooms, setBedrooms] = useState<number | "">("");
@@ -71,7 +73,11 @@ export default function ListPropertyPage() {
   function validate(): string | null {
     if (!title.trim()) return "Please enter a title for this property.";
     if (!locationArea.trim()) return "Please enter the location area.";
-    if (!price || price < 1000) return "Please enter a valid price.";
+    if (purpose === "shortlet") {
+      if (!pricePerNight || pricePerNight < 1000) return "Please enter a valid nightly price.";
+    } else {
+      if (!price || price < 1000) return "Please enter a valid price.";
+    }
     return null;
   }
 
@@ -104,8 +110,13 @@ export default function ListPropertyPage() {
         location_area: locationArea.trim(),
         location_lga: locationLga.trim() || null,
         location_state: locationState,
-        price,
-        price_period: purpose === "sale" ? null : pricePeriod,
+        // `price` is required (not null) on every property regardless of
+        // purpose — for a shortlet, the nightly rate is the genuine
+        // price, so it populates both fields consistently rather than
+        // leaving the required column empty.
+        price: purpose === "shortlet" ? pricePerNight : price,
+        price_per_night: purpose === "shortlet" ? pricePerNight : null,
+        price_period: purpose === "sale" || purpose === "shortlet" ? null : pricePeriod,
         description: description.trim() || null,
         bedrooms: bedrooms || null,
         bathrooms: bathrooms || null,
@@ -227,12 +238,19 @@ export default function ListPropertyPage() {
             </select>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-gray-600">Price (₦)</label>
-            <CurrencyInput value={price} onChange={setPrice} placeholder="e.g. 450,000" />
-          </div>
+          {purpose === "shortlet" ? (
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Price per night (₦)</label>
+              <CurrencyInput value={pricePerNight} onChange={setPricePerNight} placeholder="e.g. 45,000" />
+            </div>
+          ) : (
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Price (₦)</label>
+              <CurrencyInput value={price} onChange={setPrice} placeholder="e.g. 450,000" />
+            </div>
+          )}
 
-          {purpose !== "sale" && (
+          {purpose !== "sale" && purpose !== "shortlet" && (
             <div>
               <label className="text-xs font-semibold text-gray-600">Price period</label>
               <select value={pricePeriod} onChange={(e) => setPricePeriod(e.target.value)}

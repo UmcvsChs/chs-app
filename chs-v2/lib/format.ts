@@ -14,6 +14,7 @@ export function purposeLabel(purpose: Property["purpose"]): string {
     sale: "For Sale",
     lease: "For Lease",
     hire: "For Hire",
+    shortlet: "Shortlet",
   };
   return labels[purpose];
 }

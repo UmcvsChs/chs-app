@@ -13,6 +13,7 @@ const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
   { value: "rent", label: "For Rent" },
   { value: "lease", label: "For Lease" },
   { value: "hire", label: "For Hire" },
+  { value: "shortlet", label: "Shortlet" },
 ];
 
 export default function HomePageClient({ properties }: { properties: Property[] }) {
