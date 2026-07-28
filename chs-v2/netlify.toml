@@ -1,0 +1,10 @@
+# Explicit configuration, rather than relying on Netlify's UI
+# auto-detection — that auto-detection produced an incorrect publish
+# path (pointing at the project's root folder instead of where Next.js
+# genuinely places its real build output), which is exactly what caused
+# the live site to show "Page not found" despite a successful build.
+[build]
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
