@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { RentalApplication } from "@/types/rentalApplication";
 import { Dispute } from "@/types/dispute";
+import { CommunityFeedback } from "@/types/communityFeedback";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -26,7 +27,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties" | "disputes";
+type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function AdminDashboard() {
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
+  const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -58,16 +60,18 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }),
+      supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
+    setPendingFeedback(feedbackRes.data || []);
     setLoading(false);
   }
 
@@ -118,6 +122,16 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleFeedbackModeration(feedbackId: string, status: "approved" | "rejected") {
+    setActionError(null);
+    const { error } = await supabase.from("community_feedback").update({ status }).eq("id", feedbackId);
+    if (error) {
+      setActionError("Could not update this feedback. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -135,6 +149,7 @@ export default function AdminDashboard() {
           { key: "applications", label: `Applications (${pendingApplications.length})` },
           { key: "properties", label: `Properties (${pendingProperties.length})` },
           { key: "disputes", label: `Disputes (${openDisputes.length})` },
+          { key: "feedback", label: `Feedback (${pendingFeedback.length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -239,6 +254,28 @@ export default function AdminDashboard() {
                     className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold"
                   >
                     Rule for owner
+                  </button>
+                </div>
+              </div>
+            ))
+          ))}
+
+        {activeTab === "feedback" &&
+          (pendingFeedback.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-8">No pending community feedback.</p>
+          ) : (
+            pendingFeedback.map((f) => (
+              <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-sm text-chs-charcoal">{f.note}</p>
+                <p className="text-xs text-gray-400 mt-1">— {f.relation}</p>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => handleFeedbackModeration(f.id, "approved")}
+                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    Approve
+                  </button>
+                  <button onClick={() => handleFeedbackModeration(f.id, "rejected")}
+                    className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                    Reject
                   </button>
                 </div>
               </div>

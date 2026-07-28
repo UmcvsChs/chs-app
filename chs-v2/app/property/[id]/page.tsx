@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
+import CommunityFeedback from "@/components/CommunityFeedback";
+import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
 
 // Always fetch fresh — a property's price, status, or vacancy could
 // change at any moment, and this page must never show stale data.
@@ -39,6 +41,14 @@ export default async function PropertyDetailPage({
   if (!property) {
     notFound();
   }
+
+  const supabase = await createClient();
+  const { data: feedback } = await supabase
+    .from("community_feedback")
+    .select("*")
+    .eq("property_id", id)
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
 
   const isUnderVerification = property.verification_status !== "verified";
 
@@ -129,6 +139,8 @@ export default async function PropertyDetailPage({
         {/* Real booking/offer actions — genuinely wired to the actual
             database, not a placeholder claiming to work. */}
         <PropertyActions property={property} />
+
+        <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />
       </div>
     </div>
   );
