@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Property, PropertyPurpose } from "@/types/property";
 import PropertyCard from "./PropertyCard";
+import DemandRegistryForm from "./DemandRegistryForm";
 import { useAuth } from "@/contexts/AuthContext";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
@@ -102,6 +103,8 @@ export default function HomePageClient({ properties }: { properties: Property[] 
           </button>
         ))}
       </nav>
+
+      <DemandRegistryForm />
 
       <main className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProperties.length === 0 ? (

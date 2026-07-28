@@ -148,6 +148,9 @@ export default function OwnerDashboard() {
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">My Properties</h1>
           <div className="flex gap-2">
+            <Link href="/market-demand" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Market Demand
+            </Link>
             <Link href="/engage-chs" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Engage CHS
             </Link>
