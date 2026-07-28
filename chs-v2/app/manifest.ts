@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "CHS — Complete Housing Solutions",
     short_name: "CHS",
-    description: "Complete Housing Solutions — property platform for Kaduna State, Nigeria",
+    description: "Complete Housing Solutions — Nigeria's trusted property platform, connecting owners, tenants, buyers, agents, and property managers nationwide",
     start_url: "/",
     display: "standalone",
     background_color: "#1e1b16",

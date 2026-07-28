@@ -10,7 +10,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 export const metadata: Metadata = {
   title: "CHS — Complete Housing Solutions",
-  description: "Complete Housing Solutions — property platform for Kaduna State, Nigeria",
+  description: "Complete Housing Solutions — Nigeria's trusted property platform, connecting owners, tenants, buyers, agents, and property managers nationwide",
   // manifest.ts (in this same folder) is automatically linked by
   // Next.js — no manual <link> tag needed for that part.
   appleWebApp: {
