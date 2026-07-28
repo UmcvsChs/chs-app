@@ -117,6 +117,9 @@ export default function TenantDashboard() {
                   {t.lease_start} → {t.lease_end}
                 </p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(t.annual_rent)}/year</p>
+                <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
+                  Submit move-in condition report
+                </Link>
                 <span className="inline-block mt-1 text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full capitalize">
                   {t.status.replace(/_/g, " ")}
                 </span>
