@@ -13,6 +13,16 @@ const CATEGORIES: { value: MarketplaceCategory; label: string }[] = [
   { value: "bedding_textiles", label: "Bedding & Textiles" },
   { value: "home_equipment", label: "Home Equipment" },
   { value: "building_materials", label: "Building Materials" },
+  { value: "security_services", label: "Security Services" },
+  { value: "cleaning_services", label: "Cleaning Services" },
+  { value: "fumigation_pest_control", label: "Fumigation & Pest Control" },
+  { value: "facilities_maintenance", label: "Facilities Maintenance" },
+];
+// A service-type vendor's real work depends on genuinely covering the
+// area a client is in — a security firm operating only in Lagos is no
+// use to someone in Kaduna. Products don't have this same constraint.
+const SERVICE_CATEGORIES: MarketplaceCategory[] = [
+  "security_services", "cleaning_services", "fumigation_pest_control", "facilities_maintenance",
 ];
 const NIGERIAN_STATES = ["Kaduna", "Abuja (FCT)", "Kano", "Lagos"];
 
@@ -26,9 +36,12 @@ export default function BecomeVendorPage() {
   const [phone, setPhone] = useState("");
   const [state, setState] = useState("Kaduna");
   const [lga, setLga] = useState("");
+  const [serviceStates, setServiceStates] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const isServiceCategory = SERVICE_CATEGORIES.includes(category);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,6 +67,7 @@ export default function BecomeVendorPage() {
       phone: phone.trim() || null,
       location_state: state,
       location_lga: lga.trim() || null,
+      service_states: isServiceCategory ? serviceStates.split(",").map((s) => s.trim()).filter(Boolean) : null,
       verification_status: "pending",
     });
 
@@ -126,6 +140,17 @@ export default function BecomeVendorPage() {
             <input type="text" value={lga} onChange={(e) => setLga(e.target.value)}
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
+          {isServiceCategory && (
+            <div>
+              <label className="text-xs font-semibold text-gray-600">States you genuinely cover</label>
+              <input type="text" value={serviceStates} onChange={(e) => setServiceStates(e.target.value)}
+                placeholder="e.g. Lagos, Abuja (FCT), Kaduna"
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <p className="text-[10px] text-gray-400 mt-1">
+                Separate multiple states with commas. Only shown to clients in these states.
+              </p>
+            </div>
+          )}
           <div>
             <label className="text-xs font-semibold text-gray-600">Description</label>
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3}

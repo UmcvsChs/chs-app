@@ -9,14 +9,21 @@ export type MarketplaceCategory =
   | "furniture"
   | "bedding_textiles"
   | "home_equipment"
-  | "building_materials";
+  | "building_materials"
+  | "security_services"
+  | "cleaning_services"
+  | "fumigation_pest_control"
+  | "facilities_maintenance";
+
+export type ListingType = "product" | "service";
 
 export interface MarketplaceProduct {
   id: string;
   vendor_id: string;
   name: string;
   category: MarketplaceCategory;
-  price: number;
+  listing_type: ListingType;
+  price: number | null;
   price_unit: string | null;
   description: string | null;
   photos: string[];
@@ -34,5 +41,6 @@ export interface MarketplaceVendor {
   phone: string | null;
   location_state: string | null;
   location_lga: string | null;
+  service_states: string[] | null;
   verification_status: "pending" | "verified" | "rejected";
 }

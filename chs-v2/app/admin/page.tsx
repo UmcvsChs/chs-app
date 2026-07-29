@@ -10,6 +10,7 @@ import { Dispute } from "@/types/dispute";
 import { CommunityFeedback } from "@/types/communityFeedback";
 import { EngageRequest } from "@/types/engageRequest";
 import { MarketplaceVendor } from "@/types/marketplace";
+import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -29,7 +30,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors";
+type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -42,6 +43,8 @@ export default function AdminDashboard() {
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
+  const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
+  const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -64,7 +67,7 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
@@ -72,6 +75,8 @@ export default function AdminDashboard() {
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
+      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
     setPendingApplications(applicationsRes.data || []);
@@ -80,6 +85,8 @@ export default function AdminDashboard() {
     setPendingFeedback(feedbackRes.data || []);
     setPendingEngage(engageRes.data || []);
     setPendingVendors(vendorsRes.data || []);
+    setFeeSettings(feeSettingsRes.data || []);
+    setOwedFees(owedFeesRes.data || []);
     setLoading(false);
   }
 
@@ -160,6 +167,32 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  // The actual point of building this admin-adjustable rather than
+  // hardcoded — a real fee change takes effect immediately, for every
+  // future deal, without needing a new code deployment at all.
+  async function handleUpdateFee(category: string, newAmount: number) {
+    setActionError(null);
+    const { error } = await supabase
+      .from("referral_fee_settings")
+      .update({ flat_fee_amount: newAmount, updated_at: new Date().toISOString() })
+      .eq("category", category);
+    if (error) {
+      setActionError("Could not update this fee. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
+  async function handleUpdateOwedFeeStatus(feeId: string, status: "invoiced" | "paid") {
+    setActionError(null);
+    const { error } = await supabase.from("referral_fees_owed").update({ status }).eq("id", feeId);
+    if (error) {
+      setActionError("Could not update this. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -180,6 +213,7 @@ export default function AdminDashboard() {
           { key: "feedback", label: `Feedback (${pendingFeedback.length})` },
           { key: "engage", label: `Engage CHS (${pendingEngage.length})` },
           { key: "vendors", label: `Vendors (${pendingVendors.length})` },
+          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -351,6 +385,80 @@ export default function AdminDashboard() {
               </div>
             ))
           ))}
+
+        {activeTab === "referrals" && (
+          <>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Fee per category (editable)</p>
+            {feeSettings.map((fee) => (
+              <FeeSettingRow key={fee.category} fee={fee} onUpdate={handleUpdateFee} />
+            ))}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">
+              Referral fees ({owedFees.length})
+            </p>
+            {owedFees.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No referral fees recorded yet.</p>
+            ) : (
+              owedFees.map((f) => (
+                <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-semibold text-chs-charcoal">{formatNaira(f.amount)}</p>
+                    <span className="text-[10px] font-bold uppercase text-gray-400">{f.status}</span>
+                  </div>
+                  {f.status === "owed" && (
+                    <button onClick={() => handleUpdateOwedFeeStatus(f.id, "invoiced")}
+                      className="py-1.5 px-3 rounded-full bg-chs-amber-light text-chs-amber-dark text-[10px] font-semibold">
+                      Mark invoiced
+                    </button>
+                  )}
+                  {f.status === "invoiced" && (
+                    <button onClick={() => handleUpdateOwedFeeStatus(f.id, "paid")}
+                      className="py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Mark paid
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  security_services: "Security Services",
+  cleaning_services: "Cleaning Services",
+  fumigation_pest_control: "Fumigation & Pest Control",
+  facilities_maintenance: "Facilities Maintenance",
+};
+
+function FeeSettingRow({
+  fee,
+  onUpdate,
+}: {
+  fee: ReferralFeeSetting;
+  onUpdate: (category: string, newAmount: number) => void;
+}) {
+  const [amount, setAmount] = useState(fee.flat_fee_amount);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex items-center justify-between gap-2">
+      <p className="text-xs font-semibold text-chs-charcoal">{CATEGORY_LABELS[fee.category] || fee.category}</p>
+      <div className="flex gap-1.5 items-center">
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
+          className="w-24 px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
+        />
+        <button
+          onClick={() => onUpdate(fee.category, amount)}
+          className="py-1.5 px-3 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold"
+        >
+          Save
+        </button>
       </div>
     </div>
   );
