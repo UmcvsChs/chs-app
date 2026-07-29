@@ -13,7 +13,8 @@ export type MarketplaceCategory =
   | "security_services"
   | "cleaning_services"
   | "fumigation_pest_control"
-  | "facilities_maintenance";
+  | "facilities_maintenance"
+  | "kitchen_supplies";
 
 export type ListingType = "product" | "service";
 
