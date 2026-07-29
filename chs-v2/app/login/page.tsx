@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -161,6 +162,11 @@ export default function LoginPage() {
             {submitting ? "Logging in..." : "Log in"}
           </button>
         </form>
+
+        <p className="text-xs text-gray-400 text-center mt-6">
+          Need a role added to your existing account?{" "}
+          <Link href="/link-account" className="text-chs-red font-semibold">Link it here</Link>
+        </p>
       </div>
     </div>
   );
