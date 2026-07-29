@@ -47,6 +47,14 @@ export default function HomePageClient({ properties }: { properties: Property[] 
           {loading ? null : session && profile ? (
             <div className="flex items-center gap-2">
               <NotificationBell />
+              <Link href="/profile" className="w-7 h-7 rounded-full bg-white/15 overflow-hidden flex items-center justify-center shrink-0">
+                {profile.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profile.avatar_url} alt="Your profile" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] font-bold text-white">{profile.full_name.charAt(0).toUpperCase()}</span>
+                )}
+              </Link>
               <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
               <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                 Wallet

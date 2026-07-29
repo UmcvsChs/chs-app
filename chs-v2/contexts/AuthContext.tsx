@@ -20,6 +20,7 @@ interface Profile {
   status: string;
   membership_verified: boolean | null;
   valid_id_verified: boolean | null;
+  avatar_url: string | null;
 }
 
 interface AuthContextValue {
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, role, secondary_roles, status, membership_verified, valid_id_verified")
+      .select("id, full_name, role, secondary_roles, status, membership_verified, valid_id_verified, avatar_url")
       .eq("id", userId)
       .single();
     if (data) {
