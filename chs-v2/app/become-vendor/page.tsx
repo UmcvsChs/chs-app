@@ -24,7 +24,7 @@ const CATEGORIES: { value: MarketplaceCategory; label: string }[] = [
 const SERVICE_CATEGORIES: MarketplaceCategory[] = [
   "security_services", "cleaning_services", "fumigation_pest_control", "facilities_maintenance",
 ];
-const NIGERIAN_STATES = ["Kaduna", "Abuja (FCT)", "Kano", "Lagos"];
+import { NIGERIAN_STATES } from "@/lib/geoData";
 
 export default function BecomeVendorPage() {
   const router = useRouter();

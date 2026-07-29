@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Property, PropertyPurpose } from "@/types/property";
 import PropertyCard from "./PropertyCard";
 import DemandRegistryForm from "./DemandRegistryForm";
+import NotificationBell from "./NotificationBell";
+import PropertySearch, { applyPropertyFilters } from "./PropertySearch";
+import DiasporaMode from "./DiasporaMode";
 import { useAuth } from "@/contexts/AuthContext";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
@@ -18,12 +21,17 @@ const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
 
 export default function HomePageClient({ properties }: { properties: Property[] }) {
   const [activePurpose, setActivePurpose] = useState<PropertyPurpose | "all">("all");
+  const [searchFilters, setSearchFilters] = useState<Parameters<typeof applyPropertyFilters>[1]>(null);
+  const [diasporaActive, setDiasporaActive] = useState(false);
   const { session, profile, signOut, loading } = useAuth();
 
-  const filteredProperties =
+  // Both filters genuinely combine — matching the original app's real,
+  // tested behaviour, not just the purpose tab or just search alone.
+  const purposeFiltered =
     activePurpose === "all"
       ? properties
       : properties.filter((p) => p.purpose === activePurpose);
+  const filteredProperties = applyPropertyFilters(purposeFiltered, searchFilters);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,6 +46,7 @@ export default function HomePageClient({ properties }: { properties: Property[] 
         <div className="text-xs">
           {loading ? null : session && profile ? (
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
               <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                 Wallet
@@ -89,11 +98,13 @@ export default function HomePageClient({ properties }: { properties: Property[] 
         </div>
       </header>
 
+      <DiasporaMode active={diasporaActive} onToggle={setDiasporaActive} />
+
       <nav className="flex gap-2 overflow-x-auto px-4 py-3 bg-white border-b border-gray-100">
         {PURPOSE_TABS.map((tab) => (
           <button
             key={tab.value}
-            onClick={() => setActivePurpose(tab.value)}
+            onClick={() => { setActivePurpose(tab.value); setSearchFilters(null); }}
             className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
               activePurpose === tab.value
                 ? "bg-chs-red text-white"
@@ -105,12 +116,14 @@ export default function HomePageClient({ properties }: { properties: Property[] 
         ))}
       </nav>
 
+      <PropertySearch onResults={setSearchFilters} />
+
       <DemandRegistryForm />
 
       <main className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProperties.length === 0 ? (
           <p className="col-span-full text-center text-sm text-gray-400 py-12">
-            No properties found for this filter yet.
+            {searchFilters ? "No properties match your search." : "No properties found for this filter yet."}
           </p>
         ) : (
           filteredProperties.map((property) => (

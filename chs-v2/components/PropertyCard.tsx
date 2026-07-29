@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Property } from "@/types/property";
-import { formatNaira, purposeLabel } from "@/lib/format";
+import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const isUnderVerification = property.verification_status !== "verified";
@@ -67,6 +67,8 @@ export default function PropertyCard({ property }: { property: Property }) {
             {property.bathrooms ? <span>{property.bathrooms} baths</span> : null}
           </div>
         )}
+
+        <p className="text-[10px] text-gray-400 mt-1">{formatPostedAgo(property.created_at)}</p>
       </div>
     </Link>
   );

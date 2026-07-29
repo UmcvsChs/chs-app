@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto, uploadDocument } from "@/lib/storage";
 import CurrencyInput from "@/components/CurrencyInput";
 
+import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
+
 const DOC_TYPES = [
   { value: "ownership_document", label: "Ownership document" },
   { value: "kadgis", label: "KADGIS approval" },
@@ -23,7 +25,6 @@ const PURPOSE_OPTIONS = [
   { value: "shortlet", label: "Shortlet" },
 ];
 const PROPERTY_TYPES = ["Apartment", "Duplex", "Bungalow", "Terrace", "Land", "Commercial"];
-const NIGERIAN_STATES = ["Kaduna", "Abuja (FCT)", "Kano", "Lagos"];
 const ROAD_TYPES = [
   { value: "tarred", label: "Tarred" },
   { value: "untarred_motorable", label: "Untarred but motorable" },
@@ -219,23 +220,32 @@ export default function ListPropertyPage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600">Location area</label>
-            <input type="text" value={locationArea} onChange={(e) => setLocationArea(e.target.value)}
-              placeholder="e.g. Malali GRA" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-xs font-semibold text-gray-600">State</label>
+            <select
+              value={locationState}
+              onChange={(e) => { setLocationState(e.target.value); setLocationLga(""); }}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+            >
+              {NIGERIAN_STATES.map((s) => <option key={s}>{s}</option>)}
+            </select>
           </div>
 
           <div>
             <label className="text-xs font-semibold text-gray-600">LGA</label>
-            <input type="text" value={locationLga} onChange={(e) => setLocationLga(e.target.value)}
-              placeholder="e.g. Kaduna North" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <select
+              value={locationLga}
+              onChange={(e) => setLocationLga(e.target.value)}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+            >
+              <option value="">Select an LGA</option>
+              {(LGA_BY_STATE[locationState] || []).map((lga) => <option key={lga}>{lga}</option>)}
+            </select>
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600">State</label>
-            <select value={locationState} onChange={(e) => setLocationState(e.target.value)}
-              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
-              {NIGERIAN_STATES.map((s) => <option key={s}>{s}</option>)}
-            </select>
+            <label className="text-xs font-semibold text-gray-600">Location area</label>
+            <input type="text" value={locationArea} onChange={(e) => setLocationArea(e.target.value)}
+              placeholder="e.g. Malali GRA" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
 
           {purpose === "shortlet" ? (

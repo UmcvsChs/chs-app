@@ -82,7 +82,22 @@ export default function LoginPage() {
 
     setActiveRole(selectedRole);
     await refreshProfile();
-    router.push("/");
+
+    // The actual bug just found and fixed: every successful login was
+    // sending everyone to the plain homepage, regardless of which real
+    // role they'd just confirmed — an admin logging in never actually
+    // reached /admin at all, which is exactly why it looked like the
+    // whole dashboard had vanished. Routes to the real, correct
+    // dashboard for each role now.
+    const roleToPath: Record<string, string> = {
+      admin: "/admin",
+      owner: "/owner",
+      agent: "/agent",
+      manager: "/manager",
+      tenant: "/tenant",
+      buyer: "/",
+    };
+    router.push(roleToPath[selectedRole] || "/");
   }
 
   return (

@@ -97,6 +97,13 @@ export default function AdminDashboard() {
       setActionError("Could not update this registration. Please try again.");
       return;
     }
+    await supabase.rpc("notify_user", {
+      p_user_id: profileId,
+      p_title: status === "approved" ? "Your CHS account is approved!" : "Your CHS registration needs attention",
+      p_body: status === "approved"
+        ? "You can now fully use CHS."
+        : "Your registration could not be approved. Please contact CHS support for details.",
+    });
     loadData();
   }
 
@@ -119,20 +126,67 @@ export default function AdminDashboard() {
 
   async function handlePropertyVerification(propertyId: string, status: "verified" | "rejected") {
     setActionError(null);
-    const { error } = await supabase.from("properties").update({ verification_status: status }).eq("id", propertyId);
+    const { data: property, error } = await supabase.from("properties").update({ verification_status: status }).eq("id", propertyId).select().single();
     if (error) {
       setActionError("Could not update this property. Please try again.");
       return;
+    }
+    if (property) {
+      await supabase.rpc("notify_user", {
+        p_user_id: property.owner_id,
+        p_title: status === "verified" ? "Your property listing is now live!" : "Your property listing needs attention",
+        p_body: status === "verified"
+          ? `"${property.title}" has been verified and is now publicly visible.`
+          : `"${property.title}" could not be verified. Please contact CHS support for details.`,
+        p_link: `/property/${property.id}`,
+      });
+
+      // The real, genuine improvement over the original app: it could
+      // only tell an interested person "check back soon," with no real
+      // way to actually notify them once verification happened. Every
+      // real person who expressed interest now genuinely gets told the
+      // moment it's confirmed.
+      if (status === "verified") {
+        const { data: interestedUsers } = await supabase
+          .from("property_interest")
+          .select("user_id")
+          .eq("property_id", propertyId);
+        for (const interested of interestedUsers || []) {
+          await supabase.rpc("notify_user", {
+            p_user_id: interested.user_id,
+            p_title: "A property you're interested in is now verified!",
+            p_body: `"${property.title}" is now CHS Verified — you can go ahead with what you were trying to do.`,
+            p_link: `/property/${property.id}`,
+          });
+        }
+      }
     }
     loadData();
   }
 
   async function handleDisputeRuling(disputeId: string, status: "ruled_for_tenant" | "ruled_for_owner", notes: string) {
     setActionError(null);
-    const { error } = await supabase.from("disputes").update({ status, ruling_notes: notes || null }).eq("id", disputeId);
+    const { data: dispute, error } = await supabase.from("disputes").update({ status, ruling_notes: notes || null }).eq("id", disputeId).select().single();
     if (error) {
       setActionError("Could not record this ruling. Please try again.");
       return;
+    }
+    // Both real parties genuinely need to know the outcome — not just
+    // whoever happens to check back later.
+    if (dispute) {
+      const rulingText = status === "ruled_for_tenant" ? "in the tenant's favour" : "in the owner's favour";
+      await supabase.rpc("notify_user", {
+        p_user_id: dispute.raised_by,
+        p_title: "Your dispute has been resolved",
+        p_body: `CHS has ruled ${rulingText}. ${notes || ""}`,
+      });
+      if (dispute.against) {
+        await supabase.rpc("notify_user", {
+          p_user_id: dispute.against,
+          p_title: "A dispute involving you has been resolved",
+          p_body: `CHS has ruled ${rulingText}. ${notes || ""}`,
+        });
+      }
     }
     loadData();
   }
@@ -147,12 +201,83 @@ export default function AdminDashboard() {
     loadData();
   }
 
-  async function handleEngageContacted(requestId: string) {
+  // The real, three-way workflow restored from the original app —
+  // reject and request-more-info both genuinely require a real written
+  // reason before they can be confirmed, matching the original's exact
+  // rule that the owner deserves to know why.
+  async function handleEngageAccept(requestId: string, serviceType: string) {
     setActionError(null);
-    const { error } = await supabase.from("engage_chs_requests").update({ status: "contacted" }).eq("id", requestId);
+    const note = serviceType === "Full property management"
+      ? "CHS has accepted this request and will be in touch to sign the service agreement and agree fees before work begins. Since this covers full property management, day-to-day maintenance decisions now go through CHS and the tenant directly."
+      : "CHS has accepted this request and will be in touch to sign the service agreement and agree fees before work begins.";
+    const { data: request, error } = await supabase
+      .from("engage_chs_requests")
+      .update({ status: "accepted", admin_note: note })
+      .eq("id", requestId)
+      .select()
+      .single();
     if (error) {
-      setActionError("Could not update this request. Please try again.");
+      setActionError("Could not accept this request. Please try again.");
       return;
+    }
+    if (request) {
+      await supabase.rpc("notify_user", {
+        p_user_id: request.owner_id,
+        p_title: "✓ Request accepted",
+        p_body: `${request.service_type} (Ref ${request.reference}) accepted — proceeding to agreement.`,
+      });
+    }
+    loadData();
+  }
+
+  async function handleEngageReject(requestId: string, reason: string) {
+    if (!reason.trim()) {
+      setActionError("Please give a reason — the owner deserves to know why.");
+      return;
+    }
+    setActionError(null);
+    const { data: request, error } = await supabase
+      .from("engage_chs_requests")
+      .update({ status: "rejected", admin_note: reason.trim() })
+      .eq("id", requestId)
+      .select()
+      .single();
+    if (error) {
+      setActionError("Could not reject this request. Please try again.");
+      return;
+    }
+    if (request) {
+      await supabase.rpc("notify_user", {
+        p_user_id: request.owner_id,
+        p_title: "Request update",
+        p_body: `${request.service_type} (Ref ${request.reference}) was not accepted this time — ${reason.trim()}`,
+      });
+    }
+    loadData();
+  }
+
+  async function handleEngageRequestMoreInfo(requestId: string, question: string) {
+    if (!question.trim()) {
+      setActionError("Please specify what information you need.");
+      return;
+    }
+    setActionError(null);
+    const { data: request, error } = await supabase
+      .from("engage_chs_requests")
+      .update({ status: "more_info_requested", admin_note: question.trim() })
+      .eq("id", requestId)
+      .select()
+      .single();
+    if (error) {
+      setActionError("Could not send this request. Please try again.");
+      return;
+    }
+    if (request) {
+      await supabase.rpc("notify_user", {
+        p_user_id: request.owner_id,
+        p_title: "CHS needs more information",
+        p_body: `${request.service_type} (Ref ${request.reference}) — ${question.trim()}`,
+      });
     }
     loadData();
   }
@@ -351,15 +476,13 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No pending Engage CHS requests.</p>
           ) : (
             pendingEngage.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-3">
-                <p className="text-sm font-semibold text-chs-charcoal">{r.service_type}</p>
-                <p className="text-xs text-gray-500 mt-1">{r.location}</p>
-                <p className="text-xs text-gray-600 mt-1">{r.description}</p>
-                <button onClick={() => handleEngageContacted(r.id)}
-                  className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                  Mark as contacted
-                </button>
-              </div>
+              <EngageRequestCard
+                key={r.id}
+                request={r}
+                onAccept={handleEngageAccept}
+                onReject={handleEngageReject}
+                onRequestMoreInfo={handleEngageRequestMoreInfo}
+              />
             ))
           ))}
 
@@ -460,6 +583,83 @@ function FeeSettingRow({
           Save
         </button>
       </div>
+    </div>
+  );
+}
+
+// Restored from the original app's real, three-way workflow — Accept,
+// Reject (requires a real written reason), and Request more info
+// (requires a real specific question) — rather than the previous single
+// "mark as contacted" button with no genuine decision behind it.
+function EngageRequestCard({
+  request,
+  onAccept,
+  onReject,
+  onRequestMoreInfo,
+}: {
+  request: EngageRequest;
+  onAccept: (id: string, serviceType: string) => void;
+  onReject: (id: string, reason: string) => void;
+  onRequestMoreInfo: (id: string, question: string) => void;
+}) {
+  const [mode, setMode] = useState<"none" | "reject" | "more_info">("none");
+  const [text, setText] = useState("");
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+      <p className="text-sm font-semibold text-chs-charcoal">{request.service_type}</p>
+      <p className="text-xs text-gray-500 mt-1">{request.location}</p>
+      <p className="text-xs text-gray-600 mt-1">{request.description}</p>
+      {request.budget && <p className="text-xs text-gray-500 mt-1">Budget: {request.budget}</p>}
+
+      {Object.keys(request.category_details || {}).length > 0 && (
+        <div className="mt-2 pt-2 border-t border-gray-100 space-y-0.5">
+          {Object.entries(request.category_details).map(([label, value]) =>
+            value ? (
+              <p key={label} className="text-[11px] text-gray-600">
+                <span className="font-semibold text-chs-charcoal">{label}:</span> {value}
+              </p>
+            ) : null
+          )}
+        </div>
+      )}
+
+      {mode === "none" ? (
+        <div className="flex gap-2 mt-2">
+          <button onClick={() => onAccept(request.id, request.service_type)}
+            className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+            Accept
+          </button>
+          <button onClick={() => setMode("reject")}
+            className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+            Reject
+          </button>
+          <button onClick={() => setMode("more_info")}
+            className="flex-1 py-1.5 rounded-full bg-chs-amber-light text-chs-amber-dark text-[10px] font-semibold">
+            Request info
+          </button>
+        </div>
+      ) : (
+        <div className="mt-2">
+          <label className="text-[10px] font-semibold text-gray-600">
+            {mode === "reject" ? "Reason for rejecting (the owner will see this)" : "What additional information do you need?"}
+          </label>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2}
+            className="w-full mt-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
+          <div className="flex gap-2 mt-1.5">
+            <button onClick={() => setMode("none")}
+              className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+              Cancel
+            </button>
+            <button
+              onClick={() => mode === "reject" ? onReject(request.id, text) : onRequestMoreInfo(request.id, text)}
+              className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
+            >
+              {mode === "reject" ? "Confirm rejection" : "Send request"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import { FormalNotice, NOTICE_TYPE_LABELS } from "@/types/formalNotice";
+import MessageThread from "@/components/MessageThread";
 
 interface ApplicationWithProperty {
   id: string;
@@ -19,6 +21,7 @@ interface ApplicationWithProperty {
 interface TenancyWithProperty {
   id: string;
   landlord_id: string;
+  manager_id: string | null;
   lease_start: string;
   lease_end: string;
   annual_rent: number;
@@ -50,6 +53,9 @@ export default function TenantDashboard() {
   const [loading, setLoading] = useState(true);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyWithProperty | null>(null);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
+  const [notices, setNotices] = useState<FormalNotice[]>([]);
+  const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
+  const [messagingTenancy, setMessagingTenancy] = useState<TenancyWithProperty | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -78,7 +84,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, landlord_id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
+        .select("id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -91,7 +97,43 @@ export default function TenantDashboard() {
     setApplications((applicationsRes.data as unknown as ApplicationWithProperty[]) || []);
     setTenancies((tenanciesRes.data as unknown as TenancyWithProperty[]) || []);
     setInspections((inspectionsRes.data as unknown as InspectionWithProperty[]) || []);
+
+    // Fetching the list itself is NOT the same as "viewing" a specific
+    // notice — merely loading the dashboard must never silently count as
+    // a real read receipt. This is exactly the real bug the original
+    // app found and fixed: an earlier version accidentally marked every
+    // notice as viewed the instant it loaded, which would have made the
+    // whole read-receipt feature worthless — a false "viewed" timestamp
+    // is arguably worse than no timestamp at all. The actual receipt
+    // only ever fires from handleExpandNotice below, a genuine,
+    // deliberate action.
+    const tenancyIds = (tenanciesRes.data || []).map((t: { id: string }) => t.id);
+    if (tenancyIds.length > 0) {
+      const { data: noticesData } = await supabase
+        .from("formal_notices")
+        .select("*")
+        .in("tenancy_id", tenancyIds)
+        .order("issued_at", { ascending: false });
+      setNotices(noticesData || []);
+    }
+
     setLoading(false);
+  }
+
+  // The real, deliberate view action — the only place a read receipt is
+  // ever allowed to fire, and only ever once per notice (the first
+  // view), matching the original's exact, carefully-tested behaviour.
+  async function handleExpandNotice(notice: FormalNotice) {
+    setExpandedNoticeId(expandedNoticeId === notice.id ? null : notice.id);
+    if (!notice.first_viewed_at) {
+      const { error } = await supabase
+        .from("formal_notices")
+        .update({ first_viewed_at: new Date().toISOString(), status: "acknowledged" })
+        .eq("id", notice.id);
+      if (!error) {
+        setNotices((prev) => prev.map((n) => (n.id === notice.id ? { ...n, first_viewed_at: new Date().toISOString(), status: "acknowledged" } : n)));
+      }
+    }
   }
 
   if (authLoading || loading) {
@@ -106,6 +148,42 @@ export default function TenantDashboard() {
       </div>
 
       <div className="px-4 py-4 space-y-5">
+        {notices.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Formal notices</p>
+            {notices.map((n) => (
+              <div key={n.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <button
+                  onClick={() => handleExpandNotice(n)}
+                  className="w-full flex justify-between items-center text-left"
+                >
+                  <div>
+                    <p className="text-xs font-semibold text-chs-charcoal">{NOTICE_TYPE_LABELS[n.notice_type]}</p>
+                    <p className="text-[10px] text-gray-400">Ref {n.reference} · {new Date(n.issued_at).toLocaleDateString()}</p>
+                  </div>
+                  <span className="text-gray-400 text-xs">{expandedNoticeId === n.id ? "▲" : "▼"}</span>
+                </button>
+                {expandedNoticeId === n.id && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+                    {Object.entries(n.details).map(([label, value]) =>
+                      value ? (
+                        <p key={label} className="text-[11px] text-gray-600">
+                          <span className="font-semibold text-chs-charcoal">{label}:</span> {value}
+                        </p>
+                      ) : null
+                    )}
+                    <p className="text-[9px] text-gray-400 mt-2">
+                      {n.first_viewed_at
+                        ? `Viewed ${new Date(n.first_viewed_at).toLocaleString()}`
+                        : "Marking as viewed now"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {tenancies.length > 0 && (
           <div>
             <p className="text-xs font-bold text-chs-charcoal mb-2">Active tenancy</p>
@@ -129,9 +207,25 @@ export default function TenantDashboard() {
                 >
                   Raise a dispute about this tenancy
                 </button>
+                <button
+                  onClick={() => setMessagingTenancy(t)}
+                  className="block mt-1 text-[10px] font-semibold text-chs-charcoal underline"
+                >
+                  💬 Message {t.manager_id ? "property manager" : "landlord"}
+                </button>
               </div>
             ))}
           </div>
+        )}
+
+        {messagingTenancy && session && (
+          <MessageThread
+            tenancyId={messagingTenancy.id}
+            session={session}
+            recipientId={messagingTenancy.manager_id || messagingTenancy.landlord_id}
+            recipientLabel={messagingTenancy.properties?.title || "Conversation"}
+            onClose={() => setMessagingTenancy(null)}
+          />
         )}
 
         {disputingTenancy && session && (

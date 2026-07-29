@@ -8,6 +8,10 @@ export interface EngageRequest {
   service_type: string;
   description: string;
   location: string | null;
-  status: "pending" | "contacted" | "agreement_signed";
+  category_details: Record<string, string>;
+  budget: string | null;
+  documents: string[];
+  admin_note: string | null;
+  status: "pending" | "accepted" | "rejected" | "more_info_requested" | "agreement_signed";
   created_at: string;
 }

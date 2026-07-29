@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
-import { formatNaira, purposeLabel } from "@/lib/format";
+import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
+import InterestButton from "@/components/InterestButton";
 import CommunityFeedback from "@/components/CommunityFeedback";
 import MediaRequests from "@/components/MediaRequests";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
@@ -105,6 +106,8 @@ export default async function PropertyDetailPage({
           {property.location_state ? `, ${property.location_state} State` : ""}
         </p>
 
+        <p className="text-[11px] text-gray-400 mb-3">{formatPostedAgo(property.created_at)}</p>
+
         <p className="text-2xl font-bold text-chs-charcoal mb-4">
           {property.purpose === "shortlet" && property.price_per_night ? (
             <>
@@ -155,8 +158,15 @@ export default async function PropertyDetailPage({
         </div>
 
         {/* Real booking/offer actions — genuinely wired to the actual
-            database, not a placeholder claiming to work. */}
-        <PropertyActions property={property} />
+            database, not a placeholder claiming to work. Only shown
+            once a property is genuinely verified — an unverified
+            listing shows the real interest-tracking flow instead,
+            matching the original app's exact, deliberate behaviour. */}
+        {isUnderVerification ? (
+          <InterestButton propertyId={property.id} propertyTitle={property.title} />
+        ) : (
+          <PropertyActions property={property} />
+        )}
 
         <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />
 

@@ -7,9 +7,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
+import MessageThread from "@/components/MessageThread";
 
 interface TenancyWithProperty {
   id: string;
+  tenant_id: string;
+  property_id: string;
   lease_start: string;
   lease_end: string;
   annual_rent: number;
@@ -40,6 +43,10 @@ export default function ManagerDashboard() {
   const [faults, setFaults] = useState<FaultWithQuotations[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [messagingTenancy, setMessagingTenancy] = useState<TenancyWithProperty | null>(null);
+  const [paymentHistoryTenancy, setPaymentHistoryTenancy] = useState<TenancyWithProperty | null>(null);
+  const [paymentRecords, setPaymentRecords] = useState<{ description: string | null; amount: number; created_at: string; direction: string }[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,7 +69,7 @@ export default function ManagerDashboard() {
 
     const { data: managedTenancies } = await supabase
       .from("tenancies")
-      .select("id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
+      .select("id, tenant_id, property_id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
       .eq("manager_id", session.user.id)
       .order("created_at", { ascending: false });
 
@@ -79,6 +86,18 @@ export default function ManagerDashboard() {
     }
 
     setLoading(false);
+  }
+
+  async function handleViewPaymentHistory(t: TenancyWithProperty) {
+    setPaymentHistoryTenancy(t);
+    setLoadingPayments(true);
+    const { data } = await supabase
+      .from("wallet_transactions")
+      .select("description, amount, created_at, direction")
+      .eq("user_id", t.tenant_id)
+      .order("created_at", { ascending: false });
+    setPaymentRecords(data || []);
+    setLoadingPayments(false);
   }
 
   async function handleApproveQuotation(faultId: string, vendor: string, amount: number) {
@@ -118,17 +137,114 @@ export default function ManagerDashboard() {
           {tenancies.length === 0 ? (
             <p className="text-sm text-gray-400">No tenancies assigned to you yet.</p>
           ) : (
-            tenancies.map((t) => (
-              <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
-                <p className="text-sm font-semibold text-chs-charcoal">{t.properties?.title}</p>
-                <p className="text-xs text-gray-500">{t.properties?.location_area}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  {t.lease_start} → {t.lease_end} — {formatNaira(t.annual_rent)}/year
-                </p>
-              </div>
-            ))
+            // Genuinely grouped by real property, rather than shown as
+            // one flat list — restoring the original app's real
+            // multi-unit estate view, but built from actual data
+            // instead of one hardcoded example. Deliberately honest
+            // about what can and can't be shown: there's no real record
+            // anywhere of a property's *total* unit count, so this
+            // shows exactly what's real — how many active tenancies
+            // exist at each property under this manager — rather than
+            // invent a "vacant units" figure with no genuine source.
+            Object.entries(
+              tenancies.reduce((groups, t) => {
+                const key = t.property_id;
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(t);
+                return groups;
+              }, {} as Record<string, TenancyWithProperty[]>)
+            ).map(([propertyId, group]) => {
+              const activeCount = group.filter((t) => t.status === "active").length;
+              return (
+                <div key={propertyId} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <p className="text-sm font-semibold text-chs-charcoal">{group[0].properties?.title}</p>
+                    <span className="text-[10px] font-bold text-chs-red bg-chs-amber-light px-2 py-0.5 rounded-full">
+                      {activeCount} active {activeCount === 1 ? "tenancy" : "tenancies"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{group[0].properties?.location_area}</p>
+
+                  {group.map((t) => (
+                    <div key={t.id} className="bg-gray-50 rounded-lg p-2.5 mb-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                          t.status === "active" ? "text-chs-red bg-chs-amber-light" : "text-gray-500 bg-gray-100"
+                        }`}>
+                          {t.status.replace(/_/g, " ")}
+                        </span>
+                        <span className="text-[10px] text-gray-500">{formatNaira(t.annual_rent)}/year</span>
+                      </div>
+                      <p className="text-[10px] text-gray-500 mt-1">{t.lease_start} → {t.lease_end}</p>
+                      <button
+                        onClick={() => setMessagingTenancy(t)}
+                        className="mt-1 text-[10px] font-semibold text-chs-red underline"
+                      >
+                        💬 Message tenant
+                      </button>
+                      <button
+                        onClick={() => handleViewPaymentHistory(t)}
+                        className="mt-1 ml-3 text-[10px] font-semibold text-chs-charcoal underline"
+                      >
+                        💳 Payment history
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            })
           )}
         </div>
+
+        {messagingTenancy && session && (
+          <MessageThread
+            tenancyId={messagingTenancy.id}
+            session={session}
+            recipientId={messagingTenancy.tenant_id}
+            recipientLabel={messagingTenancy.properties?.title || "Tenant"}
+            onClose={() => setMessagingTenancy(null)}
+          />
+        )}
+
+        {paymentHistoryTenancy && (
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-chs-charcoal">💳 Payment history — {paymentHistoryTenancy.properties?.title}</p>
+              <button onClick={() => setPaymentHistoryTenancy(null)} className="text-gray-400 text-lg">✕</button>
+            </div>
+            {loadingPayments ? (
+              <p className="text-xs text-gray-400 text-center py-4">Loading...</p>
+            ) : paymentRecords.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No payment records yet.</p>
+            ) : (
+              <>
+                <div className="bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+                  <p className="text-xs text-gray-500">
+                    Total paid to date:{" "}
+                    <span className="font-bold text-chs-red">
+                      {formatNaira(
+                        paymentRecords
+                          .filter((r) => r.direction === "credit")
+                          .reduce((sum, r) => sum + r.amount, 0)
+                      )}
+                    </span>
+                  </p>
+                </div>
+                {paymentRecords.map((r, i) => (
+                  <div key={i} className="border-b border-gray-100 py-2.5 last:border-0">
+                    <div className="flex justify-between">
+                      <p className="text-xs font-semibold text-chs-charcoal">{r.description || "Wallet transaction"}</p>
+                      <p className={`text-xs font-semibold ${r.direction === "credit" ? "text-green-700" : "text-gray-400"}`}>
+                        {r.direction === "credit" ? "+" : "−"}{formatNaira(r.amount)}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{new Date(r.created_at).toLocaleDateString()}</p>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
 
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-2">Maintenance requests ({faults.length})</p>

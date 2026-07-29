@@ -9,6 +9,7 @@ import { uploadPropertyPhoto } from "@/lib/storage";
 import { MarketplaceVendor, MarketplaceProduct, ListingType } from "@/types/marketplace";
 import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 import { ReferralFeeSetting } from "@/types/referralFee";
+import { BUILDING_MATERIALS_CATALOG, MATERIAL_SECTIONS } from "@/types/buildingMaterials";
 import { formatNaira } from "@/lib/format";
 
 const SERVICE_CATEGORIES = [
@@ -37,6 +38,10 @@ export default function VendorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [referralFee, setReferralFee] = useState<ReferralFeeSetting | null>(null);
+  const [materialSection, setMaterialSection] = useState(MATERIAL_SECTIONS[0]);
+  const [selectedMaterial, setSelectedMaterial] = useState("");
+  const [othersMaterialName, setOthersMaterialName] = useState("");
+  const [othersUnit, setOthersUnit] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -100,10 +105,26 @@ export default function VendorDashboard() {
     setLoading(false);
   }
 
+  const isBuildingMaterials = vendor?.category === "building_materials";
+  const currentMaterialEntry = BUILDING_MATERIALS_CATALOG[materialSection]?.find((m) => m.name === selectedMaterial);
+  const isOthersMaterial = currentMaterialEntry?.unit === null;
+
   async function handleAddProduct(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !vendor) {
-      setError("Please enter a name.");
+
+    // For building materials specifically, the real name and unit come
+    // from the real, standardised catalog — never free text — since
+    // that's what actually makes genuine price comparison between
+    // vendors possible in the first place.
+    const finalName = isBuildingMaterials
+      ? (isOthersMaterial ? othersMaterialName.trim() : selectedMaterial)
+      : name.trim();
+    const finalUnit = isBuildingMaterials
+      ? (isOthersMaterial ? othersUnit.trim() : currentMaterialEntry?.unit || "")
+      : priceUnit;
+
+    if (!finalName || !vendor) {
+      setError(isBuildingMaterials ? "Please select a material." : "Please enter a name.");
       return;
     }
     // A real product genuinely needs a real price — a service
@@ -120,11 +141,11 @@ export default function VendorDashboard() {
       .from("marketplace_products")
       .insert({
         vendor_id: vendor.id,
-        name: name.trim(),
+        name: finalName,
         category: vendor.category,
         listing_type: listingType,
         price: listingType === "service" ? null : price,
-        price_unit: listingType === "service" ? null : priceUnit,
+        price_unit: listingType === "service" ? null : finalUnit,
         description: description.trim() || null,
         photos: [],
       })
@@ -156,13 +177,23 @@ export default function VendorDashboard() {
   async function handleRespondToQuote(quoteId: string, response: string, amount: number | null) {
     if (!response.trim()) return;
     setActionError(null);
-    const { error } = await supabase
+    const { data: quote, error } = await supabase
       .from("service_quote_requests")
       .update({ status: "responded", vendor_response: response.trim(), quoted_amount: amount })
-      .eq("id", quoteId);
+      .eq("id", quoteId)
+      .select()
+      .single();
     if (error) {
       setActionError("Could not send this response. Please try again.");
       return;
+    }
+    if (quote) {
+      await supabase.rpc("notify_user", {
+        p_user_id: quote.requester_id,
+        p_title: "You received a quote response",
+        p_body: response.trim(),
+        p_link: "/marketplace",
+      });
     }
     loadData();
   }
@@ -244,17 +275,48 @@ export default function VendorDashboard() {
                 Service (quote-based)
               </button>
             </div>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-              placeholder={listingType === "service" ? "Service name (e.g. Estate Security Package)" : "Product name"}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            {isBuildingMaterials ? (
+              <>
+                <select value={materialSection} onChange={(e) => { setMaterialSection(e.target.value); setSelectedMaterial(""); }}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                  {MATERIAL_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select a material...</option>
+                  {(BUILDING_MATERIALS_CATALOG[materialSection] || []).map((m) => (
+                    <option key={m.name} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+                {isOthersMaterial && (
+                  <>
+                    <input type="text" value={othersMaterialName} onChange={(e) => setOthersMaterialName(e.target.value)}
+                      placeholder="Material name" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                    <input type="text" value={othersUnit} onChange={(e) => setOthersUnit(e.target.value)}
+                      placeholder="Pricing unit (e.g. per tonne)" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                  </>
+                )}
+                {selectedMaterial && !isOthersMaterial && (
+                  <p className="text-[10px] text-gray-400">
+                    Real, standardised unit for this material: <span className="font-semibold">{currentMaterialEntry?.unit}</span> — locked, so every vendor's price is genuinely comparable.
+                  </p>
+                )}
+              </>
+            ) : (
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                placeholder={listingType === "service" ? "Service name (e.g. Estate Security Package)" : "Product name"}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            )}
             {listingType === "product" ? (
               <div className="flex gap-2">
                 <input type="number" value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : parseInt(e.target.value))}
                   placeholder="Price (₦)" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)}
-                  className="px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                  {["per unit", "per bag", "per sqm", "per project"].map((u) => <option key={u}>{u}</option>)}
-                </select>
+                {!isBuildingMaterials && (
+                  <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)}
+                    className="px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                    {["per unit", "per bag", "per sqm", "per project"].map((u) => <option key={u}>{u}</option>)}
+                  </select>
+                )}
               </div>
             ) : (
               <p className="text-[10px] text-gray-400">

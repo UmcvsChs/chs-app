@@ -9,9 +9,11 @@ import { Property } from "@/types/property";
 import { Offer } from "@/types/offer";
 import { Inspection } from "@/types/inspection";
 import { RentalApplication } from "@/types/rentalApplication";
+import { EngageRequest } from "@/types/engageRequest";
 import { MediaRequest } from "@/types/mediaRequest";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import IssueNoticeForm from "@/components/IssueNoticeForm";
 
 interface TenancyBasic {
   id: string;
@@ -32,9 +34,12 @@ export default function OwnerDashboard() {
   const { session, profile, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
+  const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyBasic | null>(null);
+  const [issuingNoticeTenancy, setIssuingNoticeTenancy] = useState<TenancyBasic | null>(null);
+  const [noticeIssued, setNoticeIssued] = useState(false);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
 
   // A real access check — not just a UI nicety, since row-level security
@@ -100,25 +105,86 @@ export default function OwnerDashboard() {
       .select("id, tenant_id, property_id, status")
       .eq("landlord_id", session.user.id);
     setTenancies(ownedTenancies || []);
+
+    const { data: ownedEngageRequests } = await supabase
+      .from("engage_chs_requests")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .order("created_at", { ascending: false });
+    setEngageRequests(ownedEngageRequests || []);
     setLoading(false);
   }
 
   async function handleOfferDecision(offerId: string, status: "accepted" | "rejected") {
     setActionError(null);
-    const { error } = await supabase.from("offers").update({ status }).eq("id", offerId);
+    const { data: offer, error } = await supabase.from("offers").update({ status }).eq("id", offerId).select("*, properties(title)").single();
     if (error) {
       setActionError("Could not update this offer. Please try again.");
       return;
+    }
+    // A real notification for the actual buyer — this is exactly the
+    // gap the client specifically flagged: someone acting on something
+    // with no way to ever tell the other real person it happened.
+    if (offer) {
+      await supabase.rpc("notify_user", {
+        p_user_id: offer.buyer_id,
+        p_title: status === "accepted" ? "Your offer was accepted!" : "Your offer was declined",
+        p_body: status === "accepted"
+          ? "The owner has accepted your offer. CHS will be in touch about next steps."
+          : "The owner has declined your offer on this property.",
+        p_link: `/property/${offer.property_id}`,
+      });
+
+      // The exact real nudge restored from the original app — a
+      // genuine, real-world source of stale listings is an owner who
+      // simply forgets to mark a property unavailable once a deal
+      // closes. Nudging right at the moment the deal starts moving
+      // forward, not waiting until it's fully done, since that's the
+      // actual point the owner is genuinely thinking about it.
+      if (status === "accepted") {
+        const propertyTitle = (offer as unknown as { properties?: { title: string } }).properties?.title || "This property";
+        await supabase.rpc("notify_user", {
+          p_user_id: session!.user.id,
+          p_title: "📌 Reminder: update your listing status",
+          p_body: `${propertyTitle} — you've accepted an offer of ${formatNaira(offer.amount)}. Once this sale is finalised, remember to mark the listing as sold so buyers stop asking about a property that's no longer available.`,
+          p_link: `/property/${offer.property_id}`,
+        });
+      }
     }
     loadData();
   }
 
   async function handleApplicationDecision(applicationId: string, status: "approved" | "owner_declined") {
     setActionError(null);
-    const { error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId);
+    const { data: application, error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId).select("*, properties(title)").single();
     if (error) {
       setActionError("Could not update this application. Please try again.");
       return;
+    }
+    if (application) {
+      await supabase.rpc("notify_user", {
+        p_user_id: application.tenant_id,
+        p_title: status === "approved" ? "Your rental application was approved!" : "Your rental application was declined",
+        p_body: status === "approved"
+          ? "The owner has approved your application. CHS will be in touch about next steps."
+          : "The owner has declined your rental application for this property.",
+        p_link: "/tenant",
+      });
+
+      // The same real nudge pattern restored from the original app,
+      // adapted to this rebuild's actual flow — the closest equivalent
+      // real moment to the original's "tenancy agreement signed"
+      // trigger, since that's the point a rental deal genuinely starts
+      // moving toward completion here.
+      if (status === "approved") {
+        const propertyTitle = (application as unknown as { properties?: { title: string } }).properties?.title || "This property";
+        await supabase.rpc("notify_user", {
+          p_user_id: session!.user.id,
+          p_title: "📌 Reminder: update your listing status",
+          p_body: `${propertyTitle} — you've approved a rental application. Once the tenancy is finalised, remember to mark this property occupied so prospective tenants stop asking about a unit that's no longer available.`,
+          p_link: `/property/${application.property_id}`,
+        });
+      }
     }
     loadData();
   }
@@ -273,14 +339,73 @@ export default function OwnerDashboard() {
           {tenancies.map((t) => (
             <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
               <span className="text-xs text-gray-500 capitalize">{t.status}</span>
-              <button
-                onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
-                className="text-[10px] font-semibold text-chs-red underline"
-              >
-                Raise a dispute
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setIssuingNoticeTenancy(t); setNoticeIssued(false); }}
+                  className="text-[10px] font-semibold text-chs-charcoal underline"
+                >
+                  Issue notice
+                </button>
+                <button
+                  onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
+                  className="text-[10px] font-semibold text-chs-red underline"
+                >
+                  Raise a dispute
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {engageRequests.length > 0 && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">My CHS Service Requests</p>
+          {engageRequests.map((r) => (
+            <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-semibold text-chs-charcoal">{r.service_type}</p>
+                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                  r.status === "accepted" || r.status === "agreement_signed" ? "text-chs-red bg-chs-amber-light" :
+                  r.status === "rejected" ? "text-gray-500 bg-gray-100" :
+                  "text-chs-amber-dark bg-chs-amber-light"
+                }`}>
+                  {r.status.replace(/_/g, " ")}
+                </span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-0.5">Ref {r.reference}</p>
+              {r.admin_note && (
+                <p className="text-xs text-gray-600 mt-1.5 bg-gray-50 rounded-lg p-2">{r.admin_note}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {issuingNoticeTenancy && session && (
+        <div className="px-4 pb-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            {noticeIssued ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Notice issued</p>
+                <p className="text-xs text-gray-500 mb-3">This is now recorded permanently — the tenant has been notified, and the exact moment they open it will be logged here too.</p>
+                <button onClick={() => setIssuingNoticeTenancy(null)} className="text-xs font-semibold text-chs-red">
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-chs-charcoal mb-3">📋 Issue a Formal Notice</p>
+                <IssueNoticeForm
+                  tenancyId={issuingNoticeTenancy.id}
+                  tenantId={issuingNoticeTenancy.tenant_id}
+                  session={session}
+                  onSuccess={() => setNoticeIssued(true)}
+                  onCancel={() => setIssuingNoticeTenancy(null)}
+                />
+              </>
+            )}
+          </div>
         </div>
       )}
 

@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 
-const NIGERIAN_STATES = ["Kaduna", "Abuja (FCT)", "Kano", "Lagos"];
+import { NIGERIAN_STATES } from "@/lib/geoData";
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 const PROFESSIONS = [
   "Estate Surveyor & Valuer", "Property Manager", "Quantity Surveyor",
