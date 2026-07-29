@@ -26,6 +26,9 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true);
   const [showFundForm, setShowFundForm] = useState(false);
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null);
+  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState<number | "">("");
+  const [withdrawing, setWithdrawing] = useState(false);
   const [fundAmount, setFundAmount] = useState<number | "">("");
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
@@ -65,15 +68,50 @@ export default function WalletPage() {
   // genuinely *allowed*; actually moving money out still needs a real
   // payout integration with a payment provider, the same category of
   // work already disclosed for Paystack funding.
-  async function handleWithdrawClick() {
+  async function handleWithdrawSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (!session) return;
-    setWithdrawMessage(null);
-    const result = await checkWithdrawalAllowed(session.user.id);
-    if (!result.allowed) {
-      setWithdrawMessage(result.message || "Withdrawals are currently paused.");
+    if (!withdrawAmount || withdrawAmount < 1000) {
+      setWithdrawMessage("Please enter a valid amount (minimum ₦1,000).");
       return;
     }
-    setWithdrawMessage("✓ Withdrawal request submitted — funds reflect in your bank account within 24 hours.");
+
+    setWithdrawMessage(null);
+
+    // The real, upfront convenience check — the actual protection is
+    // the same check re-run server-side inside the Edge Function below,
+    // since a client-side check alone could be bypassed.
+    const preCheck = await checkWithdrawalAllowed(session.user.id);
+    if (!preCheck.allowed) {
+      setWithdrawMessage(preCheck.message || "Withdrawals are currently paused.");
+      return;
+    }
+
+    setWithdrawing(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/initiate-withdrawal`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionData.session?.access_token}`,
+        },
+        body: JSON.stringify({ amount: withdrawAmount }),
+      }
+    );
+    const result = await response.json();
+    setWithdrawing(false);
+
+    if (!response.ok || result.error) {
+      setWithdrawMessage(result.error || "Could not complete this withdrawal.");
+      return;
+    }
+
+    setWithdrawMessage("✓ Withdrawal submitted — funds reflect in your bank account shortly.");
+    setWithdrawAmount("");
+    setShowWithdrawForm(false);
+    loadData();
   }
 
   async function handleFundWallet(e: React.FormEvent) {
@@ -158,12 +196,28 @@ export default function WalletPage() {
             {withdrawMessage && (
               <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{withdrawMessage}</p>
             )}
-            <button
-              onClick={handleWithdrawClick}
-              className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold"
-            >
-              Withdraw
-            </button>
+            {!showWithdrawForm ? (
+              <button
+                onClick={() => { setShowWithdrawForm(true); setWithdrawMessage(null); }}
+                className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold"
+              >
+                Withdraw
+              </button>
+            ) : (
+              <form onSubmit={handleWithdrawSubmit} className="space-y-2">
+                <CurrencyInput value={withdrawAmount} onChange={setWithdrawAmount} placeholder="Amount to withdraw (₦)" />
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowWithdrawForm(false)}
+                    className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={withdrawing}
+                    className="flex-1 py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
+                    {withdrawing ? "Processing..." : "Confirm withdrawal"}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {profile && <BankAccountSecurity session={session!} registeredName={profile.full_name} />}
 
