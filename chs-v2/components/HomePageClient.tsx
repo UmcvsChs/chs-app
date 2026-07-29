@@ -131,6 +131,12 @@ export default function HomePageClient({ properties }: { properties: Property[] 
           ))
         )}
       </main>
+
+      <footer className="px-4 py-6 flex justify-center gap-4 text-[11px] text-gray-400 border-t border-gray-100 mt-4">
+        <Link href="/about" className="underline">About CHS</Link>
+        <Link href="/blog" className="underline">CHS Insights</Link>
+        <Link href="/terms" className="underline">Terms & Conditions</Link>
+      </footer>
     </div>
   );
 }
