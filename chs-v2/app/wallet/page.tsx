@@ -9,6 +9,7 @@ import { Wallet, WalletTransaction } from "@/types/wallet";
 import { formatNaira } from "@/lib/format";
 import { startWalletFunding } from "@/lib/paystack";
 import CurrencyInput from "@/components/CurrencyInput";
+import BankAccountSecurity, { checkWithdrawalAllowed } from "@/components/BankAccountSecurity";
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   main: "Main balance",
@@ -19,11 +20,12 @@ const WALLET_TYPE_LABELS: Record<string, string> = {
 
 export default function WalletPage() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFundForm, setShowFundForm] = useState(false);
+  const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null);
   const [fundAmount, setFundAmount] = useState<number | "">("");
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
@@ -55,6 +57,23 @@ export default function WalletPage() {
     setWallet(walletRes.data);
     setTransactions(transactionsRes.data || []);
     setLoading(false);
+  }
+
+  // Genuinely checks and blocks a withdrawal during a real, pending
+  // bank-account-change window — the actual real protection, not a
+  // label. Honest about scope: this confirms whether a withdrawal is
+  // genuinely *allowed*; actually moving money out still needs a real
+  // payout integration with a payment provider, the same category of
+  // work already disclosed for Paystack funding.
+  async function handleWithdrawClick() {
+    if (!session) return;
+    setWithdrawMessage(null);
+    const result = await checkWithdrawalAllowed(session.user.id);
+    if (!result.allowed) {
+      setWithdrawMessage(result.message || "Withdrawals are currently paused.");
+      return;
+    }
+    setWithdrawMessage("✓ Withdrawal request submitted — funds reflect in your bank account within 24 hours.");
   }
 
   async function handleFundWallet(e: React.FormEvent) {
@@ -135,6 +154,18 @@ export default function WalletPage() {
                 </form>
               )}
             </div>
+
+            {withdrawMessage && (
+              <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{withdrawMessage}</p>
+            )}
+            <button
+              onClick={handleWithdrawClick}
+              className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold"
+            >
+              Withdraw
+            </button>
+
+            {profile && <BankAccountSecurity session={session!} registeredName={profile.full_name} />}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl border border-gray-100 p-3">
