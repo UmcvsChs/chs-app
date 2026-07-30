@@ -10,6 +10,7 @@ import { MarketplaceVendor, MarketplaceProduct, ListingType } from "@/types/mark
 import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 import { ReferralFeeSetting } from "@/types/referralFee";
 import { BUILDING_MATERIALS_CATALOG, MATERIAL_SECTIONS } from "@/types/buildingMaterials";
+import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import { formatNaira } from "@/lib/format";
 
 const SERVICE_CATEGORIES = [
@@ -25,6 +26,14 @@ export default function VendorDashboard() {
   const { session, loading: authLoading } = useAuth();
   const [vendor, setVendor] = useState<MarketplaceVendor | null>(null);
   const [products, setProducts] = useState<ProductWithQuotes[]>([]);
+  const [bundles, setBundles] = useState<MarketplaceBundle[]>([]);
+  const [showBundleForm, setShowBundleForm] = useState(false);
+  const [bundleName, setBundleName] = useState("");
+  const [bundleItems, setBundleItems] = useState("");
+  const [bundlePrice, setBundlePrice] = useState<number | "">("");
+  const [bundleDescription, setBundleDescription] = useState("");
+  const [bundleSubmitting, setBundleSubmitting] = useState(false);
+  const [bundleError, setBundleError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
@@ -101,6 +110,13 @@ export default function VendorDashboard() {
         })
       );
       setProducts(withQuotes);
+
+      const { data: bundlesData } = await supabase
+        .from("marketplace_bundles")
+        .select("*")
+        .eq("vendor_id", vendorData.id)
+        .order("created_at", { ascending: false });
+      setBundles(bundlesData || []);
     }
     setLoading(false);
   }
@@ -166,6 +182,46 @@ export default function VendorDashboard() {
     setName(""); setPrice(""); setDescription(""); setPhoto(null); setShowForm(false);
     loadData();
     setSubmitting(false);
+  }
+
+  async function handleCreateBundle(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bundleName.trim() || !bundleItems.trim() || !bundlePrice || !vendor) {
+      setBundleError("Please fill in the bundle name, what's included, and the price.");
+      return;
+    }
+    setBundleError(null);
+    setBundleSubmitting(true);
+
+    // Deliberately its own real record, sitting alongside individual
+    // products rather than replacing them — matching the original
+    // app's own explicit design note, so a buyer comparing prices on a
+    // specific material still sees this vendor's individual listing
+    // for it too.
+    const { error: insertError } = await supabase.from("marketplace_bundles").insert({
+      vendor_id: vendor.id,
+      bundle_name: bundleName.trim(),
+      category: vendor.category,
+      items_included: bundleItems.trim(),
+      price: bundlePrice,
+      description: bundleDescription.trim() || null,
+    });
+
+    if (insertError) {
+      setBundleError("Could not create this bundle. Please try again.");
+      setBundleSubmitting(false);
+      return;
+    }
+
+    setBundleName(""); setBundleItems(""); setBundlePrice(""); setBundleDescription(""); setShowBundleForm(false);
+    loadData();
+    setBundleSubmitting(false);
+  }
+
+  async function toggleBundleStatus(bundleId: string, currentStatus: string) {
+    const newStatus = currentStatus === "delisted" ? "active" : "delisted";
+    await supabase.from("marketplace_bundles").update({ status: newStatus }).eq("id", bundleId);
+    loadData();
   }
 
   async function toggleSoldOut(productId: string, currentStatus: string) {
@@ -369,6 +425,61 @@ export default function VendorDashboard() {
           ))
         )}
       </div>
+
+      {!SERVICE_CATEGORIES.includes(vendor.category) && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">My Bundles ({bundles.length})</p>
+          <p className="text-[10px] text-gray-400 mb-2">
+            Bundles sit alongside your individual listings, not instead of them — buyers comparing prices on a specific item still see your individual listing for it.
+          </p>
+
+          <button onClick={() => setShowBundleForm(!showBundleForm)}
+            className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold mb-3">
+            {showBundleForm ? "Cancel" : "📦 Create a Bundle"}
+          </button>
+
+          {showBundleForm && (
+            <form onSubmit={handleCreateBundle} className="bg-white rounded-xl border border-gray-100 p-4 mb-3 space-y-2">
+              <input type="text" value={bundleName} onChange={(e) => setBundleName(e.target.value)}
+                placeholder="Bundle name (e.g. Foundation Materials Starter Package)"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <textarea value={bundleItems} onChange={(e) => setBundleItems(e.target.value)} rows={3}
+                placeholder="What's included (e.g. 50 bags cement, 3 trips sharp sand, 500 blocks)"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <input type="number" value={bundlePrice} onChange={(e) => setBundlePrice(e.target.value === "" ? "" : parseInt(e.target.value))}
+                placeholder="Bundle price (₦)" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <textarea value={bundleDescription} onChange={(e) => setBundleDescription(e.target.value)} rows={2}
+                placeholder="Description (optional) — delivery terms, suitable project size, etc."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              {bundleError && <p className="text-xs text-chs-red">{bundleError}</p>}
+              <button type="submit" disabled={bundleSubmitting}
+                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                {bundleSubmitting ? "Creating..." : "Create bundle"}
+              </button>
+            </form>
+          )}
+
+          {bundles.length === 0 ? (
+            <p className="text-sm text-gray-400">No bundles created yet.</p>
+          ) : (
+            bundles.map((b) => (
+              <div key={b.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div className="flex justify-between items-center">
+                  <p className="text-xs font-semibold text-chs-charcoal">{b.bundle_name}</p>
+                  <button onClick={() => toggleBundleStatus(b.id, b.status)}
+                    className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
+                      b.status === "delisted" ? "bg-gray-100 text-gray-500" : "bg-chs-amber-light text-chs-amber-dark"
+                    }`}>
+                    {b.status === "delisted" ? "Relist" : "Delist"}
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1">{b.items_included}</p>
+                <p className="text-xs font-bold text-chs-charcoal mt-1">{formatNaira(b.price)}</p>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

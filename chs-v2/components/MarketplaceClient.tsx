@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
+import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import { formatNaira } from "@/lib/format";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -21,7 +22,8 @@ const CATEGORY_TABS: { value: MarketplaceCategory | "all"; label: string }[] = [
   { value: "facilities_maintenance", label: "Facilities Maintenance" },
 ];
 
-export default function MarketplaceClient({ products }: { products: MarketplaceProduct[] }) {
+export default function MarketplaceClient({ products, bundles }: { products: MarketplaceProduct[]; bundles: MarketplaceBundle[] }) {
+  const [view, setView] = useState<"items" | "bundles">("items");
   const { session } = useAuth();
   const [activeCategory, setActiveCategory] = useState<MarketplaceCategory | "all">("all");
   const [quoteFormFor, setQuoteFormFor] = useState<string | null>(null);
@@ -88,6 +90,37 @@ export default function MarketplaceClient({ products }: { products: MarketplaceP
         ))}
       </nav>
 
+      <div className="flex gap-2 px-4 pt-3">
+        <button
+          onClick={() => setView("items")}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold ${view === "items" ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"}`}
+        >
+          Individual Items
+        </button>
+        <button
+          onClick={() => setView("bundles")}
+          className={`flex-1 py-2 rounded-full text-xs font-semibold ${view === "bundles" ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"}`}
+        >
+          📦 Bundles ({bundles.length})
+        </button>
+      </div>
+
+      {view === "bundles" ? (
+        <main className="px-4 py-4 space-y-3">
+          {bundles.length === 0 ? (
+            <p className="text-center text-sm text-gray-400 py-12">No bundles available yet.</p>
+          ) : (
+            bundles.map((bundle) => (
+              <div key={bundle.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                <p className="text-sm font-bold text-chs-charcoal">{bundle.bundle_name}</p>
+                <p className="text-xs text-gray-500 mt-1">{bundle.items_included}</p>
+                {bundle.description && <p className="text-xs text-gray-400 mt-1 italic">{bundle.description}</p>}
+                <p className="text-lg font-bold text-chs-red mt-2">{formatNaira(bundle.price)}</p>
+              </div>
+            ))
+          )}
+        </main>
+      ) : (
       <main className="px-4 py-4 grid grid-cols-2 gap-3">
         {filtered.length === 0 ? (
           <p className="col-span-full text-center text-sm text-gray-400 py-12">
@@ -157,6 +190,7 @@ export default function MarketplaceClient({ products }: { products: MarketplaceP
           ))
         )}
       </main>
+      )}
     </div>
   );
 }
