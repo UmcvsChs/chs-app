@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +16,8 @@ export default function EngageChsPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [serviceType, setServiceType] = useState(ENGAGE_SERVICE_TYPES[0]);
+  const [ownedProperties, setOwnedProperties] = useState<{ id: string; title: string }[]>([]);
+  const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [categoryValues, setCategoryValues] = useState<Record<string, string>>({});
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
@@ -26,6 +28,19 @@ export default function EngageChsPage() {
   const [success, setSuccess] = useState(false);
 
   const categoryFields = ENGAGE_CATEGORY_FIELDS[serviceType] || [];
+
+  useEffect(() => {
+    if (!session) return;
+    // Real property list, needed specifically so a "Full property
+    // management" request can genuinely be tied to one real property —
+    // without this, there'd be no real way to know which property to
+    // delegate once the request is accepted.
+    supabase
+      .from("properties")
+      .select("id, title")
+      .eq("owner_id", session.user.id)
+      .then(({ data }) => setOwnedProperties(data || []));
+  }, [session]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,6 +71,7 @@ export default function EngageChsPage() {
         description: description.trim(),
         location: location.trim() || null,
         category_details: categoryDetails,
+        property_id: selectedPropertyId || null,
         budget: budget.trim() || "Not specified",
       })
       .select()
@@ -118,6 +134,20 @@ export default function EngageChsPage() {
               {ENGAGE_SERVICE_TYPES.map((s) => <option key={s}>{s}</option>)}
             </select>
           </div>
+
+          {ownedProperties.length > 0 && (
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Which property is this about? (optional)</label>
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => setSelectedPropertyId(e.target.value)}
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+              >
+                <option value="">Not tied to a specific listed property</option>
+                {ownedProperties.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            </div>
+          )}
 
           {categoryFields.map((f) => (
             <div key={f.id}>

@@ -5,6 +5,7 @@ export interface EngageRequest {
   id: string;
   reference: string;
   owner_id: string;
+  property_id: string | null;
   service_type: string;
   description: string;
   location: string | null;

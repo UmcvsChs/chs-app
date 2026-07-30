@@ -10,6 +10,7 @@ import { Dispute } from "@/types/dispute";
 import { CommunityFeedback } from "@/types/communityFeedback";
 import { EngageRequest } from "@/types/engageRequest";
 import { MarketplaceVendor } from "@/types/marketplace";
+import { FaultReport } from "@/types/faultReport";
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import { formatNaira } from "@/lib/format";
 
@@ -30,7 +31,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals";
+type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
+  const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -67,7 +69,7 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
@@ -77,6 +79,7 @@ export default function AdminDashboard() {
       supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
       supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
       supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }),
+      supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
     setPendingApplications(applicationsRes.data || []);
@@ -87,6 +90,7 @@ export default function AdminDashboard() {
     setPendingVendors(vendorsRes.data || []);
     setFeeSettings(feeSettingsRes.data || []);
     setOwedFees(owedFeesRes.data || []);
+    setUnroutedFaults((faultsRes.data as typeof unroutedFaults) || []);
     setLoading(false);
   }
 
@@ -226,6 +230,18 @@ export default function AdminDashboard() {
         p_title: "✓ Request accepted",
         p_body: `${request.service_type} (Ref ${request.reference}) accepted — proceeding to agreement.`,
       });
+
+      // The actual, real behavior change this whole feature was
+      // missing — not just the message shown above, but genuinely
+      // updating every real tenancy tied to this real property, so
+      // maintenance approvals actually start routing to the manager
+      // instead of the owner from this point forward.
+      if (serviceType === "Full property management" && request.property_id) {
+        await supabase
+          .from("tenancies")
+          .update({ management_delegated: true })
+          .eq("property_id", request.property_id);
+      }
     }
     loadData();
   }
@@ -318,6 +334,36 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  // The actual, real fix this entire piece was about — genuinely
+  // checking the real tenancy's delegation status before deciding
+  // whether this fault goes to the real owner or the real manager for
+  // approval, rather than always defaulting to the owner regardless.
+  async function handleSendFaultForApproval(fault: (typeof unroutedFaults)[number]) {
+    setActionError(null);
+    const isDelegated = fault.tenancies?.management_delegated === true;
+    const newStatus = isDelegated ? "awaiting_manager_approval" : "awaiting_owner_approval";
+
+    const { error } = await supabase.from("fault_reports").update({ status: newStatus }).eq("id", fault.id);
+    if (error) {
+      setActionError("Could not update this fault report. Please try again.");
+      return;
+    }
+
+    // Notifies the genuinely correct real person — the manager if this
+    // property's management is truly delegated, the owner otherwise —
+    // never both, and never guessing.
+    const notifyTarget = isDelegated ? fault.tenancies?.manager_id : fault.tenancies?.landlord_id;
+    if (notifyTarget) {
+      await supabase.rpc("notify_user", {
+        p_user_id: notifyTarget,
+        p_title: "A maintenance quote needs your approval",
+        p_body: `${fault.category} — ${fault.description.slice(0, 80)}`,
+        p_link: isDelegated ? "/manager" : "/owner",
+      });
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -339,6 +385,7 @@ export default function AdminDashboard() {
           { key: "engage", label: `Engage CHS (${pendingEngage.length})` },
           { key: "vendors", label: `Vendors (${pendingVendors.length})` },
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})` },
+          { key: "faults", label: `Maintenance (${unroutedFaults.length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -542,6 +589,39 @@ export default function AdminDashboard() {
                   )}
                 </div>
               ))
+            )}
+          </>
+        )}
+
+        {activeTab === "faults" && (
+          <>
+            <p className="text-[10px] text-gray-400 mb-2">
+              Faults not yet sent for approval — each one is genuinely routed to the manager if that property&apos;s management is truly delegated, or the owner otherwise.
+            </p>
+            {unroutedFaults.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No maintenance requests awaiting routing.</p>
+            ) : (
+              unroutedFaults.map((f) => {
+                const isDelegated = f.tenancies?.management_delegated === true;
+                return (
+                  <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{f.category}</p>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${isDelegated ? "bg-chs-amber-light text-chs-amber-dark" : "bg-gray-100 text-gray-500"}`}>
+                        {isDelegated ? "Delegated → Manager" : "→ Owner"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">{f.description}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 capitalize">Status: {f.status.replace(/_/g, " ")}</p>
+                    <button
+                      onClick={() => handleSendFaultForApproval(f)}
+                      className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
+                    >
+                      Send for approval → {isDelegated ? "Manager" : "Owner"}
+                    </button>
+                  </div>
+                );
+              })
             )}
           </>
         )}
