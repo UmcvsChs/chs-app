@@ -84,6 +84,9 @@ export default function HomePageClient({ properties }: { properties: Property[] 
                   Manager
                 </Link>
               )}
+              <Link href="/artisan" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Artisan
+              </Link>
               {profile.role === "admin" && (
                 <Link href="/admin" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                   Admin

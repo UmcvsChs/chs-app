@@ -5,6 +5,7 @@ import { Property } from "@/types/property";
 import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
 import InterestButton from "@/components/InterestButton";
+import CurrencyReference from "@/components/CurrencyReference";
 import CommunityFeedback from "@/components/CommunityFeedback";
 import MediaRequests from "@/components/MediaRequests";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
@@ -108,7 +109,7 @@ export default async function PropertyDetailPage({
 
         <p className="text-[11px] text-gray-400 mb-3">{formatPostedAgo(property.created_at)}</p>
 
-        <p className="text-2xl font-bold text-chs-charcoal mb-4">
+        <p className="text-2xl font-bold text-chs-charcoal mb-1">
           {property.purpose === "shortlet" && property.price_per_night ? (
             <>
               {formatNaira(property.price_per_night)}
@@ -123,6 +124,10 @@ export default async function PropertyDetailPage({
             </>
           )}
         </p>
+
+        <CurrencyReference nairaAmount={property.purpose === "shortlet" && property.price_per_night ? property.price_per_night : property.price} />
+
+        <div className="mb-3" />
 
         {property.description && (
           <p className="text-sm text-gray-700 leading-relaxed mb-4">{property.description}</p>

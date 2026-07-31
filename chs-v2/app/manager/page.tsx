@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
+import RateArtisanForm from "@/components/RateArtisanForm";
 
 interface TenancyWithProperty {
   id: string;
@@ -79,7 +80,7 @@ export default function ManagerDashboard() {
       const tenancyIds = managedTenancies.map((t) => t.id);
       const { data: faultData } = await supabase
         .from("fault_reports")
-        .select("*, fault_quotations(*)")
+        .select("*, fault_quotations(*, artisans(user_id))")
         .in("tenancy_id", tenancyIds)
         .order("created_at", { ascending: false });
       setFaults((faultData as unknown as FaultWithQuotations[]) || []);
@@ -267,18 +268,35 @@ export default function ManagerDashboard() {
                       Quotations ({fault.fault_quotations.length})
                     </p>
                     {fault.fault_quotations.map((q) => (
-                      <div key={q.id} className="bg-gray-50 rounded-lg p-2 mb-1.5 text-xs flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold">{q.vendor_name}</p>
-                          <p className="text-gray-500">{formatNaira(q.amount)}</p>
+                      <div key={q.id} className="bg-gray-50 rounded-lg p-2 mb-1.5 text-xs">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold">{q.vendor_name}</p>
+                            <p className="text-gray-500">{formatNaira(q.amount)}</p>
+                          </div>
+                          {fault.status === "awaiting_manager_approval" && (
+                            <button
+                              onClick={() => handleApproveQuotation(fault.id, q.vendor_name, q.amount)}
+                              className="py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold"
+                            >
+                              Approve
+                            </button>
+                          )}
                         </div>
-                        {fault.status === "awaiting_manager_approval" && (
-                          <button
-                            onClick={() => handleApproveQuotation(fault.id, q.vendor_name, q.amount)}
-                            className="py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold"
-                          >
-                            Approve
-                          </button>
+                        {/* Real rating/dispute — only ever reachable once
+                            this specific job is genuinely resolved, and
+                            only for a real, registered artisan's quote,
+                            never a free-text vendor with no real account
+                            to attach a rating to. */}
+                        {fault.status === "resolved" && q.artisan_id && q.artisans?.user_id && session && (
+                          <RateArtisanForm
+                            faultReportId={fault.id}
+                            artisanId={q.artisan_id}
+                            artisanUserId={q.artisans.user_id}
+                            session={session}
+                            alreadyRated={false}
+                            onDone={loadData}
+                          />
                         )}
                       </div>
                     ))}

@@ -9,9 +9,11 @@ export interface FaultQuotation {
   fault_report_id: string;
   vendor_name: string;
   amount: number;
-  submitted_by: "chs_vendor" | "owner" | "tenant";
+  submitted_by: "chs_vendor" | "owner" | "tenant" | "artisan";
   note: string | null;
   flag: "good" | "caution" | null;
+  artisan_id: string | null;
+  artisans?: { user_id: string } | null;
   created_at: string;
 }
 
