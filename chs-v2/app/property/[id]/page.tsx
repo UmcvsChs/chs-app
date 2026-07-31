@@ -84,6 +84,13 @@ export default async function PropertyDetailPage({
         )}
       </div>
 
+      {property.video_url && (
+        <div className="px-4 pt-3">
+          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">🎥 Video walkthrough</p>
+          <video controls className="w-full rounded-lg" src={property.video_url} />
+        </div>
+      )}
+
       {isUnderVerification && (
         <div className="bg-chs-amber-light text-chs-amber-dark text-xs font-semibold px-4 py-3 border-b border-chs-amber/30">
           ⏳ Under Verification — CHS is still confirming this property&apos;s documents.

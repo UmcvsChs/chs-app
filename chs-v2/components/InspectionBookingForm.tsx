@@ -3,9 +3,12 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
+import { calcInspectionFee, AREA_MEETING_POINTS, CHS_OFFICE } from "@/lib/inspectionFee";
+import { formatNaira } from "@/lib/format";
 
 interface InspectionBookingFormProps {
   propertyId: string;
+  propertyLocation: string;
   session: Session;
   onSuccess: () => void;
 }
@@ -29,6 +32,7 @@ function hasEnoughNotice(date: string, time: string): boolean {
 
 export default function InspectionBookingForm({
   propertyId,
+  propertyLocation,
   session,
   onSuccess,
 }: InspectionBookingFormProps) {
@@ -37,6 +41,13 @@ export default function InspectionBookingForm({
   const [meetingPoint, setMeetingPoint] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The real, distance-based fee — restored exactly from the original
+  // app: CHS Office at Leventis Roundabout as the fixed reference
+  // point, calculated the moment the property's real location is
+  // known, genuinely fair and split evenly, not an arbitrary flat fee.
+  const fee = calcInspectionFee(propertyLocation);
+  const suggestedMeetingPoints = fee.areaKey ? AREA_MEETING_POINTS[fee.areaKey] || [] : [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,6 +74,7 @@ export default function InspectionBookingForm({
       requested_date: date,
       requested_time: time,
       meeting_point: meetingPoint.trim(),
+      transport_fee: fee.perPersonFee,
     });
 
     if (insertError) {
@@ -83,6 +95,14 @@ export default function InspectionBookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="bg-chs-amber-light rounded-lg px-3 py-2.5">
+        <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport fee — calculated by distance</p>
+        <p className="text-xs text-chs-amber-dark">
+          ~{fee.distanceKm}km from {CHS_OFFICE} — {formatNaira(fee.totalFee)} round trip, split evenly.
+        </p>
+        <p className="text-sm font-bold text-chs-amber-dark mt-1">Your share: {formatNaira(fee.perPersonFee)}</p>
+      </div>
+
       <div>
         <label className="text-xs font-semibold text-gray-600">Preferred date</label>
         <input
@@ -103,6 +123,22 @@ export default function InspectionBookingForm({
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Meeting point</label>
+        {suggestedMeetingPoints.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-1 mb-1.5">
+            {suggestedMeetingPoints.map((point) => (
+              <button
+                key={point}
+                type="button"
+                onClick={() => setMeetingPoint(point)}
+                className={`text-[10px] px-2 py-1 rounded-full border ${
+                  meetingPoint === point ? "bg-chs-red text-white border-chs-red" : "bg-white text-gray-600 border-gray-200"
+                }`}
+              >
+                {point}
+              </button>
+            ))}
+          </div>
+        )}
         <input
           type="text"
           value={meetingPoint}

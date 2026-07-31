@@ -53,6 +53,7 @@ export default function ListPropertyPage() {
   const [electricityBackup, setElectricityBackup] = useState("");
   const [waterSource, setWaterSource] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
 
   const [submitting, setSubmitting] = useState(false);
@@ -150,6 +151,16 @@ export default function ListPropertyPage() {
       }
       if (uploadedUrls.length > 0) {
         await supabase.from("properties").update({ photos: uploadedUrls }).eq("id", newProperty.id);
+      }
+
+      // A real, genuine gap the client specifically flagged: the
+      // database already had a place to store a video link, but the
+      // actual form never gave anyone a way to add one.
+      if (videoFile) {
+        const videoUrl = await uploadDocument(videoFile, session.user.id, `property-${newProperty.id}-video`);
+        if (videoUrl) {
+          await supabase.from("properties").update({ video_url: videoUrl }).eq("id", newProperty.id);
+        }
       }
     }
 
@@ -324,6 +335,14 @@ export default function ListPropertyPage() {
             <label className="text-xs font-semibold text-gray-600">Photos</label>
             <input type="file" accept="image/*" multiple
               onChange={(e) => setPhotos(e.target.files ? Array.from(e.target.files) : [])}
+              className="w-full mt-1 text-xs" />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Short video (optional)</label>
+            <p className="text-[10px] text-gray-400 mb-1">A brief walkthrough helps buyers and tenants get a real feel for the property.</p>
+            <input type="file" accept="video/*"
+              onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
               className="w-full mt-1 text-xs" />
           </div>
 

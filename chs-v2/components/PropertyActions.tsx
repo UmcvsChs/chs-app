@@ -151,6 +151,7 @@ export default function PropertyActions({ property }: { property: Property }) {
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <InspectionBookingForm
           propertyId={property.id}
+          propertyLocation={`${property.location_area || ""} ${property.location_lga || ""} ${property.location_state || ""}`}
           session={session}
           onSuccess={() => setInspectionSuccess(true)}
         />
