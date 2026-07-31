@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import SplashScreen from "@/components/SplashScreen";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // CHS's real, established typography — Playfair Display for headings
 // (used throughout this whole project's branding work) and Inter for
@@ -41,6 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">
+        <ServiceWorkerRegistration />
         <SplashScreen />
         <AuthProvider>{children}</AuthProvider>
       </body>
