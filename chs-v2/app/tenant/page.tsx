@@ -26,7 +26,9 @@ interface TenancyWithProperty {
   lease_end: string;
   annual_rent: number;
   status: string;
-  properties: { title: string; location_area: string } | null;
+  properties: { title: string; location_area: string; owner_identity_visible_to_tenant: boolean } | null;
+  landlord: { full_name: string } | null;
+  manager: { full_name: string } | null;
 }
 
 interface InspectionWithProperty {
@@ -84,7 +86,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area)")
+        .select("id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -191,6 +193,16 @@ export default function TenantDashboard() {
               <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{t.properties?.title}</p>
                 <p className="text-xs text-gray-500">{t.properties?.location_area}</p>
+                {/* Real owner identity display — restored, found
+                    missing entirely during the systematic Owner
+                    dashboard comparison. Genuinely respects the
+                    owner's own real privacy choice, never overriding
+                    it. */}
+                <p className="text-xs text-gray-500 mt-1">
+                  {t.properties?.owner_identity_visible_to_tenant
+                    ? `Landlord: ${t.landlord?.full_name || "—"}`
+                    : `Property Manager: ${t.manager?.full_name || "CHS Property Manager"}`}
+                </p>
                 <p className="text-xs text-gray-500 mt-1">
                   {t.lease_start} → {t.lease_end}
                 </p>

@@ -42,6 +42,8 @@ export interface Property {
 
   photos: string[];
   video_url: string | null;
+  owner_identity_visible_to_tenant: boolean;
+  promoted_until: string | null;
 
   verification_status: "pending" | "verified" | "rejected";
   verification_notes: string | null;

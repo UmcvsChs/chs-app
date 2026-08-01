@@ -11,6 +11,22 @@ import { CommunityFeedback } from "@/types/communityFeedback";
 import { EngageRequest } from "@/types/engageRequest";
 import { MarketplaceVendor } from "@/types/marketplace";
 import { FaultReport } from "@/types/faultReport";
+import { Offer } from "@/types/offer";
+import { Artisan } from "@/types/artisan";
+import { Inspection } from "@/types/inspection";
+
+interface DeveloperApplication {
+  id: string;
+  user_id: string;
+  company_name: string;
+  cac_number: string;
+  current_projects: string | null;
+  offers_instalments: boolean;
+  accepts_investment_capital: boolean;
+  years_experience: string;
+  portfolio_url: string | null;
+  status: string;
+}
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import { formatNaira } from "@/lib/format";
 
@@ -31,19 +47,73 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults";
+type Tab = "overview" | "finance" | "saleapprovals" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("registrations");
+  const { session, profile, signOut, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
+  // Real Overview stats — restored, found completely missing during
+  // the systematic Admin comparison. The original's version of every
+  // one of these numbers was entirely fake and hardcoded (1,240
+  // listings, 4,210 users, etc.) — every number here is genuinely
+  // computed from real, current data instead.
+  const [overviewStats, setOverviewStats] = useState({ totalListings: 0, verifiedListings: 0, registeredUsers: 0 });
+  // Real wallet lookup + freeze — restored, found completely missing.
+  // The original's "Freeze wallet" was itself never real — a toast
+  // with no actual effect. This version genuinely, functionally
+  // blocks withdrawal at the database level once frozen.
+  const [walletSearch, setWalletSearch] = useState("");
+  const [walletResult, setWalletResult] = useState<{ id: string; full_name: string; role: string; main_balance: number; rent_savings: number; maintenance_reserve: number; frozen: boolean } | null>(null);
+  const [walletSearchError, setWalletSearchError] = useState<string | null>(null);
+  // Real Sale Approvals — restored, found completely missing. A real,
+  // distinct financial safety checkpoint between an owner accepting a
+  // sale offer and money actually moving to escrow.
+  const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
+
+  async function handleWalletSearch() {
+    setWalletSearchError(null);
+    setWalletResult(null);
+    if (!walletSearch.trim()) return;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, full_name, role, phone")
+      .or(`full_name.ilike.%${walletSearch.trim()}%,phone.ilike.%${walletSearch.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+
+    if (!profile) {
+      setWalletSearchError("No user found matching that name or phone number.");
+      return;
+    }
+
+    const { data: wallet } = await supabase.from("wallets").select("*").eq("user_id", profile.id).maybeSingle();
+    setWalletResult({
+      id: profile.id,
+      full_name: profile.full_name,
+      role: profile.role,
+      main_balance: wallet?.main_balance || 0,
+      rent_savings: wallet?.rent_savings || 0,
+      maintenance_reserve: wallet?.maintenance_reserve || 0,
+      frozen: wallet?.frozen || false,
+    });
+  }
+
+  async function handleToggleFreeze(userId: string, freeze: boolean) {
+    await supabase.from("wallets").update({ frozen: freeze, frozen_reason: freeze ? "Frozen by admin pending investigation" : null }).eq("user_id", userId);
+    if (walletResult) setWalletResult({ ...walletResult, frozen: freeze });
+  }
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
+  const [pendingArtisans, setPendingArtisans] = useState<Artisan[]>([]);
+  const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
+  const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
@@ -69,7 +139,7 @@ export default function AdminDashboard() {
 
   async function loadData() {
     setLoading(true);
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
@@ -80,8 +150,30 @@ export default function AdminDashboard() {
       supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
       supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }),
       supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: false }),
+      supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }),
+      supabase.from("developer_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setPendingProfiles(profilesRes.data || []);
+
+    const [totalListingsRes, verifiedListingsRes, usersRes] = await Promise.all([
+      supabase.from("properties").select("id", { count: "exact", head: true }),
+      supabase.from("properties").select("id", { count: "exact", head: true }).eq("verification_status", "verified"),
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+    ]);
+    setOverviewStats({
+      totalListings: totalListingsRes.count || 0,
+      verifiedListings: verifiedListingsRes.count || 0,
+      registeredUsers: usersRes.count || 0,
+    });
+
+    const { data: saleApprovalsData } = await supabase
+      .from("offers")
+      .select("*, properties(title)")
+      .eq("status", "accepted")
+      .eq("chs_cleared", false)
+      .order("created_at", { ascending: true });
+    setPendingSaleApprovals((saleApprovalsData as unknown as typeof pendingSaleApprovals) || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
@@ -91,6 +183,9 @@ export default function AdminDashboard() {
     setFeeSettings(feeSettingsRes.data || []);
     setOwedFees(owedFeesRes.data || []);
     setUnroutedFaults((faultsRes.data as typeof unroutedFaults) || []);
+    setPendingArtisans(artisansRes.data || []);
+    setUpcomingInspections((inspectionsRes.data as typeof upcomingInspections) || []);
+    setDeveloperApplications(developerAppsRes.data || []);
     setLoading(false);
   }
 
@@ -364,6 +459,46 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleArtisanVerification(artisanId: string, status: "verified" | "rejected") {
+    setActionError(null);
+    const { data: artisan, error } = await supabase.from("artisans").update({ verification_status: status }).eq("id", artisanId).select().single();
+    if (error) {
+      setActionError("Could not update this artisan. Please try again.");
+      return;
+    }
+    if (artisan) {
+      await supabase.rpc("notify_user", {
+        p_user_id: artisan.user_id,
+        p_title: status === "verified" ? "You're now a verified CHS artisan!" : "Your artisan registration needs attention",
+        p_body: status === "verified"
+          ? "You can now quote on real maintenance jobs matching your trade and location."
+          : "Your registration could not be verified. Please contact CHS support for details.",
+        p_link: "/artisan",
+      });
+    }
+    loadData();
+  }
+
+  async function handleDeveloperReviewed(appId: string) {
+    setActionError(null);
+    const { error } = await supabase.from("developer_applications").update({ status: "reviewed" }).eq("id", appId);
+    if (error) {
+      setActionError("Could not update this application. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
+  async function handleClearSale(offerId: string) {
+    setActionError(null);
+    const { error } = await supabase.from("offers").update({ chs_cleared: true }).eq("id", offerId);
+    if (error) {
+      setActionError("Could not clear this transaction. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -371,12 +506,36 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <div className="flex justify-between items-center">
+          <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+          <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
+            Log out
+          </button>
+        </div>
         <h1 className="font-serif text-lg font-bold mt-1">Admin</h1>
+        {/* The real, repeated request — admin genuinely being able to
+            reach every other dashboard directly, not stuck on one
+            screen with no way out but closing the app entirely. */}
+        <div className="flex gap-2 flex-wrap mt-2">
+          {[
+            { href: "/owner", label: "Owner" },
+            { href: "/agent", label: "Agent" },
+            { href: "/manager", label: "Manager" },
+            { href: "/tenant", label: "Tenant" },
+            { href: "/artisan", label: "Artisan" },
+          ].map((d) => (
+            <Link key={d.href} href={d.href} className="bg-white/15 px-2.5 py-1 rounded-full text-[10px] font-semibold">
+              {d.label}
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="flex border-b border-gray-200 bg-white px-4">
         {([
+          { key: "overview", label: "Overview" },
+          { key: "finance", label: "Finance" },
+          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})` },
           { key: "registrations", label: `Registrations (${pendingProfiles.length})` },
           { key: "applications", label: `Applications (${pendingApplications.length})` },
           { key: "properties", label: `Properties (${pendingProperties.length})` },
@@ -386,6 +545,9 @@ export default function AdminDashboard() {
           { key: "vendors", label: `Vendors (${pendingVendors.length})` },
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})` },
           { key: "faults", label: `Maintenance (${unroutedFaults.length})` },
+          { key: "artisans", label: `Artisans (${pendingArtisans.length})` },
+          { key: "inspections", label: `Inspections (${upcomingInspections.length})` },
+          { key: "developers", label: `Developers (${developerApplications.length})` },
         ] as { key: Tab; label: string }[]).map((tab) => (
           <button
             key={tab.key}
@@ -404,6 +566,86 @@ export default function AdminDashboard() {
       )}
 
       <div className="px-4 py-4 space-y-3">
+        {activeTab === "overview" && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.totalListings}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Total listings</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+              <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.verifiedListings}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Verified listings</p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center col-span-2">
+              <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.registeredUsers}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Registered users</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "finance" && (
+          <div>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Individual wallet lookup</p>
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={walletSearch} onChange={(e) => setWalletSearch(e.target.value)}
+                placeholder="Name or phone number" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={handleWalletSearch} className="px-4 py-2.5 rounded-lg bg-chs-red text-white text-xs font-semibold">
+                Search
+              </button>
+            </div>
+            {walletSearchError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{walletSearchError}</p>}
+            {walletResult && (
+              <div className="bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-sm font-semibold text-chs-charcoal capitalize">{walletResult.full_name} — {walletResult.role}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Main wallet: {formatNaira(walletResult.main_balance)} · Rent savings: {formatNaira(walletResult.rent_savings)} · Maintenance reserve: {formatNaira(walletResult.maintenance_reserve)}
+                </p>
+                <p className="text-xs mt-1">
+                  Status: <span className={walletResult.frozen ? "text-chs-red font-bold" : "text-green-600 font-bold"}>
+                    {walletResult.frozen ? "⚠ Frozen" : "Active, no flags"}
+                  </span>
+                </p>
+                <div className="flex gap-2 mt-2">
+                  {walletResult.frozen ? (
+                    <button onClick={() => handleToggleFreeze(walletResult.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-semibold">
+                      Unfreeze wallet
+                    </button>
+                  ) : (
+                    <button onClick={() => handleToggleFreeze(walletResult.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Freeze wallet
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "saleapprovals" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🏡 An owner has accepted a buyer&apos;s offer on a for-sale property. Before the buyer proceeds to document submission and escrow payment, CHS reviews and clears the transaction here — this is the checkpoint between &quot;offer accepted&quot; and &quot;money moves.&quot;
+            </p>
+            {pendingSaleApprovals.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No sale approvals pending right now.</p>
+            ) : (
+              pendingSaleApprovals.map((offer) => (
+                <div key={offer.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
+                  <p className="text-xs text-gray-500 mt-1">Accepted offer: {formatNaira(offer.amount)}</p>
+                  {offer.note && <p className="text-xs text-gray-400 mt-1">{offer.note}</p>}
+                  <button onClick={() => handleClearSale(offer.id)}
+                    className="w-full mt-2 py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
+                    Clear for escrow
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {activeTab === "registrations" &&
           (pendingProfiles.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending registrations.</p>
@@ -622,6 +864,92 @@ export default function AdminDashboard() {
                   </div>
                 );
               })
+            )}
+          </>
+        )}
+
+        {activeTab === "artisans" && (
+          <>
+            {pendingArtisans.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No pending artisan registrations.</p>
+            ) : (
+              pendingArtisans.map((a) => (
+                <div key={a.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
+                  <p className="text-xs text-gray-500 mt-1">{a.years_experience} years experience · {a.equipment_tier.replace(/_/g, " ")} equipment</p>
+                  <p className="text-xs text-gray-500">{a.base_lga ? `${a.base_lga}, ` : ""}{a.base_state} · {a.willing_to_travel_interstate ? "Willing to travel" : "Local jobs only"}</p>
+                  <p className="text-xs text-gray-500 capitalize">{a.artisan_type === "chs_agent" ? "CHS Maintenance Agent" : "Independent"}</p>
+                  {a.certification_document_url && (
+                    <a href={a.certification_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mt-1">View certification</a>
+                  )}
+                  {a.equipment_photo_url && (
+                    <a href={a.equipment_photo_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View equipment photo</a>
+                  )}
+                  {a.equipment_receipt_url && (
+                    <a href={a.equipment_receipt_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View equipment receipt</a>
+                  )}
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={() => handleArtisanVerification(a.id, "verified")}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Verify
+                    </button>
+                    <button onClick={() => handleArtisanVerification(a.id, "rejected")}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === "inspections" && (
+          <>
+            {upcomingInspections.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No upcoming inspections booked.</p>
+            ) : (
+              upcomingInspections.map((insp) => (
+                <div key={insp.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{insp.properties?.title || "Property"}</p>
+                    <span className="text-[9px] font-bold uppercase bg-chs-amber-light text-chs-amber-dark px-2 py-0.5 rounded-full">{insp.status}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">{insp.properties?.location_area}</p>
+                  <p className="text-xs text-gray-500 mt-1">📅 {insp.requested_date} at {insp.requested_time}</p>
+                  <p className="text-xs text-gray-500">📍 {insp.meeting_point}</p>
+                  {insp.transport_fee != null && (
+                    <p className="text-xs text-gray-500">🚗 Transport: {formatNaira(insp.transport_fee)} (per person)</p>
+                  )}
+                  <p className="text-[10px] text-gray-400 mt-1">Ref {insp.reference}</p>
+                </div>
+              ))
+            )}
+          </>
+        )}
+
+        {activeTab === "developers" && (
+          <>
+            {developerApplications.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No pending developer applications.</p>
+            ) : (
+              developerApplications.map((d) => (
+                <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
+                  <p className="text-xs text-gray-500 mt-1">CAC: {d.cac_number} · {d.years_experience}</p>
+                  {d.current_projects && <p className="text-xs text-gray-500">{d.current_projects}</p>}
+                  <p className="text-xs text-gray-500">
+                    {d.offers_instalments ? "✓ Offers instalments" : "No instalment plans"} · {d.accepts_investment_capital ? "✓ Accepts co-investment" : "No co-investment"}
+                  </p>
+                  {d.portfolio_url && (
+                    <a href={d.portfolio_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mt-1">View portfolio</a>
+                  )}
+                  <button onClick={() => handleDeveloperReviewed(d.id)}
+                    className="mt-2 py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    Mark as reviewed — contacted directly
+                  </button>
+                </div>
+              ))
             )}
           </>
         )}

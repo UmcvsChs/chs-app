@@ -8,7 +8,19 @@ export const ARTISAN_TRADES = [
   { value: "plumber", label: "Plumber" },
   { value: "electrician", label: "Electrician" },
   { value: "carpenter", label: "Carpenter" },
-  { value: "bricklayer", label: "Bricklayer" },
+  { value: "bricklayer", label: "Bricklayer / Mason" },
+  { value: "tiler", label: "Tiler" },
+  { value: "welder", label: "Welder / Metal fabricator" },
+  { value: "roofer", label: "Roofer" },
+  { value: "pop_ceiling", label: "POP / Ceiling installer" },
+  { value: "ac_technician", label: "AC / Refrigeration technician" },
+  { value: "generator_technician", label: "Generator technician" },
+  { value: "aluminum_glazier", label: "Aluminium / Glazier" },
+  { value: "interior_decorator", label: "Interior decorator" },
+  { value: "landscaper", label: "Landscaper / Gardener" },
+  { value: "borehole_driller", label: "Borehole driller" },
+  { value: "cleaner", label: "Professional cleaner" },
+  { value: "fumigator", label: "Fumigation / Pest control" },
   { value: "other", label: "Other" },
 ];
 
@@ -21,12 +33,14 @@ export const EQUIPMENT_TIERS = [
 export interface Artisan {
   id: string;
   user_id: string;
-  trade: string;
+  trades: string[];
   other_trade_description: string | null;
   years_experience: number;
   certification_body: string | null;
   certification_document_url: string | null;
   equipment_tier: "basic" | "power_tools" | "professional";
+  equipment_photo_url: string | null;
+  equipment_receipt_url: string | null;
   base_state: string;
   base_lga: string | null;
   willing_to_travel_interstate: boolean;

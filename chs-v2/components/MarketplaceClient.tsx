@@ -71,9 +71,14 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           <h1 className="font-serif text-xl font-bold">CHS Marketplace</h1>
           <p className="text-xs text-white/70">Products and services for your property</p>
         </div>
-        <Link href="/become-vendor" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
-          Sell here →
-        </Link>
+        <div className="flex gap-1.5">
+          <Link href="/become-vendor" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
+            Sell here →
+          </Link>
+          <Link href="/vendor" className="bg-chs-red text-[10px] font-semibold px-3 py-1.5 rounded-full">
+            + List item
+          </Link>
+        </div>
       </div>
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-3 bg-white border-b border-gray-100">

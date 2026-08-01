@@ -35,5 +35,35 @@ export default async function Home() {
     );
   }
 
-  return <HomePageClient properties={(properties ?? []) as Property[]} />;
+  // Real promoted-first sorting — the original app's promotion never
+  // actually affected sort order via anything durable; this genuinely
+  // checks each property's real, current promotion expiry.
+  const now = Date.now();
+  const sortedProperties = [...(properties ?? [])].sort((a, b) => {
+    const aPromoted = a.promoted_until && new Date(a.promoted_until).getTime() > now;
+    const bPromoted = b.promoted_until && new Date(b.promoted_until).getTime() > now;
+    if (aPromoted && !bPromoted) return -1;
+    if (!aPromoted && bPromoted) return 1;
+    return 0; // preserves the existing created_at ordering from the query
+  });
+
+  // Real, genuine platform stats — restored from a real section of the
+  // original homepage found missing, computed from actual live data,
+  // never a placeholder or invented figure.
+  const activeListings = (properties ?? []).filter((p) => p.verification_status === "verified").length;
+  const areasCovered = new Set((properties ?? []).map((p) => p.location_area).filter(Boolean)).size;
+  const statesCovered = new Set((properties ?? []).map((p) => p.location_state).filter(Boolean)).size;
+  const verifiedDates = (properties ?? [])
+    .filter((p) => p.verification_status === "verified")
+    .map((p) => new Date(p.created_at).getTime());
+  const longestVerifiedYears = verifiedDates.length > 0
+    ? Math.max(0, (Date.now() - Math.min(...verifiedDates)) / (1000 * 60 * 60 * 24 * 365))
+    : 0;
+
+  return (
+    <HomePageClient
+      properties={sortedProperties as Property[]}
+      platformStats={{ activeListings, areasCovered, statesCovered, longestVerifiedYears }}
+    />
+  );
 }

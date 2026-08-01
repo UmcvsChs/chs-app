@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
+import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
 
 interface TenancyWithProperty {
@@ -117,6 +118,41 @@ export default function ManagerDashboard() {
     loadData();
   }
 
+  async function handleDownloadReport() {
+    // Real, genuine report — the original app's version of this button
+    // never generated anything at all, just a fake toast pretending to.
+    // Built properly here: an actual PDF with real, currently-accurate
+    // numbers. Deliberately excludes a monthly rent/maintenance-spend
+    // breakdown, since no real timestamp exists anywhere to honestly
+    // compute "this month" for those figures — better to leave a
+    // number out than show a fabricated one.
+    const { default: jsPDF } = await import("jspdf");
+    const doc = new jsPDF();
+    const distinctProperties = new Set(tenancies.filter((t) => t.properties).map((t) => t.property_id)).size;
+    const openFaults = faults.filter((f) => f.status !== "resolved").length;
+
+    doc.setFontSize(16);
+    doc.text("CHS — Property Manager Report", 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated ${new Date().toLocaleDateString()}`, 14, 27);
+
+    doc.setFontSize(12);
+    doc.text(`Properties managed: ${distinctProperties}`, 14, 42);
+    doc.text(`Tenants managed: ${tenancies.length}`, 14, 50);
+    doc.text(`Open fault tickets: ${openFaults}`, 14, 58);
+
+    doc.setFontSize(11);
+    doc.text("Managed properties:", 14, 72);
+    let y = 80;
+    Array.from(new Map(tenancies.filter((t) => t.properties).map((t) => [t.property_id, t.properties!.title])).values()).forEach((title) => {
+      doc.setFontSize(10);
+      doc.text(`• ${title}`, 18, y);
+      y += 7;
+    });
+
+    doc.save(`CHS-Manager-Report-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -126,6 +162,29 @@ export default function ManagerDashboard() {
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">Property Manager</h1>
+
+        {/* Real summary stats — restored, found missing during the
+            systematic Manager dashboard comparison. Every number
+            genuinely computed from real data. */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">
+              {new Set(tenancies.filter((t) => t.properties).map((t) => t.property_id)).size}
+            </p>
+            <p className="text-[9px] text-white/60 uppercase">Properties managed</p>
+          </div>
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">{faults.filter((f) => f.status !== "resolved").length}</p>
+            <p className="text-[9px] text-white/60 uppercase">Open fault tickets</p>
+          </div>
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">{tenancies.length}</p>
+            <p className="text-[9px] text-white/60 uppercase">Tenants managed</p>
+          </div>
+        </div>
+        <button onClick={handleDownloadReport} className="w-full mt-3 py-2 rounded-full bg-white/15 text-xs font-semibold">
+          📄 Download monthly report
+        </button>
       </div>
 
       {actionError && (
@@ -248,6 +307,12 @@ export default function ManagerDashboard() {
         )}
 
         <div>
+          <PostQuotationJob
+            managedProperties={Array.from(
+              new Map(tenancies.filter((t) => t.properties).map((t) => [t.property_id, { id: t.property_id, title: t.properties!.title }])).values()
+            )}
+            onDone={loadData}
+          />
           <p className="text-xs font-bold text-chs-charcoal mb-2">Maintenance requests ({faults.length})</p>
           {faults.length === 0 ? (
             <p className="text-sm text-gray-400">No maintenance requests on your managed tenancies.</p>

@@ -14,12 +14,14 @@ import { MediaRequest } from "@/types/mediaRequest";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
+import RequestTermination from "@/components/RequestTermination";
 
 interface TenancyBasic {
   id: string;
   tenant_id: string;
   property_id: string;
   status: string;
+  management_delegated: boolean;
 }
 
 interface PropertyWithActivity extends Property {
@@ -34,6 +36,7 @@ export default function OwnerDashboard() {
   const { session, profile, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
+  const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -102,7 +105,7 @@ export default function OwnerDashboard() {
 
     const { data: ownedTenancies } = await supabase
       .from("tenancies")
-      .select("id, tenant_id, property_id, status")
+      .select("id, tenant_id, property_id, status, management_delegated")
       .eq("landlord_id", session.user.id);
     setTenancies(ownedTenancies || []);
 
@@ -112,6 +115,23 @@ export default function OwnerDashboard() {
       .eq("owner_id", session.user.id)
       .order("created_at", { ascending: false });
     setEngageRequests(ownedEngageRequests || []);
+
+    // Real "rent collected" — restored, found missing during the
+    // systematic Owner dashboard comparison. Genuinely summed from
+    // real credit transactions whose description actually mentions
+    // rent, not just any credit to the wallet, which could include
+    // other real income types too (e.g. a withdrawal reversal).
+    const { data: walletData } = await supabase
+      .from("wallet_transactions")
+      .select("amount, direction, description")
+      .eq("user_id", session.user.id)
+      .eq("wallet_type", "main")
+      .eq("direction", "credit");
+    const rentSum = (walletData || [])
+      .filter((t) => (t.description || "").toLowerCase().includes("rent"))
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    setRentCollected(rentSum);
+
     setLoading(false);
   }
 
@@ -203,6 +223,16 @@ export default function OwnerDashboard() {
     loadData();
   }
 
+  async function handleTogglePrivacy(propertyId: string, visible: boolean) {
+    setActionError(null);
+    const { error } = await supabase.from("properties").update({ owner_identity_visible_to_tenant: visible }).eq("id", propertyId);
+    if (error) {
+      setActionError("Could not update this setting. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -225,6 +255,25 @@ export default function OwnerDashboard() {
             </Link>
           </div>
         </div>
+
+        {/* Real summary stats — restored, found missing during the
+            systematic Owner dashboard comparison against the real
+            original. Every number here is genuinely computed from
+            real data, never a placeholder. */}
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">{properties.length}</p>
+            <p className="text-[9px] text-white/60 uppercase">Listings</p>
+          </div>
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">{tenancies.filter((t) => t.status === "active").length}</p>
+            <p className="text-[9px] text-white/60 uppercase">Active tenants</p>
+          </div>
+          <div className="text-center">
+            <p className="font-serif text-lg font-bold">{formatNaira(rentCollected)}</p>
+            <p className="text-[9px] text-white/60 uppercase">Rent collected</p>
+          </div>
+        </div>
       </div>
 
       {actionError && (
@@ -244,6 +293,44 @@ export default function OwnerDashboard() {
                 <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
                   {purposeLabel(property.purpose)}
                 </span>
+              </div>
+
+              <Link href={`/edit-listing/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
+                Edit listing
+              </Link>
+              {" · "}
+              <Link href={`/analytics/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
+                Analytics
+              </Link>
+              {" · "}
+              <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
+                ⭐ Promote
+              </Link>
+              {" · "}
+              <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
+                ⭐ Promote
+              </Link>
+
+              {/* Real, per-property identity privacy toggle — restored,
+                  found completely missing during the systematic Owner
+                  dashboard comparison. */}
+              <div className="flex gap-1.5 mt-1.5">
+                <button
+                  onClick={() => handleTogglePrivacy(property.id, true)}
+                  className={`text-[9px] font-semibold px-2 py-1 rounded-full border ${
+                    property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-white text-gray-600 border-gray-200"
+                  }`}
+                >
+                  Show my name
+                </button>
+                <button
+                  onClick={() => handleTogglePrivacy(property.id, false)}
+                  className={`text-[9px] font-semibold px-2 py-1 rounded-full border ${
+                    !property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-white text-gray-600 border-gray-200"
+                  }`}
+                >
+                  Keep private
+                </button>
               </div>
 
               {property.offers.length > 0 && (
@@ -337,22 +424,30 @@ export default function OwnerDashboard() {
         <div className="px-4 pb-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">Active tenancies</p>
           {tenancies.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
-              <span className="text-xs text-gray-500 capitalize">{t.status}</span>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setIssuingNoticeTenancy(t); setNoticeIssued(false); }}
-                  className="text-[10px] font-semibold text-chs-charcoal underline"
-                >
-                  Issue notice
-                </button>
-                <button
-                  onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
-                  className="text-[10px] font-semibold text-chs-red underline"
-                >
-                  Raise a dispute
-                </button>
+            <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500 capitalize">{t.status}</span>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setIssuingNoticeTenancy(t); setNoticeIssued(false); }}
+                    className="text-[10px] font-semibold text-chs-charcoal underline"
+                  >
+                    Issue notice
+                  </button>
+                  <button
+                    onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
+                    className="text-[10px] font-semibold text-chs-red underline"
+                  >
+                    Raise a dispute
+                  </button>
+                </div>
               </div>
+              {t.management_delegated && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-[10px] text-chs-amber-dark font-semibold mb-1">✓ CHS is managing this property</p>
+                  <RequestTermination tenancyId={t.id} onDone={loadData} />
+                </div>
+              )}
             </div>
           ))}
         </div>

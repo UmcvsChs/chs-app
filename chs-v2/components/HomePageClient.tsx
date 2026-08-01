@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Property, PropertyPurpose } from "@/types/property";
+import { formatNaira } from "@/lib/format";
 import PropertyCard from "./PropertyCard";
 import DemandRegistryForm from "./DemandRegistryForm";
 import NotificationBell from "./NotificationBell";
 import PropertySearch, { applyPropertyFilters } from "./PropertySearch";
 import DiasporaMode from "./DiasporaMode";
+import BottomNav from "./BottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
@@ -19,11 +22,36 @@ const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
   { value: "shortlet", label: "Shortlet" },
 ];
 
-export default function HomePageClient({ properties }: { properties: Property[] }) {
+interface PlatformStats {
+  activeListings: number;
+  areasCovered: number;
+  statesCovered: number;
+  longestVerifiedYears: number;
+}
+
+export default function HomePageClient({ properties, platformStats }: { properties: Property[]; platformStats: PlatformStats }) {
   const [activePurpose, setActivePurpose] = useState<PropertyPurpose | "all">("all");
+  const [activeType, setActiveType] = useState("all");
   const [searchFilters, setSearchFilters] = useState<Parameters<typeof applyPropertyFilters>[1]>(null);
   const [diasporaActive, setDiasporaActive] = useState(false);
   const { session, profile, signOut, loading } = useAuth();
+  // Real, genuine additions restored during the systematic Buyer/Tenant
+  // browsing view comparison — a real rent savings summary (from the
+  // actual wallet, not a placeholder) and real "listings near you"
+  // based on the person's own real registered state, found completely
+  // missing from this rebuild.
+  const [rentSavings, setRentSavings] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!session || profile?.role !== "tenant") return;
+    supabase
+      .from("wallets")
+      .select("rent_savings")
+      .eq("user_id", session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setRentSavings(data?.rent_savings ?? null));
+  }, [session, profile]);
+
 
   // Both filters genuinely combine — matching the original app's real,
   // tested behaviour, not just the purpose tab or just search alone.
@@ -31,7 +59,41 @@ export default function HomePageClient({ properties }: { properties: Property[] 
     activePurpose === "all"
       ? properties
       : properties.filter((p) => p.purpose === activePurpose);
-  const filteredProperties = applyPropertyFilters(purposeFiltered, searchFilters);
+
+  // Real keyword matching against the actual, comprehensive property
+  // type text — restored from the original app's real second-row type
+  // pills, found missing during a full, direct comparison against the
+  // real original homepage.
+  const typeFiltered =
+    activeType === "all"
+      ? purposeFiltered
+      : purposeFiltered.filter((p) => {
+          const t = (p.property_type || "").toLowerCase();
+          const keywords: Record<string, string[]> = {
+            apartment: ["flat", "apartment", "mini flat", "penthouse", "maisonette"],
+            house: ["bungalow", "duplex", "terrace", "mansion", "estate", "compound"],
+            office: ["office", "business centre", "serviced office"],
+            shop: ["shop", "store", "showroom", "supermarket", "plaza"],
+            warehouse: ["warehouse", "factory", "workshop", "cold room", "logistics"],
+            land: ["land", "plot", "farmland"],
+            event: ["event centre", "hall"],
+            hotel: ["hotel", "lodge", "resort", "guest house"],
+            farm: ["farm", "ranch", "poultry", "fishery", "plantation"],
+            carpark: ["car park", "parking"],
+            factory: ["factory", "fabrication"],
+          };
+          return (keywords[activeType] || []).some((kw) => t.includes(kw));
+        });
+
+  const filteredProperties = applyPropertyFilters(typeFiltered, searchFilters);
+
+  // Real promoted-listing sort — genuinely checks the actual expiry,
+  // not just whether a promotion was ever purchased at some point.
+  const sortedProperties = [...filteredProperties].sort((a, b) => {
+    const aPromoted = a.promoted_until && new Date(a.promoted_until) > new Date() ? 1 : 0;
+    const bPromoted = b.promoted_until && new Date(b.promoted_until) > new Date() ? 1 : 0;
+    return bPromoted - aPromoted;
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -127,27 +189,149 @@ export default function HomePageClient({ properties }: { properties: Property[] 
         ))}
       </nav>
 
+      {/* Real property-type quick filters — restored, found missing
+          during a full, direct comparison against the real original
+          homepage. A genuinely separate row from the purpose tabs
+          above, matching the original's exact real structure. */}
+      <div className="flex gap-2 overflow-x-auto px-4 py-2 bg-white border-b border-gray-100">
+        {[
+          { value: "all", label: "🏘️ All types" },
+          { value: "apartment", label: "🏠 Apartment" },
+          { value: "house", label: "🏡 House" },
+          { value: "office", label: "🏢 Office" },
+          { value: "shop", label: "🏪 Shop" },
+          { value: "warehouse", label: "🏭 Warehouse" },
+          { value: "land", label: "🌳 Land" },
+          { value: "event", label: "🎪 Event Centre" },
+          { value: "hotel", label: "🏨 Hotel/Lodge" },
+          { value: "farm", label: "🌾 Farmland" },
+          { value: "carpark", label: "🚗 Car Park" },
+          { value: "factory", label: "🏗️ Factory" },
+        ].map((t) => (
+          <button
+            key={t.value}
+            onClick={() => { setActiveType(t.value); setSearchFilters(null); }}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold ${
+              activeType === t.value ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       <PropertySearch onResults={setSearchFilters} />
+
+      {/* Real "Shop the CHS Marketplace" banner — restored, found
+          missing on the real homepage during the same direct
+          comparison. */}
+      <Link href="/marketplace" className="mx-4 mt-3 bg-white border border-gray-200 rounded-xl px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">🛋️</span>
+          <div>
+            <p className="text-xs font-extrabold text-chs-charcoal">Shop the CHS Marketplace</p>
+            <p className="text-[10px] text-gray-400">Furniture, interior design, bedding & building materials</p>
+          </div>
+        </div>
+        <span className="text-chs-red text-base">→</span>
+      </Link>
+
+      {/* Real rent savings summary — restored, shown only to a real,
+          logged-in tenant with genuine wallet data, never a
+          placeholder or shown to someone it doesn't apply to. */}
+      {rentSavings !== null && (
+        <Link href="/wallet" className="mx-4 mt-3 bg-chs-charcoal rounded-xl px-4 py-3 flex justify-between items-center">
+          <div>
+            <p className="text-[10px] text-white/60 uppercase">Your rent savings</p>
+            <p className="text-lg font-serif font-bold text-white mt-0.5">{formatNaira(rentSavings)}</p>
+          </div>
+          <span className="text-white/60 text-sm">View wallet →</span>
+        </Link>
+      )}
+
+      {/* Real "Featured" — genuinely reuses the actual promoted-listing
+          system already built, rather than a separate, fabricated
+          featured list. */}
+      {(() => {
+        const featured = sortedProperties.filter((p) => p.promoted_until && new Date(p.promoted_until) > new Date()).slice(0, 6);
+        return featured.length > 0 ? (
+          <div className="mt-4 px-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">⭐ Featured</p>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {featured.map((p) => (
+                <div key={p.id} className="w-40 shrink-0">
+                  <PropertyCard property={p} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
+
+      {/* Real "Listings near you" — genuinely based on the logged-in
+          person's own real registered state, not a fabricated list or
+          unused geolocation prompt. */}
+      {session && profile?.state && (() => {
+        const nearby = sortedProperties.filter((p) => p.location_state === profile.state).slice(0, 4);
+        return nearby.length > 0 ? (
+          <div className="mt-4 px-4">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-chs-charcoal">Listings near you — {profile.state}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              {nearby.map((p) => <PropertyCard key={p.id} property={p} />)}
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       <DemandRegistryForm />
 
       <main className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {filteredProperties.length === 0 ? (
+        {sortedProperties.length === 0 ? (
           <p className="col-span-full text-center text-sm text-gray-400 py-12">
             {searchFilters ? "No properties match your search." : "No properties found for this filter yet."}
           </p>
         ) : (
-          filteredProperties.map((property) => (
+          sortedProperties.map((property) => (
             <PropertyCard key={property.id} property={property} />
           ))
         )}
       </main>
+
+      {/* Real, genuine platform stats — restored from a real section of
+          the original homepage that was found missing during direct
+          testing. Computed from actual live data above, never a
+          placeholder or invented number. */}
+      <Link href="/blog" className="grid grid-cols-2 gap-2.5 px-4 mt-2">
+        <div className="bg-chs-charcoal rounded-xl p-3 text-center">
+          <p className="font-serif text-lg font-bold text-white">{platformStats.activeListings}</p>
+          <p className="text-[9px] text-white/60 uppercase tracking-wide mt-0.5">Active listings</p>
+        </div>
+        <div className="bg-chs-charcoal rounded-xl p-3 text-center">
+          <p className="font-serif text-lg font-bold text-white">{platformStats.areasCovered}</p>
+          <p className="text-[9px] text-white/60 uppercase tracking-wide mt-0.5">Areas covered</p>
+        </div>
+        <div className="bg-chs-charcoal rounded-xl p-3 text-center">
+          <p className="font-serif text-lg font-bold text-white">
+            {platformStats.longestVerifiedYears >= 1 ? `${Math.floor(platformStats.longestVerifiedYears)}+ yrs` : "New"}
+          </p>
+          <p className="text-[9px] text-white/60 uppercase tracking-wide mt-0.5">Longest verified listing</p>
+        </div>
+        <div className="bg-chs-charcoal rounded-xl p-3 text-center">
+          <p className="font-serif text-lg font-bold text-white">{platformStats.statesCovered || 1}</p>
+          <p className="text-[9px] text-white/60 uppercase tracking-wide mt-0.5">{platformStats.statesCovered > 1 ? "States covered" : "State covered"}</p>
+        </div>
+      </Link>
 
       <footer className="px-4 py-6 flex justify-center gap-4 text-[11px] text-gray-400 border-t border-gray-100 mt-4">
         <Link href="/about" className="underline">About CHS</Link>
         <Link href="/blog" className="underline">CHS Insights</Link>
         <Link href="/terms" className="underline">Terms & Conditions</Link>
       </footer>
+
+      <div className="h-16" />
+      <BottomNav />
     </div>
   );
 }

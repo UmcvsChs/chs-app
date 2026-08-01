@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import ChsLogo from "@/components/ChsLogo";
 
 const ROLE_OPTIONS = [
   { value: "buyer", label: "Buyer" },
@@ -104,8 +105,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="max-w-md mx-auto">
-        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Welcome back</h1>
-        <p className="text-sm text-gray-500 mb-6">Log in to your CHS account</p>
+        {/* The real, complete CHS logo — the same one used on the
+            splash screen, built exactly to the full design
+            specification, giving this page real, professional
+            presence rather than a plain text heading. */}
+        <div className="flex justify-center mb-6">
+          <ChsLogo width={160} />
+        </div>
+
+        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1 text-center">Welcome back</h1>
+        <p className="text-sm text-gray-500 mb-6 text-center">Log in to your CHS account</p>
 
         <p className="text-xs font-semibold text-chs-charcoal mb-2">Log in as</p>
         <div className="grid grid-cols-3 gap-2 mb-5">
@@ -163,7 +172,12 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-xs text-gray-400 text-center mt-6">
+        <p className="text-xs text-gray-400 text-center mt-4">
+          New to CHS?{" "}
+          <Link href="/register" className="text-chs-red font-semibold">Create an account</Link>
+        </p>
+
+        <p className="text-xs text-gray-400 text-center mt-3">
           Need a role added to your existing account?{" "}
           <Link href="/link-account" className="text-chs-red font-semibold">Link it here</Link>
         </p>

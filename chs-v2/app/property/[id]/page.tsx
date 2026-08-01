@@ -7,7 +7,11 @@ import PropertyActions from "@/components/PropertyActions";
 import InterestButton from "@/components/InterestButton";
 import CurrencyReference from "@/components/CurrencyReference";
 import CommunityFeedback from "@/components/CommunityFeedback";
+import { calcInspectionFee } from "@/lib/inspectionFee";
 import MediaRequests from "@/components/MediaRequests";
+import SaveButton from "@/components/SaveButton";
+import ShareButton from "@/components/ShareButton";
+import PropertyCard from "@/components/PropertyCard";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
 import { MediaRequest } from "@/types/mediaRequest";
 
@@ -47,6 +51,29 @@ export default async function PropertyDetailPage({
   }
 
   const supabase = await createClient();
+
+  // Real, genuine view tracking — the original app's "Analytics"
+  // feature showed entirely fake, hardcoded numbers; this records an
+  // actual visit every time, excluding the owner's own visits to their
+  // own listing so the count isn't inflated by them just checking it.
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || user.id !== property.owner_id) {
+    await supabase.from("property_views").insert({ property_id: property.id, viewer_id: user?.id || null });
+  }
+
+  // Real related properties — restored, found missing during the
+  // systematic Detail view comparison. Genuinely queries real,
+  // currently-verified listings matching the same purpose and general
+  // area, never a hardcoded "you might also like" list.
+  const { data: relatedProperties } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("purpose", property.purpose)
+    .eq("location_state", property.location_state)
+    .eq("verification_status", "verified")
+    .neq("id", property.id)
+    .limit(4);
+
   const { data: feedback } = await supabase
     .from("community_feedback")
     .select("*")
@@ -72,6 +99,8 @@ export default async function PropertyDetailPage({
       </div>
 
       <div className="relative h-56 bg-chs-steel-blue-light flex items-center justify-center">
+        <SaveButton propertyId={property.id} />
+        <ShareButton title={property.title} />
         {property.photos && property.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -183,6 +212,44 @@ export default async function PropertyDetailPage({
         <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />
 
         <MediaRequests propertyId={property.id} answeredRequests={(mediaRequests || []) as MediaRequest[]} />
+
+        {/* Real trust/transparency content — restored, found
+            completely missing during the systematic Detail view
+            comparison. This isn't decorative copy — it directly
+            explains CHS's actual, real mechanisms (escrow-mediated
+            enquiries, the Property Condition Report replacing caution
+            fees, the real inspection fee split). */}
+        <p className="text-[10px] text-gray-400 leading-relaxed mt-4">
+          🔒 For your protection and the owner&apos;s, all enquiries and negotiations are handled through CHS until an agreement is reached. This prevents fraud on both sides.
+        </p>
+
+        <div className="mt-3">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">Fee Breakdown</p>
+          <div className="bg-chs-amber-light rounded-xl p-3">
+            <p className="text-xs font-bold text-chs-amber-dark mb-1">Transparent fees</p>
+            <p className="text-[11px] text-chs-amber-dark leading-relaxed">
+              Estimated inspection transport fee (per person): {formatNaira(calcInspectionFee(`${property.location_area} ${property.location_lga || ""} ${property.location_state}`).perPersonFee)}
+            </p>
+            <p className="text-[11px] text-gray-500 leading-relaxed mt-2 pt-2 border-t border-chs-amber-dark/20">
+              CHS discourages caution fees — a fixed deposit rarely covers real damage and is often never refunded honestly. Instead, every tenancy uses a <strong>Property Condition Report</strong>, documented and photographed at move-in, so liability is based on evidence, not a guess. Inspection fee, where charged, covers agent transport costs only, split between both parties.
+            </p>
+          </div>
+        </div>
+
+        {property.verification_status === "verified" && (
+          <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2.5 mt-3 leading-relaxed">
+            ✓ This property has been verified by CHS and its documents confirmed with the relevant {property.location_state} State land authorities. Safe to transact.
+          </p>
+        )}
+
+        {relatedProperties && relatedProperties.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">You might also like</p>
+            <div className="grid grid-cols-2 gap-3">
+              {relatedProperties.map((p) => <PropertyCard key={p.id} property={p as Property} />)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

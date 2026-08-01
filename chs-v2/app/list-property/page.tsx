@@ -9,12 +9,27 @@ import CurrencyInput from "@/components/CurrencyInput";
 
 import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
+import { PROPERTY_TYPE_CATEGORIES } from "@/types/propertyTypes";
+
 const DOC_TYPES = [
   { value: "ownership_document", label: "Ownership document" },
   { value: "kadgis", label: "KADGIS approval" },
   { value: "kasupda", label: "KASUPDA approval" },
   { value: "owner_id", label: "Owner's valid ID" },
   { value: "inheritance_consent", label: "Inheritance consent (if applicable)" },
+];
+
+const PHOTO_SLOTS = [
+  { key: "front", label: "Front exterior" },
+  { key: "rear", label: "Rear exterior" },
+  { key: "side_left", label: "Side view (left)" },
+  { key: "side_right", label: "Side view (right)" },
+  { key: "compound", label: "Compound / access road" },
+  { key: "sitting", label: "Sitting room" },
+  { key: "bedroom", label: "Main bedroom" },
+  { key: "kitchen", label: "Kitchen" },
+  { key: "bathroom", label: "Bathroom" },
+  { key: "meter", label: "Meter / water source" },
 ];
 
 const PURPOSE_OPTIONS = [
@@ -24,7 +39,6 @@ const PURPOSE_OPTIONS = [
   { value: "hire", label: "For Hire" },
   { value: "shortlet", label: "Shortlet" },
 ];
-const PROPERTY_TYPES = ["Apartment", "Duplex", "Bungalow", "Terrace", "Land", "Commercial"];
 const ROAD_TYPES = [
   { value: "tarred", label: "Tarred" },
   { value: "untarred_motorable", label: "Untarred but motorable" },
@@ -37,7 +51,14 @@ export default function ListPropertyPage() {
 
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("rent");
-  const [propertyType, setPropertyType] = useState(PROPERTY_TYPES[0]);
+  // Real, sale-specific fields — restored, found completely missing
+  // during the systematic property listing form comparison.
+  const [minAcceptable, setMinAcceptable] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("outright_only");
+  const [depositPct, setDepositPct] = useState("");
+  const [balanceDeadline, setBalanceDeadline] = useState("");
+  const [ownershipDeclared, setOwnershipDeclared] = useState(false);
+  const [propertyType, setPropertyType] = useState(PROPERTY_TYPE_CATEGORIES[0].options[0]);
   const [locationArea, setLocationArea] = useState("");
   const [locationLga, setLocationLga] = useState("");
   const [locationState, setLocationState] = useState("Kaduna");
@@ -53,8 +74,20 @@ export default function ListPropertyPage() {
   const [electricityBackup, setElectricityBackup] = useState("");
   const [waterSource, setWaterSource] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
+  // Real, labeled photo slots — restored, found missing during the
+  // systematic property listing form comparison. The original's real
+  // rationale: specific, guided photos genuinely reduce wasted
+  // inspection trips, since buyers arrive already knowing what to
+  // expect, rather than a generic unlabeled photo dump.
+  const [labeledPhotos, setLabeledPhotos] = useState<Record<string, File | null>>({});
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
+  // Real ownership context fields — restored, found missing during
+  // the systematic property listing form comparison. Genuinely useful
+  // structured context for CHS's real verification team, not just a
+  // raw file with no classification.
+  const [acquisitionMethod, setAcquisitionMethod] = useState("Personal purchase");
+  const [primaryDocType, setPrimaryDocType] = useState("Certificate of Occupancy (C of O)");
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +112,11 @@ export default function ListPropertyPage() {
       if (!pricePerNight || pricePerNight < 1000) return "Please enter a valid nightly price.";
     } else {
       if (!price || price < 1000) return "Please enter a valid price.";
+    }
+    // A real, required legal gate — restored, found completely missing.
+    // The original never let a sale listing be submitted without this.
+    if (purpose === "sale" && !ownershipDeclared) {
+      return "Please confirm the ownership declaration before submitting a sale listing.";
     }
     return null;
   }
@@ -119,6 +157,13 @@ export default function ListPropertyPage() {
         price: purpose === "shortlet" ? pricePerNight : price,
         price_per_night: purpose === "shortlet" ? pricePerNight : null,
         price_period: purpose === "sale" || purpose === "shortlet" ? null : pricePeriod,
+        min_acceptable_amount: purpose === "sale" && minAcceptable ? parseInt(minAcceptable.replace(/\D/g, ""), 10) : null,
+        payment_terms: purpose === "sale" ? paymentTerms : null,
+        deposit_percentage: purpose === "sale" ? depositPct.trim() || null : null,
+        balance_payment_deadline: purpose === "sale" ? balanceDeadline.trim() || null : null,
+        ownership_declared: purpose === "sale" ? ownershipDeclared : false,
+        acquisition_method: acquisitionMethod,
+        primary_document_type: primaryDocType,
         description: description.trim() || null,
         bedrooms: bedrooms || null,
         bathrooms: bathrooms || null,
@@ -142,11 +187,14 @@ export default function ListPropertyPage() {
     }
 
     // Real photo uploads, now that a real property ID exists to
-    // organise them under.
-    if (photos.length > 0) {
+    // organise them under. Labeled slots upload first, so the front
+    // exterior genuinely becomes the main display photo, followed by
+    // any additional unlabeled photos.
+    const allPhotos = [...PHOTO_SLOTS.map((s) => labeledPhotos[s.key]).filter((f): f is File => !!f), ...photos];
+    if (allPhotos.length > 0) {
       const uploadedUrls: string[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const url = await uploadPropertyPhoto(photos[i], session.user.id, newProperty.id, i);
+      for (let i = 0; i < allPhotos.length; i++) {
+        const url = await uploadPropertyPhoto(allPhotos[i], session.user.id, newProperty.id, i);
         if (url) uploadedUrls.push(url);
       }
       if (uploadedUrls.length > 0) {
@@ -226,7 +274,11 @@ export default function ListPropertyPage() {
             <label className="text-xs font-semibold text-gray-600">Property type</label>
             <select value={propertyType} onChange={(e) => setPropertyType(e.target.value)}
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
-              {PROPERTY_TYPES.map((t) => <option key={t}>{t}</option>)}
+              {PROPERTY_TYPE_CATEGORIES.map((cat) => (
+                <optgroup key={cat.label} label={`${cat.icon} ${cat.label}`}>
+                  {cat.options.map((t) => <option key={t}>{t}</option>)}
+                </optgroup>
+              ))}
             </select>
           </div>
 
@@ -278,6 +330,57 @@ export default function ListPropertyPage() {
                 className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                 {["per year", "per month", "per week", "per day"].map((p) => <option key={p}>{p}</option>)}
               </select>
+            </div>
+          )}
+
+          {/* Real sale-specific fields — restored, found completely
+              missing during the systematic property listing form
+              comparison. The ownership declaration specifically is a
+              real legal protection, not a formality — the original
+              never allowed a sale listing to be submitted without it. */}
+          {purpose === "sale" && (
+            <div className="space-y-3 border-t border-gray-200 pt-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Lowest acceptable amount (₦) — for owner reference, not shown publicly</label>
+                <input type="text" value={minAcceptable} onChange={(e) => setMinAcceptable(e.target.value)}
+                  placeholder="e.g. 43,000,000" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Terms of payment</label>
+                <select value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="outright_only">Outright payment only</option>
+                  <option value="instalment_allowed">Instalment allowed</option>
+                  <option value="both">Both outright and instalment accepted</option>
+                </select>
+              </div>
+              {paymentTerms !== "outright_only" && (
+                <>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">If instalment — deposit percentage required</label>
+                    <input type="text" value={depositPct} onChange={(e) => setDepositPct(e.target.value)}
+                      placeholder="e.g. 30% down payment" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-600">Balance payment deadline</label>
+                    <input type="text" value={balanceDeadline} onChange={(e) => setBalanceDeadline(e.target.value)}
+                      placeholder="e.g. Balance due within 60 days of deposit" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  </div>
+                  <p className="text-[10px] text-gray-500 bg-gray-50 rounded-lg px-3 py-2">
+                    If the balance is not paid by the deadline, the offer is forfeited to the next highest bidder and the deposit is refunded per CHS policy.
+                  </p>
+                </>
+              )}
+
+              <div className="bg-white rounded-xl p-3 border-2 border-chs-red">
+                <p className="text-xs font-bold text-chs-red mb-2">⚖️ Ownership declaration — required</p>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={ownershipDeclared} onChange={(e) => setOwnershipDeclared(e.target.checked)} className="mt-0.5 shrink-0" />
+                  <span className="text-[11px] text-gray-600 leading-relaxed">
+                    I declare that I hold clear and undisputed authority to sell this property. Where it is inherited or family-owned, I confirm that every co-heir or beneficiary with an interest in it has genuinely consented to this sale. I understand that a false declaration makes me personally and solely liable for any resulting dispute, and that CHS may suspend my account and report suspected fraud to the appropriate authorities.
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
@@ -333,6 +436,20 @@ export default function ListPropertyPage() {
 
           <div>
             <label className="text-xs font-semibold text-gray-600">Photos</label>
+            <p className="text-[10px] text-gray-400 mb-1.5">
+              Specific, labeled photos genuinely reduce wasted inspection trips — buyers arrive already knowing what to expect.
+            </p>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {PHOTO_SLOTS.map((slot) => (
+                <div key={slot.key}>
+                  <label className="text-[10px] text-gray-500">{slot.label}</label>
+                  <input type="file" accept="image/*"
+                    onChange={(e) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: e.target.files?.[0] || null })}
+                    className="w-full mt-0.5 text-[10px]" />
+                </div>
+              ))}
+            </div>
+            <label className="text-xs font-semibold text-gray-600">Additional photos (optional)</label>
             <input type="file" accept="image/*" multiple
               onChange={(e) => setPhotos(e.target.files ? Array.from(e.target.files) : [])}
               className="w-full mt-1 text-xs" />
@@ -351,6 +468,21 @@ export default function ListPropertyPage() {
             <p className="text-[10px] text-gray-400 mb-2">
               CHS reviews these to verify your listing — upload what applies to your property.
             </p>
+
+            <div className="mb-2">
+              <label className="text-xs font-semibold text-gray-600">How was this property acquired?</label>
+              <select value={acquisitionMethod} onChange={(e) => setAcquisitionMethod(e.target.value)}
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                {["Personal purchase", "Inheritance / family property", "Gift / donation", "Government allocation", "Court judgment / settlement", "Business/company asset"].map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="mb-3">
+              <label className="text-xs font-semibold text-gray-600">Primary ownership document type</label>
+              <select value={primaryDocType} onChange={(e) => setPrimaryDocType(e.target.value)}
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                {["Certificate of Occupancy (C of O)", "Right of Occupancy (R of O)", "Deed of Assignment", "Survey Plan", "Governor's Consent", "Letter of Administration (inheritance)", "Deed of Gift", "Not yet titled"].map((o) => <option key={o}>{o}</option>)}
+              </select>
+            </div>
             {DOC_TYPES.map((doc) => (
               <div key={doc.value} className="mb-2">
                 <label className="text-[11px] text-gray-600">{doc.label}</label>

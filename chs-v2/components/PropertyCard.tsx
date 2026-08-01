@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
+import SaveButton from "./SaveButton";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const isUnderVerification = property.verification_status !== "verified";
@@ -13,6 +14,12 @@ export default function PropertyCard({ property }: { property: Property }) {
       }`}
     >
       <div className="relative h-40 bg-chs-steel-blue-light flex items-center justify-center">
+        <SaveButton propertyId={property.id} />
+        {property.promoted_until && new Date(property.promoted_until) > new Date() && (
+          <span className="absolute top-2 left-2 bg-chs-amber-dark text-white text-[9px] font-bold px-2 py-1 rounded-full z-10">
+            ⭐ PROMOTED
+          </span>
+        )}
         {property.photos && property.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -24,7 +31,7 @@ export default function PropertyCard({ property }: { property: Property }) {
           <span className="text-chs-steel-blue text-sm">No photo yet</span>
         )}
         {isUnderVerification && (
-          <span className="absolute top-2 left-2 bg-chs-amber text-white text-[10px] font-bold px-2 py-1 rounded-full">
+          <span className={`absolute top-2 ${property.promoted_until && new Date(property.promoted_until) > new Date() ? "left-24" : "left-2"} bg-chs-amber text-white text-[10px] font-bold px-2 py-1 rounded-full`}>
             Under Verification — Not Yet Bookable
           </span>
         )}

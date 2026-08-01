@@ -23,9 +23,21 @@ function generateReference(): string {
 // `inspections` table — at least 12 hours' notice — checked here too,
 // so someone gets a clear, immediate message instead of a confusing
 // raw database error if they pick a time too soon.
-function hasEnoughNotice(date: string, time: string): boolean {
-  if (!date || !time) return false;
-  const requested = new Date(`${date}T${time}`);
+// Real, reliable conversion — a native browser time input's AM/PM
+// display depends on the device's own locale settings, which is
+// exactly why it looked inconsistent across devices; this custom
+// picker produces the same real 24-hour value every time, regardless
+// of device or browser.
+function to24Hour(hour12: string, minute: string, ampm: "AM" | "PM"): string {
+  let h = parseInt(hour12, 10);
+  if (ampm === "AM" && h === 12) h = 0;
+  if (ampm === "PM" && h !== 12) h += 12;
+  return `${String(h).padStart(2, "0")}:${minute}`;
+}
+
+function hasEnoughNotice(date: string, time24: string): boolean {
+  if (!date || !time24) return false;
+  const requested = new Date(`${date}T${time24}`);
   const minimumAllowed = new Date(Date.now() + 12 * 60 * 60 * 1000);
   return requested >= minimumAllowed;
 }
@@ -37,7 +49,9 @@ export default function InspectionBookingForm({
   onSuccess,
 }: InspectionBookingFormProps) {
   const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
+  const [hour12, setHour12] = useState("9");
+  const [minute, setMinute] = useState("00");
+  const [ampm, setAmpm] = useState<"AM" | "PM">("AM");
   const [meetingPoint, setMeetingPoint] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +65,16 @@ export default function InspectionBookingForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!date || !time) {
-      setError("Please choose a date and time.");
+    const time24 = to24Hour(hour12, minute, ampm);
+    if (!date) {
+      setError("Please choose a date.");
       return;
     }
     if (!meetingPoint.trim()) {
       setError("Please enter a meeting point.");
       return;
     }
-    if (!hasEnoughNotice(date, time)) {
+    if (!hasEnoughNotice(date, time24)) {
       setError("Please choose a time at least 12 hours from now, so CHS and the owner have time to confirm.");
       return;
     }
@@ -72,7 +87,7 @@ export default function InspectionBookingForm({
       property_id: propertyId,
       requester_id: session.user.id,
       requested_date: date,
-      requested_time: time,
+      requested_time: time24,
       meeting_point: meetingPoint.trim(),
       transport_fee: fee.perPersonFee,
     });
@@ -114,12 +129,21 @@ export default function InspectionBookingForm({
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Preferred time</label>
-        <input
-          type="time"
-          value={time}
-          onChange={(e) => setTime(e.target.value)}
-          className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-        />
+        <div className="flex gap-2 mt-1">
+          <select value={hour12} onChange={(e) => setHour12(e.target.value)}
+            className="flex-1 px-2 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+            {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((h) => <option key={h} value={h}>{h}</option>)}
+          </select>
+          <select value={minute} onChange={(e) => setMinute(e.target.value)}
+            className="flex-1 px-2 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+            {["00", "15", "30", "45"].map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select value={ampm} onChange={(e) => setAmpm(e.target.value as "AM" | "PM")}
+            className="flex-1 px-2 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Meeting point</label>

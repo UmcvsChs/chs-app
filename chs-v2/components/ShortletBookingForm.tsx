@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { ShortletBooking } from "@/types/shortletBooking";
 import { formatNaira } from "@/lib/format";
+import { uploadDocument } from "@/lib/storage";
 
 interface ShortletBookingFormProps {
   propertyId: string;
@@ -13,12 +14,6 @@ interface ShortletBookingFormProps {
   onSuccess: () => void;
 }
 
-// Genuinely checks the two date ranges for overlap client-side first —
-// this is a helpful, fast, upfront check, but NOT the real protection.
-// The real protection is the database's own exclusion constraint, which
-// this client-side check can never fully replace (a race condition
-// between two nearly-simultaneous bookings is only truly prevented at
-// the database level).
 function rangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
   return new Date(startA) < new Date(endB) && new Date(startB) < new Date(endA);
 }
@@ -37,6 +32,10 @@ export default function ShortletBookingForm({
   const [existingBookings, setExistingBookings] = useState<ShortletBooking[]>([]);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
+  const [guests, setGuests] = useState(1);
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
@@ -69,9 +68,14 @@ export default function ShortletBookingForm({
       setError("Check-out must be after check-in.");
       return;
     }
+    // Real guest verification — restored, found completely missing.
+    // Genuinely required this time, unlike the original's version of
+    // this specific field, which was only ever a fake toast message.
+    if (!guestName.trim() || !guestPhone.trim() || !idFile) {
+      setError("Please provide your name, phone number, and a valid ID for guest verification.");
+      return;
+    }
 
-    // The helpful, fast, upfront check — catches the obvious case
-    // immediately, before ever reaching the server.
     const hasClientSideConflict = existingBookings.some((b) =>
       rangesOverlap(checkIn, checkOut, b.check_in, b.check_out)
     );
@@ -83,28 +87,35 @@ export default function ShortletBookingForm({
     setError(null);
     setSubmitting(true);
 
-    const { error: insertError } = await supabase.from("shortlet_bookings").insert({
-      property_id: propertyId,
-      guest_id: session.user.id,
-      check_in: checkIn,
-      check_out: checkOut,
-      total_price: totalPrice,
+    const idDocumentUrl = await uploadDocument(idFile, session.user.id, "shortlet-guest-id");
+
+    // Real, atomic booking + payment — restored, found genuinely
+    // missing entirely. A booking previously could be created with no
+    // real payment ever happening. Now genuinely debits the guest's
+    // real wallet, held in escrow, matching the original's own real
+    // promise — not released to the host until check-in is confirmed.
+    const { data: bookingId, error: rpcError } = await supabase.rpc("book_shortlet_with_payment", {
+      p_property_id: propertyId,
+      p_guest_id: session.user.id,
+      p_check_in: checkIn,
+      p_check_out: checkOut,
+      p_total_price: totalPrice,
+      p_guests: guests,
+      p_guest_full_name: guestName.trim(),
+      p_guest_phone: guestPhone.trim(),
+      p_guest_id_document_url: idDocumentUrl,
     });
 
-    if (insertError) {
-      // The real protection catching what the client-side check might
-      // have missed — genuinely possible if someone else's booking was
-      // confirmed in the brief moment between this page loading and this
-      // submission. The database's exclusion constraint rejects this
-      // with a specific, recognisable error, surfaced here honestly
-      // rather than a raw technical message.
-      if (insertError.message.includes("exclude") || insertError.code === "23P01") {
+    if (rpcError || !bookingId) {
+      if (rpcError?.message?.includes("insufficient_balance")) {
+        setError("Insufficient wallet balance for this booking. Please top up your wallet first.");
+      } else if (rpcError?.message?.includes("exclude") || rpcError?.code === "23P01") {
         setError("Someone just booked those dates. Please choose a different range.");
       } else {
         setError("Could not complete this booking. Please try again.");
       }
       setSubmitting(false);
-      loadExistingBookings(); // refresh so the newly-taken dates show as unavailable
+      loadExistingBookings();
       return;
     }
 
@@ -134,17 +145,47 @@ export default function ShortletBookingForm({
         </div>
       </div>
 
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Guests</label>
+        <input type="number" min={1} value={guests} onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
+          className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+
+      <div className="border-t border-gray-200 pt-3">
+        <p className="text-xs font-bold text-chs-charcoal mb-1">Guest verification</p>
+        <p className="text-[10px] text-gray-400 mb-2">Valid ID is required before check-in details are released. This protects both you and the host.</p>
+        <div className="space-y-2">
+          <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
+            placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)}
+            placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
+            className="w-full text-xs" />
+        </div>
+      </div>
+
       {nights > 0 && (
-        <p className="text-sm font-bold text-chs-charcoal">
-          {nights} night{nights !== 1 ? "s" : ""} — {formatNaira(totalPrice)}
-        </p>
+        <div className="border-t border-gray-200 pt-3">
+          <p className="text-xs font-bold text-chs-charcoal mb-1">Price breakdown</p>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>{formatNaira(pricePerNight)} × {nights} night{nights !== 1 ? "s" : ""}</span>
+            <span className="font-bold text-chs-charcoal">{formatNaira(totalPrice)}</span>
+          </div>
+        </div>
+      )}
+
+      {nights > 0 && (
+        <div className="bg-chs-amber-light rounded-lg p-3">
+          <p className="text-xs font-bold text-chs-red">💳 CHS Wallet (recommended)</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">Instant · Held in escrow until check-in confirmed</p>
+        </div>
       )}
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
       <button type="submit" disabled={submitting || loadingAvailability}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-        {submitting ? "Booking..." : "Book now"}
+        {submitting ? "Processing payment..." : "Confirm & pay — instant confirmation"}
       </button>
     </form>
   );

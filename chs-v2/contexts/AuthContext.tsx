@@ -16,6 +16,7 @@ interface Profile {
   id: string;
   full_name: string;
   role: string;
+  state: string;
   secondary_roles: string[] | null;
   status: string;
   membership_verified: boolean | null;
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, role, secondary_roles, status, membership_verified, valid_id_verified, avatar_url")
+      .select("id, full_name, role, state, secondary_roles, status, membership_verified, valid_id_verified, avatar_url")
       .eq("id", userId)
       .single();
     if (data) {

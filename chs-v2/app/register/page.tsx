@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ComprehensionCheck from "@/components/ComprehensionCheck";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
@@ -13,7 +14,7 @@ const PROFESSIONS = [
   "Structural Engineer", "Facility Manager", "Real Estate Consultant", "Other professional",
 ];
 
-type Role = "buyer" | "tenant" | "owner" | "agent" | "manager";
+type Role = "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer";
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "buyer", label: "Buyer", desc: "Searching to purchase, rent, lease or hire a property" },
@@ -21,11 +22,13 @@ const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "owner", label: "Property Owner", desc: "Listing a property to sell, rent, lease, or hire out" },
   { value: "agent", label: "Agent", desc: "Marketing properties and earning referral commission" },
   { value: "manager", label: "Property Manager", desc: "Managing properties professionally on behalf of owners" },
+  { value: "developer", label: "Commercial Developer", desc: "Sell estates, offer instalment/investment plans" },
 ];
 
 export default function RegisterPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>("buyer");
+  const [comprehensionPassed, setComprehensionPassed] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -51,6 +54,15 @@ export default function RegisterPage() {
   const [professionalNumber, setProfessionalNumber] = useState("");
   const [operatingStates, setOperatingStates] = useState("");
   const [certFile, setCertFile] = useState<File | null>(null);
+
+  // Commercial Developer-specific
+  const [companyName, setCompanyName] = useState("");
+  const [cacNumber, setCacNumber] = useState("");
+  const [currentProjects, setCurrentProjects] = useState("");
+  const [offersInstalments, setOffersInstalments] = useState<"" | "yes" | "no">("");
+  const [acceptsInvestment, setAcceptsInvestment] = useState<"" | "yes" | "no">("");
+  const [devExperience, setDevExperience] = useState("Less than 2 years");
+  const [portfolioFile, setPortfolioFile] = useState<File | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +90,22 @@ export default function RegisterPage() {
       if (!certFile) return "Please upload your professional certificate or licence.";
     }
 
+    if (role === "developer") {
+      if (!companyName.trim()) return "Please enter your company or development name.";
+      if (!cacNumber.trim()) return "Please enter your CAC registration number.";
+      if (offersInstalments === "") return "Please let us know whether you offer instalment purchase plans.";
+      if (acceptsInvestment === "") return "Please let us know whether you accept investment capital from buyers.";
+    }
+
     return null;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!comprehensionPassed) {
+      setError("Please complete the comprehension check correctly before continuing.");
+      return;
+    }
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -161,6 +184,18 @@ export default function RegisterPage() {
             professional_credentials_verified: false,
           })
           .eq("id", userId);
+      } else if (role === "developer") {
+        const portfolioUrl = portfolioFile ? await uploadDocument(portfolioFile, userId, "developer-portfolio") : null;
+        await supabase.from("developer_applications").insert({
+          user_id: userId,
+          company_name: companyName.trim(),
+          cac_number: cacNumber.trim(),
+          current_projects: currentProjects.trim() || null,
+          offers_instalments: offersInstalments === "yes",
+          accepts_investment_capital: acceptsInvestment === "yes",
+          years_experience: devExperience,
+          portfolio_url: portfolioUrl,
+        });
       }
 
       router.push(getReturnPath());
@@ -262,6 +297,21 @@ export default function RegisterPage() {
                   Apply as CHS Agent
                 </button>
               </div>
+
+              {/* Real explanatory context for each path — restored,
+                  found missing during the systematic Register view
+                  comparison. The toggle and data fields already
+                  existed, but the important context helping someone
+                  make an informed choice did not. */}
+              {agentType === "independent" ? (
+                <p className="text-[11px] text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 leading-relaxed">
+                  You are registering as an <strong>Independent Agent</strong>. You operate under your own name/business, market properties on CHS, and earn the standard 5% referral commission. Upload your documents below and submit for CHS review.
+                </p>
+              ) : (
+                <p className="text-[11px] text-gray-600 bg-gray-50 rounded-lg px-3 py-2 leading-relaxed">
+                  You are applying to become an <strong>official CHS Agent</strong>. This is a closer working relationship — you represent the CHS brand directly, receive priority property assignments, and are held to a stricter code of conduct. Additional vetting, an interview, and a signed CHS Agent Agreement are required before approval.
+                </p>
+              )}
               <div>
                 <label className="text-xs font-semibold text-gray-600">LGA coverage areas</label>
                 <input type="text" value={lgas} onChange={(e) => setLgas(e.target.value)}
@@ -337,11 +387,70 @@ export default function RegisterPage() {
             </div>
           )}
 
+          {role === "developer" && (
+            <div className="border-t border-gray-200 pt-4 mt-2 space-y-3">
+              <p className="text-xs font-bold text-chs-charcoal">🏗️ Commercial Developer details</p>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Company / development name</label>
+                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g. Millennium Homes Ltd" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">CAC registration number</label>
+                <input type="text" value={cacNumber} onChange={(e) => setCacNumber(e.target.value)}
+                  placeholder="RC number" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Current or planned project(s)</label>
+                <textarea value={currentProjects} onChange={(e) => setCurrentProjects(e.target.value)} rows={2}
+                  placeholder="e.g. 40-unit estate, Millennium City, Phase 2" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Do you offer instalment purchase plans?</label>
+                <select value={offersInstalments} onChange={(e) => setOffersInstalments(e.target.value as "yes" | "no")}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select...</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No — outright payment only</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Do you accept investment capital from buyers (co-investment)?</label>
+                <select value={acceptsInvestment} onChange={(e) => setAcceptsInvestment(e.target.value as "yes" | "no")}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select...</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Years in real estate development</label>
+                <select value={devExperience} onChange={(e) => setDevExperience(e.target.value)}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option>Less than 2 years</option>
+                  <option>2–5 years</option>
+                  <option>5–10 years</option>
+                  <option>10+ years</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Upload company profile / portfolio (optional)</label>
+                <input type="file" accept="image/*,application/pdf" onChange={(e) => setPortfolioFile(e.target.files?.[0] || null)}
+                  className="w-full mt-1 text-xs" />
+              </div>
+              <p className="text-[10px] text-gray-400 bg-chs-amber-light rounded-lg px-3 py-2">
+                Commercial Developer partnerships are governed by a separate Developer Partnership Agreement in addition to the standard CHS Terms &amp; Conditions. CHS will review your submission and contact you to finalise terms before any project goes live.
+              </p>
+            </div>
+          )}
+
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
-          <button type="submit" disabled={submitting}
+          <ComprehensionCheck onPassed={setComprehensionPassed} />
+
+          <button type="submit" disabled={submitting || !comprehensionPassed}
             className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-            {submitting ? "Creating your account..." : "Create my CHS account"}
+            {submitting ? "Creating your account..." : comprehensionPassed ? "Create my CHS account" : "Complete the check above to continue"}
           </button>
         </form>
       </div>

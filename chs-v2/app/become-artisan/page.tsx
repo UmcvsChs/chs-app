@@ -12,28 +12,50 @@ import { NIGERIAN_STATES, LGA_BY_STATE } from "@/lib/geoData";
 export default function BecomeArtisanPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
-  const [trade, setTrade] = useState("painter");
+  const [trades, setTrades] = useState<string[]>([]);
   const [otherTrade, setOtherTrade] = useState("");
   const [yearsExperience, setYearsExperience] = useState<number | "">("");
   const [certBody, setCertBody] = useState("");
   const [certFile, setCertFile] = useState<File | null>(null);
   const [equipmentTier, setEquipmentTier] = useState("basic");
+  const [equipmentPhoto, setEquipmentPhoto] = useState<File | null>(null);
+  const [equipmentReceipt, setEquipmentReceipt] = useState<File | null>(null);
   const [baseState, setBaseState] = useState("Kaduna");
   const [baseLga, setBaseLga] = useState("");
-  const [willingToTravel, setWillingToTravel] = useState(false);
+  const [willingToTravel, setWillingToTravel] = useState<"" | "yes" | "no">("");
   const [artisanType, setArtisanType] = useState<"independent" | "chs_agent">("independent");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  function toggleTrade(value: string) {
+    setTrades((prev) => (prev.includes(value) ? prev.filter((t) => t !== value) : [...prev, value]));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (trade === "other" && !otherTrade.trim()) {
-      setError("Please describe your trade.");
+    if (trades.length === 0) {
+      setError("Please select at least one real trade — you can select more than one if you genuinely have multiple skills.");
+      return;
+    }
+    if (trades.includes("other") && !otherTrade.trim()) {
+      setError("Please describe your other trade.");
       return;
     }
     if (!yearsExperience && yearsExperience !== 0) {
       setError("Please enter your years of experience.");
+      return;
+    }
+    // A real, confirmed gap fixed: claiming power tools or professional
+    // equipment now genuinely requires real proof, matching what this
+    // whole platform is actually built on — verifying claims, not just
+    // taking someone's word for it.
+    if ((equipmentTier === "power_tools" || equipmentTier === "professional") && !equipmentPhoto) {
+      setError("Please upload a real photo of your equipment to support this claim.");
+      return;
+    }
+    if (willingToTravel === "") {
+      setError("Please let us know whether you're willing to travel interstate — either answer is completely fine.");
       return;
     }
     if (!session) return;
@@ -43,18 +65,24 @@ export default function BecomeArtisanPage() {
 
     let certUrl: string | null = null;
     if (certFile) certUrl = await uploadDocument(certFile, session.user.id, "artisan-certification");
+    let equipmentPhotoUrl: string | null = null;
+    if (equipmentPhoto) equipmentPhotoUrl = await uploadDocument(equipmentPhoto, session.user.id, "artisan-equipment-photo");
+    let equipmentReceiptUrl: string | null = null;
+    if (equipmentReceipt) equipmentReceiptUrl = await uploadDocument(equipmentReceipt, session.user.id, "artisan-equipment-receipt");
 
     const { error: insertError } = await supabase.from("artisans").insert({
       user_id: session.user.id,
-      trade,
-      other_trade_description: trade === "other" ? otherTrade.trim() : null,
+      trades,
+      other_trade_description: trades.includes("other") ? otherTrade.trim() : null,
       years_experience: yearsExperience,
       certification_body: certBody.trim() || null,
       certification_document_url: certUrl,
       equipment_tier: equipmentTier,
+      equipment_photo_url: equipmentPhotoUrl,
+      equipment_receipt_url: equipmentReceiptUrl,
       base_state: baseState,
       base_lga: baseLga.trim() || null,
-      willing_to_travel_interstate: willingToTravel,
+      willing_to_travel_interstate: willingToTravel === "yes",
       artisan_type: artisanType,
       verification_status: "pending",
     });
@@ -97,16 +125,23 @@ export default function BecomeArtisanPage() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-gray-600">Trade</label>
-            <select value={trade} onChange={(e) => setTrade(e.target.value)}
-              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
-              {ARTISAN_TRADES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            <label className="text-xs font-semibold text-gray-600">Your trade(s)</label>
+            <p className="text-[10px] text-gray-400 mb-1.5">Select every real skill you genuinely have — you're not limited to just one.</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {ARTISAN_TRADES.map((t) => (
+                <label key={t.value} className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 text-xs cursor-pointer ${
+                  trades.includes(t.value) ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"
+                }`}>
+                  <input type="checkbox" checked={trades.includes(t.value)} onChange={() => toggleTrade(t.value)} className="shrink-0" />
+                  {t.label}
+                </label>
+              ))}
+            </div>
           </div>
 
-          {trade === "other" && (
+          {trades.includes("other") && (
             <input type="text" value={otherTrade} onChange={(e) => setOtherTrade(e.target.value)}
-              placeholder="Describe your trade" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              placeholder="Describe your other trade" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           )}
 
           <div>
@@ -139,6 +174,24 @@ export default function BecomeArtisanPage() {
             </select>
           </div>
 
+          {(equipmentTier === "power_tools" || equipmentTier === "professional") && (
+            <div className="bg-chs-amber-light rounded-lg p-3 space-y-2">
+              <p className="text-[10px] text-chs-amber-dark font-semibold">
+                Since you selected {equipmentTier === "power_tools" ? "Power tools" : "Professional-grade equipment"}, please help us verify this real claim:
+              </p>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Photo of your real equipment</label>
+                <input type="file" accept="image/*" onChange={(e) => setEquipmentPhoto(e.target.files?.[0] || null)}
+                  className="w-full mt-1 text-xs" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Purchase receipt (optional, but helps verification)</label>
+                <input type="file" accept="image/*,application/pdf" onChange={(e) => setEquipmentReceipt(e.target.files?.[0] || null)}
+                  className="w-full mt-1 text-xs" />
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="text-xs font-semibold text-gray-600">Base state</label>
             <select value={baseState} onChange={(e) => { setBaseState(e.target.value); setBaseLga(""); }}
@@ -156,10 +209,20 @@ export default function BecomeArtisanPage() {
             </select>
           </div>
 
-          <label className="flex items-center gap-2 text-xs text-gray-600">
-            <input type="checkbox" checked={willingToTravel} onChange={(e) => setWillingToTravel(e.target.checked)} />
-            I&apos;m willing to travel interstate when a job genuinely requires it
-          </label>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Willing to travel interstate for a job?</label>
+            <p className="text-[10px] text-gray-400 mb-1">This is a real, required question — either answer is completely fine, there's no wrong choice here.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setWillingToTravel("yes")}
+                className={`py-2 rounded-lg border-2 text-xs font-semibold ${willingToTravel === "yes" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
+                Yes, I&apos;m willing
+              </button>
+              <button type="button" onClick={() => setWillingToTravel("no")}
+                className={`py-2 rounded-lg border-2 text-xs font-semibold ${willingToTravel === "no" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
+                No, local jobs only
+              </button>
+            </div>
+          </div>
 
           <div>
             <label className="text-xs font-semibold text-gray-600">Registering as</label>
