@@ -243,7 +243,7 @@ export default function ListPropertyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">List a property</h1>
         <p className="text-sm text-gray-500 mb-6">
@@ -372,7 +372,7 @@ export default function ListPropertyPage() {
                 </>
               )}
 
-              <div className="bg-white rounded-xl p-3 border-2 border-chs-red">
+              <div className="bg-[var(--zone-card)] rounded-xl p-3 border-2 border-chs-red">
                 <p className="text-xs font-bold text-chs-red mb-2">⚖️ Ownership declaration — required</p>
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input type="checkbox" checked={ownershipDeclared} onChange={(e) => setOwnershipDeclared(e.target.checked)} className="mt-0.5 shrink-0" />

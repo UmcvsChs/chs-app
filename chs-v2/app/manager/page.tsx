@@ -158,7 +158,7 @@ export default function ManagerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-manager bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">Property Manager</h1>
@@ -216,7 +216,7 @@ export default function ManagerDashboard() {
             ).map(([propertyId, group]) => {
               const activeCount = group.filter((t) => t.status === "active").length;
               return (
-                <div key={propertyId} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div key={propertyId} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-center mb-1">
                     <p className="text-sm font-semibold text-chs-charcoal">{group[0].properties?.title}</p>
                     <span className="text-[10px] font-bold text-chs-red bg-chs-amber-light px-2 py-0.5 rounded-full">
@@ -267,7 +267,7 @@ export default function ManagerDashboard() {
         )}
 
         {paymentHistoryTenancy && (
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs font-bold text-chs-charcoal">💳 Payment history — {paymentHistoryTenancy.properties?.title}</p>
               <button onClick={() => setPaymentHistoryTenancy(null)} className="text-gray-400 text-lg">✕</button>
@@ -318,7 +318,7 @@ export default function ManagerDashboard() {
             <p className="text-sm text-gray-400">No maintenance requests on your managed tenancies.</p>
           ) : (
             faults.map((fault) => (
-              <div key={fault.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={fault.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-semibold text-chs-charcoal">{fault.category}</p>
                   <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">

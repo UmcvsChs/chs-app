@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import ChsLogo from "@/components/ChsLogo";
+import BiometricLogin from "@/components/BiometricLogin";
 
 const ROLE_OPTIONS = [
   { value: "buyer", label: "Buyer" },
@@ -33,6 +34,7 @@ export default function LoginPage() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showBiometric, setShowBiometric] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,7 +105,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         {/* The real, complete CHS logo — the same one used on the
             splash screen, built exactly to the full design
@@ -115,6 +117,19 @@ export default function LoginPage() {
 
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1 text-center">Welcome back</h1>
         <p className="text-sm text-gray-500 mb-6 text-center">Log in to your CHS account</p>
+
+        {showBiometric ? (
+          <>
+            <BiometricLogin onLoggedIn={() => {}} />
+            <button onClick={() => setShowBiometric(false)} className="text-xs text-gray-400 text-center w-full mb-4">
+              Use phone number and PIN instead
+            </button>
+          </>
+        ) : (
+          <button onClick={() => setShowBiometric(true)} className="w-full py-2.5 rounded-full border-2 border-chs-charcoal text-chs-charcoal text-xs font-semibold mb-4">
+            🔐 Log in with Face ID / fingerprint instead
+          </button>
+        )}
 
         <p className="text-xs font-semibold text-chs-charcoal mb-2">Log in as</p>
         <div className="grid grid-cols-3 gap-2 mb-5">

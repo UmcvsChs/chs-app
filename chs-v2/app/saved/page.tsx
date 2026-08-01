@@ -35,7 +35,7 @@ export default function SavedPropertiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-20">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">❤️ Saved Properties</h1>

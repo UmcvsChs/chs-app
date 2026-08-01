@@ -95,7 +95,7 @@ export default function PromoteListingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/owner" className="text-xs text-gray-400">← Back to My Properties</Link>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mt-1 mb-1">⭐ Promote listing</h1>

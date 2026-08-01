@@ -71,8 +71,8 @@ export default function NotificationBell() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-w-[90vw] bg-white rounded-xl border border-gray-100 shadow-lg z-50 max-h-96 overflow-y-auto">
+          <div className="fixed inset-0 z-40 bg-black/30" onClick={() => setOpen(false)} />
+          <div className="fixed top-16 left-1/2 -translate-x-1/2 w-[92vw] max-w-sm bg-white rounded-xl border border-gray-100 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
             <div className="flex justify-between items-center p-3 border-b border-gray-100">
               <p className="text-xs font-bold text-chs-charcoal">Notifications</p>
               {unreadCount > 0 && (

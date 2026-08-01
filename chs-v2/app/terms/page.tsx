@@ -5,7 +5,7 @@ import Link from "next/link";
 // (5%/5.5% rental, 6.5%/6% sale), not approximated from memory.
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">📜 Terms & Conditions</h1>
@@ -22,8 +22,38 @@ export default function TermsPage() {
           <p><strong className="text-chs-charcoal">8. Disputes are resolved through CHS&apos;s internal process first</strong>, before arbitration or the courts of Kaduna State.</p>
           <p><strong className="text-chs-charcoal">9. CHS reserves the right to suspend or terminate</strong> any account found in breach of these terms.</p>
 
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">10. Sale Approvals checkpoint</p>
+            <p>Once an owner accepts a buyer&apos;s offer on a for-sale property, the transaction does not move straight to document submission and escrow payment — CHS first reviews and clears it. This is the real checkpoint between an offer being accepted and money actually moving.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">11. Shortlet bookings</p>
+            <p>A shortlet booking is paid instantly through your CHS Wallet and held in escrow — not released to the host until your check-in is confirmed. Genuine guest verification (name, phone, valid ID) is required before any booking is confirmed.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">12. Wallet freezing</p>
+            <p>CHS reserves the right to freeze any wallet pending a genuine investigation into suspected fraud or a policy violation. A frozen wallet is functionally blocked from withdrawal until the matter is resolved.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">13. Listing promotion</p>
+            <p>Promoting a listing (7-Day Boost, 30-Day Featured, or 90-Day Premium) is a real, paid feature, debited directly from the owner&apos;s wallet at time of purchase.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">14. Maintenance Artisans</p>
+            <p>For any property under full CHS management, maintenance work is offered first and exclusively to verified CHS Maintenance Agents. For every other property, real quotations are ranked by a transparent formula weighted toward rating and reliability first, experience second, and equipment third. Either the client or the artisan may raise a genuine, two-sided dispute about a completed job.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">15. Engaging CHS for a professional service</p>
+            <p>Full Property Management, Sale Negotiation, Construction Monitoring, Project Management, and Renovation services each carry their own real, specific Terms &amp; Conditions and fee schedule, which must be reviewed in full and accepted before that service begins. The complete terms for every service are available in the full CHS Terms &amp; Conditions document.</p>
+          </div>
+
           <div id="referral" className="border-t border-gray-200 pt-4 mt-2">
-            <p className="font-bold text-chs-charcoal mb-2">10. How the Agent Referral system works</p>
+            <p className="font-bold text-chs-charcoal mb-2">16. How the Agent Referral system works</p>
             <p>Every registered agent has a unique code (e.g. <strong>CHS-AG-0024</strong>), automatically attached to every property link generated from their dashboard.</p>
             <p className="mt-2"><strong className="text-chs-charcoal">Where the link goes.</strong> A referral link always opens the property directly on CHS — never on the agent&apos;s personal page, profile, or any third-party site. This means CHS can verify the transaction and calculate commission accurately, and it means the buyer/tenant always transacts through CHS&apos;s protections (escrow, dispute resolution, document verification), regardless of where they first saw the link.</p>
             <p className="mt-2"><strong className="text-chs-charcoal">Where an agent can share it.</strong> Anywhere the agent already has an audience — their own Facebook page, WhatsApp status, Instagram bio, a physical flyer with a short link, and so on. Sharing the link doesn&apos;t move any part of the transaction off CHS; it only brings the visitor to CHS.</p>
@@ -31,7 +61,7 @@ export default function TermsPage() {
             <p className="mt-2"><strong className="text-chs-charcoal">What this is not.</strong> This is not a way to direct buyers/tenants to complete a deal outside CHS — see term 2 above. Attempting to circumvent CHS after using a referral link is treated the same as any other circumvention attempt.</p>
           </div>
 
-          <p className="text-xs text-gray-400 bg-white rounded-lg p-3 mt-4">
+          <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
             This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support.
           </p>
         </div>

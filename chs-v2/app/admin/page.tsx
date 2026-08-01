@@ -47,7 +47,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "finance" | "saleapprovals" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
+type Tab = "overview" | "finance" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   // one of these numbers was entirely fake and hardcoded (1,240
   // listings, 4,210 users, etc.) — every number here is genuinely
   // computed from real, current data instead.
-  const [overviewStats, setOverviewStats] = useState({ totalListings: 0, verifiedListings: 0, registeredUsers: 0 });
+  const [overviewStats, setOverviewStats] = useState({ totalListings: 0, verifiedListings: 0, registeredUsers: 0, propertiesWithRules: 0, rulesAcknowledged: 0 });
   // Real wallet lookup + freeze — restored, found completely missing.
   // The original's "Freeze wallet" was itself never real — a toast
   // with no actual effect. This version genuinely, functionally
@@ -71,6 +71,7 @@ export default function AdminDashboard() {
   // distinct financial safety checkpoint between an owner accepting a
   // sale offer and money actually moving to escrow.
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
+  const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
 
   async function handleWalletSearch() {
     setWalletSearchError(null);
@@ -156,15 +157,19 @@ export default function AdminDashboard() {
     ]);
     setPendingProfiles(profilesRes.data || []);
 
-    const [totalListingsRes, verifiedListingsRes, usersRes] = await Promise.all([
+    const [totalListingsRes, verifiedListingsRes, usersRes, rulesRes, ackRes] = await Promise.all([
       supabase.from("properties").select("id", { count: "exact", head: true }),
       supabase.from("properties").select("id", { count: "exact", head: true }).eq("verification_status", "verified"),
       supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("property_house_rules").select("id", { count: "exact", head: true }),
+      supabase.from("house_rules_acknowledgments").select("id", { count: "exact", head: true }),
     ]);
     setOverviewStats({
       totalListings: totalListingsRes.count || 0,
       verifiedListings: verifiedListingsRes.count || 0,
       registeredUsers: usersRes.count || 0,
+      propertiesWithRules: rulesRes.count || 0,
+      rulesAcknowledged: ackRes.count || 0,
     });
 
     const { data: saleApprovalsData } = await supabase
@@ -174,6 +179,13 @@ export default function AdminDashboard() {
       .eq("chs_cleared", false)
       .order("created_at", { ascending: true });
     setPendingSaleApprovals((saleApprovalsData as unknown as typeof pendingSaleApprovals) || []);
+
+    const { data: livenessData } = await supabase
+      .from("liveness_submissions")
+      .select("id, user_id, captured_photo_url, profiles(full_name)")
+      .eq("status", "pending_review")
+      .order("created_at", { ascending: true });
+    setPendingLiveness((livenessData as unknown as typeof pendingLiveness) || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
@@ -499,12 +511,28 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleLivenessReview(submissionId: string, userId: string, approve: boolean) {
+    setActionError(null);
+    const { error } = await supabase
+      .from("liveness_submissions")
+      .update({ status: approve ? "approved" : "rejected" })
+      .eq("id", submissionId);
+    if (error) {
+      setActionError("Could not update this submission. Please try again.");
+      return;
+    }
+    if (approve) {
+      await supabase.from("profiles").update({ liveness_verified: true }).eq("id", userId);
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-admin bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
@@ -536,6 +564,7 @@ export default function AdminDashboard() {
           { key: "overview", label: "Overview" },
           { key: "finance", label: "Finance" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})` },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length})` },
           { key: "registrations", label: `Registrations (${pendingProfiles.length})` },
           { key: "applications", label: `Applications (${pendingApplications.length})` },
           { key: "properties", label: `Properties (${pendingProperties.length})` },
@@ -568,17 +597,25 @@ export default function AdminDashboard() {
       <div className="px-4 py-4 space-y-3">
         {activeTab === "overview" && (
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.totalListings}</p>
               <p className="text-[10px] text-gray-400 mt-1">Total listings</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.verifiedListings}</p>
               <p className="text-[10px] text-gray-400 mt-1">Verified listings</p>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 p-4 text-center col-span-2">
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center col-span-2">
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.registeredUsers}</p>
               <p className="text-[10px] text-gray-400 mt-1">Registered users</p>
+            </div>
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
+              <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.propertiesWithRules}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Properties with House Rules uploaded</p>
+            </div>
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
+              <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.rulesAcknowledged}</p>
+              <p className="text-[10px] text-gray-400 mt-1">Tenants who&apos;ve acknowledged House Rules</p>
             </div>
           </div>
         )}
@@ -595,7 +632,7 @@ export default function AdminDashboard() {
             </div>
             {walletSearchError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{walletSearchError}</p>}
             {walletResult && (
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal capitalize">{walletResult.full_name} — {walletResult.role}</p>
                 <p className="text-xs text-gray-500 mt-1">
                   Main wallet: {formatNaira(walletResult.main_balance)} · Rent savings: {formatNaira(walletResult.rent_savings)} · Maintenance reserve: {formatNaira(walletResult.maintenance_reserve)}
@@ -632,7 +669,7 @@ export default function AdminDashboard() {
               <p className="text-center text-sm text-gray-400 py-8">No sale approvals pending right now.</p>
             ) : (
               pendingSaleApprovals.map((offer) => (
-                <div key={offer.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
                   <p className="text-xs text-gray-500 mt-1">Accepted offer: {formatNaira(offer.amount)}</p>
                   {offer.note && <p className="text-xs text-gray-400 mt-1">{offer.note}</p>}
@@ -646,12 +683,41 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === "liveness" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🔒 Each real capture below comes from an actual on-device walkthrough — never an automated pass. Review the photo directly and confirm it genuinely shows a real person matching the account.
+            </p>
+            {pendingLiveness.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No facial verifications pending review.</p>
+            ) : (
+              pendingLiveness.map((sub) => (
+                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-2">{sub.profiles?.full_name || "User"}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sub.captured_photo_url} alt="Liveness capture" className="w-full rounded-lg mb-2" />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleLivenessReview(sub.id, sub.user_id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleLivenessReview(sub.id, sub.user_id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {activeTab === "registrations" &&
           (pendingProfiles.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending registrations.</p>
           ) : (
             pendingProfiles.map((p) => (
-              <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
                 <p className="text-xs text-gray-500">
                   {p.phone} — {p.role} — {p.state}
@@ -675,7 +741,7 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No pending rental applications.</p>
           ) : (
             pendingApplications.map((app) => (
-              <div key={app.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">Guarantor: {app.guarantor_name}</p>
                 <p className="text-xs text-gray-500">{app.guarantor_phone} — Move-in: {app.move_in_date}</p>
                 <button onClick={() => handleApplicationScreened(app.id)}
@@ -691,7 +757,7 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No properties awaiting verification.</p>
           ) : (
             pendingProperties.map((prop) => (
-              <div key={prop.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
                 <p className="text-xs text-gray-500">{prop.location_area} — {prop.purpose}</p>
                 <div className="flex gap-2 mt-2">
@@ -713,7 +779,7 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No open disputes.</p>
           ) : (
             openDisputes.map((d) => (
-              <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm text-chs-charcoal">{d.description}</p>
                 {d.amount_in_dispute !== null && (
                   <p className="text-xs font-semibold text-chs-charcoal mt-1">
@@ -743,7 +809,7 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No pending community feedback.</p>
           ) : (
             pendingFeedback.map((f) => (
-              <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm text-chs-charcoal">{f.note}</p>
                 <p className="text-xs text-gray-400 mt-1">— {f.relation}</p>
                 <div className="flex gap-2 mt-2">
@@ -780,7 +846,7 @@ export default function AdminDashboard() {
             <p className="text-center text-sm text-gray-400 py-8">No pending vendor registrations.</p>
           ) : (
             pendingVendors.map((v) => (
-              <div key={v.id} className="bg-white rounded-xl border border-gray-100 p-3">
+              <div key={v.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
                 <p className="text-xs text-gray-500">{v.category} — {v.location_state}</p>
                 {v.cac_number && <p className="text-xs text-gray-500">CAC: {v.cac_number}</p>}
@@ -812,7 +878,7 @@ export default function AdminDashboard() {
               <p className="text-center text-sm text-gray-400 py-8">No referral fees recorded yet.</p>
             ) : (
               owedFees.map((f) => (
-                <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
+                <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
                   <div>
                     <p className="text-sm font-semibold text-chs-charcoal">{formatNaira(f.amount)}</p>
                     <span className="text-[10px] font-bold uppercase text-gray-400">{f.status}</span>
@@ -846,7 +912,7 @@ export default function AdminDashboard() {
               unroutedFaults.map((f) => {
                 const isDelegated = f.tenancies?.management_delegated === true;
                 return (
-                  <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                  <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-semibold text-chs-charcoal">{f.category}</p>
                       <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full ${isDelegated ? "bg-chs-amber-light text-chs-amber-dark" : "bg-gray-100 text-gray-500"}`}>
@@ -874,7 +940,7 @@ export default function AdminDashboard() {
               <p className="text-center text-sm text-gray-400 py-8">No pending artisan registrations.</p>
             ) : (
               pendingArtisans.map((a) => (
-                <div key={a.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
                   <p className="text-xs text-gray-500 mt-1">{a.years_experience} years experience · {a.equipment_tier.replace(/_/g, " ")} equipment</p>
                   <p className="text-xs text-gray-500">{a.base_lga ? `${a.base_lga}, ` : ""}{a.base_state} · {a.willing_to_travel_interstate ? "Willing to travel" : "Local jobs only"}</p>
@@ -910,7 +976,7 @@ export default function AdminDashboard() {
               <p className="text-center text-sm text-gray-400 py-8">No upcoming inspections booked.</p>
             ) : (
               upcomingInspections.map((insp) => (
-                <div key={insp.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div key={insp.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{insp.properties?.title || "Property"}</p>
                     <span className="text-[9px] font-bold uppercase bg-chs-amber-light text-chs-amber-dark px-2 py-0.5 rounded-full">{insp.status}</span>
@@ -934,7 +1000,7 @@ export default function AdminDashboard() {
               <p className="text-center text-sm text-gray-400 py-8">No pending developer applications.</p>
             ) : (
               developerApplications.map((d) => (
-                <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+                <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
                   <p className="text-xs text-gray-500 mt-1">CAC: {d.cac_number} · {d.years_experience}</p>
                   {d.current_projects && <p className="text-xs text-gray-500">{d.current_projects}</p>}
@@ -975,7 +1041,7 @@ function FeeSettingRow({
   const [amount, setAmount] = useState(fee.flat_fee_amount);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex items-center justify-between gap-2">
+    <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 flex items-center justify-between gap-2">
       <p className="text-xs font-semibold text-chs-charcoal">{CATEGORY_LABELS[fee.category] || fee.category}</p>
       <div className="flex gap-1.5 items-center">
         <input
@@ -1014,7 +1080,7 @@ function EngageRequestCard({
   const [text, setText] = useState("");
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+    <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
       <p className="text-sm font-semibold text-chs-charcoal">{request.service_type}</p>
       <p className="text-xs text-gray-500 mt-1">{request.location}</p>
       <p className="text-xs text-gray-600 mt-1">{request.description}</p>

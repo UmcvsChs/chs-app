@@ -153,7 +153,7 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
@@ -167,7 +167,7 @@ export default function WalletPage() {
               <p className="text-2xl font-bold mt-1">{formatNaira(wallet.main_balance)}</p>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
               {!showFundForm ? (
                 <button
                   onClick={() => setShowFundForm(true)}
@@ -222,19 +222,19 @@ export default function WalletPage() {
             {profile && <BankAccountSecurity session={session!} registeredName={profile.full_name} />}
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-[10px] uppercase text-gray-400">Rent savings</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.rent_savings)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-[10px] uppercase text-gray-400">Maintenance reserve</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.maintenance_reserve)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-[10px] uppercase text-gray-400">Agent earnings paid</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_paid)}</p>
               </div>
-              <div className="bg-white rounded-xl border border-gray-100 p-3">
+              <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-[10px] uppercase text-gray-400">Pending earnings</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_pending)}</p>
               </div>
@@ -250,7 +250,7 @@ export default function WalletPage() {
             <p className="text-sm text-gray-400">No transactions yet.</p>
           ) : (
             transactions.map((tx) => (
-              <div key={tx.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
+              <div key={tx.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
                 <div>
                   <p className="text-xs font-semibold text-chs-charcoal">
                     {tx.description || WALLET_TYPE_LABELS[tx.wallet_type]}

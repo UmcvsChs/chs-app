@@ -62,26 +62,26 @@ export default function PropertyAnalyticsPage() {
   const conversionRate = viewCount > 0 ? ((interestCount / viewCount) * 100).toFixed(1) : "0.0";
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/owner" className="text-xs text-gray-400">← Back to My Properties</Link>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mt-1 mb-1">Analytics</h1>
         <p className="text-sm text-gray-500 mb-6">{property.title}</p>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+          <div className="bg-[var(--zone-card)] rounded-xl p-4 text-center border border-gray-100">
             <p className="font-serif text-2xl font-bold text-chs-red">{viewCount}</p>
             <p className="text-[10px] text-gray-400 mt-1">Total views</p>
           </div>
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+          <div className="bg-[var(--zone-card)] rounded-xl p-4 text-center border border-gray-100">
             <p className="font-serif text-2xl font-bold text-chs-red">{interestCount}</p>
             <p className="text-[10px] text-gray-400 mt-1">Interest registered</p>
           </div>
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+          <div className="bg-[var(--zone-card)] rounded-xl p-4 text-center border border-gray-100">
             <p className="font-serif text-2xl font-bold text-chs-red">{inspectionCount}</p>
             <p className="text-[10px] text-gray-400 mt-1">Inspections booked</p>
           </div>
-          <div className="bg-white rounded-xl p-4 text-center border border-gray-100">
+          <div className="bg-[var(--zone-card)] rounded-xl p-4 text-center border border-gray-100">
             <p className="font-serif text-2xl font-bold text-chs-red">{conversionRate}%</p>
             <p className="text-[10px] text-gray-400 mt-1">View → interest rate</p>
           </div>

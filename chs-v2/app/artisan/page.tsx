@@ -188,7 +188,7 @@ export default function ArtisanDashboard() {
     : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-artisan bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
@@ -210,7 +210,7 @@ export default function ArtisanDashboard() {
           <p className="text-sm text-gray-400 mb-4">No open jobs matching your trade right now.</p>
         ) : (
           openFaults.map((f) => (
-            <div key={f.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+            <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
               <div className="flex justify-between items-start">
                 <p className="text-sm font-semibold text-chs-charcoal">{f.category}</p>
                 {f.tenancies?.management_delegated && (
@@ -248,7 +248,7 @@ export default function ArtisanDashboard() {
           <div className="mt-4">
             <p className="text-xs font-bold text-chs-charcoal mb-2">My completed jobs</p>
             {completedJobs.map((job) => (
-              <div key={job.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={job.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-xs font-semibold text-chs-charcoal">{job.category}</p>
                 {disputingFaultId === job.id ? (
                   <div className="mt-2 space-y-1.5">
@@ -274,7 +274,7 @@ export default function ArtisanDashboard() {
           <div className="mt-4">
             <p className="text-xs font-bold text-chs-charcoal mb-2">My job disputes ({myDisputes.length})</p>
             {myDisputes.map((d) => (
-              <div key={d.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 text-xs">
+              <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 text-xs">
                 <p className="text-gray-700">{d.description}</p>
                 <p className="text-gray-400 mt-1 capitalize">Status: {d.status.replace(/_/g, " ")}</p>
               </div>

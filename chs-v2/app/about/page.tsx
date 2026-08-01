@@ -4,7 +4,7 @@ import Link from "next/link";
 // including the actual, real company registration details.
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
 
@@ -17,7 +17,7 @@ export default function AboutPage() {
           CHS is a digital property platform connecting property owners, tenants, buyers, agents, and property managers across Nigeria. Every property listed goes through document verification with the relevant state land registry before it can be transacted on, and every payment is protected through CHS&apos;s escrow system.
         </p>
 
-        <div className="bg-white rounded-xl p-4 mb-3">
+        <div className="bg-[var(--zone-card)] rounded-xl p-4 mb-3">
           <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-2">Company details</p>
           <p className="text-xs text-gray-600 leading-relaxed">
             Operated by: Complete Comprehensive Concepts<br />

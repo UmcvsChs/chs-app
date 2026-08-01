@@ -10,6 +10,7 @@ import CurrencyInput from "./CurrencyInput";
 import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
 import ShortletBookingForm from "./ShortletBookingForm";
+import IdentityVerificationGate from "./IdentityVerificationGate";
 
 type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet";
 
@@ -25,6 +26,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [inspectionSuccess, setInspectionSuccess] = useState(false);
   const [rentalApplicationSuccess, setRentalApplicationSuccess] = useState(false);
   const [shortletSuccess, setShortletSuccess] = useState(false);
+  const [identityVerified, setIdentityVerified] = useState(false);
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -44,6 +46,10 @@ export default function PropertyActions({ property }: { property: Property }) {
     e.preventDefault();
     if (!amount || amount < 1000) {
       setError("Please enter a valid offer amount.");
+      return;
+    }
+    if (!identityVerified) {
+      setError("Please complete identity verification before submitting a real offer.");
       return;
     }
     if (!session) return;
@@ -119,6 +125,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   if (activeForm === "offer" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <IdentityVerificationGate session={session} onVerified={() => setIdentityVerified(true)} />
         <form onSubmit={handleSubmitOffer} className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-gray-600">Your offer amount (₦)</label>

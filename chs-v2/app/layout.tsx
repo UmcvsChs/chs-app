@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import SplashScreen from "@/components/SplashScreen";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
@@ -41,10 +42,12 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col font-sans">
-        <ServiceWorkerRegistration />
-        <SplashScreen />
-        <AuthProvider>{children}</AuthProvider>
+      <body className="min-h-full flex flex-col font-sans bg-background text-foreground">
+        <ThemeProvider>
+          <ServiceWorkerRegistration />
+          <SplashScreen />
+          <AuthProvider>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

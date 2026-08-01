@@ -218,7 +218,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Join CHS</h1>
         <p className="text-sm text-gray-500 mb-6">Complete Housing Solutions — register your account</p>

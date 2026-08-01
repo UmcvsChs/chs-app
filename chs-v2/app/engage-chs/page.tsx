@@ -159,7 +159,7 @@ export default function EngageChsPage() {
         <p className="text-sm text-gray-500 mb-5">Here's exactly what happens next:</p>
         <div className="w-full max-w-sm text-left space-y-2 mb-6">
           {nextSteps.map((step, i) => (
-            <div key={i} className="flex gap-2.5 bg-white rounded-lg border border-gray-100 p-3">
+            <div key={i} className="flex gap-2.5 bg-[var(--zone-card)] rounded-lg border border-gray-100 p-3">
               <span className="text-xs font-bold text-chs-red shrink-0">{i + 1}.</span>
               <p className="text-xs text-gray-600 leading-relaxed">{step}</p>
             </div>
@@ -171,7 +171,7 @@ export default function EngageChsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-8">
+    <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Engage CHS</h1>
         <div className="flex gap-1.5 mb-6">

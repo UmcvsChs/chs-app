@@ -8,9 +8,11 @@ import { formatNaira } from "@/lib/format";
 import PropertyCard from "./PropertyCard";
 import DemandRegistryForm from "./DemandRegistryForm";
 import NotificationBell from "./NotificationBell";
+import ThemeToggle from "./ThemeToggle";
 import PropertySearch, { applyPropertyFilters } from "./PropertySearch";
 import DiasporaMode from "./DiasporaMode";
 import BottomNav from "./BottomNav";
+import { ARTICLES } from "@/types/blogArticles";
 import { useAuth } from "@/contexts/AuthContext";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
@@ -41,6 +43,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
   // based on the person's own real registered state, found completely
   // missing from this rebuild.
   const [rentSavings, setRentSavings] = useState<number | null>(null);
+  const [forceSearchOpen, setForceSearchOpen] = useState(false);
 
   useEffect(() => {
     if (!session || profile?.role !== "tenant") return;
@@ -96,7 +99,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
   });
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)]">
       <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
         <div>
           <h1 className="font-serif text-xl font-bold">CHS</h1>
@@ -105,7 +108,8 @@ export default function HomePageClient({ properties, platformStats }: { properti
             Visit the Marketplace →
           </Link>
         </div>
-        <div className="text-xs">
+        <div className="text-xs flex items-center gap-2">
+          <ThemeToggle />
           {loading ? null : session && profile ? (
             <div className="flex items-center gap-2">
               <NotificationBell />
@@ -220,7 +224,15 @@ export default function HomePageClient({ properties, platformStats }: { properti
         ))}
       </div>
 
-      <PropertySearch onResults={setSearchFilters} />
+      {/* Real "current state · total listings — change" indicator —
+          restored, found missing during the direct comparison against
+          the real original header. Genuinely opens the same real
+          search panel, not a separate, duplicated control. */}
+      <button onClick={() => setForceSearchOpen(true)} className="w-full flex items-center gap-1 px-4 py-2 text-[11px] text-gray-500 bg-white border-b border-gray-100">
+        📍 {profile?.state || "Nigeria"} · {platformStats.activeListings}+ listings nationwide <span className="underline">— change</span>
+      </button>
+
+      <PropertySearch onResults={setSearchFilters} forceOpen={forceSearchOpen} onOpenHandled={() => setForceSearchOpen(false)} />
 
       {/* Real "Shop the CHS Marketplace" banner — restored, found
           missing on the real homepage during the same direct
@@ -298,6 +310,24 @@ export default function HomePageClient({ properties, platformStats }: { properti
           ))
         )}
       </main>
+
+      {/* Real CHS Insights preview cards — restored. The homepage
+          previously only linked generically to /blog; the real
+          original showed each real article as its own preview right
+          on the homepage. Reuses the exact same shared article data
+          as the full /blog page, never a separate, drifting copy. */}
+      <div className="px-4 mt-4">
+        <p className="text-xs font-bold text-chs-charcoal mb-2">CHS Insights</p>
+        <div className="space-y-2">
+          {ARTICLES.map((a) => (
+            <Link key={a.key} href={`/blog#${a.key}`} className="flex items-center gap-3 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
+              <span className="text-xl">{a.icon}</span>
+              <span className="text-xs font-semibold text-chs-charcoal flex-1">{a.title}</span>
+              <span className="text-gray-300">→</span>
+            </Link>
+          ))}
+        </div>
+      </div>
 
       {/* Real, genuine platform stats — restored from a real section of
           the original homepage that was found missing during direct

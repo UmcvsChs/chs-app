@@ -65,7 +65,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen zone-market-browse bg-[var(--zone-bg)]">
       <div className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
         <div>
           <h1 className="font-serif text-xl font-bold">CHS Marketplace</h1>
@@ -116,7 +116,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
             <p className="text-center text-sm text-gray-400 py-12">No bundles available yet.</p>
           ) : (
             bundles.map((bundle) => (
-              <div key={bundle.id} className="bg-white rounded-xl border border-gray-100 p-4">
+              <div key={bundle.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
                 <p className="text-sm font-bold text-chs-charcoal">{bundle.bundle_name}</p>
                 <p className="text-xs text-gray-500 mt-1">{bundle.items_included}</p>
                 {bundle.description && <p className="text-xs text-gray-400 mt-1 italic">{bundle.description}</p>}
@@ -133,7 +133,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           </p>
         ) : (
           filtered.map((product) => (
-            <div key={product.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+            <div key={product.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 overflow-hidden">
               <div className="h-28 bg-chs-steel-blue-light flex items-center justify-center">
                 {product.photos && product.photos.length > 0 ? (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import HouseRulesAcknowledgment from "@/components/HouseRulesAcknowledgment";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -20,6 +21,7 @@ interface ApplicationWithProperty {
 
 interface TenancyWithProperty {
   id: string;
+  property_id: string;
   landlord_id: string;
   manager_id: string | null;
   lease_start: string;
@@ -86,7 +88,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
+        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -143,7 +145,7 @@ export default function TenantDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-tenant bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Rentals</h1>
@@ -154,7 +156,7 @@ export default function TenantDashboard() {
           <div>
             <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Formal notices</p>
             {notices.map((n) => (
-              <div key={n.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={n.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <button
                   onClick={() => handleExpandNotice(n)}
                   className="w-full flex justify-between items-center text-left"
@@ -190,7 +192,7 @@ export default function TenantDashboard() {
           <div>
             <p className="text-xs font-bold text-chs-charcoal mb-2">Active tenancy</p>
             {tenancies.map((t) => (
-              <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={t.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{t.properties?.title}</p>
                 <p className="text-xs text-gray-500">{t.properties?.location_area}</p>
                 {/* Real owner identity display — restored, found
@@ -210,6 +212,7 @@ export default function TenantDashboard() {
                 <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
                   Submit move-in condition report
                 </Link>
+                {session && <HouseRulesAcknowledgment tenancyId={t.id} propertyId={t.property_id} session={session} />}
                 <span className="inline-block mt-1 text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full capitalize">
                   {t.status.replace(/_/g, " ")}
                 </span>
@@ -241,7 +244,7 @@ export default function TenantDashboard() {
         )}
 
         {disputingTenancy && session && (
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
             {disputeSubmitted ? (
               <div className="text-center">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Dispute submitted</p>
@@ -273,7 +276,7 @@ export default function TenantDashboard() {
             <p className="text-sm text-gray-400">No rental applications yet.</p>
           ) : (
             applications.map((app) => (
-              <div key={app.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title}</p>
                 <p className="text-xs text-gray-500">{app.properties?.location_area}</p>
                 <p className="text-xs text-gray-500 mt-1">Move-in: {app.move_in_date}</p>
@@ -299,7 +302,7 @@ export default function TenantDashboard() {
             <p className="text-sm text-gray-400">No inspection requests yet.</p>
           ) : (
             inspections.map((insp) => (
-              <div key={insp.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={insp.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{insp.properties?.title}</p>
                 <p className="text-xs text-gray-500">
                   {insp.requested_date} at {insp.requested_time}

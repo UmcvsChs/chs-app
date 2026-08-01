@@ -91,7 +91,7 @@ export default async function PropertyDetailPage({
   const isUnderVerification = property.verification_status !== "verified";
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-3 flex items-center gap-3">
         <Link href="/" className="text-sm">
           ← Back
@@ -171,19 +171,19 @@ export default async function PropertyDetailPage({
 
         <div className="grid grid-cols-2 gap-3 mb-4">
           {property.bedrooms !== null && (
-            <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Bedrooms</p>
               <p className="text-sm font-semibold text-chs-charcoal">{property.bedrooms}</p>
             </div>
           )}
           {property.bathrooms !== null && (
-            <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Bathrooms</p>
               <p className="text-sm font-semibold text-chs-charcoal">{property.bathrooms}</p>
             </div>
           )}
           {property.road_type && (
-            <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Road</p>
               <p className="text-sm font-semibold text-chs-charcoal capitalize">
                 {property.road_type.replace(/_/g, " ")}
@@ -191,7 +191,7 @@ export default async function PropertyDetailPage({
             </div>
           )}
           {property.water_source && (
-            <div className="bg-white rounded-xl p-3 border border-gray-100">
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Water</p>
               <p className="text-sm font-semibold text-chs-charcoal">{property.water_source}</p>
             </div>

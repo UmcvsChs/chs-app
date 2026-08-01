@@ -15,6 +15,7 @@ import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
+import HouseRulesUpload from "@/components/HouseRulesUpload";
 
 interface TenancyBasic {
   id: string;
@@ -238,7 +239,7 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-owner bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
@@ -287,7 +288,7 @@ export default function OwnerDashboard() {
       ) : (
         <div className="px-4 py-4 space-y-4">
           {properties.map((property) => (
-            <div key={property.id} className="bg-white rounded-xl border border-gray-100 p-4">
+            <div key={property.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
               <div className="flex justify-between items-start mb-2">
                 <h2 className="font-semibold text-sm text-chs-charcoal">{property.title}</h2>
                 <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
@@ -318,7 +319,7 @@ export default function OwnerDashboard() {
                 <button
                   onClick={() => handleTogglePrivacy(property.id, true)}
                   className={`text-[9px] font-semibold px-2 py-1 rounded-full border ${
-                    property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-white text-gray-600 border-gray-200"
+                    property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-[var(--zone-card)] text-gray-600 border-gray-200"
                   }`}
                 >
                   Show my name
@@ -326,12 +327,14 @@ export default function OwnerDashboard() {
                 <button
                   onClick={() => handleTogglePrivacy(property.id, false)}
                   className={`text-[9px] font-semibold px-2 py-1 rounded-full border ${
-                    !property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-white text-gray-600 border-gray-200"
+                    !property.owner_identity_visible_to_tenant ? "bg-chs-red text-white border-chs-red" : "bg-[var(--zone-card)] text-gray-600 border-gray-200"
                   }`}
                 >
                   Keep private
                 </button>
               </div>
+
+              {session && <HouseRulesUpload propertyId={property.id} session={session} />}
 
               {property.offers.length > 0 && (
                 <div className="mt-3">
@@ -424,7 +427,7 @@ export default function OwnerDashboard() {
         <div className="px-4 pb-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">Active tenancies</p>
           {tenancies.map((t) => (
-            <div key={t.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+            <div key={t.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-500 capitalize">{t.status}</span>
                 <div className="flex gap-3">
@@ -457,7 +460,7 @@ export default function OwnerDashboard() {
         <div className="px-4 pb-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">My CHS Service Requests</p>
           {engageRequests.map((r) => (
-            <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+            <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
               <div className="flex justify-between items-center">
                 <p className="text-xs font-semibold text-chs-charcoal">{r.service_type}</p>
                 <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
@@ -479,7 +482,7 @@ export default function OwnerDashboard() {
 
       {issuingNoticeTenancy && session && (
         <div className="px-4 pb-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
             {noticeIssued ? (
               <div className="text-center">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Notice issued</p>
@@ -506,7 +509,7 @@ export default function OwnerDashboard() {
 
       {disputingTenancy && session && (
         <div className="px-4 pb-6">
-          <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
             {disputeSubmitted ? (
               <div className="text-center">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Dispute submitted</p>

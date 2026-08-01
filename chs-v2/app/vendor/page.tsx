@@ -292,7 +292,7 @@ export default function VendorDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-market-browse bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
@@ -320,7 +320,7 @@ export default function VendorDashboard() {
         </button>
 
         {showForm && (
-          <form onSubmit={handleAddProduct} className="bg-white rounded-xl border border-gray-100 p-4 mb-4 space-y-2">
+          <form onSubmit={handleAddProduct} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 mb-4 space-y-2">
             <div className="flex gap-2 mb-1">
               <button type="button" onClick={() => setListingType("product")}
                 className={`flex-1 py-2 rounded-lg border-2 text-xs font-semibold ${listingType === "product" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
@@ -395,7 +395,7 @@ export default function VendorDashboard() {
           <p className="text-sm text-gray-400">No listings added yet.</p>
         ) : (
           products.map((p) => (
-            <div key={p.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+            <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-xs font-semibold text-chs-charcoal">{p.name}</p>
@@ -439,7 +439,7 @@ export default function VendorDashboard() {
           </button>
 
           {showBundleForm && (
-            <form onSubmit={handleCreateBundle} className="bg-white rounded-xl border border-gray-100 p-4 mb-3 space-y-2">
+            <form onSubmit={handleCreateBundle} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 mb-3 space-y-2">
               <input type="text" value={bundleName} onChange={(e) => setBundleName(e.target.value)}
                 placeholder="Bundle name (e.g. Foundation Materials Starter Package)"
                 className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
@@ -463,7 +463,7 @@ export default function VendorDashboard() {
             <p className="text-sm text-gray-400">No bundles created yet.</p>
           ) : (
             bundles.map((b) => (
-              <div key={b.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2">
+              <div key={b.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <div className="flex justify-between items-center">
                   <p className="text-xs font-semibold text-chs-charcoal">{b.bundle_name}</p>
                   <button onClick={() => toggleBundleStatus(b.id, b.status)}

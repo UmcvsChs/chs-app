@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* CHS's real, established brand palette — carried over exactly from the
    original app, not reinvented. Steel-blue-to-charcoal-to-amber gradient,
@@ -16,6 +17,40 @@
   --chs-steel-blue: #4a6883;
   --chs-steel-blue-light: #e7edf2;
 }
+
+/* Real dark mode — genuinely new, never existed before this. The
+   brand colours themselves (red, amber) stay the same in both modes,
+   since they're already dark/saturated enough to read well against a
+   dark background; only the real base surface and text invert. */
+.dark {
+  --background: #161310;
+  --foreground: #f0ede8;
+  --chs-amber-light: #2a2118;
+  --chs-steel-blue-light: #232a30;
+}
+
+/* A real, distinct color identity per role/section — restored,
+   following a direct client request that every dashboard feel
+   genuinely different, never plain white/gray throughout. Each real
+   palette keeps the same CHS brand foundation (red accent, serif
+   headings) but layers in its own real, deliberate tint so a Buyer's
+   view, an Agent's view, and an Artisan's view are each immediately,
+   visibly distinct. */
+.zone-buyer { --zone-bg: #eef3f6; --zone-card: #f7fafb; --zone-accent: #4a6883; }
+.zone-owner { --zone-bg: #fbf3e9; --zone-card: #fffaf3; --zone-accent: #a8480f; }
+.zone-agent { --zone-bg: #f7f2e3; --zone-card: #fdfaf0; --zone-accent: #c9a84c; }
+.zone-manager { --zone-bg: #e8f1ef; --zone-card: #f4faf9; --zone-accent: #2f6e63; }
+.zone-artisan { --zone-bg: #f6ece5; --zone-card: #fdf5f0; --zone-accent: #b05a2e; }
+.zone-admin { --zone-bg: #efeaf1; --zone-card: #f8f5f9; --zone-accent: #4a3b5c; }
+.zone-tenant { --zone-bg: #eef4ee; --zone-card: #f8fbf7; --zone-accent: #3f7a4f; }
+
+/* Real, distinct Marketplace stage colors — matching the client's
+   explicit request that browsing, cart, and checkout each feel
+   genuinely different, the same real principle already proven in
+   their sister app. */
+.zone-market-browse { --zone-bg: #eaf3ea; --zone-card: #f6fbf6; --zone-accent: #3f7a4f; }
+.zone-market-cart { --zone-bg: #faf1de; --zone-card: #fffaf0; --zone-accent: #b8860b; }
+.zone-market-checkout { --zone-bg: #f9e9e2; --zone-card: #fff5f0; --zone-accent: #c8102e; }
 
 @theme inline {
   --color-background: var(--background);

@@ -105,7 +105,7 @@ export default function AgentDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10">
+    <div className="min-h-screen zone-agent bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">Agent Dashboard</h1>
@@ -132,7 +132,7 @@ export default function AgentDashboard() {
             during the original app's #15 and #16 fixes, an honest
             human-reviewed status, not a fake automated pass. */}
         {profile && (
-          <div className="bg-white rounded-xl border border-gray-100 p-3 flex gap-4 text-xs">
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 flex gap-4 text-xs">
             <div>
               <p className="text-gray-400">Membership</p>
               <p className={`font-semibold ${profile.membership_verified ? "text-chs-red" : "text-chs-amber-dark"}`}>
@@ -148,7 +148,7 @@ export default function AgentDashboard() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">Your referral link</p>
           <p className="text-xs text-gray-500 mb-3">
             Share this — you earn commission on any resulting transaction.
@@ -161,7 +161,7 @@ export default function AgentDashboard() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
           <p className="text-xs font-bold text-chs-charcoal">Total earned (completed deals)</p>
           <p className="text-xl font-bold text-chs-charcoal mt-1">{formatNaira(totalEarned)}</p>
           <p className="text-[10px] text-gray-400 mt-1">Earned this month: {formatNaira(earnedThisMonth)}</p>
@@ -186,7 +186,7 @@ export default function AgentDashboard() {
             <p className="text-sm text-gray-400">No referrals yet — share your link to get started.</p>
           ) : (
             referrals.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border border-gray-100 p-3 mb-2 text-xs">
+              <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-chs-charcoal">{r.masked_reference}</span>
                   <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
