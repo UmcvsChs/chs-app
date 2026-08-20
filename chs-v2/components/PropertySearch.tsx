@@ -80,7 +80,13 @@ export default function PropertySearch({
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // Genuinely external signal from the parent — forceOpen is a
+    // one-shot instruction to open the panel, acknowledged via
+    // onOpenHandled so the parent can reset it. Calling that callback
+    // during render (the "pure" alternative) would itself be a side
+    // effect on the parent, so this stays an effect.
     if (forceOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(true);
       onOpenHandled?.();
     }

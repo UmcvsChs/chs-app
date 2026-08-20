@@ -17,9 +17,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    // Genuinely external-system read — the real saved preference (or,
+    // failing that, the OS's own real color-scheme setting) only exists
+    // in the browser, never in anything React already knows about.
     const stored = localStorage.getItem("chs-theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const shouldBeDark = stored ? stored === "dark" : prefersDark;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsDark(shouldBeDark);
     document.documentElement.classList.toggle("dark", shouldBeDark);
   }, []);

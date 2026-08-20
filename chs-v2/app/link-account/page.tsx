@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
-import { NIGERIAN_STATES } from "@/lib/geoData";
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 const PROFESSIONS = [
@@ -30,7 +28,6 @@ type Step = "lookup" | "confirm" | "pin" | "role_details" | "success";
 // earlier work (lookup-account-for-linking, add-role-to-account), which
 // needed no changes at all — only this real frontend flow was missing.
 export default function LinkAccountPage() {
-  const router = useRouter();
   const [step, setStep] = useState<Step>("lookup");
   const [phone, setPhone] = useState("");
   const [foundAccount, setFoundAccount] = useState<{ id: string; full_name: string; all_roles: string[] } | null>(null);
@@ -53,7 +50,7 @@ export default function LinkAccountPage() {
   // Manager-specific
   const [profession, setProfession] = useState(PROFESSIONS[0]);
   const [regNumber, setRegNumber] = useState("");
-  const [operatingStates, setOperatingStates] = useState<string[]>([]);
+  const [operatingStates, setOperatingStates] = useState("");
   const [certFile, setCertFile] = useState<File | null>(null);
 
   async function handleLookup(e: React.FormEvent) {
@@ -135,7 +132,7 @@ export default function LinkAccountPage() {
     } else if (newRole === "manager") {
       body.profession = profession;
       body.professionalRegistrationNumber = regNumber.trim() || null;
-      body.operatingStates = operatingStates.join(", ") || null;
+      body.operatingStates = operatingStates.trim() || null;
       body.certificateDocumentUrl = certificateDocumentUrl;
     }
 
@@ -251,6 +248,13 @@ export default function LinkAccountPage() {
                 </div>
                 <input type="text" value={lgas} onChange={(e) => setLgas(e.target.value)}
                   placeholder="Operating LGAs" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Years of real estate experience</label>
+                  <select value={experience} onChange={(e) => setExperience(e.target.value)}
+                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                    {["Less than 1 year", "1–3 years", "3–5 years", "5–10 years", "10+ years"].map((x) => <option key={x}>{x}</option>)}
+                  </select>
+                </div>
                 <input type="text" value={association} onChange={(e) => setAssociation(e.target.value)}
                   placeholder="Association (e.g. NIESV), if any" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
                 {association.trim() && (
@@ -268,6 +272,13 @@ export default function LinkAccountPage() {
                 </select>
                 <input type="text" value={regNumber} onChange={(e) => setRegNumber(e.target.value)}
                   placeholder="Professional registration number" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                <input type="text" value={operatingStates} onChange={(e) => setOperatingStates(e.target.value)}
+                  placeholder="States of operation (e.g. Kaduna, Abuja, Kano)" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Upload professional certificate / licence</label>
+                  <input type="file" accept="image/*,application/pdf"
+                    onChange={(e) => setCertFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs" />
+                </div>
               </>
             )}
 

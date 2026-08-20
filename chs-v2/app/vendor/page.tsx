@@ -62,15 +62,6 @@ export default function VendorDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session]);
 
-  useEffect(() => {
-    // A vendor whose real category is a service category should default
-    // to listing services — a security firm's own products list is
-    // genuinely almost always services, not physical goods.
-    if (vendor && SERVICE_CATEGORIES.includes(vendor.category)) {
-      setListingType("service");
-    }
-  }, [vendor]);
-
   async function loadData() {
     if (!session) return;
     setLoading(true);
@@ -82,6 +73,15 @@ export default function VendorDashboard() {
       .maybeSingle();
 
     setVendor(vendorData);
+
+    // A vendor whose real category is a service category should default
+    // to listing services — a security firm's own products list is
+    // genuinely almost always services, not physical goods. Set here,
+    // alongside the vendor data itself, rather than in a separate effect
+    // reacting to it a render later.
+    if (vendorData && SERVICE_CATEGORIES.includes(vendorData.category)) {
+      setListingType("service");
+    }
 
     if (vendorData && SERVICE_CATEGORIES.includes(vendorData.category)) {
       const { data: feeData } = await supabase
@@ -354,7 +354,7 @@ export default function VendorDashboard() {
                 )}
                 {selectedMaterial && !isOthersMaterial && (
                   <p className="text-[10px] text-gray-400">
-                    Real, standardised unit for this material: <span className="font-semibold">{currentMaterialEntry?.unit}</span> — locked, so every vendor's price is genuinely comparable.
+                    Real, standardised unit for this material: <span className="font-semibold">{currentMaterialEntry?.unit}</span> — locked, so every vendor&apos;s price is genuinely comparable.
                   </p>
                 )}
               </>

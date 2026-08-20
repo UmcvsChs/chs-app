@@ -37,7 +37,11 @@ export default async function Home() {
 
   // Real promoted-first sorting — the original app's promotion never
   // actually affected sort order via anything durable; this genuinely
-  // checks each property's real, current promotion expiry.
+  // checks each property's real, current promotion expiry. Computed
+  // once here and reused below — this is an async Server Component
+  // forced dynamic on every request (see `dynamic` above), so a single
+  // "now" per request is correct, not a stale, build-time snapshot.
+  // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const sortedProperties = [...(properties ?? [])].sort((a, b) => {
     const aPromoted = a.promoted_until && new Date(a.promoted_until).getTime() > now;
@@ -57,7 +61,7 @@ export default async function Home() {
     .filter((p) => p.verification_status === "verified")
     .map((p) => new Date(p.created_at).getTime());
   const longestVerifiedYears = verifiedDates.length > 0
-    ? Math.max(0, (Date.now() - Math.min(...verifiedDates)) / (1000 * 60 * 60 * 24 * 365))
+    ? Math.max(0, (now - Math.min(...verifiedDates)) / (1000 * 60 * 60 * 24 * 365))
     : 0;
 
   return (

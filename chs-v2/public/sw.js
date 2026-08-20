@@ -5,7 +5,7 @@
 // picture.
 const CACHE_NAME = "chs-v2-cache-v1";
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 

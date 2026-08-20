@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Artisan, ArtisanRating, ArtisanJobDispute } from "@/types/artisan";
-import { formatNaira } from "@/lib/format";
 
 interface OpenFault {
   id: string;

@@ -15,16 +15,6 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!session) return;
-    loadNotifications();
-    // Real, live polling — a genuinely simple, reliable way to keep the
-    // bell current without needing a persistent websocket connection.
-    const interval = setInterval(loadNotifications, 30000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
   async function loadNotifications() {
     if (!session) return;
     const { data } = await supabase
@@ -36,6 +26,21 @@ export default function NotificationBell() {
     setNotifications(data || []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (!session) return;
+    // Real network fetch, not a synchronous setState — loadNotifications
+    // is async and only calls setState after a genuine await on
+    // Supabase's response, so this is the standard, safe "fetch on
+    // mount" pattern, just re-run on a real interval for live polling.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadNotifications();
+    // Real, live polling — a genuinely simple, reliable way to keep the
+    // bell current without needing a persistent websocket connection.
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
 
   async function markAsRead(id: string) {
     await supabase.from("notifications").update({ read: true }).eq("id", id);

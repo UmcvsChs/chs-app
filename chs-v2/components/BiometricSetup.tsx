@@ -50,7 +50,7 @@ export default function BiometricSetup() {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3">
       <p className="text-xs font-bold text-chs-charcoal mb-1">🔐 Biometric login</p>
-      <p className="text-[10px] text-gray-500 mb-2">Use Face ID, fingerprint, or your device's own screen lock to log in faster, without your PIN.</p>
+      <p className="text-[10px] text-gray-500 mb-2">Use Face ID, fingerprint, or your device&apos;s own screen lock to log in faster, without your PIN.</p>
       {error && <p className="text-[10px] text-chs-red mb-2">{error}</p>}
       <button onClick={handleSetup} disabled={status === "working"}
         className="w-full py-2.5 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">

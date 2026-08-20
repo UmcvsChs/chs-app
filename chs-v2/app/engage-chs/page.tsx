@@ -156,7 +156,7 @@ export default function EngageChsPage() {
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-10">
         <p className="text-lg font-semibold text-chs-charcoal mb-1">✓ All information acknowledged</p>
         <p className="text-sm text-chs-red font-semibold mb-4">Pending review — CHS will respond within 24–48 hours.</p>
-        <p className="text-sm text-gray-500 mb-5">Here's exactly what happens next:</p>
+        <p className="text-sm text-gray-500 mb-5">Here&apos;s exactly what happens next:</p>
         <div className="w-full max-w-sm text-left space-y-2 mb-6">
           {nextSteps.map((step, i) => (
             <div key={i} className="flex gap-2.5 bg-[var(--zone-card)] rounded-lg border border-gray-100 p-3">

@@ -8,7 +8,11 @@ export default function BlogPage() {
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   useEffect(() => {
+    // Genuinely external-system sync — restoring which article was open
+    // from the real browser URL hash on load, so a shared link opens
+    // directly to the right article. No pure alternative exists here.
     const hash = window.location.hash.replace("#", "");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hash && ARTICLES.some((a) => a.key === hash)) setOpenKey(hash);
   }, []);
 

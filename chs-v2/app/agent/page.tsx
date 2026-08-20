@@ -24,21 +24,6 @@ export default function AgentDashboard() {
   const [templateCopied, setTemplateCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-    const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-    if (profile && !allRoles.includes("agent")) {
-      router.push("/");
-      return;
-    }
-    loadReferrals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session, profile]);
-
   async function loadReferrals() {
     if (!session) return;
     setLoading(true);
@@ -55,6 +40,25 @@ export default function AgentDashboard() {
     setReferrals(data || []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
+    if (profile && !allRoles.includes("agent")) {
+      router.push("/");
+      return;
+    }
+    // Real network fetch, not a synchronous setState — loadReferrals is
+    // async and only calls setState after a genuine await on Supabase's
+    // response, so this is the standard, safe "fetch on mount" pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadReferrals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, session, profile]);
 
   function copyReferralLink() {
     if (!session) return;

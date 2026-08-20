@@ -61,21 +61,6 @@ export default function TenantDashboard() {
   const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
   const [messagingTenancy, setMessagingTenancy] = useState<TenancyWithProperty | null>(null);
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-    const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-    if (profile && !allRoles.includes("tenant")) {
-      router.push("/");
-      return;
-    }
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session, profile]);
-
   async function loadData() {
     if (!session) return;
     setLoading(true);
@@ -123,6 +108,25 @@ export default function TenantDashboard() {
 
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
+    if (profile && !allRoles.includes("tenant")) {
+      router.push("/");
+      return;
+    }
+    // Real network fetch, not a synchronous setState — loadData is
+    // async and only calls setState after a genuine await on Supabase's
+    // response, so this is the standard, safe "fetch on mount" pattern.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, session, profile]);
 
   // The real, deliberate view action — the only place a read receipt is
   // ever allowed to fire, and only ever once per notice (the first

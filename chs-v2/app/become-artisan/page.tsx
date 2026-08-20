@@ -126,7 +126,7 @@ export default function BecomeArtisanPage() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-gray-600">Your trade(s)</label>
-            <p className="text-[10px] text-gray-400 mb-1.5">Select every real skill you genuinely have — you're not limited to just one.</p>
+            <p className="text-[10px] text-gray-400 mb-1.5">Select every real skill you genuinely have — you&apos;re not limited to just one.</p>
             <div className="grid grid-cols-2 gap-1.5">
               {ARTISAN_TRADES.map((t) => (
                 <label key={t.value} className={`flex items-center gap-1.5 px-2.5 py-2 rounded-lg border-2 text-xs cursor-pointer ${
@@ -211,7 +211,7 @@ export default function BecomeArtisanPage() {
 
           <div>
             <label className="text-xs font-semibold text-gray-600">Willing to travel interstate for a job?</label>
-            <p className="text-[10px] text-gray-400 mb-1">This is a real, required question — either answer is completely fine, there's no wrong choice here.</p>
+            <p className="text-[10px] text-gray-400 mb-1">This is a real, required question — either answer is completely fine, there&apos;s no wrong choice here.</p>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={() => setWillingToTravel("yes")}
                 className={`py-2 rounded-lg border-2 text-xs font-semibold ${willingToTravel === "yes" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
