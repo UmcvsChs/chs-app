@@ -1,0 +1,13 @@
+# The single, complete source of truth for how this site builds and
+# deploys. Explicitly setting "publish" here is the actual fix — without
+# it, Netlify's default behaviour is to treat the publish directory as
+# identical to the base directory, which the Next.js plugin correctly
+# refuses to accept, since that's never actually where Next.js puts its
+# real, genuine build output.
+[build]
+  base = "chs-v2"
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
