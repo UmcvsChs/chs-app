@@ -36,6 +36,16 @@ async function getProperty(id: string): Promise<Property | null> {
   return data as Property;
 }
 
+async function getUrgentSaleHotline(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("platform_settings")
+    .select("value")
+    .eq("key", "urgent_sale_hotline")
+    .maybeSingle();
+  return data?.value ?? null;
+}
+
 export default async function PropertyDetailPage({
   params,
 }: {
@@ -43,6 +53,7 @@ export default async function PropertyDetailPage({
 }) {
   const { id } = await params;
   const property = await getProperty(id);
+  const urgentSaleHotline = property?.is_urgent_sale ? await getUrgentSaleHotline() : null;
 
   // A real 404 — not a blank page or a silent failure — for an ID that
   // doesn't exist (deleted, mistyped, or never real to begin with).
@@ -153,6 +164,11 @@ export default async function PropertyDetailPage({
             </>
           ) : (
             <>
+              {property.is_urgent_sale && property.urgent_sale_original_price && (
+                <span className="line-through text-gray-400 text-base font-normal mr-2">
+                  {formatNaira(property.urgent_sale_original_price)}
+                </span>
+              )}
               {formatNaira(property.price)}
               {property.price_period ? (
                 <span className="font-normal text-sm text-gray-500"> {property.price_period}</span>
@@ -160,6 +176,29 @@ export default async function PropertyDetailPage({
             </>
           )}
         </p>
+
+        {property.is_urgent_sale && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4">
+            <p className="text-sm font-bold text-red-700 mb-1">🚨 Urgent Sale</p>
+            <p className="text-xs text-red-600 mb-2">
+              {property.urgent_sale_reason === "relocation" && "Owner is relocating and needs to sell fast."}
+              {property.urgent_sale_reason === "medical" && "Owner has an urgent medical need and must sell fast."}
+              {property.urgent_sale_reason === "financial" && "Owner has an urgent financial need and must sell fast."}
+              {property.urgent_sale_reason === "other" && "Owner has an urgent, genuine reason to sell fast."}
+            </p>
+            {property.urgent_sale_deadline && (
+              <p className="text-xs text-red-600 font-semibold mb-2">
+                Sale closes by {new Date(property.urgent_sale_deadline).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
+            )}
+            {urgentSaleHotline && (
+              <a href={`tel:${urgentSaleHotline.replace(/[^+\d]/g, "")}`}
+                className="inline-block bg-red-600 text-white text-xs font-bold px-4 py-2 rounded-full">
+                📞 Call CHS now — {urgentSaleHotline}
+              </a>
+            )}
+          </div>
+        )}
 
         <CurrencyReference nairaAmount={property.purpose === "shortlet" && property.price_per_night ? property.price_per_night : property.price} />
 

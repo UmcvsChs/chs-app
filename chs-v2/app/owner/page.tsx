@@ -307,10 +307,14 @@ export default function OwnerDashboard() {
               <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
                 ⭐ Promote
               </Link>
-              {" · "}
-              <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
-                ⭐ Promote
-              </Link>
+              {property.purpose === "sale" && (
+                <>
+                  {" · "}
+                  <Link href={`/urgent-sale/${property.id}`} className="text-[10px] font-semibold text-red-600 underline">
+                    🚨 Urgent Sale
+                  </Link>
+                </>
+              )}
 
               {/* Real, per-property identity privacy toggle — restored,
                   found completely missing during the systematic Owner

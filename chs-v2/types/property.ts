@@ -45,6 +45,12 @@ export interface Property {
   owner_identity_visible_to_tenant: boolean;
   promoted_until: string | null;
 
+  is_urgent_sale: boolean;
+  urgent_sale_original_price: number | null;
+  urgent_sale_reason: "relocation" | "medical" | "financial" | "other" | null;
+  urgent_sale_deadline: string | null;
+  urgent_sale_activated_at: string | null;
+
   verification_status: "pending" | "verified" | "rejected";
   verification_notes: string | null;
 

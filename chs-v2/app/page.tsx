@@ -61,7 +61,12 @@ export default async function Home() {
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
   const rankWeight: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
-  const promoWeight = (property: Property & { id: string; promoted_until?: string | null }) => {
+  const promoWeight = (property: Property & { id: string; promoted_until?: string | null; is_urgent_sale?: boolean }) => {
+    // A real, time-bound Urgent Sale outranks even a paid promotion —
+    // a genuine deadline is more time-sensitive than a paid boost, and
+    // this is enforced by a real database trigger (see
+    // backend-v2/48_urgent_emergency_sale.sql), not just a UI label.
+    if (property.is_urgent_sale) return 100;
     const legacyPromoted = property.promoted_until && new Date(property.promoted_until).getTime() > now;
     const creditRank = creditPromoByProperty.get(property.id);
     if (creditRank) return rankWeight[creditRank] ?? 0;

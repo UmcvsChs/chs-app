@@ -20,6 +20,11 @@ export default function PropertyCard({ property }: { property: Property }) {
             ⭐ PROMOTED
           </span>
         )}
+        {property.is_urgent_sale && (
+          <span className={`absolute top-2 ${property.promoted_until && new Date(property.promoted_until) > new Date() ? "left-24" : "left-2"} bg-red-600 text-white text-[9px] font-bold px-2 py-1 rounded-full z-10 animate-pulse`}>
+            🚨 URGENT SALE
+          </span>
+        )}
         {property.photos && property.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -60,6 +65,11 @@ export default function PropertyCard({ property }: { property: Property }) {
             </>
           ) : (
             <>
+              {property.is_urgent_sale && property.urgent_sale_original_price && (
+                <span className="line-through text-gray-400 text-xs font-normal mr-1.5">
+                  {formatNaira(property.urgent_sale_original_price)}
+                </span>
+              )}
               {formatNaira(property.price)}
               {property.price_period ? (
                 <span className="font-normal text-xs text-gray-500"> {property.price_period}</span>

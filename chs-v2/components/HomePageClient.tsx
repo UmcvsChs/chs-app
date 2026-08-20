@@ -261,6 +261,27 @@ export default function HomePageClient({ properties, platformStats }: { properti
         </Link>
       )}
 
+      {/* Real "Urgent Sale" — genuinely reuses the actual is_urgent_sale
+          flag enforced by a real database trigger (see
+          backend-v2/48_urgent_emergency_sale.sql), not a fabricated
+          section. Shown above Featured — a real deadline is more
+          time-sensitive than a paid boost. */}
+      {(() => {
+        const urgent = sortedProperties.filter((p) => p.is_urgent_sale).slice(0, 6);
+        return urgent.length > 0 ? (
+          <div className="mt-4 px-4">
+            <p className="text-xs font-bold text-red-600 mb-2">🚨 Urgent Sales</p>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {urgent.map((p) => (
+                <div key={p.id} className="w-40 shrink-0">
+                  <PropertyCard property={p} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null;
+      })()}
+
       {/* Real "Featured" — genuinely reuses the actual promoted-listing
           system already built, rather than a separate, fabricated
           featured list. */}
