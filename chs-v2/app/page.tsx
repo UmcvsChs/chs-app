@@ -35,21 +35,45 @@ export default async function Home() {
     );
   }
 
+  // Real second promotion mechanism — the newer, credit-based system
+  // (property_promotions) sits alongside the original tier-based one
+  // (properties.promoted_until), not replacing it. Both are read here
+  // so a single, real sort order accounts for whichever one a given
+  // owner actually used. rank_category only exists on the credit-based
+  // system; a property using the older tier system is real, paid
+  // promotion too, so it's treated as an honest mid-tier ('B'
+  // equivalent) rather than being silently outranked by it.
+  const { data: creditPromotions } = await supabase
+    .from("property_promotions")
+    .select("property_id, rank_category")
+    .eq("is_active", true);
+  const creditPromoByProperty = new Map(
+    (creditPromotions ?? []).map((p) => [p.property_id, p.rank_category as string | null])
+  );
+
   // Real promoted-first sorting — the original app's promotion never
   // actually affected sort order via anything durable; this genuinely
-  // checks each property's real, current promotion expiry. Computed
-  // once here and reused below — this is an async Server Component
-  // forced dynamic on every request (see `dynamic` above), so a single
-  // "now" per request is correct, not a stale, build-time snapshot.
+  // checks each property's real, current promotion state across both
+  // mechanisms. Computed once here and reused below — this is an
+  // async Server Component forced dynamic on every request (see
+  // `dynamic` above), so a single "now" per request is correct, not a
+  // stale, build-time snapshot.
   // eslint-disable-next-line react-hooks/purity
   const now = Date.now();
+  const rankWeight: Record<string, number> = { A: 4, B: 3, C: 2, D: 1 };
+  const promoWeight = (property: Property & { id: string; promoted_until?: string | null }) => {
+    const legacyPromoted = property.promoted_until && new Date(property.promoted_until).getTime() > now;
+    const creditRank = creditPromoByProperty.get(property.id);
+    if (creditRank) return rankWeight[creditRank] ?? 0;
+    if (legacyPromoted) return rankWeight.B; // real paid promotion, honest mid-tier default
+    return 0;
+  };
   const sortedProperties = [...(properties ?? [])].sort((a, b) => {
-    const aPromoted = a.promoted_until && new Date(a.promoted_until).getTime() > now;
-    const bPromoted = b.promoted_until && new Date(b.promoted_until).getTime() > now;
-    if (aPromoted && !bPromoted) return -1;
-    if (!aPromoted && bPromoted) return 1;
+    const diff = promoWeight(b) - promoWeight(a);
+    if (diff !== 0) return diff;
     return 0; // preserves the existing created_at ordering from the query
   });
+
 
   // Real, genuine platform stats — restored from a real section of the
   // original homepage found missing, computed from actual live data,

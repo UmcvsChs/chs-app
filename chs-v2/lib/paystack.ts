@@ -39,3 +39,34 @@ export async function startWalletFunding(
     onCancel: () => onCancel(),
   });
 }
+
+// Same real, secure pattern as startWalletFunding above — the server
+// (initialize-promo-credit-funding) locks in the real Naira amount from
+// a trusted, flat exchange rate, never from anything the browser sends.
+export async function startPromoCreditFunding(
+  credits: number,
+  onSuccess: (reference: string) => void,
+  onCancel: () => void
+) {
+  const { default: PaystackPop } = await import("@paystack/inline-js");
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/initialize-promo-credit-funding`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credits }),
+    }
+  );
+
+  const result = await response.json();
+  if (!response.ok || result.error) {
+    throw new Error(result.error || "Could not start payment");
+  }
+
+  const popup = new PaystackPop();
+  popup.resumeTransaction(result.accessCode, {
+    onSuccess: (transaction) => onSuccess(transaction.reference),
+    onCancel: () => onCancel(),
+  });
+}

@@ -617,6 +617,11 @@ export default function AdminDashboard() {
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.rulesAcknowledged}</p>
               <p className="text-[10px] text-gray-400 mt-1">Tenants who&apos;ve acknowledged House Rules</p>
             </div>
+            <Link href="/admin/concierge"
+              className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center col-span-2 block">
+              <p className="font-serif text-lg font-bold text-chs-charcoal">📝 Concierge Requests</p>
+              <p className="text-[10px] text-gray-400 mt-1">Every &quot;Talk to an Agent&quot; submission, real and unfiltered →</p>
+            </Link>
           </div>
         )}
 
