@@ -16,11 +16,20 @@ export const dynamic = "force-dynamic";
 // Next.js app is built, not an approximation of it.
 export default async function Home() {
   const supabase = await createClient();
+  // Real fix: this had no limit at all — every active property, no
+  // matter how many, was fetched on every single homepage visit. The
+  // purpose-tab and search filtering below happens client-side from
+  // this array (see HomePageClient), so a true page-by-page "load
+  // more" needs that filtering moved server-side first — a bigger,
+  // separate change. This cap is the honest, safe fix available right
+  // now: it stops the payload from growing without bound as the
+  // catalog grows, without changing how filtering currently works.
   const { data: properties, error } = await supabase
     .from("properties")
     .select("*")
     .eq("status", "active")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(300);
 
   if (error) {
     // Honest, visible failure rather than a silent empty page — matches

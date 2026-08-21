@@ -103,8 +103,12 @@ export default function AdminDashboard() {
   }
 
   async function handleToggleFreeze(userId: string, freeze: boolean) {
-    await supabase.from("wallets").update({ frozen: freeze, frozen_reason: freeze ? "Frozen by admin pending investigation" : null }).eq("user_id", userId);
-    if (walletResult) setWalletResult({ ...walletResult, frozen: freeze });
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "freeze_wallet",
+      p_target_id: userId,
+      p_proposed_changes: { frozen: freeze, frozen_reason: freeze ? "Frozen by admin pending investigation" : null },
+    });
+    if (!error && walletResult) setWalletResult({ ...walletResult, frozen: freeze });
   }
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
@@ -115,6 +119,23 @@ export default function AdminDashboard() {
   const [pendingArtisans, setPendingArtisans] = useState<Artisan[]>([]);
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
+  const [pendingLoginRequests, setPendingLoginRequests] = useState<{
+    id: string; admin_id: string; code: string; created_at: string;
+    profiles: { full_name: string; role: string }[] | null;
+  }[]>([]);
+  const [resolvingLoginId, setResolvingLoginId] = useState<string | null>(null);
+
+  const [pendingActionRequests, setPendingActionRequests] = useState<{
+    id: string; requested_by: string; domain: string; action_type: string;
+    target_id: string; proposed_changes: Record<string, unknown>; note: string | null; created_at: string;
+    profiles: { full_name: string; staff_role: string | null }[] | null;
+  }[]>([]);
+  const [resolvingActionId, setResolvingActionId] = useState<string | null>(null);
+
+  const [assignContact, setAssignContact] = useState("");
+  const [assignRole, setAssignRole] = useState("customer_care");
+  const [assigning, setAssigning] = useState(false);
+  const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
@@ -134,26 +155,44 @@ export default function AdminDashboard() {
       router.push("/");
       return;
     }
+    // Real login-approval guard — closes the direct-navigation bypass:
+    // without this, a sub-admin with an already-valid session (correct
+    // password, but no super-admin approval yet) could just type
+    // /admin into the URL bar and skip the waiting screen entirely.
+    if (profile?.role === "admin" && !profile.is_super_admin) {
+      supabase.rpc("has_approved_admin_login", { p_admin_id: session.user.id }).then(({ data: approved }) => {
+        if (!approved) router.push("/admin-approval-pending");
+        else loadData();
+      });
+      return;
+    }
     if (profile?.role === "admin") loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile]);
 
   async function loadData() {
     setLoading(true);
+    // Real fix: none of these had a limit — every single pending item,
+    // in every category, was fetched in full on every dashboard load.
+    // Also switched from newest-first to oldest-first: a limit on a
+    // newest-first queue would silently hide old, long-neglected items
+    // behind a flood of new ones — the wrong items to hide from an
+    // admin queue. referral_fee_settings is a small, bounded config
+    // table, not a growing queue, so it's left unlimited.
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: false }),
-      supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }),
-      supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
+      supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
-      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }),
-      supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: false }),
-      supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }),
-      supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }),
-      supabase.from("developer_applications").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: true }).limit(200),
+      supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: true }).limit(200),
+      supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
+      supabase.from("developer_applications").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
     ]);
     setPendingProfiles(profilesRes.data || []);
 
@@ -198,23 +237,77 @@ export default function AdminDashboard() {
     setPendingArtisans(artisansRes.data || []);
     setUpcomingInspections((inspectionsRes.data as typeof upcomingInspections) || []);
     setDeveloperApplications(developerAppsRes.data || []);
+
+    // Only a real super admin needs to see or act on these — a
+    // sub-admin querying this would just get an empty result anyway
+    // (RLS: admin_login_requests_own_read only shows their own), but
+    // there's no reason to even ask unless they're the one who'd act.
+    if (profile?.is_super_admin) {
+      const { data: loginRequests } = await supabase
+        .from("admin_login_requests")
+        .select("id, admin_id, code, created_at, profiles(full_name, role)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      setPendingLoginRequests((loginRequests as typeof pendingLoginRequests) || []);
+
+      const { data: actionRequests } = await supabase
+        .from("admin_action_requests")
+        .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles(full_name, staff_role)")
+        .eq("status", "pending")
+        .order("created_at", { ascending: true });
+      setPendingActionRequests((actionRequests as typeof pendingActionRequests) || []);
+    }
+
     setLoading(false);
+  }
+
+  async function handleResolveAction(requestId: string, approve: boolean) {
+    setResolvingActionId(requestId);
+    const { error } = await supabase.rpc("resolve_admin_action", { p_request_id: requestId, p_approve: approve });
+    setResolvingActionId(null);
+    if (!error) {
+      setPendingActionRequests((prev) => prev.filter((r) => r.id !== requestId));
+      loadData(); // real refresh — the underlying tab's data just changed
+    }
+  }
+
+  async function handleAssignStaffRole() {
+    if (!assignContact.trim()) return;
+    setAssigning(true);
+    setAssignMessage(null);
+    const { data, error } = await supabase.rpc("assign_staff_role", {
+      p_contact: assignContact.trim(),
+      p_staff_role: assignRole,
+    });
+    setAssigning(false);
+    if (error) {
+      setAssignMessage(error.message);
+      return;
+    }
+    setAssignMessage(`✓ ${data} is now the ${assignRole.replace(/_/g, " ")} admin.`);
+    setAssignContact("");
+  }
+
+  async function handleResolveLogin(requestId: string, approve: boolean) {
+    setResolvingLoginId(requestId);
+    const { error } = await supabase.rpc("resolve_admin_login", { p_request_id: requestId, p_approve: approve });
+    setResolvingLoginId(null);
+    if (!error) {
+      setPendingLoginRequests((prev) => prev.filter((r) => r.id !== requestId));
+    }
   }
 
   async function handleProfileDecision(profileId: string, status: "approved" | "rejected") {
     setActionError(null);
-    const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "approve_profile",
+      p_target_id: profileId,
+      p_proposed_changes: { status },
+    });
     if (error) {
-      setActionError("Could not update this registration. Please try again.");
+      setActionError(error.message);
       return;
     }
-    await supabase.rpc("notify_user", {
-      p_user_id: profileId,
-      p_title: status === "approved" ? "Your CHS account is approved!" : "Your CHS registration needs attention",
-      p_body: status === "approved"
-        ? "You can now fully use CHS."
-        : "Your registration could not be approved. Please contact CHS support for details.",
-    });
     loadData();
   }
 
@@ -237,40 +330,14 @@ export default function AdminDashboard() {
 
   async function handlePropertyVerification(propertyId: string, status: "verified" | "rejected") {
     setActionError(null);
-    const { data: property, error } = await supabase.from("properties").update({ verification_status: status }).eq("id", propertyId).select().single();
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "verify_property",
+      p_target_id: propertyId,
+      p_proposed_changes: { verification_status: status },
+    });
     if (error) {
-      setActionError("Could not update this property. Please try again.");
+      setActionError(error.message);
       return;
-    }
-    if (property) {
-      await supabase.rpc("notify_user", {
-        p_user_id: property.owner_id,
-        p_title: status === "verified" ? "Your property listing is now live!" : "Your property listing needs attention",
-        p_body: status === "verified"
-          ? `"${property.title}" has been verified and is now publicly visible.`
-          : `"${property.title}" could not be verified. Please contact CHS support for details.`,
-        p_link: `/property/${property.id}`,
-      });
-
-      // The real, genuine improvement over the original app: it could
-      // only tell an interested person "check back soon," with no real
-      // way to actually notify them once verification happened. Every
-      // real person who expressed interest now genuinely gets told the
-      // moment it's confirmed.
-      if (status === "verified") {
-        const { data: interestedUsers } = await supabase
-          .from("property_interest")
-          .select("user_id")
-          .eq("property_id", propertyId);
-        for (const interested of interestedUsers || []) {
-          await supabase.rpc("notify_user", {
-            p_user_id: interested.user_id,
-            p_title: "A property you're interested in is now verified!",
-            p_body: `"${property.title}" is now CHS Verified — you can go ahead with what you were trying to do.`,
-            p_link: `/property/${property.id}`,
-          });
-        }
-      }
     }
     loadData();
   }
@@ -407,9 +474,13 @@ export default function AdminDashboard() {
 
   async function handleVendorVerification(vendorId: string, status: "verified" | "rejected") {
     setActionError(null);
-    const { error } = await supabase.from("marketplace_vendors").update({ verification_status: status }).eq("id", vendorId);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "verify_vendor",
+      p_target_id: vendorId,
+      p_proposed_changes: { verification_status: status },
+    });
     if (error) {
-      setActionError("Could not update this vendor. Please try again.");
+      setActionError(error.message);
       return;
     }
     loadData();
@@ -433,6 +504,22 @@ export default function AdminDashboard() {
 
   async function handleUpdateOwedFeeStatus(feeId: string, status: "invoiced" | "paid") {
     setActionError(null);
+    if (status === "paid") {
+      // A real financial disbursement — routes through the same
+      // high-stakes queue as everything else that moves real money.
+      const { error } = await supabase.rpc("request_admin_action", {
+        p_action_type: "mark_referral_paid",
+        p_target_id: feeId,
+        p_proposed_changes: {},
+      });
+      if (error) {
+        setActionError(error.message);
+        return;
+      }
+      loadData();
+      return;
+    }
+    // "Invoiced" is routine status tracking, not a real money movement.
     const { error } = await supabase.from("referral_fees_owed").update({ status }).eq("id", feeId);
     if (error) {
       setActionError("Could not update this. Please try again.");
@@ -473,29 +560,27 @@ export default function AdminDashboard() {
 
   async function handleArtisanVerification(artisanId: string, status: "verified" | "rejected") {
     setActionError(null);
-    const { data: artisan, error } = await supabase.from("artisans").update({ verification_status: status }).eq("id", artisanId).select().single();
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "verify_artisan",
+      p_target_id: artisanId,
+      p_proposed_changes: { verification_status: status },
+    });
     if (error) {
-      setActionError("Could not update this artisan. Please try again.");
+      setActionError(error.message);
       return;
-    }
-    if (artisan) {
-      await supabase.rpc("notify_user", {
-        p_user_id: artisan.user_id,
-        p_title: status === "verified" ? "You're now a verified CHS artisan!" : "Your artisan registration needs attention",
-        p_body: status === "verified"
-          ? "You can now quote on real maintenance jobs matching your trade and location."
-          : "Your registration could not be verified. Please contact CHS support for details.",
-        p_link: "/artisan",
-      });
     }
     loadData();
   }
 
   async function handleDeveloperReviewed(appId: string) {
     setActionError(null);
-    const { error } = await supabase.from("developer_applications").update({ status: "reviewed" }).eq("id", appId);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "review_developer",
+      p_target_id: appId,
+      p_proposed_changes: { status: "reviewed" },
+    });
     if (error) {
-      setActionError("Could not update this application. Please try again.");
+      setActionError(error.message);
       return;
     }
     loadData();
@@ -503,26 +588,28 @@ export default function AdminDashboard() {
 
   async function handleClearSale(offerId: string) {
     setActionError(null);
-    const { error } = await supabase.from("offers").update({ chs_cleared: true }).eq("id", offerId);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "clear_sale",
+      p_target_id: offerId,
+      p_proposed_changes: {},
+    });
     if (error) {
-      setActionError("Could not clear this transaction. Please try again.");
+      setActionError(error.message);
       return;
     }
     loadData();
   }
 
-  async function handleLivenessReview(submissionId: string, userId: string, approve: boolean) {
+  async function handleLivenessReview(submissionId: string, approve: boolean) {
     setActionError(null);
-    const { error } = await supabase
-      .from("liveness_submissions")
-      .update({ status: approve ? "approved" : "rejected" })
-      .eq("id", submissionId);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "review_liveness",
+      p_target_id: submissionId,
+      p_proposed_changes: { status: approve ? "approved" : "rejected" },
+    });
     if (error) {
-      setActionError("Could not update this submission. Please try again.");
+      setActionError(error.message);
       return;
-    }
-    if (approve) {
-      await supabase.from("profiles").update({ liveness_verified: true }).eq("id", userId);
     }
     loadData();
   }
@@ -559,29 +646,41 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="flex border-b border-gray-200 bg-white px-4">
+      <div className="flex border-b border-gray-200 bg-white px-4 overflow-x-auto">
         {([
-          { key: "overview", label: "Overview" },
-          { key: "finance", label: "Finance" },
-          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})` },
-          { key: "liveness", label: `Face Verification (${pendingLiveness.length})` },
-          { key: "registrations", label: `Registrations (${pendingProfiles.length})` },
-          { key: "applications", label: `Applications (${pendingApplications.length})` },
-          { key: "properties", label: `Properties (${pendingProperties.length})` },
-          { key: "disputes", label: `Disputes (${openDisputes.length})` },
-          { key: "feedback", label: `Feedback (${pendingFeedback.length})` },
-          { key: "engage", label: `Engage CHS (${pendingEngage.length})` },
-          { key: "vendors", label: `Vendors (${pendingVendors.length})` },
-          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})` },
-          { key: "faults", label: `Maintenance (${unroutedFaults.length})` },
-          { key: "artisans", label: `Artisans (${pendingArtisans.length})` },
-          { key: "inspections", label: `Inspections (${upcomingInspections.length})` },
-          { key: "developers", label: `Developers (${developerApplications.length})` },
-        ] as { key: Tab; label: string }[]).map((tab) => (
+          { key: "overview", label: "Overview", domain: null },
+          { key: "finance", label: "Finance", domain: "finance" },
+          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
+          { key: "registrations", label: `Registrations (${pendingProfiles.length})`, domain: "registration_setup" },
+          { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
+          { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
+          { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
+          { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
+          { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only" },
+          { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations" },
+          { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
+          { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
+        ] as { key: Tab; label: string; domain: string | null }[])
+          // Real tab-gating — a sub-admin only ever sees the tabs
+          // inside their own assigned domain. This is UX on top of the
+          // real enforcement (RLS via staff_can_access, tested
+          // directly against the live database) — hiding a tab a
+          // sub-admin has no real access to anyway, not the actual
+          // security boundary itself.
+          .filter((tab) =>
+            profile?.is_super_admin ||
+            tab.domain === null ||
+            (tab.domain !== "super_admin_only" && tab.domain === profile?.staff_role)
+          )
+          .map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`text-xs font-semibold px-3 py-3 border-b-2 ${
+            className={`text-xs font-semibold px-3 py-3 border-b-2 whitespace-nowrap ${
               activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
             }`}
           >
@@ -597,6 +696,85 @@ export default function AdminDashboard() {
       <div className="px-4 py-4 space-y-3">
         {activeTab === "overview" && (
           <div className="grid grid-cols-2 gap-3">
+            {profile?.is_super_admin && pendingLoginRequests.length > 0 && (
+              <div className="col-span-2 bg-red-50 border-2 border-red-200 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-bold text-red-700">🔐 Admin logins awaiting your approval</p>
+                {pendingLoginRequests.map((req) => (
+                  <div key={req.id} className="bg-white rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs font-semibold text-chs-charcoal">
+                        {req.profiles?.[0]?.full_name || "Unknown"} ({req.profiles?.[0]?.role})
+                      </p>
+                      <p className="text-[10px] text-gray-400">Code: <span className="font-bold tracking-widest">{req.code}</span></p>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <button onClick={() => handleResolveLogin(req.id, true)} disabled={resolvingLoginId === req.id}
+                        className="px-3 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-semibold disabled:opacity-50">
+                        Approve
+                      </button>
+                      <button onClick={() => handleResolveLogin(req.id, false)} disabled={resolvingLoginId === req.id}
+                        className="px-3 py-1.5 rounded-full bg-gray-300 text-gray-700 text-[10px] font-semibold disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {profile?.is_super_admin && pendingActionRequests.length > 0 && (
+              <div className="col-span-2 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 space-y-3">
+                <p className="text-sm font-bold text-amber-800">⚠️ Sub-admin actions awaiting your sign-off</p>
+                {pendingActionRequests.map((req) => (
+                  <div key={req.id} className="bg-white rounded-lg p-3">
+                    <p className="text-xs font-semibold text-chs-charcoal">
+                      {req.profiles?.[0]?.full_name || "Unknown"} requests: {req.action_type.replace(/_/g, " ")}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {JSON.stringify(req.proposed_changes)}
+                      {req.note && ` — "${req.note}"`}
+                    </p>
+                    <div className="flex gap-1.5 mt-2">
+                      <button onClick={() => handleResolveAction(req.id, true)} disabled={resolvingActionId === req.id}
+                        className="px-3 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-semibold disabled:opacity-50">
+                        Approve
+                      </button>
+                      <button onClick={() => handleResolveAction(req.id, false)} disabled={resolvingActionId === req.id}
+                        className="px-3 py-1.5 rounded-full bg-gray-300 text-gray-700 text-[10px] font-semibold disabled:opacity-50">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {profile?.is_super_admin && (
+              <div className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2">
+                <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
+                <p className="text-[10px] text-gray-400">
+                  The person must already have a real CHS account — this promotes their existing account, it doesn&apos;t create a new one.
+                </p>
+                <input type="text" value={assignContact} onChange={(e) => setAssignContact(e.target.value)}
+                  placeholder="Their phone number or email"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                <select value={assignRole} onChange={(e) => setAssignRole(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="customer_care">Customer Care (disputes, feedback)</option>
+                  <option value="registration_setup">Registration & Setup (approvals, face verification)</option>
+                  <option value="owner_buyer_tenant">Owner/Buyer/Tenant (properties, applications, sales)</option>
+                  <option value="agent_relations">Agent Relations (referral fees)</option>
+                  <option value="artisan_dev_pm_vendor">Artisan/Developer/PM/Vendor</option>
+                </select>
+                {assignMessage && (
+                  <p className={`text-xs rounded-lg px-3 py-2 ${assignMessage.startsWith("✓") ? "text-green-700 bg-green-50" : "text-chs-red bg-red-50"}`}>
+                    {assignMessage}
+                  </p>
+                )}
+                <button onClick={handleAssignStaffRole} disabled={assigning}
+                  className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
+                  {assigning ? "Assigning..." : "Assign role"}
+                </button>
+              </div>
+            )}
             <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.totalListings}</p>
               <p className="text-[10px] text-gray-400 mt-1">Total listings</p>
@@ -702,11 +880,11 @@ export default function AdminDashboard() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sub.captured_photo_url} alt="Liveness capture" className="w-full rounded-lg mb-2" />
                   <div className="flex gap-2">
-                    <button onClick={() => handleLivenessReview(sub.id, sub.user_id, true)}
+                    <button onClick={() => handleLivenessReview(sub.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                       Approve
                     </button>
-                    <button onClick={() => handleLivenessReview(sub.id, sub.user_id, false)}
+                    <button onClick={() => handleLivenessReview(sub.id, false)}
                       className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                       Reject
                     </button>

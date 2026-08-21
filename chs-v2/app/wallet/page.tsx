@@ -33,6 +33,15 @@ export default function WalletPage() {
   const [funding, setFunding] = useState(false);
   const [fundError, setFundError] = useState<string | null>(null);
 
+  const [showTransferForm, setShowTransferForm] = useState(false);
+  const [transferContact, setTransferContact] = useState("");
+  const [transferAmount, setTransferAmount] = useState<number | "">("");
+  const [transferNote, setTransferNote] = useState("");
+  const [transferRecipient, setTransferRecipient] = useState<{ id: string; full_name: string; role: string } | null>(null);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [transferMessage, setTransferMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (authLoading) return;
     if (!session) {
@@ -48,7 +57,13 @@ export default function WalletPage() {
     setLoading(true);
 
     const [walletRes, transactionsRes] = await Promise.all([
-      supabase.from("wallets").select("*").eq("user_id", session.user.id).single(),
+      // .maybeSingle(), not .single() — a real trigger now guarantees a
+      // wallet exists for every profile (see
+      // backend-v2/50_wallet_fixes_and_admin_approval.sql), but this
+      // stays defensive rather than hard-crashing the whole page on
+      // any edge case (e.g. a profile that predates the trigger and
+      // somehow missed the backfill).
+      supabase.from("wallets").select("*").eq("user_id", session.user.id).maybeSingle(),
       supabase
         .from("wallet_transactions")
         .select("*")
@@ -68,6 +83,60 @@ export default function WalletPage() {
   // genuinely *allowed*; actually moving money out still needs a real
   // payout integration with a payment provider, the same category of
   // work already disclosed for Paystack funding.
+  async function handleLookupRecipient() {
+    if (!transferContact.trim()) return;
+    setLookingUp(true);
+    setTransferMessage(null);
+    setTransferRecipient(null);
+
+    const { data, error } = await supabase.rpc("find_transfer_recipient", { p_contact: transferContact.trim() });
+    setLookingUp(false);
+
+    if (error || !data || data.length === 0) {
+      setTransferMessage("No CHS user found with that phone number or email.");
+      return;
+    }
+    setTransferRecipient(data[0]);
+  }
+
+  async function handleTransferSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!transferRecipient) {
+      setTransferMessage("Please look up and confirm a recipient first.");
+      return;
+    }
+    if (!transferAmount || transferAmount <= 0) {
+      setTransferMessage("Enter a real amount to send.");
+      return;
+    }
+
+    setTransferring(true);
+    setTransferMessage(null);
+
+    const { error } = await supabase.rpc("transfer_wallet_funds", {
+      p_recipient_id: transferRecipient.id,
+      p_amount: transferAmount,
+      p_note: transferNote.trim() || null,
+    });
+
+    setTransferring(false);
+    if (error) {
+      // The real database function's own message — the same real,
+      // specific reasons (insufficient balance, frozen wallet, self-
+      // transfer) rather than a generic "something went wrong".
+      setTransferMessage(error.message);
+      return;
+    }
+
+    setTransferMessage(`✓ Sent ${formatNaira(transferAmount)} to ${transferRecipient.full_name}.`);
+    setTransferContact("");
+    setTransferAmount("");
+    setTransferNote("");
+    setTransferRecipient(null);
+    setShowTransferForm(false);
+    loadData(); // real, immediate balance refresh
+  }
+
   async function handleWithdrawSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!session) return;
@@ -220,6 +289,57 @@ export default function WalletPage() {
             )}
 
             {profile && <BankAccountSecurity session={session!} registeredName={profile.full_name} />}
+
+            {transferMessage && (
+              <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{transferMessage}</p>
+            )}
+            {!showTransferForm ? (
+              <button
+                onClick={() => { setShowTransferForm(true); setTransferMessage(null); }}
+                className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold"
+              >
+                Send to another CHS user
+              </button>
+            ) : (
+              <form onSubmit={handleTransferSubmit} className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={transferContact}
+                    onChange={(e) => { setTransferContact(e.target.value); setTransferRecipient(null); }}
+                    placeholder="Recipient's phone or email"
+                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+                  />
+                  <button type="button" onClick={handleLookupRecipient} disabled={lookingUp}
+                    className="px-4 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold disabled:opacity-50">
+                    {lookingUp ? "..." : "Find"}
+                  </button>
+                </div>
+                {transferRecipient && (
+                  <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+                    ✓ {transferRecipient.full_name} ({transferRecipient.role})
+                  </p>
+                )}
+                <CurrencyInput value={transferAmount} onChange={setTransferAmount} placeholder="Amount to send (₦)" />
+                <input
+                  type="text"
+                  value={transferNote}
+                  onChange={(e) => setTransferNote(e.target.value)}
+                  placeholder="What's this for? (optional)"
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+                />
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setShowTransferForm(false); setTransferRecipient(null); }}
+                    className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={transferring || !transferRecipient}
+                    className="flex-1 py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
+                    {transferring ? "Sending..." : "Confirm transfer"}
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">

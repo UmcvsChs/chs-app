@@ -81,26 +81,42 @@ export default function OwnerDashboard() {
       return;
     }
 
-    // Real activity for each real property — offers, inspection
-    // requests, and rental applications actually made on it, not just
-    // the property's own details.
-    const withActivity = await Promise.all(
-      ownedProperties.map(async (property) => {
-        const [offersRes, inspectionsRes, applicationsRes, mediaRequestsRes] = await Promise.all([
-          supabase.from("offers").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
-          supabase.from("inspections").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
-          supabase.from("rental_applications").select("*").eq("property_id", property.id).order("created_at", { ascending: false }),
-          supabase.from("media_requests").select("*").eq("property_id", property.id).eq("status", "pending").order("created_at", { ascending: false }),
-        ]);
-        return {
-          ...property,
-          offers: offersRes.data || [],
-          inspections: inspectionsRes.data || [],
-          rentalApplications: applicationsRes.data || [],
-          mediaRequests: mediaRequestsRes.data || [],
-        } as PropertyWithActivity;
-      })
-    );
+    // Real fix: this used to fire 4 separate queries PER property
+    // (offers, inspections, applications, media requests) — fine for
+    // an owner with 1-2 listings, but N properties meant N×4 real
+    // database round-trips on every dashboard load. An agent or
+    // property manager with 50 listings would trigger 200 concurrent
+    // queries. Batched here into 4 total queries regardless of how
+    // many properties an owner has, then grouped in memory by
+    // property_id — same real data, a fraction of the round-trips.
+    const propertyIds = ownedProperties.map((p) => p.id);
+    const [allOffersRes, allInspectionsRes, allApplicationsRes, allMediaRequestsRes] = await Promise.all([
+      supabase.from("offers").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("inspections").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("rental_applications").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("media_requests").select("*").in("property_id", propertyIds).eq("status", "pending").order("created_at", { ascending: false }),
+    ]);
+
+    const groupBy = <T extends { property_id: string }>(rows: T[] | null) => {
+      const map = new Map<string, T[]>();
+      for (const row of rows || []) {
+        if (!map.has(row.property_id)) map.set(row.property_id, []);
+        map.get(row.property_id)!.push(row);
+      }
+      return map;
+    };
+    const offersByProperty = groupBy(allOffersRes.data);
+    const inspectionsByProperty = groupBy(allInspectionsRes.data);
+    const applicationsByProperty = groupBy(allApplicationsRes.data);
+    const mediaRequestsByProperty = groupBy(allMediaRequestsRes.data);
+
+    const withActivity = ownedProperties.map((property) => ({
+      ...property,
+      offers: offersByProperty.get(property.id) || [],
+      inspections: inspectionsByProperty.get(property.id) || [],
+      rentalApplications: applicationsByProperty.get(property.id) || [],
+      mediaRequests: mediaRequestsByProperty.get(property.id) || [],
+    })) as PropertyWithActivity[];
 
     setProperties(withActivity);
 

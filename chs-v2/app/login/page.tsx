@@ -87,6 +87,27 @@ export default function LoginPage() {
     setActiveRole(selectedRole);
     await refreshProfile();
 
+    // Real login approval gate — a sub-admin (any role='admin' account
+    // that isn't the genuine super admin) can't reach the dashboard
+    // straight from a correct password alone anymore. This calls the
+    // real request_admin_login() function (see
+    // backend-v2/50_wallet_fixes_and_admin_approval.sql), which
+    // returns 'super_admin' immediately for the one real super admin,
+    // or creates a real pending approval request — with a real code —
+    // for anyone else.
+    if (selectedRole === "admin") {
+      const { data: approvalResult, error: approvalError } = await supabase.rpc("request_admin_login");
+      if (approvalError) {
+        setError("Could not start the admin login approval process. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+      if (approvalResult !== "super_admin") {
+        router.push(`/admin-approval-pending?code=${approvalResult}`);
+        return;
+      }
+    }
+
     // The actual bug just found and fixed: every successful login was
     // sending everyone to the plain homepage, regardless of which real
     // role they'd just confirmed — an admin logging in never actually

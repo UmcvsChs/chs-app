@@ -4,8 +4,7 @@
 
 export interface Profile {
   id: string;
-  role: "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer" | "admin";
-  full_name: string;
+  role: "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer" | "admin";  full_name: string;
   phone: string;
   email: string | null;
   state: string;
@@ -20,6 +19,11 @@ export interface Profile {
   // Multi-role support (item #17) — every additional role this account
   // has genuinely linked, beyond its primary `role`.
   secondary_roles: string[];
+
+  // Real sub-admin infrastructure (backend-v2/50_wallet_fixes_and_admin_approval.sql)
+  // — true only for the one genuine super admin; every other
+  // role='admin' account is a sub-admin, subject to login approval.
+  is_super_admin: boolean;
 
   // Agent-specific
   agent_type: "independent" | "chs_official" | null;
