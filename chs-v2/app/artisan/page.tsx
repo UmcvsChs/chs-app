@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Artisan, ArtisanRating, ArtisanJobDispute } from "@/types/artisan";
+import GuidePrompt from "@/components/GuidePrompt";
 
 interface OpenFault {
   id: string;
@@ -18,7 +19,7 @@ interface OpenFault {
 
 export default function ArtisanDashboard() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [artisan, setArtisan] = useState<Artisan | null>(null);
   const [artisanName, setArtisanName] = useState<string>("");
   const [openFaults, setOpenFaults] = useState<OpenFault[]>([]);
@@ -26,6 +27,7 @@ export default function ArtisanDashboard() {
   const [myDisputes, setMyDisputes] = useState<ArtisanJobDispute[]>([]);
   const [completedJobs, setCompletedJobs] = useState<{ id: string; category: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [quotingFaultId, setQuotingFaultId] = useState<string | null>(null);
   const [quoteAmount, setQuoteAmount] = useState<number | "">("");
   const [quoteNote, setQuoteNote] = useState("");
@@ -40,9 +42,17 @@ export default function ArtisanDashboard() {
       router.push("/login");
       return;
     }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/artisan");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("artisan")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
+    }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session]);
+  }, [authLoading, session, profile]);
 
   async function loadData() {
     if (!session) return;
@@ -281,6 +291,7 @@ export default function ArtisanDashboard() {
           </div>
         )}
       </div>
+      {showGuide && <GuidePrompt role="artisan" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

@@ -70,3 +70,34 @@ export async function startPromoCreditFunding(
     onCancel: () => onCancel(),
   });
 }
+
+// Same real, secure pattern — the server (initialize-roadmap-funding)
+// reads the real fee from platform_settings, never trusted from the
+// browser.
+export async function startRoadmapFunding(
+  modelId: string,
+  onSuccess: (reference: string) => void,
+  onCancel: () => void
+) {
+  const { default: PaystackPop } = await import("@paystack/inline-js");
+
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/initialize-roadmap-funding`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modelId }),
+    }
+  );
+
+  const result = await response.json();
+  if (!response.ok || result.error) {
+    throw new Error(result.error || "Could not start payment");
+  }
+
+  const popup = new PaystackPop();
+  popup.resumeTransaction(result.accessCode, {
+    onSuccess: (transaction) => onSuccess(transaction.reference),
+    onCancel: () => onCancel(),
+  });
+}

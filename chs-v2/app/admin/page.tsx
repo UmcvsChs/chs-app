@@ -14,6 +14,7 @@ import { FaultReport } from "@/types/faultReport";
 import { Offer } from "@/types/offer";
 import { Artisan } from "@/types/artisan";
 import { Inspection } from "@/types/inspection";
+import GuidePrompt from "@/components/GuidePrompt";
 
 interface DeveloperApplication {
   id: string;
@@ -119,6 +120,7 @@ export default function AdminDashboard() {
   const [pendingArtisans, setPendingArtisans] = useState<Artisan[]>([]);
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
+  const [showGuide, setShowGuide] = useState(false);
   const [pendingLoginRequests, setPendingLoginRequests] = useState<{
     id: string; admin_id: string; code: string; created_at: string;
     profiles: { full_name: string; role: string }[] | null;
@@ -155,18 +157,30 @@ export default function AdminDashboard() {
       router.push("/");
       return;
     }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/admin");
+      return;
+    }
     // Real login-approval guard — closes the direct-navigation bypass:
     // without this, a sub-admin with an already-valid session (correct
     // password, but no super-admin approval yet) could just type
     // /admin into the URL bar and skip the waiting screen entirely.
     if (profile?.role === "admin" && !profile.is_super_admin) {
       supabase.rpc("has_approved_admin_login", { p_admin_id: session.user.id }).then(({ data: approved }) => {
-        if (!approved) router.push("/admin-approval-pending");
-        else loadData();
+        if (!approved) {
+          router.push("/admin-approval-pending");
+          return;
+        }
+        if (!profile.guide_roles_seen.includes("admin")) setShowGuide(true);
+        loadData();
       });
       return;
     }
-    if (profile?.role === "admin") loadData();
+    if (profile?.role === "admin") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (!profile.guide_roles_seen.includes("admin")) setShowGuide(true);
+      loadData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile]);
 
@@ -1203,6 +1217,7 @@ export default function AdminDashboard() {
           </>
         )}
       </div>
+      {showGuide && <GuidePrompt role="admin" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

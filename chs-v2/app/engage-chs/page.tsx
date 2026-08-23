@@ -194,6 +194,12 @@ export default function EngageChsPage() {
                 {ENGAGE_SERVICE_TYPES.map((s) => <option key={s}>{s}</option>)}
               </select>
             </div>
+            {(serviceType === "Construction monitoring" || serviceType === "Full construction / project management") && (
+              <Link href="/construction-roadmap"
+                className="block bg-chs-amber-light rounded-lg px-3 py-2.5 text-xs text-chs-amber-dark">
+                🏗️ Before you continue — see real quantities, permits, and payment plan by bedroom count →
+              </Link>
+            )}
             {ownedProperties.length > 0 && (
               <div>
                 <label className="text-xs font-semibold text-gray-600">Which property is this about? (optional)</label>

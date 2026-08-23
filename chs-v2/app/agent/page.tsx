@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { AgentReferral } from "@/types/agentReferral";
 import { formatNaira } from "@/lib/format";
+import GuidePrompt from "@/components/GuidePrompt";
 
 const STAGE_LABELS: Record<string, string> = {
   enquiry: "New enquiry",
@@ -23,6 +24,7 @@ export default function AgentDashboard() {
   const [copied, setCopied] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   async function loadReferrals() {
     if (!session) return;
@@ -52,10 +54,17 @@ export default function AgentDashboard() {
       router.push("/");
       return;
     }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/agent");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("agent")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
+    }
     // Real network fetch, not a synchronous setState — loadReferrals is
     // async and only calls setState after a genuine await on Supabase's
     // response, so this is the standard, safe "fetch on mount" pattern.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadReferrals();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile]);
@@ -206,6 +215,7 @@ export default function AgentDashboard() {
           )}
         </div>
       </div>
+      {showGuide && <GuidePrompt role="agent" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
 import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
+import GuidePrompt from "@/components/GuidePrompt";
 
 interface TenancyWithProperty {
   id: string;
@@ -44,6 +45,7 @@ export default function ManagerDashboard() {
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [faults, setFaults] = useState<FaultWithQuotations[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [messagingTenancy, setMessagingTenancy] = useState<TenancyWithProperty | null>(null);
   const [paymentHistoryTenancy, setPaymentHistoryTenancy] = useState<TenancyWithProperty | null>(null);
@@ -60,6 +62,14 @@ export default function ManagerDashboard() {
     if (profile && !allRoles.includes("manager")) {
       router.push("/");
       return;
+    }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/manager");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("manager")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -372,6 +382,7 @@ export default function ManagerDashboard() {
           )}
         </div>
       </div>
+      {showGuide && <GuidePrompt role="manager" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

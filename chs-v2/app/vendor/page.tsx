@@ -11,6 +11,7 @@ import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 import { ReferralFeeSetting } from "@/types/referralFee";
 import { BUILDING_MATERIALS_CATALOG, MATERIAL_SECTIONS } from "@/types/buildingMaterials";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
+import GuidePrompt from "@/components/GuidePrompt";
 import { formatNaira } from "@/lib/format";
 
 const SERVICE_CATEGORIES = [
@@ -23,7 +24,7 @@ interface ProductWithQuotes extends MarketplaceProduct {
 
 export default function VendorDashboard() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [vendor, setVendor] = useState<MarketplaceVendor | null>(null);
   const [products, setProducts] = useState<ProductWithQuotes[]>([]);
   const [bundles, setBundles] = useState<MarketplaceBundle[]>([]);
@@ -35,6 +36,7 @@ export default function VendorDashboard() {
   const [bundleSubmitting, setBundleSubmitting] = useState(false);
   const [bundleError, setBundleError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -58,9 +60,17 @@ export default function VendorDashboard() {
       router.push("/login");
       return;
     }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/vendor");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("vendor")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
+    }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session]);
+  }, [authLoading, session, profile]);
 
   async function loadData() {
     if (!session) return;
@@ -480,6 +490,7 @@ export default function VendorDashboard() {
           )}
         </div>
       )}
+      {showGuide && <GuidePrompt role="vendor" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

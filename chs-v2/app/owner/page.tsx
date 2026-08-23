@@ -13,6 +13,7 @@ import { EngageRequest } from "@/types/engageRequest";
 import { MediaRequest } from "@/types/mediaRequest";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import GuidePrompt from "@/components/GuidePrompt";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
@@ -40,6 +41,7 @@ export default function OwnerDashboard() {
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyBasic | null>(null);
   const [issuingNoticeTenancy, setIssuingNoticeTenancy] = useState<TenancyBasic | null>(null);
@@ -60,6 +62,20 @@ export default function OwnerDashboard() {
     if (profile && !allRoles.includes("owner")) {
       router.push("/");
       return;
+    }
+    // Real T&Cs gate — per direct instruction, a genuine scroll-to-
+    // accept, not a passive link. Checked before the dashboard loads
+    // at all.
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/owner");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("owner")) {
+      // Genuinely external-state-driven UI toggle — profile.guide_roles_seen
+      // only becomes known after the real async profile fetch completes,
+      // so there's no pure render-time alternative here.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -550,6 +566,7 @@ export default function OwnerDashboard() {
           </div>
         </div>
       )}
+      {showGuide && <GuidePrompt role="owner" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

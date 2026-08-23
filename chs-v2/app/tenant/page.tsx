@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import { FormalNotice, NOTICE_TYPE_LABELS } from "@/types/formalNotice";
 import MessageThread from "@/components/MessageThread";
+import GuidePrompt from "@/components/GuidePrompt";
 
 interface ApplicationWithProperty {
   id: string;
@@ -55,6 +56,7 @@ export default function TenantDashboard() {
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [inspections, setInspections] = useState<InspectionWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showGuide, setShowGuide] = useState(false);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyWithProperty | null>(null);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
   const [notices, setNotices] = useState<FormalNotice[]>([]);
@@ -120,10 +122,17 @@ export default function TenantDashboard() {
       router.push("/");
       return;
     }
+    if (profile && !profile.terms_accepted_at) {
+      router.push("/accept-terms?redirect=/tenant");
+      return;
+    }
+    if (profile && !profile.guide_roles_seen.includes("tenant")) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowGuide(true);
+    }
     // Real network fetch, not a synchronous setState — loadData is
     // async and only calls setState after a genuine await on Supabase's
     // response, so this is the standard, safe "fetch on mount" pattern.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile]);
@@ -319,6 +328,7 @@ export default function TenantDashboard() {
           )}
         </div>
       </div>
+      {showGuide && <GuidePrompt role="tenant" onDismiss={() => setShowGuide(false)} />}
     </div>
   );
 }

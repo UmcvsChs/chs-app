@@ -50,6 +50,10 @@ export default function PromoteListingPage() {
   const [creditsPerDay, setCreditsPerDay] = useState<number | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [rankCategory, setRankCategory] = useState<string | null>(null);
+  const [rankNumber, setRankNumber] = useState<number | null>(null);
+  const [bucketTopN, setBucketTopN] = useState<number | null>(null);
+  const [otherActiveCount, setOtherActiveCount] = useState(0);
+  const [otherActiveCreditsPerDay, setOtherActiveCreditsPerDay] = useState(0);
   const [toggling, setToggling] = useState(false);
   const [buyAmount, setBuyAmount] = useState<number | "">(50);
   const [buying, setBuying] = useState(false);
@@ -71,20 +75,41 @@ export default function PromoteListingPage() {
       }
       setPropertyTitle(property.title);
 
-      const [{ data: balanceData }, { data: perDayData }, { data: promo }] = await Promise.all([
+      const [{ data: balanceData }, { data: perDayData }, { data: promo }, { data: otherActive }] = await Promise.all([
         supabase.rpc("get_promo_credit_balance", { p_user_id: session.user.id }),
         supabase.rpc("get_credits_per_day", { p_property_id: params.id as string }),
         supabase
           .from("property_promotions")
-          .select("is_active, rank_category")
+          .select("is_active, rank_category, rank_number, bucket_top_n")
           .eq("property_id", params.id as string)
           .maybeSingle(),
+        // The real "shared pool" picture — every OTHER listing this
+        // owner currently has running, so the cost disclosure below
+        // reflects their real total daily draw, not just this one
+        // listing in isolation.
+        supabase
+          .from("property_promotions")
+          .select("property_id")
+          .eq("owner_id", session.user.id)
+          .eq("is_active", true)
+          .neq("property_id", params.id as string),
       ]);
 
       setCreditBalance(balanceData ?? 0);
       setCreditsPerDay(perDayData ?? 1);
       setIsActive(promo?.is_active ?? false);
       setRankCategory(promo?.rank_category ?? null);
+      setRankNumber(promo?.rank_number ?? null);
+      setBucketTopN(promo?.bucket_top_n ?? null);
+
+      if (otherActive && otherActive.length > 0) {
+        setOtherActiveCount(otherActive.length);
+        const perDayValues = await Promise.all(
+          otherActive.map((p) => supabase.rpc("get_credits_per_day", { p_property_id: p.property_id }))
+        );
+        setOtherActiveCreditsPerDay(perDayValues.reduce((sum, r) => sum + (r.data ?? 0), 0));
+      }
+
       setLoading(false);
     })();
   }, [authLoading, session, params.id]);
@@ -236,6 +261,35 @@ export default function PromoteListingPage() {
 
         {mode === "credits" && (
           <>
+            {/* The real, explicit, plain-language disclosure — shown
+                before the balance, before the toggle, before any
+                payment button, exactly where a real person actually
+                decides whether to buy. Not buried in Terms. */}
+            <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 mb-3 space-y-2">
+              <p className="text-xs font-bold text-amber-800">📖 How credits actually work — read this first</p>
+              <p className="text-xs text-amber-800">
+                Your credits are <strong>one shared balance</strong> across every listing you own — not split up per
+                listing. <strong>Each listing you turn ON is charged separately, every day</strong>, for as long as
+                it stays on. If you turn on 3 listings at once, you pay for all 3 that day, from the same balance.
+              </p>
+              <p className="text-xs text-amber-800">
+                <strong>This listing costs {creditsPerDay ?? 1} credits/day</strong> — based on its real location
+                and size. Other listings you own may cost more or less.
+              </p>
+              {otherActiveCount > 0 && (
+                <p className="text-xs text-amber-800 bg-white/60 rounded-lg px-2 py-1.5">
+                  You currently have <strong>{otherActiveCount} other listing{otherActiveCount > 1 ? "s" : ""}</strong> turned
+                  on, together costing <strong>{otherActiveCreditsPerDay} credits/day</strong>. Turning this one on
+                  too would bring your real total to <strong>{otherActiveCreditsPerDay + (creditsPerDay ?? 1)} credits/day</strong>.
+                </p>
+              )}
+              <p className="text-xs text-amber-800">
+                There&apos;s no fixed daily limit — the total just depends on how many listings you keep on and each
+                one&apos;s own real cost. Turn any listing off any day for free; you&apos;re never charged for a day
+                it was off.
+              </p>
+            </div>
+
             <div className="rounded-xl border-2 border-gray-200 bg-white p-4 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Your credit balance</span>
@@ -247,8 +301,15 @@ export default function PromoteListingPage() {
               </div>
               {rankCategory && (
                 <div className="text-xs text-gray-500 bg-chs-amber-light rounded-lg px-3 py-2">
-                  {RANK_LABELS[rankCategory] ?? `Category ${rankCategory}`} — recalculated daily against other
-                  promoted listings in your local market.
+                  {RANK_LABELS[rankCategory] ?? `Category ${rankCategory}`}
+                  {rankNumber && bucketTopN && (
+                    <span className="block font-semibold text-chs-charcoal mt-0.5">
+                      #{rankNumber} of Top {bucketTopN} in your local market
+                    </span>
+                  )}
+                  {" "}— recalculated daily against other promoted listings in your local market. Spending more
+                  relative to others in your same area/size raises your position; this doesn&apos;t cost extra on
+                  its own — it&apos;s a comparison, not an add-on purchase.
                 </div>
               )}
 
