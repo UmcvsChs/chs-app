@@ -16,6 +16,6 @@ export interface Inspection {
   transport_fee: number | null;
   video_call: boolean;
   verified_report_addon: boolean;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
+  status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
   created_at: string;
 }

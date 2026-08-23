@@ -53,6 +53,9 @@ export default function InspectionBookingForm({
   const [minute, setMinute] = useState("00");
   const [ampm, setAmpm] = useState<"AM" | "PM">("AM");
   const [meetingPoint, setMeetingPoint] = useState("");
+  const [timeline, setTimeline] = useState("ready_now");
+  const [fundsReady, setFundsReady] = useState(true);
+  const [decisionMaker, setDecisionMaker] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +85,7 @@ export default function InspectionBookingForm({
     setError(null);
     setSubmitting(true);
 
-    const { error: insertError } = await supabase.from("inspections").insert({
+    const { data: newInspection, error: insertError } = await supabase.from("inspections").insert({
       reference: generateReference(),
       property_id: propertyId,
       requester_id: session.user.id,
@@ -90,7 +93,7 @@ export default function InspectionBookingForm({
       requested_time: time24,
       meeting_point: meetingPoint.trim(),
       transport_fee: fee.perPersonFee,
-    });
+    }).select().single();
 
     if (insertError) {
       // The database's own 12-hour rule is the final, authoritative
@@ -103,6 +106,21 @@ export default function InspectionBookingForm({
       );
       setSubmitting(false);
       return;
+    }
+
+    // The real readiness questionnaire — see
+    // backend-v2/56_buyer_readiness_score.sql. Doesn't block or delay
+    // the booking itself; the score it feeds is only ever shown to the
+    // property owner deciding how to prioritize their time, never used
+    // to gate anyone.
+    if (newInspection) {
+      await supabase.rpc("submit_readiness_response", {
+        p_request_type: "inspection",
+        p_request_id: newInspection.id,
+        p_timeline: timeline,
+        p_funds_ready: fundsReady,
+        p_decision_maker: decisionMaker,
+      });
     }
 
     onSuccess();
@@ -171,6 +189,31 @@ export default function InspectionBookingForm({
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
         />
       </div>
+
+      <div className="bg-[var(--zone-card)] rounded-lg p-3 space-y-2.5">
+        <p className="text-[10px] font-bold text-gray-500 uppercase">
+          A few quick questions — helps the owner prioritize real, ready buyers and tenants
+        </p>
+        <div>
+          <label className="text-xs font-semibold text-gray-600">When are you looking to move / finalize?</label>
+          <select value={timeline} onChange={(e) => setTimeline(e.target.value)}
+            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+            <option value="ready_now">Ready now</option>
+            <option value="one_to_three_months">1–3 months</option>
+            <option value="three_to_six_months">3–6 months</option>
+            <option value="just_exploring">Just exploring for now</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input type="checkbox" checked={fundsReady} onChange={(e) => setFundsReady(e.target.checked)} />
+          My deposit / funds are ready now
+        </label>
+        <label className="flex items-center gap-2 text-xs text-gray-600">
+          <input type="checkbox" checked={decisionMaker} onChange={(e) => setDecisionMaker(e.target.checked)} />
+          I&apos;m the one making this decision (not exploring on someone else&apos;s behalf)
+        </label>
+      </div>
+
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
       <button
         type="submit"

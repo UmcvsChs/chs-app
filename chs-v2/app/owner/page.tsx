@@ -416,10 +416,7 @@ export default function OwnerDashboard() {
                     Inspection requests ({property.inspections.length})
                   </p>
                   {property.inspections.map((insp) => (
-                    <div key={insp.id} className="bg-gray-50 rounded-lg p-2.5 mb-2 text-xs">
-                      <p>{insp.requested_date} at {insp.requested_time}</p>
-                      <p className="text-gray-500">{insp.meeting_point}</p>
-                    </div>
+                    <InspectionRequestRow key={insp.id} inspection={insp} onMarked={loadData} />
                   ))}
                 </div>
               )}
@@ -587,6 +584,70 @@ function MediaRequestAnswerRow({
           Answer
         </button>
       </div>
+    </div>
+  );
+}
+
+// The real Readiness Score display — see
+// backend-v2/56_buyer_readiness_score.sql. Never blocks or hides the
+// request itself; it's purely information for the owner to prioritize
+// their own time, exactly the real problem this was built to solve.
+function InspectionRequestRow({
+  inspection,
+  onMarked,
+}: {
+  inspection: Inspection;
+  onMarked: () => void;
+}) {
+  const [score, setScore] = useState<number | null>(null);
+  const [marking, setMarking] = useState(false);
+
+  useEffect(() => {
+    supabase.rpc("get_readiness_score", { p_user_id: inspection.requester_id }).then(({ data }) => {
+      if (typeof data === "number") setScore(data);
+    });
+  }, [inspection.requester_id]);
+
+  const scheduledPast = new Date(`${inspection.requested_date}T${inspection.requested_time}`) < new Date();
+  const needsAttendanceMark = scheduledPast && (inspection.status === "confirmed" || inspection.status === "pending");
+
+  async function handleMark(attended: boolean) {
+    setMarking(true);
+    await supabase.rpc("mark_inspection_attendance", { p_inspection_id: inspection.id, p_attended: attended });
+    setMarking(false);
+    onMarked();
+  }
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-2.5 mb-2 text-xs">
+      <div className="flex justify-between items-start">
+        <div>
+          <p>{inspection.requested_date} at {inspection.requested_time}</p>
+          <p className="text-gray-500">{inspection.meeting_point}</p>
+        </div>
+        {score !== null && (
+          <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${
+            score >= 60 ? "bg-green-100 text-green-700" : score >= 30 ? "bg-amber-100 text-amber-700" : "bg-gray-200 text-gray-500"
+          }`}>
+            {score}/100 ready
+          </span>
+        )}
+      </div>
+      {needsAttendanceMark && (
+        <div className="flex gap-1.5 mt-2">
+          <button onClick={() => handleMark(true)} disabled={marking}
+            className="px-3 py-1 rounded-full bg-green-600 text-white text-[10px] font-semibold disabled:opacity-50">
+            They showed up
+          </button>
+          <button onClick={() => handleMark(false)} disabled={marking}
+            className="px-3 py-1 rounded-full bg-gray-300 text-gray-700 text-[10px] font-semibold disabled:opacity-50">
+            No-show
+          </button>
+        </div>
+      )}
+      {inspection.status === "no_show" && (
+        <p className="text-[10px] text-chs-red mt-1.5">Marked as no-show</p>
+      )}
     </div>
   );
 }

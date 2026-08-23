@@ -61,6 +61,26 @@ export default function TermsPage() {
             <p className="mt-2"><strong className="text-chs-charcoal">What this is not.</strong> This is not a way to direct buyers/tenants to complete a deal outside CHS — see term 2 above. Attempting to circumvent CHS after using a referral link is treated the same as any other circumvention attempt.</p>
           </div>
 
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">17. Credit-based listing promotion</p>
+            <p>As an alternative to the fixed-tier promotion in term 13, an owner or agent may purchase reusable promotion credits (₦400 each) and apply them to any listing they own. Turning promotion on for a listing consumes a real number of credits per day, varying by the property&apos;s location and size — this cost is disclosed before activation and may change as CHS adjusts location-tier pricing. Promotion can be turned off at any time at no further cost, and unused credits remain available indefinitely for use on any current or future listing. A promoted listing is assigned a ranking category based on real, comparative spend against other promoted listings in the same real local market, recalculated daily.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">18. Urgent & Emergency Sale</p>
+            <p>A property may be listed under Urgent & Emergency Sale only once it is already CHS Verified and its owner is ID-verified. The owner must set a genuine original price higher than the current listed price, and a genuine deadline; both are shown to prospective buyers. CHS is notified the moment a listing is activated under this category and may contact the owner or buyer directly to assist. An Urgent Sale listing automatically reverts to a standard sale listing once its deadline passes, unless renewed by the owner. Misrepresenting the urgency, the discount, or the deadline is treated as providing falsified information under term 4.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">19. Concierge requests (&quot;Talk to an Agent&quot;)</p>
+            <p>A user may submit a free-form request describing a property need, by text or voice, in place of using the standard search tools. CHS reviews these requests directly and may follow up by phone or in-app message. Submitting a concierge request does not guarantee a match is found, and does not change any other term of this agreement once a matching property is pursued.</p>
+          </div>
+
+          <div className="border-t border-gray-200 pt-4 mt-2">
+            <p className="font-bold text-chs-charcoal mb-2">20. Wallet-to-wallet transfers</p>
+            <p>A user may transfer wallet funds directly to another CHS user, identified by their registered phone number or email. A transfer cannot be sent to oneself, cannot exceed the sender&apos;s available balance, and cannot be sent from or to a frozen wallet. A completed transfer is final. CHS is not responsible for funds sent to the wrong recipient due to a user-entered error, though CHS support may be contacted to investigate.</p>
+          </div>
+
           <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
             This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support.
           </p>
