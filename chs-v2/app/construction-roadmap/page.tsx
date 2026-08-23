@@ -39,7 +39,7 @@ interface Milestone {
 }
 
 export default function ConstructionRoadmapPage() {
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [models, setModels] = useState<ReferenceModel[]>([]);
   const [permits, setPermits] = useState<Permit[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
@@ -103,6 +103,24 @@ export default function ConstructionRoadmapPage() {
     }
   }
 
+  // Pre-launch admin testing tool ONLY — see the real note in
+  // AuthContext.tsx and backend-v2/63_construction_roadmap_test_bypass.sql.
+  // Skips Paystack entirely; marked is_test_grant = true in the
+  // database so this is never confused with a real payment. Remove
+  // this button (and the underlying function) before real launch.
+  async function handleTestUnlock() {
+    if (!selectedId) return;
+    setUnlocking(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("grant_roadmap_access_test", { p_model_id: selectedId });
+    setUnlocking(false);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    setUnlocked((prev) => ({ ...prev, [selectedId]: true }));
+  }
+
   const selected = models.find((m) => m.id === selectedId);
   const isUnlocked = selectedId ? unlocked[selectedId] : false;
   const accessFee = Number(settings.construction_roadmap_access_fee || 15000);
@@ -164,6 +182,12 @@ export default function ConstructionRoadmapPage() {
                   className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
                   {unlocking ? "Opening..." : `Unlock — ${formatNaira(accessFee)}`}
                 </button>
+                {profile?.is_super_admin && (
+                  <button onClick={handleTestUnlock} disabled={unlocking}
+                    className="w-full py-2.5 rounded-full bg-purple-100 text-purple-800 text-xs font-semibold disabled:opacity-50">
+                    🧪 Unlock for testing (no payment) — super admin only
+                  </button>
+                )}
                 <p className="text-[10px] text-gray-400 text-center">
                   {settings.construction_roadmap_access_note}
                 </p>
