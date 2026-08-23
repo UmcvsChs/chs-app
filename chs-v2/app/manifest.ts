@@ -12,8 +12,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Complete Housing Solutions — Nigeria's trusted property platform, connecting owners, tenants, buyers, agents, and property managers nationwide",
     start_url: "/",
     display: "standalone",
-    background_color: "#1e1b16",
-    theme_color: "#1e1b16",
+    background_color: "#4B627A",
+    theme_color: "#4B627A",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

@@ -35,7 +35,7 @@ interface PropertyWithActivity extends Property {
 
 export default function OwnerDashboard() {
   const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
+  const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
   const [rentCollected, setRentCollected] = useState(0);
@@ -59,7 +59,11 @@ export default function OwnerDashboard() {
       return;
     }
     const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-    if (profile && !allRoles.includes("owner")) {
+    // Pre-launch admin testing bypass — see AuthContext.tsx. A super
+    // admin previewing this dashboard in test mode skips the real
+    // role check entirely, but still only ever sees their own real data.
+    const inTestMode = profile?.is_super_admin && testModeRole === "owner";
+    if (profile && !allRoles.includes("owner") && !inTestMode) {
       router.push("/");
       return;
     }
@@ -79,7 +83,7 @@ export default function OwnerDashboard() {
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session, profile]);
+  }, [authLoading, session, profile, testModeRole]);
 
   async function loadData() {
     if (!session) return;

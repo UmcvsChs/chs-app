@@ -5,6 +5,7 @@
 export interface LinkedBankAccount {
   user_id: string;
   bank_name: string;
+  bank_code: string | null;
   account_number: string;
   account_name: string;
   updated_at: string;
@@ -14,6 +15,7 @@ export interface PendingBankAccountChange {
   id: string;
   user_id: string;
   bank_name: string;
+  bank_code: string | null;
   account_number: string;
   account_name: string;
   requested_at: string;

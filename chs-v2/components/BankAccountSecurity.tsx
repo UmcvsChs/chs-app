@@ -5,11 +5,6 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { LinkedBankAccount, PendingBankAccountChange } from "@/types/bankAccount";
 
-const NIGERIAN_BANKS = [
-  "Access Bank", "GTBank", "Zenith Bank", "First Bank", "UBA", "Fidelity Bank",
-  "Union Bank", "Sterling Bank", "Wema Bank", "Polaris Bank", "Kuda", "Opay", "Moniepoint",
-];
-
 // Restored from a real, confirmed feature in the original app — genuine
 // identity-name matching that blocks a mismatch outright, and a real
 // 48-hour delay that actually blocks withdrawals during the window,
@@ -24,7 +19,14 @@ export default function BankAccountSecurity({
   const [linked, setLinked] = useState<LinkedBankAccount | null>(null);
   const [pending, setPending] = useState<PendingBankAccountChange | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [bankName, setBankName] = useState(NIGERIAN_BANKS[0]);
+  // The real, comprehensive, always-current list — pulled live from
+  // Paystack's own bank directory (the same source
+  // initiate-withdrawal already trusts) rather than a hand-typed list
+  // of ~13 banks that goes stale as new banks and fintechs launch.
+  const [banks, setBanks] = useState<{ name: string; code: string }[]>([]);
+  const [banksLoading, setBanksLoading] = useState(true);
+  const [bankName, setBankName] = useState("");
+  const [bankCode, setBankCode] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +34,39 @@ export default function BankAccountSecurity({
 
   useEffect(() => {
     loadData();
+    loadBanks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function loadBanks() {
+    setBanksLoading(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/list-nigerian-banks`
+      );
+      const result = await response.json();
+      if (result.banks && result.banks.length > 0) {
+        setBanks(result.banks);
+        setBankName(result.banks[0].name);
+        setBankCode(result.banks[0].code);
+      }
+    } catch {
+      // Real, honest fallback — if the live list genuinely can't be
+      // reached, at least the most common banks stay selectable
+      // rather than leaving the form completely unusable.
+      const fallback = [
+        { name: "Access Bank", code: "044" }, { name: "First Bank of Nigeria", code: "011" },
+        { name: "Guaranty Trust Bank", code: "058" }, { name: "Kuda Bank", code: "50211" },
+        { name: "Moniepoint MFB", code: "50515" }, { name: "OPay Digital Services Limited (OPay)", code: "999992" },
+        { name: "PalmPay", code: "999991" }, { name: "United Bank For Africa", code: "033" },
+        { name: "Zenith Bank", code: "057" },
+      ];
+      setBanks(fallback);
+      setBankName(fallback[0].name);
+      setBankCode(fallback[0].code);
+    }
+    setBanksLoading(false);
+  }
 
   async function loadData() {
     const [linkedRes, pendingRes] = await Promise.all([
@@ -85,6 +118,7 @@ export default function BankAccountSecurity({
     const { error: insertError } = await supabase.from("pending_bank_account_changes").insert({
       user_id: session.user.id,
       bank_name: bankName,
+      bank_code: bankCode,
       account_number: accountNumber,
       account_name: accountName.trim(),
       effective_at: effectiveAt,
@@ -145,9 +179,21 @@ export default function BankAccountSecurity({
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-2 mt-2">
-          <select value={bankName} onChange={(e) => setBankName(e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white">
-            {NIGERIAN_BANKS.map((b) => <option key={b}>{b}</option>)}
+          <select
+            value={bankCode}
+            disabled={banksLoading}
+            onChange={(e) => {
+              const selected = banks.find((b) => b.code === e.target.value);
+              setBankCode(e.target.value);
+              setBankName(selected?.name || "");
+            }}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white"
+          >
+            {banksLoading ? (
+              <option>Loading banks...</option>
+            ) : (
+              banks.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)
+            )}
           </select>
           <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)}
             placeholder="10-digit account number" maxLength={10}

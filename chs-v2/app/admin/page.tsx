@@ -52,7 +52,7 @@ type Tab = "overview" | "finance" | "saleapprovals" | "liveness" | "registration
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { session, profile, signOut, loading: authLoading } = useAuth();
+  const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
   // Real Overview stats — restored, found completely missing during
@@ -759,6 +759,33 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            {profile?.is_super_admin && (
+              <div className="col-span-2 bg-purple-50 border-2 border-purple-200 rounded-xl p-4 space-y-2">
+                <p className="text-sm font-bold text-purple-800">🧪 Switch role for testing</p>
+                <p className="text-[10px] text-purple-700">
+                  Preview any dashboard using your own admin account — never a real user&apos;s data. Pre-launch
+                  testing only; this whole panel should be removed once CHS actually goes live.
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { role: "owner", label: "Owner", path: "/owner" },
+                    { role: "tenant", label: "Tenant", path: "/tenant" },
+                    { role: "agent", label: "Agent", path: "/agent" },
+                    { role: "manager", label: "Manager", path: "/manager" },
+                    { role: "vendor", label: "Vendor", path: "/vendor" },
+                    { role: "artisan", label: "Artisan", path: "/artisan" },
+                  ].map((r) => (
+                    <button
+                      key={r.role}
+                      onClick={() => { setTestModeRole(r.role); router.push(r.path); }}
+                      className="py-2 rounded-lg bg-white border border-purple-200 text-purple-800 text-xs font-semibold"
+                    >
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
             {profile?.is_super_admin && (

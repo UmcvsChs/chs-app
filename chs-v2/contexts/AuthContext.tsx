@@ -36,6 +36,15 @@ interface AuthContextValue {
   setActiveRole: (role: string) => void;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  // Pre-launch admin testing tool ONLY — lets the super admin preview
+  // any role's real dashboard using their OWN account (never another
+  // real person's data), so testing a new feature doesn't require
+  // logging out and back in as a different account. This has no
+  // purpose once CHS is actually live and should be removed at that
+  // point, not left lingering — flagged here and in every place it's
+  // used, not just this one comment.
+  testModeRole: string | null;
+  setTestModeRole: (role: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -44,7 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [activeRole, setActiveRoleState] = useState<string | null>(null);
+  const [testModeRole, setTestModeRoleState] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Deliberately real React state, not persisted anywhere (not
+  // localStorage, not the database) — resets on every real page
+  // refresh, so nobody stays in test mode by accident across sessions.
+  // Enforced here too, not just in the UI that triggers it — only a
+  // genuine super admin can ever actually set this.
+  function setTestModeRole(role: string | null) {
+    if (role !== null && !profile?.is_super_admin) return;
+    setTestModeRoleState(role);
+  }
 
   async function loadProfile(userId: string) {
     const { data } = await supabase
@@ -106,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActiveRole: setActiveRoleState,
         signOut,
         refreshProfile,
+        testModeRole,
+        setTestModeRole,
       }}
     >
       {children}

@@ -41,7 +41,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function ManagerDashboard() {
   const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
+  const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [faults, setFaults] = useState<FaultWithQuotations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,9 @@ export default function ManagerDashboard() {
       return;
     }
     const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-    if (profile && !allRoles.includes("manager")) {
+    // Pre-launch admin testing bypass — see AuthContext.tsx.
+    const inTestMode = profile?.is_super_admin && testModeRole === "manager";
+    if (profile && !allRoles.includes("manager") && !inTestMode) {
       router.push("/");
       return;
     }
@@ -73,7 +75,7 @@ export default function ManagerDashboard() {
     }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session, profile]);
+  }, [authLoading, session, profile, testModeRole]);
 
   async function loadData() {
     if (!session) return;

@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SplashScreen from "@/components/SplashScreen";
+import TestModeBanner from "@/components/TestModeBanner";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // CHS's real, established typography — Playfair Display for headings
@@ -46,7 +47,10 @@ export default function RootLayout({
         <ThemeProvider>
           <ServiceWorkerRegistration />
           <SplashScreen />
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <TestModeBanner />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -51,7 +51,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function TenantDashboard() {
   const router = useRouter();
-  const { session, profile, loading: authLoading } = useAuth();
+  const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithProperty[]>([]);
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [inspections, setInspections] = useState<InspectionWithProperty[]>([]);
@@ -118,7 +118,9 @@ export default function TenantDashboard() {
       return;
     }
     const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-    if (profile && !allRoles.includes("tenant")) {
+    // Pre-launch admin testing bypass — see AuthContext.tsx.
+    const inTestMode = profile?.is_super_admin && testModeRole === "tenant";
+    if (profile && !allRoles.includes("tenant") && !inTestMode) {
       router.push("/");
       return;
     }
@@ -135,7 +137,7 @@ export default function TenantDashboard() {
     // response, so this is the standard, safe "fetch on mount" pattern.
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, session, profile]);
+  }, [authLoading, session, profile, testModeRole]);
 
   // The real, deliberate view action — the only place a read receipt is
   // ever allowed to fire, and only ever once per notice (the first
