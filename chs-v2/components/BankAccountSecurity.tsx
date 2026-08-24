@@ -40,6 +40,37 @@ export default function BankAccountSecurity({
   // genuinely checked against the actual bank the moment both it and
   // a bank are provided — not accepted on trust. A wrong digit fails
   // right here, before anything can ever be submitted.
+  async function verifyAccount(numberToVerify: string, codeToVerify: string) {
+    setResolving(true);
+    setResolveError(null);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/resolve-bank-account`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ accountNumber: numberToVerify, bankCode: codeToVerify }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok || result.error) {
+        setResolveError(result.error || "This account number could not be verified with the bank.");
+        setVerifiedRealName(null);
+      } else {
+        setVerifiedRealName(result.accountName);
+        setAccountName(result.accountName);
+      }
+    } catch {
+      setResolveError("Could not verify this account right now. Please try again.");
+      setVerifiedRealName(null);
+    } finally {
+      setResolving(false);
+    }
+  }
+
   useEffect(() => {
     // Genuinely external-system sync — clearing prior verification
     // state the moment the account number or bank changes, since a
@@ -52,35 +83,12 @@ export default function BankAccountSecurity({
     if (accountNumber.length !== 10 || !bankCode) return;
 
     let cancelled = false;
-    setResolving(true);
     (async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/resolve-bank-account`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ accountNumber, bankCode }),
-          }
-        );
-        const result = await response.json();
-        if (cancelled) return;
-        if (!response.ok || result.error) {
-          setResolveError(result.error || "This account number could not be verified with the bank.");
-        } else {
-          setVerifiedRealName(result.accountName);
-          setAccountName(result.accountName);
-        }
-      } catch {
-        if (!cancelled) setResolveError("Could not verify this account right now. Please try again.");
-      } finally {
-        if (!cancelled) setResolving(false);
-      }
+      if (cancelled) return;
+      await verifyAccount(accountNumber, bankCode);
     })();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountNumber, bankCode, session.access_token]);
 
   useEffect(() => {
@@ -287,7 +295,18 @@ export default function BankAccountSecurity({
               placeholder="10-digit account number" maxLength={10}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
             {resolving && <p className="text-[10px] text-gray-400 mt-1">🔄 Verifying with the bank...</p>}
-            {resolveError && <p className="text-[10px] text-chs-red mt-1">✕ {resolveError}</p>}
+            {resolveError && (
+              <div className="mt-1">
+                <p className="text-[10px] text-chs-red">✕ {resolveError}</p>
+                <button
+                  type="button"
+                  onClick={() => verifyAccount(accountNumber, bankCode)}
+                  className="text-[10px] font-semibold text-chs-red underline mt-0.5"
+                >
+                  🔄 Try verifying again
+                </button>
+              </div>
+            )}
             {verifiedRealName && (
               <p className="text-[10px] text-green-700 mt-1">✓ Verified: real account name on file is <strong>{verifiedRealName}</strong></p>
             )}

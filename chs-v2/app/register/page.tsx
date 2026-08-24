@@ -245,23 +245,23 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-gray-600">Full name</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+            <input type="text" value={name} onChange={(e) => { setName(e.target.value); setError(null); }}
               placeholder="Your full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number</label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+            <input type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setError(null); }}
               placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Email address (optional)</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(null); }}
               placeholder="your@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN)</label>
             <input type="text" inputMode="numeric" maxLength={11} value={nin}
-              onChange={(e) => setNin(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) => { setNin(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="11-digit NIN" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
