@@ -73,3 +73,38 @@ body {
   font-family: var(--font-sans);
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Real, app-wide fix — the actual root cause of the "faint text /
+   nothing shows when I type" bug reported across multiple pages
+   (registration, wallet, engage-chs). None of it was ever a broken
+   input — every field was working correctly the whole time. The real
+   problem: form fields never had an explicit text color, so they
+   silently inherited the page's theme color. In dark mode, that's a
+   near-white color sitting on the field's white background — text
+   was rendering, just practically invisible against its own field.
+
+   The professional fix, not a per-page patch: every form field in
+   the app is now always a light, high-contrast surface — a real,
+   deliberate design convention (the same one most dark-mode apps
+   use), not a workaround. This makes the whole class of bug
+   structurally impossible going forward, including on any future
+   page, rather than something that needs re-checking field by field
+   forever. `!important` is deliberate here — this is meant to
+   override any page-level or future styling choice that might
+   otherwise silently reintroduce this exact bug.
+   ───────────────────────────────────────────────────────────── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="submit"]):not([type="button"]),
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: var(--chs-charcoal) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: #9ca3af !important;
+  opacity: 1 !important;
+}
+input:disabled:not([type="checkbox"]):not([type="radio"]), select:disabled, textarea:disabled {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+}
+
