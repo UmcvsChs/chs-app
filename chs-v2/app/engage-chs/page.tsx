@@ -6,14 +6,15 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
-import { ENGAGE_SERVICE_TYPES, ENGAGE_CATEGORY_FIELDS, ENGAGE_NEXT_STEPS } from "@/types/engageCategoryFields";
+import { ENGAGE_SERVICE_TYPES, ENGAGE_CATEGORY_FIELDS, ENGAGE_NEXT_STEPS, ENGAGE_SPECIFICATION_FIELDS } from "@/types/engageCategoryFields";
 import ServiceTncGate from "@/components/ServiceTncGate";
+import CurrencyInput from "@/components/CurrencyInput";
 
 function generateReference(): string {
   return "CHS-ENG-" + Math.floor(1000 + Math.random() * 9000);
 }
 
-type Stage = "service" | "tnc_gate" | "requirements" | "details" | "acknowledged" | "submitted";
+type Stage = "service" | "tnc_gate" | "requirements" | "details" | "acknowledged" | "review" | "submitted";
 
 // A real, genuinely staged conversation — not one long form, and not
 // an AI generating its own answers. Each real step gets its own
@@ -30,14 +31,19 @@ export default function EngageChsPage() {
   const [ownedProperties, setOwnedProperties] = useState<{ id: string; title: string }[]>([]);
   const [selectedPropertyId, setSelectedPropertyId] = useState("");
   const [categoryValues, setCategoryValues] = useState<Record<string, string>>({});
-  const [budget, setBudget] = useState("");
+  const [budgetMin, setBudgetMin] = useState<number | "">("");
+  const [budgetMax, setBudgetMax] = useState<number | "">("");
+  const [wantsToSpecify, setWantsToSpecify] = useState(true);
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [documents, setDocuments] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const categoryFields = ENGAGE_CATEGORY_FIELDS[serviceType] || [];
+  const showSpecifications = serviceType === "Full construction / project management" || serviceType === "Renovation project management";
 
   useEffect(() => {
     if (!session) return;
@@ -46,6 +52,14 @@ export default function EngageChsPage() {
       .select("id, title")
       .eq("owner_id", session.user.id)
       .then(({ data }) => setOwnedProperties(data || []));
+  }, [session]);
+
+  useEffect(() => {
+    // Real, sensible default — the client's own registered email, so
+    // they don't have to retype it unless it's genuinely different.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (session?.user.email && !contactEmail) setContactEmail(session.user.email);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   function handleServiceContinue() {
@@ -64,12 +78,29 @@ export default function EngageChsPage() {
     setTimeout(() => setStage("details"), 1400);
   }
 
-  async function handleFinalSubmit(e: React.FormEvent) {
+  function handleReviewContinue(e: React.FormEvent) {
     e.preventDefault();
     if (!description.trim()) {
       setError("Please tell us a bit more before we submit this.");
       return;
     }
+    if (!contactPhone.trim()) {
+      setError("Please provide an active phone number — so CHS can call you directly if anything needs quick clarification.");
+      return;
+    }
+    if (!contactEmail.trim()) {
+      setError("Please provide a real email address.");
+      return;
+    }
+    // The real fix, per direct instruction: nothing gets submitted yet
+    // — a genuine plain-language summary of everything entered comes
+    // first, so both sides are confirmed on the same page before
+    // anything is actually sent.
+    setError(null);
+    setStage("review");
+  }
+
+  async function handleActualSubmit() {
     if (!session) return;
 
     setError(null);
@@ -79,6 +110,16 @@ export default function EngageChsPage() {
     categoryFields.forEach((f) => {
       categoryDetails[f.label] = categoryValues[f.id] || "";
     });
+    if (showSpecifications) {
+      categoryDetails["Client preferences"] = wantsToSpecify ? "Client has specific preferences (below)" : "Client asked CHS to recommend, subject to client approval";
+      if (wantsToSpecify) {
+        ENGAGE_SPECIFICATION_FIELDS.forEach((f) => {
+          if (categoryValues[f.id]?.trim()) {
+            categoryDetails[`Specification: ${f.label}`] = categoryValues[f.id].trim();
+          }
+        });
+      }
+    }
 
     const { data: newRequest, error: insertError } = await supabase
       .from("engage_chs_requests")
@@ -90,7 +131,11 @@ export default function EngageChsPage() {
         location: location.trim() || null,
         category_details: categoryDetails,
         property_id: selectedPropertyId || null,
-        budget: budget.trim() || "Not specified",
+        contact_phone: contactPhone.trim(),
+        contact_email: contactEmail.trim(),
+        budget: budgetMin === "" ? "Not specified"
+          : budgetMax === "" || budgetMax === budgetMin ? `₦${budgetMin.toLocaleString("en-NG")}`
+          : `₦${budgetMin.toLocaleString("en-NG")} - ₦${budgetMax.toLocaleString("en-NG")}`,
       })
       .select()
       .single();
@@ -246,11 +291,45 @@ export default function EngageChsPage() {
                 )}
               </div>
             ))}
+
+            {showSpecifications && (
+              <div className="rounded-xl border-2 border-gray-200 bg-white p-3 space-y-3">
+                <p className="text-xs font-bold text-chs-charcoal">Material & finish preferences</p>
+                <p className="text-[10px] text-gray-400">
+                  Real, specific preferences some clients hold strongly to (cement brand, block type, roof color, and
+                  more) — genuinely optional. Tell us exactly what you want, or let CHS recommend and you approve.
+                </p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setWantsToSpecify(true)}
+                    className={`flex-1 py-2 rounded-full text-xs font-semibold ${wantsToSpecify ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>
+                    I have specific preferences
+                  </button>
+                  <button type="button" onClick={() => setWantsToSpecify(false)}
+                    className={`flex-1 py-2 rounded-full text-xs font-semibold ${!wantsToSpecify ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>
+                    Let CHS recommend
+                  </button>
+                </div>
+                {wantsToSpecify && ENGAGE_SPECIFICATION_FIELDS.map((f) => (
+                  <div key={f.id}>
+                    <label className="text-xs font-semibold text-gray-600">{f.label}</label>
+                    <input
+                      type="text"
+                      value={categoryValues[f.id] || ""}
+                      onChange={(e) => setCategoryValues({ ...categoryValues, [f.id]: e.target.value })}
+                      placeholder={f.placeholder}
+                      className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
             <div>
               <label className="text-xs font-semibold text-gray-600">Estimated budget (₦)</label>
-              <input type="text" value={budget} onChange={(e) => setBudget(e.target.value)}
-                placeholder="e.g. 5,000,000 or a range like 3,000,000 - 5,000,000"
-                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <p className="text-[10px] text-gray-400 mb-1">Fills in real comma-separated Naira as you type — leave the second box empty if you have one exact figure, not a range.</p>
+              <div className="flex gap-2">
+                <CurrencyInput value={budgetMin} onChange={setBudgetMin} placeholder="Minimum (or exact amount)" />
+                <CurrencyInput value={budgetMax} onChange={setBudgetMax} placeholder="Maximum (optional)" />
+              </div>
             </div>
             <div>
               <label className="text-xs font-semibold text-gray-600">Supporting documents (optional)</label>
@@ -268,13 +347,28 @@ export default function EngageChsPage() {
         )}
 
         {stage === "details" && (
-          <form onSubmit={handleFinalSubmit} className="space-y-3">
+          <form onSubmit={handleReviewContinue} className="space-y-3">
             <p className="text-xs text-gray-500 mb-1">Last real step — your details and any other relevant context.</p>
             <div>
               <label className="text-xs font-semibold text-gray-600">Property location</label>
               <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
                 placeholder="e.g. Malali GRA, Kaduna" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Active phone number</label>
+                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="080..." className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Email</label>
+                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="you@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+            </div>
+            <p className="text-[10px] text-gray-400 -mt-2">
+              So CHS can call you directly if anything ever needs quick, real clarification.
+            </p>
             <div>
               <label className="text-xs font-semibold text-gray-600">Tell us more</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4}
@@ -283,12 +377,84 @@ export default function EngageChsPage() {
             {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
             <div className="flex gap-2">
               <button type="button" onClick={() => setStage("requirements")} className="flex-1 py-3 rounded-full bg-gray-200 text-gray-600 text-sm font-semibold">Back</button>
-              <button type="submit" disabled={submitting}
-                className="flex-1 py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-                {submitting ? "Submitting..." : "Submit request"}
+              <button type="submit"
+                className="flex-1 py-3 rounded-full bg-chs-red text-white text-sm font-semibold">
+                Review before submitting
               </button>
             </div>
           </form>
+        )}
+
+        {stage === "review" && (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500 mb-1">
+              Please confirm this is accurate — nothing has been sent to CHS yet.
+            </p>
+            <div className="bg-white rounded-xl border-2 border-gray-200 p-4 space-y-3 text-xs">
+              <div>
+                <p className="font-bold text-chs-charcoal">Service</p>
+                <p className="text-gray-600">{serviceType}</p>
+              </div>
+              {categoryFields.filter((f) => categoryValues[f.id]?.trim()).length > 0 && (
+                <div>
+                  <p className="font-bold text-chs-charcoal">Your requirements</p>
+                  {categoryFields.filter((f) => categoryValues[f.id]?.trim()).map((f) => (
+                    <p key={f.id} className="text-gray-600">{f.label}: <span className="text-chs-charcoal">{categoryValues[f.id]}</span></p>
+                  ))}
+                </div>
+              )}
+              {showSpecifications && (
+                <div>
+                  <p className="font-bold text-chs-charcoal">Material & finish preferences</p>
+                  <p className="text-gray-600">
+                    {wantsToSpecify ? "You have specific preferences:" : "You asked CHS to recommend, subject to your approval."}
+                  </p>
+                  {wantsToSpecify && ENGAGE_SPECIFICATION_FIELDS.filter((f) => categoryValues[f.id]?.trim()).map((f) => (
+                    <p key={f.id} className="text-gray-600">{f.label}: <span className="text-chs-charcoal">{categoryValues[f.id]}</span></p>
+                  ))}
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-chs-charcoal">Budget</p>
+                <p className="text-gray-600">
+                  {budgetMin === "" ? "Not specified"
+                    : budgetMax === "" || budgetMax === budgetMin ? `₦${budgetMin.toLocaleString("en-NG")}`
+                    : `₦${budgetMin.toLocaleString("en-NG")} - ₦${budgetMax.toLocaleString("en-NG")}`}
+                </p>
+              </div>
+              {location.trim() && (
+                <div>
+                  <p className="font-bold text-chs-charcoal">Location</p>
+                  <p className="text-gray-600">{location}</p>
+                </div>
+              )}
+              <div>
+                <p className="font-bold text-chs-charcoal">Additional details</p>
+                <p className="text-gray-600">{description}</p>
+              </div>
+              <div>
+                <p className="font-bold text-chs-charcoal">Contact</p>
+                <p className="text-gray-600">{contactPhone} · {contactEmail}</p>
+              </div>
+              {documents.length > 0 && (
+                <div>
+                  <p className="font-bold text-chs-charcoal">Attached documents</p>
+                  <p className="text-gray-600">{documents.length} file{documents.length > 1 ? "s" : ""}</p>
+                </div>
+              )}
+            </div>
+            {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
+            <div className="flex gap-2">
+              <button onClick={() => setStage("details")}
+                className="flex-1 py-3 rounded-full bg-gray-200 text-gray-600 text-sm font-semibold">
+                Go back and edit
+              </button>
+              <button onClick={handleActualSubmit} disabled={submitting}
+                className="flex-1 py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
+                {submitting ? "Submitting..." : "Yes, submit this"}
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -14,6 +14,8 @@ import { MediaRequest } from "@/types/mediaRequest";
 import { formatNaira, purposeLabel } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import GuidePrompt from "@/components/GuidePrompt";
+import EngageChatThread from "@/components/EngageChatThread";
+import { EngageDocumentsList } from "@/components/EngageDocuments";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
@@ -40,6 +42,7 @@ export default function OwnerDashboard() {
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
+  const [engageUnreadCount, setEngageUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -152,6 +155,24 @@ export default function OwnerDashboard() {
       .eq("owner_id", session.user.id)
       .order("created_at", { ascending: false });
     setEngageRequests(ownedEngageRequests || []);
+
+    // Real aggregate unread count for the dedicated Engage CHS badge —
+    // per direct instruction, separate from the general notification
+    // bell. One message-count query per real request, summed — the
+    // same real comparison EngageChatThread does per-conversation.
+    if (ownedEngageRequests && ownedEngageRequests.length > 0) {
+      const counts = await Promise.all(
+        ownedEngageRequests.map((r) =>
+          supabase
+            .from("engage_chs_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("request_id", r.id)
+            .neq("sender_id", session.user.id)
+            .gt("created_at", r.client_last_read_at)
+        )
+      );
+      setEngageUnreadCount(counts.reduce((sum, c) => sum + (c.count || 0), 0));
+    }
 
     // Real "rent collected" — restored, found missing during the
     // systematic Owner dashboard comparison. Genuinely summed from
@@ -284,8 +305,13 @@ export default function OwnerDashboard() {
             <Link href="/market-demand" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Market Demand
             </Link>
-            <Link href="/engage-chs" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+            <Link href="/engage-chs" className="relative bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Engage CHS
+              {engageUnreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-chs-red text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {engageUnreadCount}
+                </span>
+              )}
             </Link>
             <Link href="/list-property" className="bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
               + List a property
@@ -512,6 +538,8 @@ export default function OwnerDashboard() {
               {r.admin_note && (
                 <p className="text-xs text-gray-600 mt-1.5 bg-gray-50 rounded-lg p-2">{r.admin_note}</p>
               )}
+              {session && <EngageChatThread requestId={r.id} session={session} isAdmin={false} reference={r.reference} />}
+              <EngageDocumentsList requestId={r.id} />
             </div>
           ))}
         </div>

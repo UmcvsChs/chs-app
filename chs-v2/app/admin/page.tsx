@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { RentalApplication } from "@/types/rentalApplication";
@@ -15,6 +16,8 @@ import { Offer } from "@/types/offer";
 import { Artisan } from "@/types/artisan";
 import { Inspection } from "@/types/inspection";
 import GuidePrompt from "@/components/GuidePrompt";
+import EngageChatThread from "@/components/EngageChatThread";
+import { EngageDocumentManager } from "@/components/EngageDocuments";
 
 interface DeveloperApplication {
   id: string;
@@ -1058,6 +1061,7 @@ export default function AdminDashboard() {
               <EngageRequestCard
                 key={r.id}
                 request={r}
+                session={session}
                 onAccept={handleEngageAccept}
                 onReject={handleEngageReject}
                 onRequestMoreInfo={handleEngageRequestMoreInfo}
@@ -1292,11 +1296,13 @@ function FeeSettingRow({
 // "mark as contacted" button with no genuine decision behind it.
 function EngageRequestCard({
   request,
+  session,
   onAccept,
   onReject,
   onRequestMoreInfo,
 }: {
   request: EngageRequest;
+  session: Session | null;
   onAccept: (id: string, serviceType: string) => void;
   onReject: (id: string, reason: string) => void;
   onRequestMoreInfo: (id: string, question: string) => void;
@@ -1310,6 +1316,11 @@ function EngageRequestCard({
       <p className="text-xs text-gray-500 mt-1">{request.location}</p>
       <p className="text-xs text-gray-600 mt-1">{request.description}</p>
       {request.budget && <p className="text-xs text-gray-500 mt-1">Budget: {request.budget}</p>}
+      {(request.contact_phone || request.contact_email) && (
+        <p className="text-[11px] text-gray-500 mt-1">
+          📞 {request.contact_phone} {request.contact_email && `· ${request.contact_email}`}
+        </p>
+      )}
 
       {Object.keys(request.category_details || {}).length > 0 && (
         <div className="mt-2 pt-2 border-t border-gray-100 space-y-0.5">
@@ -1359,6 +1370,8 @@ function EngageRequestCard({
           </div>
         </div>
       )}
+      {session && <EngageChatThread requestId={request.id} session={session} isAdmin={true} reference={request.reference} />}
+      {session && <EngageDocumentManager requestId={request.id} adminUserId={session.user.id} />}
     </div>
   );
 }

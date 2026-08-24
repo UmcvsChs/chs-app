@@ -27,6 +27,7 @@ export default function BankAccountSecurity({
   const [banksLoading, setBanksLoading] = useState(true);
   const [bankName, setBankName] = useState("");
   const [bankCode, setBankCode] = useState("");
+  const [bankSearch, setBankSearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -179,28 +180,47 @@ export default function BankAccountSecurity({
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-2 mt-2">
-          <select
-            value={bankCode}
-            disabled={banksLoading}
-            onChange={(e) => {
-              const selected = banks.find((b) => b.code === e.target.value);
-              setBankCode(e.target.value);
-              setBankName(selected?.name || "");
-            }}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white"
-          >
-            {banksLoading ? (
-              <option>Loading banks...</option>
-            ) : (
-              banks.map((b) => <option key={b.code} value={b.code}>{b.name}</option>)
-            )}
-          </select>
-          <input type="text" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)}
-            placeholder="10-digit account number" maxLength={10}
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs" />
-          <input type="text" value={accountName} onChange={(e) => setAccountName(e.target.value)}
-            placeholder="Account name (must match your CHS identity)"
-            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+          <div>
+            <label className="text-[10px] font-semibold text-gray-500">Bank</label>
+            <input
+              type="text"
+              value={bankSearch}
+              onChange={(e) => setBankSearch(e.target.value)}
+              placeholder="🔍 Search — e.g. Zenith, GTBank, Kuda..."
+              className="w-full mt-1 mb-1 px-3 py-2 rounded-lg border border-gray-200 text-xs"
+            />
+            <select
+              value={bankCode}
+              disabled={banksLoading}
+              onChange={(e) => {
+                const selected = banks.find((b) => b.code === e.target.value);
+                setBankCode(e.target.value);
+                setBankName(selected?.name || "");
+              }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white"
+            >
+              {banksLoading ? (
+                <option>Loading banks...</option>
+              ) : (
+                banks
+                  .filter((b) => b.name.toLowerCase().includes(bankSearch.toLowerCase()))
+                  .map((b) => <option key={b.code} value={b.code}>{b.name}</option>)
+              )}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-500">Account number</label>
+            <input type="text" inputMode="numeric" pattern="[0-9]*" value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+              placeholder="10-digit account number" maxLength={10}
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold text-gray-500">Account name</label>
+            <input type="text" value={accountName} onChange={(e) => setAccountName(e.target.value)}
+              placeholder="Must match your CHS identity"
+              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+          </div>
           {error && <p className="text-[10px] text-chs-red bg-red-50 rounded-lg px-2 py-1.5">{error}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowForm(false); setError(null); }}

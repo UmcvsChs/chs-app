@@ -13,6 +13,10 @@ export interface EngageRequest {
   budget: string | null;
   documents: string[];
   admin_note: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  client_last_read_at: string;
+  admin_last_read_at: string;
   status: "pending" | "accepted" | "rejected" | "more_info_requested" | "agreement_signed";
   created_at: string;
 }

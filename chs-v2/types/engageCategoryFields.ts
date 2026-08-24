@@ -69,6 +69,28 @@ export const ENGAGE_CATEGORY_FIELDS: Record<string, EngageField[]> = {
   "Other real estate service": [],
 };
 
+// Real, genuinely optional specification fields — separate from the
+// required scoping fields above, per direct instruction: a client
+// might have a strong, specific preference (Dangote vs Sokoto cement
+// is a real, common Northern Nigerian sentiment), or might have no
+// opinion at all and want CHS to decide. Neither is wrong, so neither
+// is forced — these are never included in the required-field check.
+export interface SpecField {
+  id: string;
+  label: string;
+  placeholder: string;
+}
+
+export const ENGAGE_SPECIFICATION_FIELDS: SpecField[] = [
+  { id: "spec_cement", label: "Cement brand", placeholder: "e.g. Dangote, Sokoto (BUA), or leave blank for CHS to decide" },
+  { id: "spec_blocks", label: "Block specification", placeholder: "e.g. 9-inch throughout, or 9-inch foundation then 6-inch above" },
+  { id: "spec_roof", label: "Roof — material and color", placeholder: "e.g. Aluminum long-span, brown" },
+  { id: "spec_interior", label: "Interior — paint color and finish", placeholder: "e.g. White walls, matte finish" },
+  { id: "spec_windows", label: "Windows/aluminum brand", placeholder: "Type your preferred brand, or leave blank" },
+  { id: "spec_cable", label: "Electrical cable brand", placeholder: "Type your preferred brand, or leave blank" },
+  { id: "spec_other", label: "Any other specific instructions", placeholder: "Anything else you feel strongly about" },
+];
+
 // The real, automatic "what happens next" response — shown the
 // instant a real request is submitted, answering exactly the question
 // the client specifically raised ("what is the process, how do I get
@@ -96,7 +118,7 @@ export const ENGAGE_NEXT_STEPS: Record<string, string[]> = {
   ],
   "Full construction / project management": [
     "A CHS project manager reviews your real submission, including drawings and approval status if provided.",
-    "If you don't yet have a Bill of Quantities or approved drawings, CHS can arrange these — this becomes the real, itemised basis for your project budget.",
+    "If you don't yet have a Bill of Quantities or approved drawings, CHS will prepare and deliver these within 3–7 working days — you'll see them appear directly under this request once ready, with a real due date shown while you wait.",
     "You'll receive a real project proposal with cost breakdown and timeline before any work begins.",
     "Once approved, CHS manages contractors and procurement, with regular real progress updates.",
   ],

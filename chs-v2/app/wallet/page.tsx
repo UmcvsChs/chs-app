@@ -302,32 +302,43 @@ export default function WalletPage() {
               </button>
             ) : (
               <form onSubmit={handleTransferSubmit} className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={transferContact}
-                    onChange={(e) => { setTransferContact(e.target.value); setTransferRecipient(null); }}
-                    placeholder="Recipient's phone or email"
-                    className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-                  />
-                  <button type="button" onClick={handleLookupRecipient} disabled={lookingUp}
-                    className="px-4 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold disabled:opacity-50">
-                    {lookingUp ? "..." : "Find"}
-                  </button>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500">Recipient&apos;s phone or email</label>
+                  <div className="flex gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={transferContact}
+                      onChange={(e) => { setTransferContact(e.target.value); setTransferRecipient(null); }}
+                      placeholder="080... or their email"
+                      className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+                    />
+                    <button type="button" onClick={handleLookupRecipient} disabled={lookingUp}
+                      className="px-4 rounded-lg bg-gray-200 text-gray-700 text-xs font-semibold disabled:opacity-50">
+                      {lookingUp ? "..." : "Find"}
+                    </button>
+                  </div>
                 </div>
                 {transferRecipient && (
                   <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
                     ✓ {transferRecipient.full_name} ({transferRecipient.role})
                   </p>
                 )}
-                <CurrencyInput value={transferAmount} onChange={setTransferAmount} placeholder="Amount to send (₦)" />
-                <input
-                  type="text"
-                  value={transferNote}
-                  onChange={(e) => setTransferNote(e.target.value)}
-                  placeholder="What's this for? (optional)"
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-                />
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500">Amount to send (₦)</label>
+                  <div className="mt-1">
+                    <CurrencyInput value={transferAmount} onChange={setTransferAmount} placeholder="0.00" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold text-gray-500">What&apos;s this for? (optional)</label>
+                  <input
+                    type="text"
+                    value={transferNote}
+                    onChange={(e) => setTransferNote(e.target.value)}
+                    placeholder="e.g. Rent contribution"
+                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => { setShowTransferForm(false); setTransferRecipient(null); }}
                     className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
