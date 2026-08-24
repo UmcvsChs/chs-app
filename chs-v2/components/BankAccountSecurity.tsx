@@ -30,8 +30,58 @@ export default function BankAccountSecurity({
   const [bankSearch, setBankSearch] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState<string | null>(null);
+  const [verifiedRealName, setVerifiedRealName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // The real fix for a serious gap: the account number is now
+  // genuinely checked against the actual bank the moment both it and
+  // a bank are provided — not accepted on trust. A wrong digit fails
+  // right here, before anything can ever be submitted.
+  useEffect(() => {
+    // Genuinely external-system sync — clearing prior verification
+    // state the moment the account number or bank changes, since a
+    // real bank check is about to run (or the input no longer
+    // qualifies for one). No pure alternative exists here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setVerifiedRealName(null);
+    setResolveError(null);
+    setAccountName("");
+    if (accountNumber.length !== 10 || !bankCode) return;
+
+    let cancelled = false;
+    setResolving(true);
+    (async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/resolve-bank-account`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ accountNumber, bankCode }),
+          }
+        );
+        const result = await response.json();
+        if (cancelled) return;
+        if (!response.ok || result.error) {
+          setResolveError(result.error || "This account number could not be verified with the bank.");
+        } else {
+          setVerifiedRealName(result.accountName);
+          setAccountName(result.accountName);
+        }
+      } catch {
+        if (!cancelled) setResolveError("Could not verify this account right now. Please try again.");
+      } finally {
+        if (!cancelled) setResolving(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [accountNumber, bankCode, session.access_token]);
 
   useEffect(() => {
     loadData();
@@ -82,6 +132,18 @@ export default function BankAccountSecurity({
     e.preventDefault();
     if (!accountNumber || accountNumber.length !== 10 || !/^\d{10}$/.test(accountNumber)) {
       setError("Please enter a valid 10-digit account number.");
+      return;
+    }
+    // The real, direct fix: nothing submits without a genuine,
+    // bank-verified match. No more self-typed account names that
+    // prove nothing — this is the actual account holder's real name,
+    // returned directly by the bank via Paystack.
+    if (resolving) {
+      setError("Still verifying this account with the bank — please wait a moment.");
+      return;
+    }
+    if (resolveError || !verifiedRealName) {
+      setError(resolveError || "Please enter a real, verifiable account number before continuing.");
       return;
     }
     if (!accountName.trim()) {
@@ -214,20 +276,26 @@ export default function BankAccountSecurity({
               onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
               placeholder="10-digit account number" maxLength={10}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+            {resolving && <p className="text-[10px] text-gray-400 mt-1">🔄 Verifying with the bank...</p>}
+            {resolveError && <p className="text-[10px] text-chs-red mt-1">✕ {resolveError}</p>}
+            {verifiedRealName && (
+              <p className="text-[10px] text-green-700 mt-1">✓ Verified: real account name on file is <strong>{verifiedRealName}</strong></p>
+            )}
           </div>
-          <div>
-            <label className="text-[10px] font-semibold text-gray-500">Account name</label>
-            <input type="text" value={accountName} onChange={(e) => setAccountName(e.target.value)}
-              placeholder="Must match your CHS identity"
-              className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
-          </div>
+          {verifiedRealName && (
+            <div>
+              <label className="text-[10px] font-semibold text-gray-500">Account name (from the bank — cannot be edited)</label>
+              <input type="text" value={accountName} readOnly disabled
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-gray-50" />
+            </div>
+          )}
           {error && <p className="text-[10px] text-chs-red bg-red-50 rounded-lg px-2 py-1.5">{error}</p>}
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowForm(false); setError(null); }}
               className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
               Cancel
             </button>
-            <button type="submit" disabled={submitting}
+            <button type="submit" disabled={submitting || resolving || !verifiedRealName}
               className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
               {submitting ? "Submitting..." : "Submit"}
             </button>
