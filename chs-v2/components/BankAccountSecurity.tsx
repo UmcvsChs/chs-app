@@ -153,13 +153,23 @@ export default function BankAccountSecurity({
 
     // The real, genuine identity check — the account name must
     // genuinely match the registered person's real name on file, not
-    // just be present. Compared case-insensitively and ignoring extra
-    // whitespace, since formatting varies, but this is a real check,
-    // never a formality.
-    const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
-    if (normalize(accountName) !== normalize(registeredName)) {
+    // just be present. The real fix for a genuine problem: many
+    // Nigerians have a real bank account name with a middle name
+    // their CHS registration doesn't include, or vice versa — an
+    // exact-string match was blocking real, legitimate account
+    // holders. Now: every real name word on the shorter of the two
+    // names must appear in the longer one, order-independent, so a
+    // missing middle name passes but a genuinely different name still
+    // fails.
+    const normalizeWords = (s: string) => new Set(s.toLowerCase().replace(/[^a-z\s]/g, "").split(/\s+/).filter(Boolean));
+    const bankWords = normalizeWords(accountName);
+    const regWords = normalizeWords(registeredName);
+    const [shorter, longer] = bankWords.size <= regWords.size ? [bankWords, regWords] : [regWords, bankWords];
+    const namesMatch = shorter.size > 0 && [...shorter].every((w) => longer.has(w));
+
+    if (!namesMatch) {
       setError(
-        `This account name doesn't match your registered CHS identity (${registeredName}). For your protection, a bank account can only be linked if the account name matches exactly.`
+        `This account name doesn't match your registered CHS identity (${registeredName}). For your protection, a bank account can only be linked if the account name genuinely matches.`
       );
       // A real, automatic admin alert — logged for visibility, no admin
       // action needed unless something looks genuinely wrong.

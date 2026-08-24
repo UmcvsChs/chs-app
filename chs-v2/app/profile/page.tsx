@@ -23,7 +23,15 @@ export default function ProfilePage() {
   const [checkingLiveness, setCheckingLiveness] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [phone, setPhone] = useState("");
-  const [editingPhone, setEditingPhone] = useState(false);
+  const [residentialAddress, setResidentialAddress] = useState("");
+  const [profileState, setProfileState] = useState("");
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editState, setEditState] = useState("");
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaveMessage, setProfileSaveMessage] = useState<string | null>(null);
   const [notifyOffers, setNotifyOffers] = useState(true);
   const [notifyMessages, setNotifyMessages] = useState(true);
   const [notifyMarketing, setNotifyMarketing] = useState(true);
@@ -34,7 +42,7 @@ export default function ProfilePage() {
     if (!session) return;
     supabase.from("wallets").select("main_balance").eq("user_id", session.user.id).maybeSingle()
       .then(({ data }) => setWalletBalance(data?.main_balance ?? 0));
-    supabase.from("profiles").select("phone, notify_offers, notify_messages, notify_marketing, diaspora_mode")
+    supabase.from("profiles").select("phone, notify_offers, notify_messages, notify_marketing, diaspora_mode, residential_address, state")
       .eq("id", session.user.id).single()
       .then(({ data }) => {
         if (!data) return;
@@ -43,8 +51,32 @@ export default function ProfilePage() {
         setNotifyMessages(data.notify_messages ?? true);
         setNotifyMarketing(data.notify_marketing ?? true);
         setDiasporaMode(data.diaspora_mode ?? false);
+        setResidentialAddress(data.residential_address || "");
+        setProfileState(data.state || "");
       });
   }, [session]);
+
+  async function handleSaveProfileDetails() {
+    if (!session) return;
+    setSavingProfile(true);
+    setProfileSaveMessage(null);
+    const { error: rpcError } = await supabase.rpc("update_profile_details", {
+      p_full_name: editName.trim() || null,
+      p_phone: editPhone.trim() || null,
+      p_residential_address: editAddress.trim() || null,
+      p_state: editState.trim() || null,
+    });
+    setSavingProfile(false);
+    if (rpcError) {
+      setProfileSaveMessage(rpcError.message);
+      return;
+    }
+    setPhone(editPhone.trim());
+    setResidentialAddress(editAddress.trim());
+    setProfileState(editState.trim());
+    setEditingProfile(false);
+    await refreshProfile();
+  }
 
   async function handleSaveSettings() {
     if (!session) return;
@@ -58,15 +90,6 @@ export default function ProfilePage() {
     setTimeout(() => setSettingsSaved(false), 2000);
   }
 
-  async function handleUpdatePhone() {
-    if (!session || !phone.trim()) return;
-    const { error: updateError } = await supabase.from("profiles").update({ phone: phone.trim() }).eq("id", session.user.id);
-    if (updateError) {
-      setError("Could not update your phone number — it may already be in use.");
-      return;
-    }
-    setEditingPhone(false);
-  }
 
   useEffect(() => {
     if (!session) return;
@@ -200,24 +223,71 @@ export default function ProfilePage() {
           </div>
         </Link>
 
+        {/* Real "Edit Profile" — genuinely didn't exist before; only
+            the name was ever shown, never editable. A real name
+            change here correctly resets ID/liveness verification,
+            since the original verification was for the old name. */}
+        <div className="mt-4 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-sm font-bold text-chs-charcoal">Edit Profile</p>
+            {!editingProfile && (
+              <button onClick={() => {
+                setEditName(profile?.full_name || "");
+                setEditPhone(phone);
+                setEditAddress(residentialAddress);
+                setEditState(profileState);
+                setEditingProfile(true);
+              }} className="text-[10px] font-semibold text-chs-red underline">Edit</button>
+            )}
+          </div>
+          {!editingProfile ? (
+            <div className="space-y-1.5 text-sm text-gray-600">
+              <p><strong className="text-chs-charcoal">Name:</strong> {profile?.full_name}</p>
+              <p><strong className="text-chs-charcoal">Phone:</strong> {phone || "Not set"}</p>
+              <p><strong className="text-chs-charcoal">Address:</strong> {residentialAddress || "Not set"}</p>
+              <p><strong className="text-chs-charcoal">State:</strong> {profileState || "Not set"}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[10px] text-chs-amber-dark bg-chs-amber-light rounded-lg px-2 py-1.5">
+                ⚠️ Changing your name will reset your ID/liveness verification — you&apos;ll need to re-verify.
+              </p>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500">Full name</label>
+                <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500">Phone number</label>
+                <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500">Residential address</label>
+                <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold text-gray-500">State</label>
+                <input type="text" value={editState} onChange={(e) => setEditState(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              {profileSaveMessage && <p className="text-[10px] text-chs-red">{profileSaveMessage}</p>}
+              <div className="flex gap-2">
+                <button onClick={() => { setEditingProfile(false); setProfileSaveMessage(null); }}
+                  className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">Cancel</button>
+                <button onClick={handleSaveProfileDetails} disabled={savingProfile}
+                  className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                  {savingProfile ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Real Settings — restored, found missing entirely. */}
         <div className="mt-4 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
           <p className="text-sm font-bold text-chs-charcoal mb-3">Settings</p>
-
-          <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Phone number</p>
-          {editingPhone ? (
-            <div className="flex gap-2 mb-3">
-              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-              <button onClick={handleUpdatePhone} className="px-3 py-2 rounded-lg bg-chs-red text-white text-xs font-semibold">Save</button>
-            </div>
-          ) : (
-            <div className="flex justify-between items-center mb-3">
-              <p className="text-sm text-gray-600">{phone}</p>
-              <button onClick={() => setEditingPhone(true)} className="text-[10px] font-semibold text-chs-red underline">Edit</button>
-            </div>
-          )}
-
           <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5 mt-2">Notification preferences</p>
           <div className="space-y-2 mb-3">
             {[
