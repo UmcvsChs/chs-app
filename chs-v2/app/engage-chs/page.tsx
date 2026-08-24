@@ -16,6 +16,17 @@ function generateReference(): string {
 
 type Stage = "service" | "tnc_gate" | "requirements" | "details" | "acknowledged" | "review" | "submitted";
 
+// Same real document types the admin's document manager already
+// understands (see backend-v2/64_engage_chs_enhancements.sql and
+// components/EngageDocuments.tsx) — one row per real document, not a
+// single catch-all pile, per direct instruction.
+const DOCUMENT_CHECKLIST: { id: string; label: string }[] = [
+  { id: "architectural_drawing", label: "Architectural drawing" },
+  { id: "bill_of_quantities", label: "Bill of Quantities" },
+  { id: "structural_drawing", label: "Site status / structural report" },
+  { id: "other", label: "Any other document" },
+];
+
 // A real, genuinely staged conversation — not one long form, and not
 // an AI generating its own answers. Each real step gets its own
 // immediate, deterministic acknowledgment the instant it's completed,
@@ -38,7 +49,8 @@ export default function EngageChsPage() {
   const [location, setLocation] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
-  const [documents, setDocuments] = useState<File[]>([]);
+  const [docChoices, setDocChoices] = useState<Record<string, "have" | "need_chs" | "">>({});
+  const [docFiles, setDocFiles] = useState<Record<string, File | null>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -146,15 +158,31 @@ export default function EngageChsPage() {
       return;
     }
 
-    if (documents.length > 0) {
-      const urls: string[] = [];
-      for (const doc of documents) {
-        const url = await uploadDocument(doc, session.user.id, `engage-${newRequest.id}`);
-        if (url) urls.push(url);
+    // Real, per-document handling — matches exactly what the client
+    // chose above, feeding directly into the same document delivery
+    // system the admin already uses (backend-v2/64_engage_chs_enhancements.sql).
+    const urls: string[] = [];
+    for (const d of DOCUMENT_CHECKLIST) {
+      const choice = docChoices[d.id];
+      if (choice === "have" && docFiles[d.id]) {
+        const url = await uploadDocument(docFiles[d.id]!, session.user.id, `engage-${newRequest.id}`);
+        if (url) {
+          urls.push(url);
+          await supabase.rpc("upsert_engage_chs_document", {
+            p_request_id: newRequest.id, p_document_type: d.id, p_file_url: url, p_due_by: null, p_status: "delivered",
+          });
+        }
+      } else if (choice === "need_chs") {
+        // A real, immediate pending record — CHS sees exactly what's
+        // needed the moment this request lands, not just a hope
+        // buried in the description text.
+        await supabase.rpc("upsert_engage_chs_document", {
+          p_request_id: newRequest.id, p_document_type: d.id, p_file_url: null, p_due_by: null, p_status: "pending",
+        });
       }
-      if (urls.length > 0) {
-        await supabase.from("engage_chs_requests").update({ documents: urls }).eq("id", newRequest.id);
-      }
+    }
+    if (urls.length > 0) {
+      await supabase.from("engage_chs_requests").update({ documents: urls }).eq("id", newRequest.id);
     }
 
     setSubmitting(false);
@@ -234,7 +262,7 @@ export default function EngageChsPage() {
               <select
                 value={serviceType}
                 onChange={(e) => { setServiceType(e.target.value); setCategoryValues({}); }}
-                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal"
               >
                 {ENGAGE_SERVICE_TYPES.map((s) => <option key={s}>{s}</option>)}
               </select>
@@ -251,7 +279,7 @@ export default function EngageChsPage() {
                 <select
                   value={selectedPropertyId}
                   onChange={(e) => setSelectedPropertyId(e.target.value)}
-                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal"
                 >
                   <option value="">Not tied to a specific listed property</option>
                   {ownedProperties.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
@@ -275,7 +303,7 @@ export default function EngageChsPage() {
                   <select
                     value={categoryValues[f.id] || ""}
                     onChange={(e) => setCategoryValues({ ...categoryValues, [f.id]: e.target.value })}
-                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white"
+                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal"
                   >
                     <option value="">Select...</option>
                     {f.options?.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -286,7 +314,7 @@ export default function EngageChsPage() {
                     value={categoryValues[f.id] || ""}
                     onChange={(e) => setCategoryValues({ ...categoryValues, [f.id]: e.target.value })}
                     placeholder={f.placeholder}
-                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
+                    className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal"
                   />
                 )}
               </div>
@@ -317,7 +345,7 @@ export default function EngageChsPage() {
                       value={categoryValues[f.id] || ""}
                       onChange={(e) => setCategoryValues({ ...categoryValues, [f.id]: e.target.value })}
                       placeholder={f.placeholder}
-                      className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs"
+                      className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white text-chs-charcoal"
                     />
                   </div>
                 ))}
@@ -332,11 +360,36 @@ export default function EngageChsPage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600">Supporting documents (optional)</label>
-              <p className="text-[10px] text-gray-400 mb-1">Bill of Quantities, drawings, or anything else relevant.</p>
-              <input type="file" multiple accept="image/*,application/pdf"
-                onChange={(e) => setDocuments(e.target.files ? Array.from(e.target.files) : [])}
-                className="w-full mt-1 text-xs" />
+              <label className="text-xs font-semibold text-gray-600">Documents</label>
+              <p className="text-[10px] text-gray-400 mb-1.5">
+                For each real document: upload it if you already have it, or ask CHS to prepare it — either way,
+                nothing here blocks you from continuing.
+              </p>
+              <div className="space-y-2">
+                {DOCUMENT_CHECKLIST.map((d) => (
+                  <div key={d.id} className="bg-white rounded-lg border border-gray-200 p-2.5">
+                    <p className="text-xs font-semibold text-chs-charcoal mb-1.5">{d.label}</p>
+                    <div className="flex gap-2 mb-1.5">
+                      <button type="button" onClick={() => setDocChoices({ ...docChoices, [d.id]: "have" })}
+                        className={`flex-1 py-1.5 rounded-full text-[11px] font-semibold ${docChoices[d.id] === "have" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>
+                        I have this
+                      </button>
+                      <button type="button" onClick={() => setDocChoices({ ...docChoices, [d.id]: "need_chs" })}
+                        className={`flex-1 py-1.5 rounded-full text-[11px] font-semibold ${docChoices[d.id] === "need_chs" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>
+                        Let CHS provide it
+                      </button>
+                    </div>
+                    {docChoices[d.id] === "have" && (
+                      <input type="file" accept="image/*,application/pdf"
+                        onChange={(e) => setDocFiles({ ...docFiles, [d.id]: e.target.files?.[0] || null })}
+                        className="w-full text-[11px] text-chs-charcoal" />
+                    )}
+                    {docChoices[d.id] === "need_chs" && (
+                      <p className="text-[10px] text-chs-amber-dark">CHS will be notified to prepare this once you submit.</p>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
             <div className="flex gap-2">
@@ -352,18 +405,18 @@ export default function EngageChsPage() {
             <div>
               <label className="text-xs font-semibold text-gray-600">Property location</label>
               <input type="text" value={location} onChange={(e) => setLocation(e.target.value)}
-                placeholder="e.g. Malali GRA, Kaduna" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                placeholder="e.g. Malali GRA, Kaduna" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs font-semibold text-gray-600">Active phone number</label>
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="080..." className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  placeholder="080..." className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Email</label>
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="you@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  placeholder="you@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal" />
               </div>
             </div>
             <p className="text-[10px] text-gray-400 -mt-2">
@@ -372,7 +425,7 @@ export default function EngageChsPage() {
             <div>
               <label className="text-xs font-semibold text-gray-600">Tell us more</label>
               <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4}
-                placeholder="Anything else relevant CHS should know" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                placeholder="Anything else relevant CHS should know" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal" />
             </div>
             {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
             <div className="flex gap-2">
@@ -436,10 +489,16 @@ export default function EngageChsPage() {
                 <p className="font-bold text-chs-charcoal">Contact</p>
                 <p className="text-gray-600">{contactPhone} · {contactEmail}</p>
               </div>
-              {documents.length > 0 && (
+              {Object.entries(docChoices).some(([, v]) => v) && (
                 <div>
-                  <p className="font-bold text-chs-charcoal">Attached documents</p>
-                  <p className="text-gray-600">{documents.length} file{documents.length > 1 ? "s" : ""}</p>
+                  <p className="font-bold text-chs-charcoal">Documents</p>
+                  {DOCUMENT_CHECKLIST.filter((d) => docChoices[d.id]).map((d) => (
+                    <p key={d.id} className="text-gray-600">
+                      {d.label}: <span className="text-chs-charcoal">
+                        {docChoices[d.id] === "have" ? (docFiles[d.id] ? "Uploading your file" : "You have it, but no file selected yet") : "Let CHS provide it"}
+                      </span>
+                    </p>
+                  ))}
                 </div>
               )}
             </div>
