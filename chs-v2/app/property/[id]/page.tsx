@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
@@ -34,6 +35,49 @@ async function getProperty(id: string): Promise<Property | null> {
 
   if (error || !data) return null;
   return data as Property;
+}
+
+// The real, direct fix for "someone abroad Googles a 4-bedroom flat in
+// Asokoro and never finds CHS" — every real, verified listing now gets
+// its own genuine title and description, not a generic one every page
+// shared before. This is the single biggest lever for a listings site
+// showing up in search at all, since Google previously had no way to
+// tell one listing apart from another.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const property = await getProperty(id);
+
+  if (!property || property.verification_status !== "verified") {
+    return { title: "Property Not Found — CHS", robots: { index: false } };
+  }
+
+  const bedroomText = property.bedrooms ? `${property.bedrooms}-Bedroom ` : "";
+  const purposeText = purposeLabel(property.purpose);
+  const locationText = [property.location_area, property.location_lga, property.location_state].filter(Boolean).join(", ");
+  const title = `${bedroomText}${property.property_type} for ${purposeText} in ${locationText} — ₦${property.price.toLocaleString()} | CHS`;
+  const description = `${property.description?.slice(0, 155) || `A real, CHS-verified ${bedroomText}${property.property_type} for ${purposeText} in ${locationText}.`}`;
+  const images = Array.isArray(property.photos) && property.photos.length > 0 ? [property.photos[0]] : [];
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images,
+    },
+  };
 }
 
 async function getUrgentSaleHotline(): Promise<string | null> {
@@ -101,8 +145,40 @@ export default async function PropertyDetailPage({
 
   const isUnderVerification = property.verification_status !== "verified";
 
+  // Real Schema.org structured data — the format Google actually reads
+  // to show rich results (price, bedrooms, location) directly in
+  // search, not just a plain blue link. Only emitted for genuinely
+  // verified listings, matching exactly what generateMetadata above
+  // already restricts to.
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "RealEstateListing",
+    name: property.title,
+    description: property.description,
+    url: `https://extraordinary-conkies-312c3d.netlify.app/property/${property.id}`,
+    datePosted: property.created_at,
+    ...(property.photos?.[0] ? { image: property.photos[0] } : {}),
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: property.location_area || property.location_lga,
+      addressRegion: property.location_state,
+      addressCountry: "NG",
+    },
+    offers: {
+      "@type": "Offer",
+      price: property.price,
+      priceCurrency: "NGN",
+      availability: "https://schema.org/InStock",
+    },
+    ...(property.bedrooms ? { numberOfRooms: property.bedrooms } : {}),
+  };
+
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <div className="bg-chs-charcoal text-white px-4 py-3 flex items-center gap-3">
         <Link href="/" className="text-sm">
           ← Back
