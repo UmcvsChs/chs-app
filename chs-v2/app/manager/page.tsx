@@ -173,7 +173,12 @@ export default function ManagerDashboard() {
     <div className="min-h-screen zone-manager bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">Property Manager</h1>
+        <div className="flex justify-between items-center mt-1">
+          <h1 className="font-serif text-lg font-bold">Property Manager</h1>
+          <Link href="/manager/estates" className="text-[10px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">
+            🏘️ My Estates
+          </Link>
+        </div>
 
         {/* Real summary stats — restored, found missing during the
             systematic Manager dashboard comparison. Every number

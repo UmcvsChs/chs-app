@@ -87,6 +87,7 @@ export const ROLE_GUIDES: Record<string, { title: string; sections: GuideSection
       { title: "Your assigned domain", body: "Unless you're the Super Admin, you're assigned to exactly one domain and can only see and act within it." },
       { title: "The approval queue", body: "Routine actions happen immediately. High-stakes actions (finance, every verification decision) are held pending until the Super Admin approves — visible on the Overview tab." },
       { title: "Logging in", body: "A correct password alone isn't enough — a real approval code is generated and sent to the Super Admin, who must approve your specific login attempt." },
+      { title: "Trace an Account (Super Admin)", body: "Search any real user by phone/email/name to see their full wallet, promotion, roadmap, and Engage CHS history in one place — the real tool for resolving a support issue." },
     ],
   },
 };

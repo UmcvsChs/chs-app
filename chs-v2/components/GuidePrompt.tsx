@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { ROLE_GUIDES } from "@/types/guideContent";
 
@@ -27,7 +28,10 @@ export default function GuidePrompt({ role, onDismiss }: { role: string; onDismi
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-4">
       <div className="bg-white rounded-2xl max-w-md w-full max-h-[80vh] overflow-y-auto p-5">
         <p className="font-serif text-xl font-bold text-chs-charcoal mb-1">👋 {guide.title}</p>
-        <p className="text-xs text-gray-400 mb-4">A quick guide to get you started — you can read the full Users Guide any time from Profile.</p>
+        <p className="text-xs text-gray-400 mb-4">
+          A quick guide to get you started —{" "}
+          <Link href="/guide" className="text-chs-red underline">the full Users Guide</Link> is always available from the More menu.
+        </p>
         <div className="space-y-3">
           {guide.sections.map((s) => (
             <div key={s.title}>

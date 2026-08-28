@@ -54,6 +54,9 @@ export default function TenantDashboard() {
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithProperty[]>([]);
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
+  const [serviceCharges, setServiceCharges] = useState<{ id: string; amount: number; description: string; due_date: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [payingChargeId, setPayingChargeId] = useState<string | null>(null);
+  const [chargeMessage, setChargeMessage] = useState<string | null>(null);
   const [inspections, setInspections] = useState<InspectionWithProperty[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
@@ -67,7 +70,7 @@ export default function TenantDashboard() {
     if (!session) return;
     setLoading(true);
 
-    const [applicationsRes, tenanciesRes, inspectionsRes] = await Promise.all([
+    const [applicationsRes, tenanciesRes, inspectionsRes, serviceChargesRes] = await Promise.all([
       supabase
         .from("rental_applications")
         .select("id, status, move_in_date, created_at, properties(title, location_area)")
@@ -83,11 +86,17 @@ export default function TenantDashboard() {
         .select("id, requested_date, requested_time, status, properties(title, location_area)")
         .eq("requester_id", session.user.id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("service_charges")
+        .select("id, amount, description, due_date, status, properties(title)")
+        .eq("tenant_id", session.user.id)
+        .order("due_date", { ascending: true }),
     ]);
 
     setApplications((applicationsRes.data as unknown as ApplicationWithProperty[]) || []);
     setTenancies((tenanciesRes.data as unknown as TenancyWithProperty[]) || []);
     setInspections((inspectionsRes.data as unknown as InspectionWithProperty[]) || []);
+    setServiceCharges((serviceChargesRes.data as typeof serviceCharges) || []);
 
     // Fetching the list itself is NOT the same as "viewing" a specific
     // notice — merely loading the dashboard must never silently count as
@@ -109,6 +118,19 @@ export default function TenantDashboard() {
     }
 
     setLoading(false);
+  }
+
+  async function handlePayServiceCharge(chargeId: string) {
+    setPayingChargeId(chargeId);
+    setChargeMessage(null);
+    const { error } = await supabase.rpc("pay_service_charge", { p_charge_id: chargeId });
+    setPayingChargeId(null);
+    if (error) {
+      setChargeMessage(error.message);
+      return;
+    }
+    setChargeMessage("✓ Service charge paid.");
+    loadData();
   }
 
   useEffect(() => {
@@ -310,6 +332,32 @@ export default function TenantDashboard() {
             ))
           )}
         </div>
+
+        {serviceCharges.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">💰 Estate service charges</p>
+            {chargeMessage && <p className="text-[10px] text-gray-600 bg-gray-50 rounded-lg px-2 py-1.5 mb-2">{chargeMessage}</p>}
+            <div className="space-y-2">
+              {serviceCharges.map((c) => (
+                <div key={c.id} className="bg-white rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs font-semibold text-chs-charcoal">{c.description}</p>
+                  <p className="text-[10px] text-gray-400">{c.properties?.[0]?.title} · Due {c.due_date}</p>
+                  <div className="flex justify-between items-center mt-1.5">
+                    <p className="text-sm font-bold text-chs-charcoal">{formatNaira(c.amount)}</p>
+                    {c.status === "paid" ? (
+                      <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">✓ Paid</span>
+                    ) : (
+                      <button onClick={() => handlePayServiceCharge(c.id)} disabled={payingChargeId === c.id}
+                        className="px-3 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                        {payingChargeId === c.id ? "Paying..." : "Pay now"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-2">My inspection requests</p>

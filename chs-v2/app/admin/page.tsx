@@ -51,7 +51,8 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "finance" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
+type Tab = "overview" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
+interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -124,6 +125,36 @@ export default function AdminDashboard() {
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
   const [showGuide, setShowGuide] = useState(false);
+
+  // Real "Trace an Account" tool state — the direct fix for the
+  // MTN-style support gap: search by phone/email/name, then see
+  // everything real about that person across every system in one
+  // place, exactly the way a real customer care agent traces an
+  // account with just a phone number.
+  const [traceQuery, setTraceQuery] = useState("");
+  const [traceResults, setTraceResults] = useState<{ id: string; full_name: string; phone: string; email: string; role: string }[]>([]);
+  const [traceSearching, setTraceSearching] = useState(false);
+  const [tracedUser, setTracedUser] = useState<{ id: string; full_name: string; phone: string; email: string; role: string } | null>(null);
+  const [traceLoading, setTraceLoading] = useState(false);
+  const [traceData, setTraceData] = useState<{
+    wallet: { main_balance: number; frozen: boolean } | null;
+    walletTx: { amount: number; direction: string; description: string; created_at: string }[];
+    promoCredits: { amount: number; direction: string; description: string; created_at: string }[];
+    promotions: TracePromotion[];
+    roadmapAccess: { model_id: string; amount_paid: number; is_test_grant: boolean; created_at: string }[];
+    bankAccount: { bank_name: string; account_number: string; account_name: string } | null;
+    engageRequests: { reference: string; service_type: string; status: string }[];
+  } | null>(null);
+
+  // Real resolved-history view — closes a related gap: once a
+  // sub-admin action is approved/rejected, it previously vanished
+  // from admin view entirely with no audit trail.
+  const [showActionHistory, setShowActionHistory] = useState(false);
+  const [actionHistory, setActionHistory] = useState<{
+    id: string; action_type: string; status: string; resolved_at: string | null; resolution_note: string | null;
+    profiles: { full_name: string }[] | null;
+  }[]>([]);
+  const [loadingActionHistory, setLoadingActionHistory] = useState(false);
   const [pendingLoginRequests, setPendingLoginRequests] = useState<{
     id: string; admin_id: string; code: string; created_at: string;
     profiles: { full_name: string; role: string }[] | null;
@@ -276,6 +307,62 @@ export default function AdminDashboard() {
     }
 
     setLoading(false);
+  }
+
+  async function handleToggleActionHistory() {
+    if (showActionHistory) {
+      setShowActionHistory(false);
+      return;
+    }
+    setLoadingActionHistory(true);
+    const { data } = await supabase
+      .from("admin_action_requests")
+      .select("id, action_type, status, resolved_at, resolution_note, profiles(full_name)")
+      .neq("status", "pending")
+      .order("resolved_at", { ascending: false })
+      .limit(50);
+    setActionHistory((data as typeof actionHistory) || []);
+    setLoadingActionHistory(false);
+    setShowActionHistory(true);
+  }
+
+  async function handleTraceSearch() {
+    if (!traceQuery.trim()) return;
+    setTraceSearching(true);
+    setTracedUser(null);
+    setTraceData(null);
+    const { data } = await supabase.rpc("admin_find_user", { p_contact: traceQuery.trim() });
+    setTraceResults(data || []);
+    setTraceSearching(false);
+  }
+
+  async function handleSelectTracedUser(user: { id: string; full_name: string; phone: string; email: string; role: string }) {
+    setTracedUser(user);
+    setTraceLoading(true);
+    setTraceData(null);
+
+    // Real, parallel queries across every real system — the actual
+    // MTN-agent-style "show me everything" behind this whole tool.
+    const [walletRes, walletTxRes, promoTxRes, promoRes, roadmapRes, bankRes, engageRes] = await Promise.all([
+      supabase.from("wallets").select("main_balance, frozen").eq("user_id", user.id).maybeSingle(),
+      supabase.from("wallet_transactions").select("amount, direction, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("promo_credit_transactions").select("amount, direction, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
+      supabase.from("property_promotions").select("is_active, rank_category, properties(title)").eq("owner_id", user.id),
+      supabase.from("construction_roadmap_access").select("model_id, amount_paid, is_test_grant, created_at").eq("user_id", user.id),
+      supabase.from("linked_bank_accounts").select("bank_name, account_number, account_name").eq("user_id", user.id).maybeSingle(),
+      supabase.from("engage_chs_requests").select("reference, service_type, status").eq("owner_id", user.id),
+    ]);
+
+    setTraceData({
+      wallet: walletRes.data,
+      walletTx: walletTxRes.data || [],
+      promoCredits: promoTxRes.data || [],
+      promotions: (promoRes.data as TracePromotion[]) || [],
+      roadmapAccess: roadmapRes.data || [],
+      bankAccount: bankRes.data,
+      engageRequests: engageRes.data || [],
+    });
+    setTraceLoading(false);
   }
 
   async function handleResolveAction(requestId: string, approve: boolean) {
@@ -667,6 +754,7 @@ export default function AdminDashboard() {
         {([
           { key: "overview", label: "Overview", domain: null },
           { key: "finance", label: "Finance", domain: "finance" },
+          { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingProfiles.length})`, domain: "registration_setup" },
@@ -765,6 +853,29 @@ export default function AdminDashboard() {
               </div>
             )}
             {profile?.is_super_admin && (
+              <div className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
+                <button onClick={handleToggleActionHistory} disabled={loadingActionHistory}
+                  className="text-xs font-semibold text-chs-red underline disabled:opacity-50">
+                  {loadingActionHistory ? "Loading..." : showActionHistory ? "Hide sub-admin action history" : "📜 View sub-admin action history"}
+                </button>
+                {showActionHistory && (
+                  <div className="mt-2 space-y-1.5">
+                    {actionHistory.length === 0 ? (
+                      <p className="text-[10px] text-gray-400">No resolved actions yet.</p>
+                    ) : actionHistory.map((h) => (
+                      <div key={h.id} className="text-[10px] text-gray-500 border-b border-gray-100 pb-1.5">
+                        <span className={h.status === "approved" ? "text-green-700 font-semibold" : "text-chs-red font-semibold"}>
+                          {h.status === "approved" ? "✓" : "✕"} {h.action_type.replace(/_/g, " ")}
+                        </span>
+                        {" "}— {h.profiles?.[0]?.full_name || "Unknown"}, {h.resolved_at && new Date(h.resolved_at).toLocaleString()}
+                        {h.resolution_note && ` ("${h.resolution_note}")`}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {profile?.is_super_admin && (
               <div className="col-span-2 bg-purple-50 border-2 border-purple-200 rounded-xl p-4 space-y-2">
                 <p className="text-sm font-bold text-purple-800">🧪 Switch role for testing</p>
                 <p className="text-[10px] text-purple-700">
@@ -791,6 +902,14 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+            <Link href="/admin/feature-catalog"
+              className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-chs-charcoal">📋 Feature Catalog</p>
+                <p className="text-[10px] text-gray-400">Every real feature, where to find it, and where to trace it from here</p>
+              </div>
+              <span className="text-chs-red text-lg">→</span>
+            </Link>
             {profile?.is_super_admin && (
               <div className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2">
                 <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
@@ -882,6 +1001,118 @@ export default function AdminDashboard() {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "trace" && (
+          <div>
+            <p className="text-xs font-bold text-chs-charcoal mb-1">🔎 Trace an Account</p>
+            <p className="text-[10px] text-gray-400 mb-2">
+              Search by phone, email, or name — see everything real about this person across every system, the same
+              way real customer support traces an account.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={traceQuery} onChange={(e) => setTraceQuery(e.target.value)}
+                placeholder="Phone, email, or name" className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={handleTraceSearch} disabled={traceSearching}
+                className="px-4 py-2.5 rounded-lg bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                {traceSearching ? "..." : "Search"}
+              </button>
+            </div>
+
+            {!tracedUser && traceResults.length > 0 && (
+              <div className="space-y-1.5 mb-3">
+                {traceResults.map((u) => (
+                  <button key={u.id} onClick={() => handleSelectTracedUser(u)}
+                    className="w-full text-left bg-white rounded-lg border border-gray-200 p-2.5">
+                    <p className="text-xs font-semibold text-chs-charcoal">{u.full_name} — {u.role}</p>
+                    <p className="text-[10px] text-gray-400">{u.phone} · {u.email}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {tracedUser && (
+              <div>
+                <button onClick={() => { setTracedUser(null); setTraceData(null); }} className="text-[10px] text-chs-red underline mb-2">← Back to results</button>
+                <div className="bg-chs-charcoal text-white rounded-xl p-3 mb-3">
+                  <p className="text-sm font-bold">{tracedUser.full_name}</p>
+                  <p className="text-[11px] text-white/70">{tracedUser.role} · {tracedUser.phone} · {tracedUser.email}</p>
+                </div>
+
+                {traceLoading ? (
+                  <p className="text-xs text-gray-400">Loading everything...</p>
+                ) : traceData && (
+                  <div className="space-y-3">
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">💰 Wallet</p>
+                      {traceData.wallet ? (
+                        <>
+                          <p className="text-xs text-gray-600">
+                            Balance: {formatNaira(traceData.wallet.main_balance)}
+                            {traceData.wallet.frozen && <span className="text-chs-red font-bold"> — FROZEN</span>}
+                          </p>
+                          {traceData.walletTx.length === 0 ? (
+                            <p className="text-[10px] text-gray-400 mt-1">No transactions.</p>
+                          ) : traceData.walletTx.map((tx, i) => (
+                            <p key={i} className="text-[10px] text-gray-500 mt-1">
+                              {tx.direction === "credit" ? "+" : "−"}{formatNaira(tx.amount)} — {tx.description} ({new Date(tx.created_at).toLocaleDateString()})
+                            </p>
+                          ))}
+                        </>
+                      ) : <p className="text-[10px] text-gray-400">No wallet found.</p>}
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">⭐ Promotion credits</p>
+                      {traceData.promoCredits.length === 0 ? (
+                        <p className="text-[10px] text-gray-400">No credit transactions.</p>
+                      ) : traceData.promoCredits.map((tx, i) => (
+                        <p key={i} className="text-[10px] text-gray-500 mt-1">
+                          {tx.direction === "credit" ? "+" : "−"}{tx.amount} credits — {tx.description} ({new Date(tx.created_at).toLocaleDateString()})
+                        </p>
+                      ))}
+                      {traceData.promotions.length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          {traceData.promotions.map((p, i) => (
+                            <p key={i} className="text-[10px] text-gray-500">
+                              {p.properties?.[0]?.title || "Untitled"} — {p.is_active ? "ON" : "OFF"}{p.rank_category && `, Category ${p.rank_category}`}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">🏗️ Construction Roadmap</p>
+                      {traceData.roadmapAccess.length === 0 ? (
+                        <p className="text-[10px] text-gray-400">No roadmap unlocks.</p>
+                      ) : traceData.roadmapAccess.map((r, i) => (
+                        <p key={i} className="text-[10px] text-gray-500 mt-1">
+                          {r.model_id} — {formatNaira(r.amount_paid)}{r.is_test_grant && " (TEST GRANT)"} ({new Date(r.created_at).toLocaleDateString()})
+                        </p>
+                      ))}
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">🏦 Bank account</p>
+                      {traceData.bankAccount ? (
+                        <p className="text-[10px] text-gray-500">{traceData.bankAccount.bank_name} — {traceData.bankAccount.account_number} ({traceData.bankAccount.account_name})</p>
+                      ) : <p className="text-[10px] text-gray-400">No bank account linked.</p>}
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">🏗️ Engage CHS requests</p>
+                      {traceData.engageRequests.length === 0 ? (
+                        <p className="text-[10px] text-gray-400">No requests.</p>
+                      ) : traceData.engageRequests.map((r, i) => (
+                        <p key={i} className="text-[10px] text-gray-500 mt-1">{r.reference} — {r.service_type} ({r.status})</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
