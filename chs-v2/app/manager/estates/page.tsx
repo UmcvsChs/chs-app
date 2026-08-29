@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { NIGERIAN_STATES } from "@/lib/geoData";
+import { formatNaira } from "@/lib/format";
 
 interface Estate {
   id: string;
@@ -32,6 +33,10 @@ export default function EstatesPage() {
   const [totalUnits, setTotalUnits] = useState<number | "">("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [selectedTier, setSelectedTier] = useState("up_to_50");
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeMessage, setSubscribeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -57,6 +62,19 @@ export default function EstatesPage() {
       .order("created_at", { ascending: false });
     setEstates(data || []);
     setLoading(false);
+  }
+
+  async function handleSubscribe(estateId: string) {
+    setSubscribing(true);
+    setSubscribeMessage(null);
+    const { error: rpcError } = await supabase.rpc("activate_estate_subscription", { p_estate_id: estateId, p_tier: selectedTier });
+    setSubscribing(false);
+    if (rpcError) {
+      setSubscribeMessage(rpcError.message);
+      return;
+    }
+    setActivatingId(null);
+    loadEstates();
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -145,9 +163,11 @@ export default function EstatesPage() {
         ) : (
           <div className="space-y-2">
             {estates.map((e) => (
-              <Link key={e.id} href={`/manager/estates/${e.id}`} className="block bg-white rounded-xl border border-gray-200 p-4">
-                <p className="text-sm font-bold text-chs-charcoal">{e.name}</p>
-                <p className="text-xs text-gray-500">{e.address}, {e.state}</p>
+              <div key={e.id} className="bg-white rounded-xl border border-gray-200 p-4">
+                <Link href={`/manager/estates/${e.id}`}>
+                  <p className="text-sm font-bold text-chs-charcoal">{e.name}</p>
+                  <p className="text-xs text-gray-500">{e.address}, {e.state}</p>
+                </Link>
                 <div className="flex justify-between items-center mt-1.5">
                   <span className="text-[10px] text-gray-400">{e.total_units_declared || "?"} units planned</span>
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
@@ -156,7 +176,35 @@ export default function EstatesPage() {
                     {e.subscription_status}
                   </span>
                 </div>
-              </Link>
+                {e.subscription_status !== "active" && (
+                  <div className="mt-2 pt-2 border-t border-gray-100">
+                    {activatingId === e.id ? (
+                      <div className="space-y-1.5">
+                        <select value={selectedTier} onChange={(ev) => setSelectedTier(ev.target.value)}
+                          className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
+                          <option value="up_to_50">Up to 50 units — {formatNaira(75000)}/month</option>
+                          <option value="51_to_200">51–200 units — {formatNaira(180000)}/month</option>
+                          <option value="201_to_500">201–500 units — {formatNaira(350000)}/month</option>
+                        </select>
+                        {subscribeMessage && <p className="text-[10px] text-gray-600">{subscribeMessage}</p>}
+                        <div className="flex gap-1.5">
+                          <button onClick={() => setActivatingId(null)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                            Cancel
+                          </button>
+                          <button onClick={() => handleSubscribe(e.id)} disabled={subscribing}
+                            className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                            {subscribing ? "Activating..." : "Pay from wallet"}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setActivatingId(e.id)} className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        💳 Subscribe to unlock this estate
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/format";
 import { startWalletFunding } from "@/lib/paystack";
 import CurrencyInput from "@/components/CurrencyInput";
 import BankAccountSecurity, { checkWithdrawalAllowed } from "@/components/BankAccountSecurity";
+import TransactionCommissions from "@/components/TransactionCommissions";
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   main: "Main balance",
@@ -227,6 +228,8 @@ export default function WalletPage() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
       </div>
+
+      {session && <TransactionCommissions session={session} />}
 
       <div className="px-4 py-4 space-y-4">
         {wallet ? (

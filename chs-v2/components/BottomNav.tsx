@@ -24,6 +24,7 @@ export default function BottomNav() {
     { icon: "🏢", label: "About Us", href: "/about" },
     { icon: "📜", label: "Terms & Conditions", href: "/terms" },
     { icon: "📘", label: "Users Guide", href: "/guide" },
+    { icon: "🏠", label: "My Shortlet Bookings", href: "/my-bookings" },
     { icon: "📝", label: "Property request", href: "/concierge" },
     { icon: "🗺️", label: "Area guide", href: null, note: "Coming soon — was a placeholder in the original app too" },
     { icon: "❓", label: "Help & FAQs", href: null, note: "Coming soon — was a placeholder in the original app too" },

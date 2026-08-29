@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import TransactionCommissions from "@/components/TransactionCommissions";
 import { FormalNotice, NOTICE_TYPE_LABELS } from "@/types/formalNotice";
 import MessageThread from "@/components/MessageThread";
 import GuidePrompt from "@/components/GuidePrompt";
@@ -332,6 +333,8 @@ export default function TenantDashboard() {
             ))
           )}
         </div>
+
+        {session && <TransactionCommissions session={session} />}
 
         {serviceCharges.length > 0 && (
           <div className="mt-4">

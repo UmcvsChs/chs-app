@@ -16,6 +16,8 @@ import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import GuidePrompt from "@/components/GuidePrompt";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentsList } from "@/components/EngageDocuments";
+import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
+import TransactionCommissions from "@/components/TransactionCommissions";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
@@ -42,6 +44,7 @@ export default function OwnerDashboard() {
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
+  const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [engageUnreadCount, setEngageUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
@@ -91,6 +94,13 @@ export default function OwnerDashboard() {
   async function loadData() {
     if (!session) return;
     setLoading(true);
+
+    supabase
+      .from("shortlet_bookings")
+      .select("id, guest_full_name, check_in, check_out, status, properties!inner(title, owner_id)")
+      .eq("properties.owner_id", session.user.id)
+      .in("status", ["confirmed", "active"])
+      .then(({ data }) => setShortletBookings((data as unknown as typeof shortletBookings) || []));
 
     const { data: ownedProperties } = await supabase
       .from("properties")
@@ -193,6 +203,7 @@ export default function OwnerDashboard() {
     setLoading(false);
   }
 
+
   async function handleOfferDecision(offerId: string, status: "accepted" | "rejected") {
     setActionError(null);
     const { data: offer, error } = await supabase.from("offers").update({ status }).eq("id", offerId).select("*, properties(title)").single();
@@ -234,35 +245,26 @@ export default function OwnerDashboard() {
 
   async function handleApplicationDecision(applicationId: string, status: "approved" | "owner_declined") {
     setActionError(null);
-    const { data: application, error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId).select("*, properties(title)").single();
+
+    if (status === "approved") {
+      // The real fix: this now genuinely creates the tenancy and
+      // generates the correct, two-sided rental commission (5%
+      // tenant, 5.5% landlord) at the exact same real moment —
+      // previously this only flipped a status label and never
+      // created a real tenancy at all.
+      const { error } = await supabase.rpc("approve_rental_application", { p_application_id: applicationId });
+      if (error) {
+        setActionError(error.message);
+        return;
+      }
+      loadData();
+      return;
+    }
+
+    const { error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId).select("*, properties(title)").single();
     if (error) {
       setActionError("Could not update this application. Please try again.");
       return;
-    }
-    if (application) {
-      await supabase.rpc("notify_user", {
-        p_user_id: application.tenant_id,
-        p_title: status === "approved" ? "Your rental application was approved!" : "Your rental application was declined",
-        p_body: status === "approved"
-          ? "The owner has approved your application. CHS will be in touch about next steps."
-          : "The owner has declined your rental application for this property.",
-        p_link: "/tenant",
-      });
-
-      // The same real nudge pattern restored from the original app,
-      // adapted to this rebuild's actual flow — the closest equivalent
-      // real moment to the original's "tenancy agreement signed"
-      // trigger, since that's the point a rental deal genuinely starts
-      // moving toward completion here.
-      if (status === "approved") {
-        const propertyTitle = (application as unknown as { properties?: { title: string } }).properties?.title || "This property";
-        await supabase.rpc("notify_user", {
-          p_user_id: session!.user.id,
-          p_title: "📌 Reminder: update your listing status",
-          p_body: `${propertyTitle} — you've approved a rental application. Once the tenancy is finalised, remember to mark this property occupied so prospective tenants stop asking about a unit that's no longer available.`,
-          p_link: `/property/${application.property_id}`,
-        });
-      }
     }
     loadData();
   }
@@ -514,6 +516,21 @@ export default function OwnerDashboard() {
                   <RequestTermination tenancyId={t.id} onDone={loadData} />
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {session && <TransactionCommissions session={session} />}
+
+      {shortletBookings.length > 0 && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Shortlet Guests</p>
+          {shortletBookings.map((b) => (
+            <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+              <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
+              <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.check_in} → {b.check_out}</p>
+              <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
             </div>
           ))}
         </div>
