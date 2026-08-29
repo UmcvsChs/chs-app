@@ -17,6 +17,7 @@ import GuidePrompt from "@/components/GuidePrompt";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentsList } from "@/components/EngageDocuments";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
+import ShortletMessageThread from "@/components/ShortletMessageThread";
 import TransactionCommissions from "@/components/TransactionCommissions";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
@@ -45,6 +46,11 @@ export default function OwnerDashboard() {
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
+  const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
+  const [confirmingJobId, setConfirmingJobId] = useState<string | null>(null);
+  const [confirmJobMessage, setConfirmJobMessage] = useState<Record<string, string>>({});
   const [engageUnreadCount, setEngageUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
@@ -101,6 +107,23 @@ export default function OwnerDashboard() {
       .eq("properties.owner_id", session.user.id)
       .in("status", ["confirmed", "active"])
       .then(({ data }) => setShortletBookings((data as unknown as typeof shortletBookings) || []));
+
+    // Real fix found during the audit — owners previously had zero
+    // visibility into maintenance issues on their own directly-managed
+    // properties. Only a delegated manager's dashboard ever showed this.
+    supabase
+      .from("fault_reports")
+      .select("id, category, description, status, property_id, properties!inner(title, owner_id)")
+      .eq("properties.owner_id", session.user.id)
+      .neq("status", "resolved")
+      .then(({ data }) => setFaultReports((data as unknown as typeof faultReports) || []));
+
+    supabase
+      .from("rent_to_own_agreements")
+      .select("id, total_price, monthly_amount, properties(title)")
+      .eq("seller_id", session.user.id)
+      .eq("status", "requested")
+      .then(({ data }) => setRentToOwnRequests((data as unknown as typeof rentToOwnRequests) || []));
 
     const { data: ownedProperties } = await supabase
       .from("properties")
@@ -201,6 +224,26 @@ export default function OwnerDashboard() {
     setRentCollected(rentSum);
 
     setLoading(false);
+  }
+
+  async function handleApproveRentToOwn(agreementId: string) {
+    setApprovingRtoId(agreementId);
+    const { error } = await supabase.rpc("approve_rent_to_own_request", { p_agreement_id: agreementId });
+    setApprovingRtoId(null);
+    if (!error) loadData();
+  }
+
+  async function handleConfirmJobCompletion(faultId: string) {
+    setConfirmingJobId(faultId);
+    setConfirmJobMessage((prev) => ({ ...prev, [faultId]: "" }));
+    const { error } = await supabase.rpc("confirm_job_completion", { p_fault_report_id: faultId });
+    setConfirmingJobId(null);
+    if (error) {
+      setConfirmJobMessage((prev) => ({ ...prev, [faultId]: error.message }));
+      return;
+    }
+    setConfirmJobMessage((prev) => ({ ...prev, [faultId]: "✓ Confirmed — artisan paid, job resolved." }));
+    loadData();
   }
 
 
@@ -531,6 +574,49 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
               <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.check_in} → {b.check_out}</p>
               <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
+              <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {rentToOwnRequests.length > 0 && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Rent-to-Own Requests</p>
+          {rentToOwnRequests.map((r) => (
+            <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+              <p className="text-xs font-semibold text-chs-charcoal">{r.properties?.[0]?.title || "Property"}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">
+                {formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} total
+              </p>
+              <button onClick={() => handleApproveRentToOwn(r.id)} disabled={approvingRtoId === r.id}
+                className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                {approvingRtoId === r.id ? "Approving..." : "✓ Approve this request"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {faultReports.length > 0 && (
+        <div className="px-4 pb-4">
+          <p className="text-xs font-bold text-chs-charcoal mb-2">🔧 Maintenance Requests</p>
+          {faultReports.map((f) => (
+            <div key={f.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+              <p className="text-xs font-semibold text-chs-charcoal">{f.properties?.[0]?.title || "Property"} — {f.category}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{f.description}</p>
+              <span className="inline-block mt-1 text-[9px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
+                {f.status.replace(/_/g, " ")}
+              </span>
+              {f.status === "completed_pending_confirmation" && (
+                <div className="mt-2">
+                  {confirmJobMessage[f.id] && <p className="text-[10px] text-gray-600 mb-1">{confirmJobMessage[f.id]}</p>}
+                  <button onClick={() => handleConfirmJobCompletion(f.id)} disabled={confirmingJobId === f.id}
+                    className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                    {confirmingJobId === f.id ? "Processing..." : "✓ Confirm work done & pay artisan"}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

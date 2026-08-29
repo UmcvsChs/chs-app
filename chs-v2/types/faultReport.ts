@@ -35,6 +35,7 @@ export interface FaultReport {
     | "awaiting_manager_approval"
     | "approved_by_owner"
     | "approved_by_manager"
+    | "completed_pending_confirmation"
     | "resolved";
   approved_vendor: string | null;
   approved_amount: number | null;

@@ -47,6 +47,8 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmingJobId, setConfirmingJobId] = useState<string | null>(null);
+  const [confirmJobMessage, setConfirmJobMessage] = useState<Record<string, string>>({});
   const [messagingTenancy, setMessagingTenancy] = useState<TenancyWithProperty | null>(null);
   const [paymentHistoryTenancy, setPaymentHistoryTenancy] = useState<TenancyWithProperty | null>(null);
   const [paymentRecords, setPaymentRecords] = useState<{ description: string | null; amount: number; created_at: string; direction: string }[]>([]);
@@ -100,6 +102,19 @@ export default function ManagerDashboard() {
     }
 
     setLoading(false);
+  }
+
+  async function handleConfirmJobCompletion(faultId: string) {
+    setConfirmingJobId(faultId);
+    setConfirmJobMessage((prev) => ({ ...prev, [faultId]: "" }));
+    const { error } = await supabase.rpc("confirm_job_completion", { p_fault_report_id: faultId });
+    setConfirmingJobId(null);
+    if (error) {
+      setConfirmJobMessage((prev) => ({ ...prev, [faultId]: error.message }));
+      return;
+    }
+    setConfirmJobMessage((prev) => ({ ...prev, [faultId]: "✓ Confirmed — artisan paid, job resolved." }));
+    loadData();
   }
 
   async function handleViewPaymentHistory(t: TenancyWithProperty) {
@@ -343,6 +358,16 @@ export default function ManagerDashboard() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">{fault.description}</p>
+
+                {fault.status === "completed_pending_confirmation" && (
+                  <div className="mt-2">
+                    {confirmJobMessage[fault.id] && <p className="text-[10px] text-gray-600 mb-1">{confirmJobMessage[fault.id]}</p>}
+                    <button onClick={() => handleConfirmJobCompletion(fault.id)} disabled={confirmingJobId === fault.id}
+                      className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                      {confirmingJobId === fault.id ? "Processing..." : "✓ Confirm work done & pay artisan"}
+                    </button>
+                  </div>
+                )}
 
                 {fault.fault_quotations && fault.fault_quotations.length > 0 && (
                   <div className="mt-2">

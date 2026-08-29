@@ -9,6 +9,11 @@ export interface ShortletBooking {
   check_in: string;
   check_out: string;
   total_price: number;
+  guests: number;
+  guest_full_name: string;
+  guest_phone: string;
+  guest_id_document_url: string | null;
   status: "confirmed" | "cancelled";
+  payment_status: "unpaid" | "held_escrow" | "released" | "refunded";
   created_at: string;
 }

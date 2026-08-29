@@ -55,6 +55,8 @@ export default function TenantDashboard() {
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithProperty[]>([]);
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
+  const [payingRentId, setPayingRentId] = useState<string | null>(null);
+  const [payRentMessage, setPayRentMessage] = useState<Record<string, string>>({});
   const [serviceCharges, setServiceCharges] = useState<{ id: string; amount: number; description: string; due_date: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [payingChargeId, setPayingChargeId] = useState<string | null>(null);
   const [chargeMessage, setChargeMessage] = useState<string | null>(null);
@@ -119,6 +121,19 @@ export default function TenantDashboard() {
     }
 
     setLoading(false);
+  }
+
+  async function handlePayRent(tenancyId: string) {
+    setPayingRentId(tenancyId);
+    setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "" }));
+    const { error } = await supabase.rpc("pay_rent", { p_tenancy_id: tenancyId });
+    setPayingRentId(null);
+    if (error) {
+      setPayRentMessage((prev) => ({ ...prev, [tenancyId]: error.message }));
+      return;
+    }
+    setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "✓ Rent paid — lease renewed." }));
+    loadData();
   }
 
   async function handlePayServiceCharge(chargeId: string) {
@@ -247,6 +262,11 @@ export default function TenantDashboard() {
                   {t.lease_start} → {t.lease_end}
                 </p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(t.annual_rent)}/year</p>
+                {payRentMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{payRentMessage[t.id]}</p>}
+                <button onClick={() => handlePayRent(t.id)} disabled={payingRentId === t.id}
+                  className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                  {payingRentId === t.id ? "Processing..." : `Pay rent — ${formatNaira(t.annual_rent)}`}
+                </button>
                 <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
                   Submit move-in condition report
                 </Link>

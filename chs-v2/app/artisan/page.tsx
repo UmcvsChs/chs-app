@@ -26,6 +26,9 @@ export default function ArtisanDashboard() {
   const [myRatings, setMyRatings] = useState<ArtisanRating[]>([]);
   const [myDisputes, setMyDisputes] = useState<ArtisanJobDispute[]>([]);
   const [completedJobs, setCompletedJobs] = useState<{ id: string; category: string }[]>([]);
+  const [activeJobs, setActiveJobs] = useState<{ id: string; category: string; status: string }[]>([]);
+  const [markingCompleteId, setMarkingCompleteId] = useState<string | null>(null);
+  const [jobActionMessage, setJobActionMessage] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [quotingFaultId, setQuotingFaultId] = useState<string | null>(null);
@@ -105,9 +108,30 @@ export default function ArtisanDashboard() {
         .map((q) => q.fault_reports as unknown as { id: string; category: string; status: string })
         .filter((f) => f && f.status === "resolved");
       setCompletedJobs(resolved);
+
+      // Real, active jobs this artisan's own quote won — either
+      // awaiting them to mark the work done, or already marked and
+      // awaiting the real owner/manager to confirm and release payment.
+      const active = (myQuotes || [])
+        .map((q) => q.fault_reports as unknown as { id: string; category: string; status: string })
+        .filter((f) => f && (f.status === "approved_by_owner" || f.status === "approved_by_manager" || f.status === "completed_pending_confirmation"));
+      setActiveJobs(active);
     }
 
     setLoading(false);
+  }
+
+  async function handleMarkJobComplete(faultId: string) {
+    setMarkingCompleteId(faultId);
+    setJobActionMessage((prev) => ({ ...prev, [faultId]: "" }));
+    const { error } = await supabase.rpc("submit_job_completion", { p_fault_report_id: faultId });
+    setMarkingCompleteId(null);
+    if (error) {
+      setJobActionMessage((prev) => ({ ...prev, [faultId]: error.message }));
+      return;
+    }
+    setJobActionMessage((prev) => ({ ...prev, [faultId]: "✓ Marked complete — awaiting owner confirmation and payment." }));
+    loadData();
   }
 
   async function handleSubmitQuote(faultId: string) {
@@ -251,6 +275,30 @@ export default function ArtisanDashboard() {
               )}
             </div>
           ))
+        )}
+
+        {activeJobs.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">🔧 My active jobs</p>
+            <div className="space-y-2">
+              {activeJobs.map((job) => (
+                <div key={job.id} className="bg-white rounded-lg border border-gray-100 p-3">
+                  <p className="text-xs font-semibold text-chs-charcoal">{job.category}</p>
+                  {jobActionMessage[job.id] && <p className="text-[10px] text-gray-600 mt-1">{jobActionMessage[job.id]}</p>}
+                  {job.status === "completed_pending_confirmation" ? (
+                    <p className="text-[10px] text-chs-amber-dark bg-chs-amber-light rounded-full px-2 py-1 mt-1.5 inline-block">
+                      ⏳ Awaiting owner/manager confirmation and payment
+                    </p>
+                  ) : (
+                    <button onClick={() => handleMarkJobComplete(job.id)} disabled={markingCompleteId === job.id}
+                      className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                      {markingCompleteId === job.id ? "Submitting..." : "Mark job complete"}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {completedJobs.length > 0 && (

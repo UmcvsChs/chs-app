@@ -11,6 +11,8 @@ export interface Wallet {
   maintenance_reserve: number;
   agent_earnings_paid: number;
   agent_earnings_pending: number;
+  frozen: boolean;
+  frozen_reason: string | null;
   updated_at: string;
 }
 

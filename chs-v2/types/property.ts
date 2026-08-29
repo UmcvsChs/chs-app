@@ -8,7 +8,7 @@ export interface Property {
   id: string;
   owner_id: string;
   title: string;
-  purpose: "rent" | "sale" | "lease" | "hire" | "shortlet";
+  purpose: "rent" | "sale" | "lease" | "hire" | "shortlet" | "rent_to_own";
   property_type: string;
   location_area: string;
   location_lga: string | null;
@@ -31,8 +31,13 @@ export interface Property {
   for_sale: boolean;
   acquisition_method: string | null;
   title_document_type: string | null;
+  primary_document_type: string | null;
   payment_terms: string | null;
   owner_acceptable_amount: number | null;
+  min_acceptable_amount: number | null;
+  ownership_declared: boolean | null;
+  deposit_percentage: number | null;
+  balance_payment_deadline: string | null;
 
   rent_to_own_available: boolean;
   rent_to_own_monthly: number | null;
@@ -56,6 +61,11 @@ export interface Property {
 
   status: "active" | "rented" | "sold" | "delisted";
   created_at: string;
+
+  // Added this session — Estate Management and the extended commission model.
+  estate_id: string | null;
+  unit_label: string | null;
+  hire_category: "shortlet" | "event_centre" | "hotel_lodge" | "car_park_casual" | null;
 }
 
 export type PropertyPurpose = Property["purpose"];

@@ -27,6 +27,8 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [rentalApplicationSuccess, setRentalApplicationSuccess] = useState(false);
   const [shortletSuccess, setShortletSuccess] = useState(false);
   const [identityVerified, setIdentityVerified] = useState(false);
+  const [rentToOwnSuccess, setRentToOwnSuccess] = useState(false);
+  const [rentToOwnSubmitting, setRentToOwnSubmitting] = useState(false);
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -40,6 +42,18 @@ export default function PropertyActions({ property }: { property: Property }) {
       return;
     }
     action();
+  }
+
+  async function handleRequestRentToOwn() {
+    setRentToOwnSubmitting(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("request_rent_to_own", { p_property_id: property.id });
+    setRentToOwnSubmitting(false);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    setRentToOwnSuccess(true);
   }
 
   async function handleSubmitOffer(e: React.FormEvent) {
@@ -205,6 +219,22 @@ export default function PropertyActions({ property }: { property: Property }) {
         >
           Make an offer
         </button>
+      )}
+      {property.purpose === "rent_to_own" && (
+        rentToOwnSuccess ? (
+          <p className="text-sm text-green-600 font-semibold text-center py-2">✓ Request sent — the owner will review and approve it.</p>
+        ) : (
+          <>
+            <button
+              onClick={() => requireLoginThen(handleRequestRentToOwn)}
+              disabled={rentToOwnSubmitting}
+              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+            >
+              {rentToOwnSubmitting ? "Sending request..." : "Request Rent to Own / Mortgage"}
+            </button>
+            {error && <p className="text-xs text-chs-red text-center">{error}</p>}
+          </>
+        )
       )}
       {property.purpose === "shortlet" && property.price_per_night && (
         <button

@@ -35,6 +35,7 @@ const PHOTO_SLOTS = [
 const PURPOSE_OPTIONS = [
   { value: "sale", label: "For Sale" },
   { value: "rent", label: "For Rent" },
+  { value: "rent_to_own", label: "Rent to Own / Mortgage" },
   { value: "lease", label: "For Lease" },
   { value: "hire", label: "For Hire" },
   { value: "shortlet", label: "Shortlet" },
@@ -52,6 +53,9 @@ export default function ListPropertyPage() {
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("rent");
   const [hireCategory, setHireCategory] = useState("shortlet");
+  const [rentToOwnMonthly, setRentToOwnMonthly] = useState<number | "">("");
+  const [rentToOwnYears, setRentToOwnYears] = useState<number | "">(5);
+  const [rentToOwnPortionPct, setRentToOwnPortionPct] = useState<number | "">(100);
   // Real, sale-specific fields — restored, found completely missing
   // during the systematic property listing form comparison.
   const [minAcceptable, setMinAcceptable] = useState("");
@@ -162,6 +166,10 @@ export default function ListPropertyPage() {
         // applies — a genuine Shortlet gets the length-of-stay sliding
         // scale, everything else in this bucket gets the flat rate.
         hire_category: purpose === "shortlet" ? hireCategory : null,
+        rent_to_own_monthly: purpose === "rent_to_own" ? rentToOwnMonthly : null,
+        rent_to_own_years: purpose === "rent_to_own" ? rentToOwnYears : null,
+        rent_to_own_portion_pct: purpose === "rent_to_own" ? rentToOwnPortionPct : null,
+        rent_to_own_available: purpose === "rent_to_own",
         min_acceptable_amount: purpose === "sale" && minAcceptable ? parseInt(minAcceptable.replace(/\D/g, ""), 10) : null,
         payment_terms: purpose === "sale" ? paymentTerms : null,
         deposit_percentage: purpose === "sale" ? depositPct.trim() || null : null,
@@ -339,6 +347,28 @@ export default function ListPropertyPage() {
               <label className="text-xs font-semibold text-gray-600">Price (₦)</label>
               <CurrencyInput value={price} onChange={setPrice} placeholder="e.g. 450,000" />
             </div>
+          )}
+
+          {purpose === "rent_to_own" && (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Real monthly installment (₦)</label>
+                <CurrencyInput value={rentToOwnMonthly} onChange={setRentToOwnMonthly} placeholder="e.g. 150,000" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Real term (years)</label>
+                <input type="number" min={1} max={30} value={rentToOwnYears}
+                  onChange={(e) => setRentToOwnYears(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Portion of each payment counting toward ownership (%)</label>
+                <p className="text-[10px] text-gray-400 mb-1">Use 100% if the full payment builds toward ownership. Lower this only if part of each installment is a genuine, separate service/maintenance charge.</p>
+                <input type="number" min={1} max={100} value={rentToOwnPortionPct}
+                  onChange={(e) => setRentToOwnPortionPct(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              </div>
+            </>
           )}
 
           {purpose !== "sale" && purpose !== "shortlet" && (

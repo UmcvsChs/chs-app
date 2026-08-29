@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
+import ShortletMessageThread from "@/components/ShortletMessageThread";
 
 interface Booking {
   id: string;
@@ -68,6 +69,7 @@ export default function MyBookingsPage() {
                 <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>
                 <p className="text-xs text-gray-500">{formatNaira(b.total_price)} · {b.status}</p>
                 <GuestShortletConfirmation bookingId={b.id} />
+                <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
               </div>
             ))}
           </div>

@@ -174,6 +174,8 @@ export default function AdminDashboard() {
   const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
+  const [agentReferrals, setAgentReferrals] = useState<{ id: string; masked_reference: string; stage: string; chs_commission: number | null; agent_share_pct: number | null; split_50_50: boolean; agent_payout: number | null }[]>([]);
+  const [completingReferralId, setCompletingReferralId] = useState<string | null>(null);
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -240,7 +242,7 @@ export default function AdminDashboard() {
       supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
-      supabase.from("developer_applications").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("developer_applications").select("*").in("status", ["pending", "reviewed"]).order("created_at", { ascending: true }).limit(200),
     ]);
     setPendingProfiles(profilesRes.data || []);
 
@@ -285,6 +287,15 @@ export default function AdminDashboard() {
     setPendingArtisans(artisansRes.data || []);
     setUpcomingInspections((inspectionsRes.data as typeof upcomingInspections) || []);
     setDeveloperApplications(developerAppsRes.data || []);
+
+    // Real fix found during the audit — agent-to-agent referral
+    // commission had zero admin UI at all before this.
+    supabase
+      .from("agent_referrals")
+      .select("id, masked_reference, stage, chs_commission, agent_share_pct, split_50_50, agent_payout")
+      .neq("stage", "completed")
+      .neq("stage", "lost")
+      .then(({ data }) => setAgentReferrals(data || []));
 
     // Only a real super admin needs to see or act on these — a
     // sub-admin querying this would just get an empty result anyway
@@ -448,27 +459,13 @@ export default function AdminDashboard() {
 
   async function handleDisputeRuling(disputeId: string, status: "ruled_for_tenant" | "ruled_for_owner", notes: string) {
     setActionError(null);
-    const { data: dispute, error } = await supabase.from("disputes").update({ status, ruling_notes: notes || null }).eq("id", disputeId).select().single();
+    // The real fix: this now genuinely moves the disputed amount
+    // between the two parties, not just a text notification claiming
+    // someone "won" with no real financial consequence attached.
+    const { error } = await supabase.rpc("rule_on_dispute", { p_dispute_id: disputeId, p_status: status, p_notes: notes });
     if (error) {
-      setActionError("Could not record this ruling. Please try again.");
+      setActionError(error.message);
       return;
-    }
-    // Both real parties genuinely need to know the outcome — not just
-    // whoever happens to check back later.
-    if (dispute) {
-      const rulingText = status === "ruled_for_tenant" ? "in the tenant's favour" : "in the owner's favour";
-      await supabase.rpc("notify_user", {
-        p_user_id: dispute.raised_by,
-        p_title: "Your dispute has been resolved",
-        p_body: `CHS has ruled ${rulingText}. ${notes || ""}`,
-      });
-      if (dispute.against) {
-        await supabase.rpc("notify_user", {
-          p_user_id: dispute.against,
-          p_title: "A dispute involving you has been resolved",
-          p_body: `CHS has ruled ${rulingText}. ${notes || ""}`,
-        });
-      }
     }
     loadData();
   }
@@ -606,6 +603,18 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleCompleteAgentReferral(referralId: string) {
+    setActionError(null);
+    setCompletingReferralId(referralId);
+    const { error } = await supabase.rpc("complete_agent_referral", { p_referral_id: referralId });
+    setCompletingReferralId(null);
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   async function handleUpdateOwedFeeStatus(feeId: string, status: "invoiced" | "paid") {
     setActionError(null);
     if (status === "paid") {
@@ -682,6 +691,24 @@ export default function AdminDashboard() {
       p_action_type: "review_developer",
       p_target_id: appId,
       p_proposed_changes: { status: "reviewed" },
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
+  async function handleDeveloperPartnered(appId: string) {
+    setActionError(null);
+    // The real fix: this was previously never reachable at all —
+    // there was no button anywhere that could ever mark a developer
+    // application as genuinely partnered, so the applicant's account
+    // role could never actually elevate.
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "review_developer",
+      p_target_id: appId,
+      p_proposed_changes: { status: "partnered" },
     });
     if (error) {
       setActionError(error.message);
@@ -1325,7 +1352,30 @@ export default function AdminDashboard() {
 
         {activeTab === "referrals" && (
           <>
-            <p className="text-xs font-bold text-chs-charcoal mb-2">Fee per category (editable)</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Agent referrals — real, un-paid-out ({agentReferrals.length})</p>
+            {agentReferrals.length === 0 ? (
+              <p className="text-center text-xs text-gray-400 py-4">No active agent referrals.</p>
+            ) : (
+              agentReferrals.map((r) => (
+                <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs font-semibold text-chs-charcoal">{r.masked_reference}</p>
+                    <span className="text-[9px] font-bold uppercase text-gray-400">{r.stage}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Commission {formatNaira(r.chs_commission || 0)} · {r.split_50_50 ? "50/50 co-broker split" : `${r.agent_share_pct}% agent share`}
+                  </p>
+                  {r.stage !== "enquiry" && (
+                    <button onClick={() => handleCompleteAgentReferral(r.id)} disabled={completingReferralId === r.id}
+                      className="mt-2 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                      {completingReferralId === r.id ? "Processing..." : "Mark completed & pay agent(s)"}
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">Fee per category (editable)</p>
             {feeSettings.map((fee) => (
               <FeeSettingRow key={fee.category} fee={fee} onUpdate={handleUpdateFee} />
             ))}
@@ -1469,10 +1519,16 @@ export default function AdminDashboard() {
                   {d.portfolio_url && (
                     <a href={d.portfolio_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mt-1">View portfolio</a>
                   )}
-                  <button onClick={() => handleDeveloperReviewed(d.id)}
-                    className="mt-2 py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                    Mark as reviewed — contacted directly
+                  <button onClick={() => handleDeveloperReviewed(d.id)} disabled={d.status !== "pending"}
+                    className="mt-2 py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-40">
+                    {d.status === "pending" ? "Mark as reviewed — contacted directly" : "✓ Reviewed"}
                   </button>
+                  {d.status === "reviewed" && (
+                    <button onClick={() => handleDeveloperPartnered(d.id)}
+                      className="mt-2 ml-2 py-1.5 px-3 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
+                      ✓ Mark partnered — elevate to developer account
+                    </button>
+                  )}
                 </div>
               ))
             )}
