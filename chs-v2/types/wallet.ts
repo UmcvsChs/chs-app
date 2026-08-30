@@ -10,6 +10,7 @@ export interface Wallet {
   rent_savings: number;
   maintenance_reserve: number;
   agent_earnings_paid: number;
+  escrow_held: number;
   agent_earnings_pending: number;
   frozen: boolean;
   frozen_reason: string | null;
@@ -19,7 +20,7 @@ export interface Wallet {
 export interface WalletTransaction {
   id: string;
   user_id: string;
-  wallet_type: "main" | "rent_savings" | "maintenance_reserve" | "agent_earnings";
+  wallet_type: "main" | "rent_savings" | "maintenance_reserve" | "agent_earnings" | "escrow_held";
   amount: number;
   direction: "credit" | "debit";
   description: string | null;

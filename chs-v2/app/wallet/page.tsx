@@ -368,6 +368,15 @@ export default function WalletPage() {
                 <p className="text-[10px] uppercase text-gray-400">Agent earnings paid</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_paid)}</p>
               </div>
+              {wallet.escrow_held > 0 && (
+                <div className="bg-chs-amber-light rounded-xl border border-chs-amber-dark p-3 col-span-2">
+                  <p className="text-[10px] uppercase text-chs-amber-dark font-semibold">🔒 Held — pending legal document transfer</p>
+                  <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.escrow_held)}</p>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    This is real, confirmed sale proceeds — visible to you, but not yet withdrawable. CHS releases it to your main wallet once the real Certificate of Occupancy, Deed of Assignment, and every other legal document have been confirmed transferred to the buyer.
+                  </p>
+                </div>
+              )}
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-[10px] uppercase text-gray-400">Pending earnings</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_pending)}</p>

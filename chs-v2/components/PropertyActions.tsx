@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Property } from "@/types/property";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,6 +29,65 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [identityVerified, setIdentityVerified] = useState(false);
   const [rentToOwnSuccess, setRentToOwnSuccess] = useState(false);
   const [rentToOwnSubmitting, setRentToOwnSubmitting] = useState(false);
+
+  // Real, fundamental gap found through direct client testing: a
+  // buyer whose offer was accepted previously had no real way to
+  // actually pay for the property at all — only commission had ever
+  // been tested. Built as one real, transparent checkout that
+  // includes the buyer's own commission automatically.
+  const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string } | null>(null);
+  const [breakdown, setBreakdown] = useState<{ offer_amount: number; buyer_pct: number; buyer_commission: number; buyer_total: number; seller_net: number } | null>(null);
+  const [docsVerified, setDocsVerified] = useState<boolean | null>(null);
+  const [paying, setPaying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!session || property.purpose !== "sale") return;
+    supabase
+      .from("offers")
+      .select("id")
+      .eq("property_id", property.id)
+      .eq("buyer_id", session.user.id)
+      .eq("status", "accepted")
+      .eq("payment_status", "unpaid")
+      .maybeSingle()
+      .then(({ data }) => {
+        setMyAcceptedOffer(data);
+        if (data) {
+          supabase.rpc("get_sale_commission_breakdown", { p_offer_id: data.id }).then(({ data: bd }) => {
+            if (bd && bd[0]) {
+              setBreakdown({
+                offer_amount: Number(bd[0].offer_amount),
+                buyer_pct: Number(bd[0].buyer_pct),
+                buyer_commission: Number(bd[0].buyer_commission),
+                buyer_total: Number(bd[0].buyer_total),
+                seller_net: Number(bd[0].seller_net),
+              });
+            }
+          });
+          // Real check, matching what pay_for_property itself enforces
+          // — a buyer sees clearly, before even trying to pay, whether
+          // CHS has genuinely verified every real legal document yet.
+          supabase.rpc("are_sale_documents_verified", { p_property_id: property.id }).then(({ data: verified }) => {
+            setDocsVerified(!!verified);
+          });
+        }
+      });
+  }, [session, property.id, property.purpose]);
+
+  async function handlePayForProperty() {
+    if (!myAcceptedOffer) return;
+    setPaying(true);
+    setPaymentError(null);
+    const { error: rpcError } = await supabase.rpc("pay_for_property", { p_offer_id: myAcceptedOffer.id });
+    setPaying(false);
+    if (rpcError) {
+      setPaymentError(rpcError.message);
+      return;
+    }
+    setPaymentSuccess(true);
+  }
 
   // The real fix for #17's core problem: an unregistered visitor trying
   // to do something — not just browse — gets sent to register, with the
@@ -90,6 +149,40 @@ export default function PropertyActions({ property }: { property: Property }) {
 
     setOfferSuccess(true);
     setSubmitting(false);
+  }
+
+  if (myAcceptedOffer && breakdown) {
+    if (paymentSuccess) {
+      return (
+        <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
+          <p className="text-sm font-bold text-green-700 mb-1">🎉 Payment successful — this property is now yours!</p>
+        </div>
+      );
+    }
+    return (
+      <div className="bg-white rounded-xl border-2 border-chs-red p-4">
+        <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Offer accepted — proceed to payment</p>
+        <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
+          <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
+          <div className="flex justify-between text-xs"><span className="text-gray-500">Commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due for this transaction</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
+          <p className="text-[10px] text-gray-400 pt-1">For full transparency: the seller will receive {formatNaira(breakdown.seller_net)}, net of their own real commission — nothing here is hidden from either side.</p>
+        </div>
+        {docsVerified === false && (
+          <div className="bg-chs-amber-light rounded-lg p-3 mb-3">
+            <p className="text-xs font-semibold text-chs-amber-dark">⏳ Waiting on CHS document verification</p>
+            <p className="text-[10px] text-gray-600 mt-1">
+              Before payment can proceed, CHS must confirm every real legal document for this property — Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor&apos;s Consent, Tax Clearance, and Sale Agreement. You&apos;ll be notified the moment it&apos;s ready.
+            </p>
+          </div>
+        )}
+        {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
+        <button onClick={handlePayForProperty} disabled={paying || docsVerified === false}
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
+          {paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`}
+        </button>
+      </div>
+    );
   }
 
   if (offerSuccess) {

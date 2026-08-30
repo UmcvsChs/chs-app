@@ -78,6 +78,8 @@ export default function AdminDashboard() {
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
+  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
 
   async function handleWalletSearch() {
     setWalletSearchError(null);
@@ -283,6 +285,21 @@ export default function AdminDashboard() {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     setPendingBuyerIds((buyerIdData as unknown as typeof pendingBuyerIds) || []);
+
+    const { data: saleDocsData } = await supabase
+      .from("property_sale_documents")
+      .select("id, property_id, document_type, file_url, properties(title)")
+      .eq("verification_status", "pending")
+      .order("created_at", { ascending: true });
+    setPendingSaleDocs((saleDocsData as unknown as typeof pendingSaleDocs) || []);
+
+    const { data: legalTransferData } = await supabase
+      .from("offers")
+      .select("id, amount, properties(title, owner_id)")
+      .eq("payment_status", "paid")
+      .eq("legal_transfer_confirmed", false)
+      .order("created_at", { ascending: true });
+    setPendingLegalTransfers((legalTransferData as unknown as typeof pendingLegalTransfers) || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
@@ -767,6 +784,29 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleSaleDocReview(docId: string, approve: boolean) {
+    setActionError(null);
+    const { error } = await supabase.from("property_sale_documents").update({
+      verification_status: approve ? "verified" : "rejected",
+      verified_at: approve ? new Date().toISOString() : null,
+    }).eq("id", docId);
+    if (error) {
+      setActionError("Could not update this document. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
+  async function handleConfirmLegalTransfer(offerId: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("confirm_legal_transfer_complete", { p_offer_id: offerId });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -1236,6 +1276,45 @@ export default function AdminDashboard() {
                       Reject
                     </button>
                   </div>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">📜 Real Sale Legal Documents ({pendingSaleDocs.length})</p>
+            {pendingSaleDocs.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No sale documents pending review.</p>
+            ) : (
+              pendingSaleDocs.map((doc) => (
+                <div key={doc.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
+                  <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
+                  <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleSaleDocReview(doc.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Verify
+                    </button>
+                    <button onClick={() => handleSaleDocReview(doc.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🔒 Real Held Funds — Confirm Legal Transfer ({pendingLegalTransfers.length})</p>
+            {pendingLegalTransfers.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No sales awaiting legal transfer confirmation.</p>
+            ) : (
+              pendingLegalTransfers.map((offer) => (
+                <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
+                  <p className="text-xs text-gray-500 mb-2">Real funds held: {formatNaira(offer.amount)}</p>
+                  <button onClick={() => handleConfirmLegalTransfer(offer.id)}
+                    className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    ✓ Confirm real legal documents transferred — release funds
+                  </button>
                 </div>
               ))
             )}

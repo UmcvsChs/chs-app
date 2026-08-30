@@ -73,6 +73,20 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Real, defensive fix for a confirmed, persistent mobile bug: even
+   after the missing viewport meta tag was fixed, real device testing
+   still showed the page draggable sideways to reach things like the
+   bottom nav's logout button. The viewport tag fixes the INITIAL
+   render scale; this fixes what happens if any single element
+   anywhere on a real page is ever even slightly wider than the real
+   screen — without this, that one element can drag the whole
+   document sideways. This is the standard, correct pairing for this
+   entire class of bug, not a guess. */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 /* ─────────────────────────────────────────────────────────────
    Real, app-wide fix — the actual root cause of the "faint text /
    nothing shows when I type" bug reported across multiple pages

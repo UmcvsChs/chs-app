@@ -87,6 +87,7 @@ export default function ListPropertyPage() {
   const [labeledPhotos, setLabeledPhotos] = useState<Record<string, File | null>>({});
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
+  const [saleDocuments, setSaleDocuments] = useState<Record<string, File | null>>({});
   // Real ownership context fields — restored, found missing during
   // the systematic property listing form comparison. Genuinely useful
   // structured context for CHS's real verification team, not just a
@@ -239,6 +240,26 @@ export default function ListPropertyPage() {
           doc_type: docType,
           file_url: url,
         });
+      }
+    }
+
+    // Real, sourced legal requirement for a Sale listing specifically
+    // — Certificate of Occupancy, Deed of Assignment, Survey Plan,
+    // Governor's Consent, Tax Clearance, and Sale Agreement, matching
+    // actual Nigerian real estate transaction practice. Uploaded here
+    // as soft copies for CHS to genuinely verify; a buyer's payment
+    // cannot proceed until every one of these is confirmed.
+    if (purpose === "sale") {
+      for (const [docType, file] of Object.entries(saleDocuments)) {
+        if (!file) continue;
+        const url = await uploadDocument(file, session.user.id, `sale-doc-${docType}`);
+        if (url) {
+          await supabase.from("property_sale_documents").insert({
+            property_id: newProperty.id,
+            document_type: docType,
+            file_url: url,
+          });
+        }
       }
     }
 
@@ -544,6 +565,49 @@ export default function ListPropertyPage() {
                 />
               </div>
             ))}
+
+            {purpose === "sale" && (
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs font-bold text-chs-charcoal mb-1">Real legal documents required for Sale</p>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  CHS must genuinely verify every one of these before a buyer&apos;s payment can proceed. Upload real soft copies now — prepare the real hard copies through a barrister for the actual legal transfer once a sale completes.
+                </p>
+                {[
+                  { value: "certificate_of_occupancy", label: "Certificate of Occupancy (C of O)" },
+                  { value: "deed_of_assignment", label: "Deed of Assignment" },
+                  { value: "survey_plan", label: "Survey Plan (Registered)" },
+                  { value: "governors_consent", label: "Governor's Consent" },
+                  { value: "tax_clearance_certificate", label: "Tax Clearance Certificate" },
+                  { value: "sale_agreement", label: "Sale Agreement" },
+                ].map((doc) => (
+                  <div key={doc.value} className="mb-2">
+                    <label className="text-[11px] text-gray-600">{doc.label} *</label>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) =>
+                        setSaleDocuments({ ...saleDocuments, [doc.value]: e.target.files?.[0] || null })
+                      }
+                      className="w-full mt-1 text-xs"
+                    />
+                  </div>
+                ))}
+                {!propertyType.toLowerCase().includes("land") && !propertyType.toLowerCase().includes("farmland") && (
+                  <div className="mb-2">
+                    <label className="text-[11px] text-gray-600">Building Plan Approval *</label>
+                    <p className="text-[9px] text-gray-400 mb-0.5">Required for a developed property with a real structure on it.</p>
+                    <input
+                      type="file"
+                      accept="image/*,application/pdf"
+                      onChange={(e) =>
+                        setSaleDocuments({ ...saleDocuments, building_plan_approval: e.target.files?.[0] || null })
+                      }
+                      className="w-full mt-1 text-xs"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}

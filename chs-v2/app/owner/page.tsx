@@ -264,11 +264,11 @@ export default function OwnerDashboard() {
     if (offer) {
       await supabase.rpc("notify_user", {
         p_user_id: offer.buyer_id,
-        p_title: status === "accepted" ? "Your offer was accepted!" : "Your offer was declined",
+        p_title: status === "accepted" ? "Your offer was accepted! Proceed to payment" : "Your offer was declined",
         p_body: sellerNote
           ? sellerNote
           : status === "accepted"
-            ? "The owner has accepted your offer. CHS will be in touch about next steps."
+            ? "The owner has accepted your offer. Return to the property page to see your real total due and complete payment."
             : "The owner has declined your offer on this property.",
         p_link: `/property/${offer.property_id}`,
       });
@@ -471,7 +471,11 @@ export default function OwnerDashboard() {
                         <span className="font-semibold">{formatNaira(offer.amount)}</span>
                         <span className="text-gray-400 capitalize">{offer.status}</span>
                       </div>
-                      {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
+                      {property.purpose === "sale" && (
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          If accepted and paid, you&apos;ll receive ~{formatNaira(offer.amount * 0.94)} (net of the real 6% seller commission) — full, transparent breakdown shown to the buyer at checkout.
+                        </p>
+                      )}                      {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
                       {offer.status === "pending" && (
                         <div className="mt-2">
                           <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
@@ -480,7 +484,7 @@ export default function OwnerDashboard() {
                           <div className="flex gap-2">
                             <button onClick={() => handleOfferDecision(offer.id, "accepted")}
                               className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                              Accept
+                              Offer Accepted — Proceed to Payment
                             </button>
                             <button onClick={() => handleOfferDecision(offer.id, "rejected")}
                               className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
