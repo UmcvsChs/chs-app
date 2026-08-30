@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -11,6 +11,21 @@ import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 // body text — loaded via a stylesheet link rather than next/font/google,
 // since this avoids a build-time fetch to Google's servers and gives
 // identical, predictable results in every environment.
+
+// The real, missing fix confirmed by direct user testing on multiple
+// real phones: without this, a mobile browser assumes the page is a
+// ~980px desktop layout and shrinks the whole thing to fit the real
+// screen, rather than genuinely rendering at native mobile width —
+// producing exactly the squeezed-content-with-blank-space symptom
+// reported. This is the one, real, standard fix for that entire class
+// of "looks fine on a laptop, broken on every real phone" bug.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#1E1B16",
+};
 
 export const metadata: Metadata = {
   title: "CHS — Complete Housing Solutions",

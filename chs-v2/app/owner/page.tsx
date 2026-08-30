@@ -49,6 +49,7 @@ export default function OwnerDashboard() {
   const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
+  const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
   const [confirmingJobId, setConfirmingJobId] = useState<string | null>(null);
   const [confirmJobMessage, setConfirmJobMessage] = useState<Record<string, string>>({});
   const [engageUnreadCount, setEngageUnreadCount] = useState(0);
@@ -249,7 +250,8 @@ export default function OwnerDashboard() {
 
   async function handleOfferDecision(offerId: string, status: "accepted" | "rejected") {
     setActionError(null);
-    const { data: offer, error } = await supabase.from("offers").update({ status }).eq("id", offerId).select("*, properties(title)").single();
+    const sellerNote = sellerOfferNotes[offerId]?.trim() || null;
+    const { data: offer, error } = await supabase.from("offers").update({ status, seller_response_note: sellerNote }).eq("id", offerId).select("*, properties(title)").single();
     if (error) {
       setActionError("Could not update this offer. Please try again.");
       return;
@@ -257,13 +259,17 @@ export default function OwnerDashboard() {
     // A real notification for the actual buyer — this is exactly the
     // gap the client specifically flagged: someone acting on something
     // with no way to ever tell the other real person it happened.
+    // The real fix here: the seller's own genuine message, if they
+    // wrote one, not just a fixed, generic line either way.
     if (offer) {
       await supabase.rpc("notify_user", {
         p_user_id: offer.buyer_id,
         p_title: status === "accepted" ? "Your offer was accepted!" : "Your offer was declined",
-        p_body: status === "accepted"
-          ? "The owner has accepted your offer. CHS will be in touch about next steps."
-          : "The owner has declined your offer on this property.",
+        p_body: sellerNote
+          ? sellerNote
+          : status === "accepted"
+            ? "The owner has accepted your offer. CHS will be in touch about next steps."
+            : "The owner has declined your offer on this property.",
         p_link: `/property/${offer.property_id}`,
       });
 
@@ -445,7 +451,16 @@ export default function OwnerDashboard() {
                 </button>
               </div>
 
-              {session && <HouseRulesUpload propertyId={property.id} session={session} />}
+              {/* Real fix, confirmed by direct testing: this
+                  previously showed unconditionally for every
+                  listing, including a land sale where "house rules"
+                  genuinely makes no sense — a buyer takes full
+                  ownership, there's no ongoing occupancy relationship
+                  the way there is for a real tenant, shortlet guest,
+                  or someone progressively paying toward ownership. */}
+              {session && ["rent", "lease", "shortlet", "rent_to_own"].includes(property.purpose) && (
+                <HouseRulesUpload propertyId={property.id} session={session} />
+              )}
 
               {property.offers.length > 0 && (
                 <div className="mt-3">
@@ -458,15 +473,20 @@ export default function OwnerDashboard() {
                       </div>
                       {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
                       {offer.status === "pending" && (
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => handleOfferDecision(offer.id, "accepted")}
-                            className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                            Accept
-                          </button>
-                          <button onClick={() => handleOfferDecision(offer.id, "rejected")}
-                            className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                            Decline
-                          </button>
+                        <div className="mt-2">
+                          <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                            placeholder="Optional message to the buyer — e.g. a reason, or the amount you'd actually accept"
+                            rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          <div className="flex gap-2">
+                            <button onClick={() => handleOfferDecision(offer.id, "accepted")}
+                              className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                              Accept
+                            </button>
+                            <button onClick={() => handleOfferDecision(offer.id, "rejected")}
+                              className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                              Decline
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>

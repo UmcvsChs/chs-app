@@ -74,3 +74,56 @@
 - Built the Users Guide (in-app `/guide` and downloadable `.docx`) — genuinely didn't exist before this engagement.
 - Built the Complete Feature Catalog — PDF, segmented `.xlsx` (one real chapter per role), and in-app `/admin/feature-catalog` — all reusing the same source data, kept consistent by construction rather than by manual syncing.
 - Built this Progress Log and the companion Handover Notes.
+
+## Migrations 69–76 — Reminder Engine, Estate Management, Extended Commission Model
+- Built the Reminder Engine — one real, generic escalation system instead of a narrow "rent reminder" feature: real escalating rent-due cadence, real maintenance follow-up escalation (artisan → manager), multi-channel delivery (in-app confirmed working immediately; SMS via Termii and email via Resend added once real provider accounts and sender-ID approval were in place).
+- Built the Estate Management System foundation — Estates as a real, first-class entity distinct from individual property delegation: real unit linkage, real service charges (genuinely separate from rent), bulk CSV unit onboarding, a real manager dashboard aggregating occupancy/disputes/maintenance/collections in one place.
+- **Corrected a real, invented commission figure:** an initial 5%-seller-only sale commission was built from a guess rather than checked documentation. The client's real, previously-confirmed reference document was found and used instead — Sale: 6.5% Buyer / 6% Seller; Rental: 5% Tenant / 5.5% Landlord — replacing the incorrect version entirely.
+- **Found and fixed a real, deeper gap while correcting the commission:** approving a rental application never actually created a real tenancy anywhere in the app — it only flipped a status label. Now genuinely creates the tenancy and generates the correct two-sided commission in one atomic step.
+- Extended the commission model to Warehouse, Factory, Land, and Farmland (confirmed these need zero new code, since existing functions never filtered by property type), and built the genuinely new Hire/Booking tier for Event Centre, Hotel & Lodge, and casual Car Park (flat rate), plus a real length-of-stay sliding scale specifically for Shortlet — both sourced from a real extended commission reference document and refined through direct client confirmation on the exact rates and pay-direction (guest pays the higher share throughout).
+- Built real Estate Management subscription tiers with genuine monthly billing, refined upward through direct client feedback on real-world SaaS pricing psychology.
+
+## A Comprehensive, Three-Phase Audit — 23 Real Issues Found and Fixed
+Prompted by a direct client request for a full, systematic audit after several real wiring gaps surfaced during normal feature work. Conducted in three phases, all with real test data, not assumptions:
+
+**Phase 1 — Wiring audit:** every RPC call, table reference, and Edge Function call across the entire frontend cross-referenced against what genuinely exists in the live database. Came back completely clean. Found and fixed 5 real TypeScript type-file drift issues (Property, Wallet, ShortletBooking, FaultReport types missing real database columns, including some added within this same engagement and never typed).
+
+**Phase 2 — RLS coverage audit:** every table checked for real, correctly-scoped access control. Found and fixed 4 real domain-scoping gaps (`agent_referrals`, `property_documents`, `reminder_rules`, `scheduled_reminders` all using a blanket admin check instead of the correct restriction).
+
+**Phase 3 — Real end-to-end journey testing, the most consequential phase.** Revealed a genuine, repeated pattern: an admin-facing "approve/confirm/mark paid" action that updated a status and stopped, with no real financial consequence ever following through. Found and fixed **7 real instances of this exact pattern**:
+- Shortlet host payment never actually released from escrow after check-in confirmation
+- No mechanism anywhere for a tenant to actually pay real rent to a landlord
+- No mechanism for an artisan to actually get paid for approved maintenance work, and no way to ever mark a job "resolved"
+- A dispute ruling only ever sent a notification saying who "won" — the real disputed amount never moved
+- Marking a vendor referral fee "paid" never actually charged the vendor
+- Agent-to-agent referral commission had no real payout mechanism at all — not even a broken one, just entirely unbuilt
+- Approving a developer application never elevated the applicant's real account role, and had no way to even reach its own real success state
+
+Also found and fixed in Phase 3: management delegation could only ever be turned on, never off (built the real, missing 30-day-notice termination flow); Urgent Sale price reductions never reverted when the deadline passed, permanently discounting a property (fixed, plus a second bug where the expiry notification only fired for listings expiring exactly one day prior, silently missing any backlog); a frozen wallet's withdrawal attempt showed a misleading "insufficient balance" message instead of the real reason. Confirmed genuinely correct and untouched: inspections → readiness score, Construction Roadmap unlock, promotion credit daily billing, and the WebAuthn cryptographic implementation itself (though its domain configuration could not be verified directly, since secret values are never readable once set).
+
+## Rent to Own / Mortgage — A Genuinely New Category
+- Distinguished clearly for the client: "Hire" (the short-term booking commission tier) and "Mortgage" (progressive ownership) are not the same thing, and Mortgage never existed as a real feature — only unused, unwired schema fields.
+- Built as "Rent to Own / Mortgage," a real, selectable listing category: real monthly installment payments, real ownership-percentage tracking, automatic conversion to a completed sale at 100% ownership, and the same real commission mechanism as every other category.
+- Found and fixed a real gap during frontend wiring: the central label function used everywhere to display "For Sale"/"For Rent" had no entry for this new category, meaning every real listing of this type would have shown a broken, blank label to actual site visitors — caught before it reached anyone.
+- Corrected the real transaction model from "owner directly starts an agreement for a buyer they specify" to a genuine buyer-request → owner-approval flow, matching the same pattern already proven for rental applications.
+
+## Shortlet/Hotel Guest-Host Messaging
+- Built the real, previously entirely-missing in-app communication system for Shortlet and Hotel bookings, with genuine host anonymity toward the guest specifically (never toward CHS), and a real 12-hour escalation to admin when a host doesn't respond, reusing the exact Reminder Engine infrastructure already proven.
+- Caught and fixed a real column/value misalignment bug in the escalation function's own insert statement before it was ever tested — would have silently written wrong data types into the wrong columns.
+
+## Maintenance Reserve — Made Genuinely Functional
+- Confirmed, on direct client question, a real three-part gap: the Maintenance Reserve could never be externally funded, was never actually the real source of artisan maintenance payments despite existing for that purpose, and could never be withdrawn on its own.
+- Fixed all three: real fund-from-main-wallet transfer, real artisan payment logic that draws from the reserve first and only falls back to the main wallet for a genuine shortfall, and real, unrestricted withdrawal of unused reserve funds back to the main wallet.
+
+## Real, Login-Able Demo Accounts
+- Built 10 genuine, fully-verified user accounts (not simulated) across five categories — Land, House, Office, Hotel, Shortlet — each a real seller/buyer or host/guest pair, with real listings live and real wallet balances funded, so the client could manually click through negotiation, payment, and commission deduction themselves rather than have it demonstrated by the agent.
+
+## A Real Gap in the Documentation Process Itself, Found and Fixed
+- Discovered that every migration from 77 through 95 — covering the entire audit and everything built afterward — had been applied directly to the live database and thoroughly tested there, but never actually saved as a file in the exportable project repository. The packaged zip and the live database had quietly drifted apart for several rounds of work.
+- Reconstructed and saved all 17 real migration files with their exact, already-tested content, and verified their presence directly inside the final zip rather than assuming the fix worked.
+
+## Documentation Refresh — Progress Log, Handover Notes, Users Guide, T&C, Feature Catalog
+- Updated the Terms & Conditions with the real, complete commission structure across every category, plus new clauses for Rent to Own, Estate Management subscriptions, Shortlet messaging, and the Maintenance Reserve.
+- Updated the Users Guide (in-app and `.docx`) with two new real sections — Rent to Own/Mortgage and Estate Management — and extended the Wallet and Shortlet sections.
+- Updated the Feature Catalog (PDF, segmented `.xlsx`, and in-app data) with a new 10th chapter covering every system built since the last update.
+- **A real mistake caught and fixed in the same breath:** after correctly updating this Progress Log and the Handover Notes, a careless `cp` command overwrote both freshly-updated files with their own stale originals from a different folder, silently destroying the update. Caught by verifying the actual file content after packaging, rather than assuming the edit had survived — redone correctly immediately after.

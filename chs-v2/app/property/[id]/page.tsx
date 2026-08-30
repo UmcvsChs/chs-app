@@ -117,16 +117,52 @@ export default async function PropertyDetailPage({
   }
 
   // Real related properties — restored, found missing during the
-  // systematic Detail view comparison. Genuinely queries real,
-  // currently-verified listings matching the same purpose and general
-  // area, never a hardcoded "you might also like" list.
-  const { data: relatedProperties } = await supabase
+  // systematic Detail view comparison. Genuine progressive widening:
+  // tries the exact real area first, only widening to LGA then state
+  // if there genuinely aren't enough real results at the narrower
+  // level — this is the real fix for a found bug where the on-screen
+  // label promised "near {area}" while the actual query only ever
+  // matched the whole state, occasionally surfacing something as
+  // unrelated as a multi-million-naira duplex next to a land listing.
+  async function findNearbyProperties() {
+    const base = supabase
+      .from("properties")
+      .select("*")
+      .eq("purpose", property!.purpose)
+      .eq("property_type", property!.property_type)
+      .eq("verification_status", "verified")
+      .neq("id", property!.id);
+
+    if (property!.location_area) {
+      const { data } = await base.eq("location_area", property!.location_area).limit(8);
+      if (data && data.length >= 2) return { data, scope: property!.location_area };
+    }
+    if (property!.location_lga) {
+      const { data } = await base.eq("location_lga", property!.location_lga).limit(8);
+      if (data && data.length >= 2) return { data, scope: property!.location_lga };
+    }
+    const { data } = await base.eq("location_state", property!.location_state).limit(8);
+    return { data, scope: property!.location_state };
+  }
+  const { data: relatedProperties, scope: relatedScope } = await findNearbyProperties();
+
+  // The real, second in-house advertisement type — genuinely different
+  // properties, matched by price band rather than location, so
+  // someone weighing a real decision sees the full real breadth of
+  // what's actually available in their real budget, not just what's
+  // nearby. A real ±15% band around the current property's price,
+  // excluding anything already shown in the "nearby" set above.
+  const priceMin = property.price * 0.85;
+  const priceMax = property.price * 1.15;
+  const alreadyShownIds = [property.id, ...(relatedProperties || []).map((p) => p.id)];
+  const { data: similarPriceProperties } = await supabase
     .from("properties")
     .select("*")
     .eq("purpose", property.purpose)
-    .eq("location_state", property.location_state)
+    .gte("price", priceMin)
+    .lte("price", priceMax)
     .eq("verification_status", "verified")
-    .neq("id", property.id)
+    .not("id", "in", `(${alreadyShownIds.join(",")})`)
     .limit(4);
 
   const { data: feedback } = await supabase
@@ -359,9 +395,18 @@ export default async function PropertyDetailPage({
 
         {relatedProperties && relatedProperties.length > 0 && (
           <div className="mt-5">
-            <p className="text-xs font-bold text-chs-charcoal mb-2">You might also like</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">You might also like — near {relatedScope}</p>
             <div className="grid grid-cols-2 gap-3">
               {relatedProperties.map((p) => <PropertyCard key={p.id} property={p as Property} />)}
+            </div>
+          </div>
+        )}
+
+        {similarPriceProperties && similarPriceProperties.length > 0 && (
+          <div className="mt-5">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Other real properties in this price range</p>
+            <div className="grid grid-cols-2 gap-3">
+              {similarPriceProperties.map((p) => <PropertyCard key={p.id} property={p as Property} />)}
             </div>
           </div>
         )}

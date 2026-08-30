@@ -7,7 +7,15 @@ export default function TermsContent() {
     <div className="text-sm text-gray-600 leading-relaxed space-y-3">
       <p><strong className="text-chs-charcoal">1. CHS is a facilitator, not a party to your transaction.</strong> CHS verifies documents, holds funds in escrow, and provides dispute resolution, but the underlying sale/tenancy agreement is between the Owner and the Buyer/Tenant directly.</p>
       <p><strong className="text-chs-charcoal">2. Every transaction started on CHS must be completed on CHS.</strong> Concluding a deal introduced through the platform outside it does not remove CHS&apos;s commission, which remains legally owed.</p>
-      <p><strong className="text-chs-charcoal">3. Commission structure.</strong> On a rental or lease, CHS charges 5% from the Tenant and 5.5% from the Landlord/Owner. On a sale, CHS charges 6.5% from the Buyer and 6% from the Owner/Seller. No inspection fee as standard.</p>
+      <p><strong className="text-chs-charcoal">3. Commission structure.</strong> CHS&apos;s real commission varies by category, always split between both sides of the transaction:</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li><strong className="text-chs-charcoal">Residential/Commercial Rental or Lease</strong> (houses, offices, shops, warehouses, factories, land leased long-term): 5% from the Tenant/Lessee, 5.5% from the Landlord/Owner.</li>
+        <li><strong className="text-chs-charcoal">Sale</strong> (houses, land, warehouses, factories, or any property sold outright): 6.5% from the Buyer, 6% from the Seller.</li>
+        <li><strong className="text-chs-charcoal">Rent to Own / Mortgage</strong>: 5% from the Buyer, 5.5% from the Seller, charged on every real monthly installment as it&apos;s paid — not on the total price upfront.</li>
+        <li><strong className="text-chs-charcoal">Shortlet</strong> (genuine short-term apartment/house stays): a real sliding scale by length of stay — 1–3 nights: 7% Guest / 5% Host; 4–13 nights: 6% Guest / 4% Host; 14+ nights: 5% Guest / 3% Host.</li>
+        <li><strong className="text-chs-charcoal">Hotel &amp; Lodge, Event Centre, and casual/hourly Car Park bookings</strong>: a flat 6% from the Guest, 4% from the Host, regardless of duration.</li>
+      </ul>
+      <p>No inspection fee as standard.</p>
       <p><strong className="text-chs-charcoal">4. Honesty and accurate information is mandatory.</strong> Falsified documents or fraudulent listings result in permanent suspension and may be reported to law enforcement.</p>
       <p><strong className="text-chs-charcoal">5. Agents and Property Managers must not extort Users.</strong> No undisclosed fees, caution money, or inspection charges.</p>
       <p><strong className="text-chs-charcoal">6. All funds are held in escrow</strong> until the conditions for release are met.</p>
@@ -80,6 +88,26 @@ export default function TermsContent() {
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">21. Construction Roadmap access</p>
         <p>Accessing a Construction Roadmap (real quantities, permits checklist, and payment plan for a specific building configuration) requires a one-time access fee, credited in full toward the real project cost if the client proceeds with CHS for construction. Cost figures shown are a general market estimate, not a firm CHS quotation, until CHS&apos;s own verified rates are available for that configuration.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">22. Rent to Own / Mortgage</p>
+        <p>A buyer may request a Rent to Own / Mortgage agreement on any property listed under that category; the owner must approve the request before it begins. Each real monthly installment is paid through the CHS Wallet directly to the owner, and genuinely builds toward full ownership at the real percentage disclosed on the listing. Once 100% ownership is reached, the property automatically converts to a completed sale — this is irreversible and does not require a further approval step.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">23. Estate Management subscription</p>
+        <p>A property manager overseeing a bounded estate of units may subscribe to CHS&apos;s Estate Management tools for a real, tiered monthly fee based on real unit count. This subscription fee is CHS&apos;s own charge for the tools and automation provided — it is entirely separate from, and does not include, any real service charges the estate manager collects from residents, which remain the estate manager&apos;s own revenue.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">24. Shortlet and Hotel guest-host messaging</p>
+        <p>Guests and hosts may communicate directly in-app for the duration of a real booking. A host may remain anonymous to the guest — CHS never discloses a host&apos;s real identity to a guest without the host&apos;s consent — but a host is never anonymous to CHS itself. If a genuine guest message goes unanswered for an extended period, CHS may contact the host directly to intervene, using contact information CHS holds regardless of the anonymity shown to the guest.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">25. Maintenance Reserve</p>
+        <p>An owner&apos;s Maintenance Reserve may be funded directly from their own Main Wallet at any time, in addition to whatever automatic allocation already applies. When a maintenance job is confirmed complete, payment is drawn from the Maintenance Reserve first; any real shortfall is drawn from the Main Wallet. Unused Maintenance Reserve funds may be withdrawn back to the Main Wallet by the owner at any time, without requiring CHS approval.</p>
       </div>
 
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">

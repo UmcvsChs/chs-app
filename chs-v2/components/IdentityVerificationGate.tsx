@@ -10,11 +10,8 @@ const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passp
 
 // A real, genuine identity check — restored, extended to cover buyers
 // making a real offer to purchase, matching the same requirement
-// already correctly built for tenants applying to rent. Verified once
-// on the real profile, then reused for every future offer — the
-// point isn't to re-ask the same person twice, it's to make sure
-// someone genuinely serious about buying has real, verified identity
-// on file before that first real offer goes anywhere.
+// already correctly built for tenants applying to rent. Submitted
+// once, reviewed by a real admin, then reused for every future offer.
 export default function IdentityVerificationGate({
   session,
   onVerified,
@@ -24,24 +21,25 @@ export default function IdentityVerificationGate({
 }) {
   const [checking, setChecking] = useState(true);
   const [alreadyVerified, setAlreadyVerified] = useState(false);
+  const [pendingReview, setPendingReview] = useState(false);
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("profiles")
-      .select("id_type, id_number")
-      .eq("id", session.user.id)
-      .single()
-      .then(({ data }) => {
-        const verified = !!(data?.id_type && data?.id_number);
-        setAlreadyVerified(verified);
-        setChecking(false);
-        if (verified) onVerified();
-      });
+    Promise.all([
+      supabase.from("profiles").select("valid_id_verified").eq("id", session.user.id).single(),
+      supabase.from("buyer_id_verifications").select("status").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]).then(([profileRes, submissionRes]) => {
+      const verified = !!profileRes.data?.valid_id_verified;
+      setAlreadyVerified(verified);
+      setPendingReview(submissionRes.data?.status === "pending");
+      setChecking(false);
+      if (verified) onVerified();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.user.id]);
 
@@ -54,20 +52,35 @@ export default function IdentityVerificationGate({
     setSubmitting(true);
 
     const idDocumentUrl = await uploadDocument(idFile, session.user.id, "buyer-id-verification");
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({ id_type: idType, id_number: idNumber.trim(), id_document_url: idDocumentUrl })
-      .eq("id", session.user.id);
+    // The real fix: this now genuinely creates a pending submission
+    // for CHS staff to review — it no longer self-certifies the
+    // instant the form fields are filled in.
+    const { error: rpcError } = await supabase.rpc("submit_buyer_id_verification", {
+      p_id_type: idType,
+      p_id_number: idNumber.trim(),
+      p_id_document_url: idDocumentUrl,
+    });
 
     setSubmitting(false);
-    if (updateError) {
-      setError("Could not save your identity details. Please try again.");
+    if (rpcError) {
+      setError("Could not submit your identity details. Please try again.");
       return;
     }
-    onVerified();
+    setSubmitted(true);
   }
 
   if (checking || alreadyVerified) return null;
+
+  if (submitted || pendingReview) {
+    return (
+      <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-3 mb-3">
+        <p className="text-xs font-bold text-chs-amber-dark mb-1">⏳ Identity verification pending review</p>
+        <p className="text-[10px] text-gray-500">
+          Your ID has been submitted to CHS for real review — you&apos;ll be notified once it&apos;s approved, and can then make real offers.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl border-2 border-chs-red p-3 mb-3">

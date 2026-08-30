@@ -77,6 +77,7 @@ export default function AdminDashboard() {
   // sale offer and money actually moving to escrow.
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
 
   async function handleWalletSearch() {
     setWalletSearchError(null);
@@ -275,6 +276,13 @@ export default function AdminDashboard() {
       .eq("status", "pending_review")
       .order("created_at", { ascending: true });
     setPendingLiveness((livenessData as unknown as typeof pendingLiveness) || []);
+
+    const { data: buyerIdData } = await supabase
+      .from("buyer_id_verifications")
+      .select("id, user_id, id_type, id_number, id_document_url, profiles(full_name)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    setPendingBuyerIds((buyerIdData as unknown as typeof pendingBuyerIds) || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
@@ -745,6 +753,20 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleBuyerIdReview(submissionId: string, approve: boolean) {
+    setActionError(null);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "review_buyer_id",
+      p_target_id: submissionId,
+      p_proposed_changes: { status: approve ? "approved" : "rejected" },
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
@@ -783,7 +805,7 @@ export default function AdminDashboard() {
           { key: "finance", label: "Finance", domain: "finance" },
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
-          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length + pendingBuyerIds.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingProfiles.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
@@ -1187,6 +1209,29 @@ export default function AdminDashboard() {
                       Approve
                     </button>
                     <button onClick={() => handleLivenessReview(sub.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Buyer ID Verifications ({pendingBuyerIds.length})</p>
+            {pendingBuyerIds.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No buyer ID verifications pending review.</p>
+            ) : (
+              pendingBuyerIds.map((sub) => (
+                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
+                  <p className="text-xs text-gray-500 mb-2">{sub.id_type} — {sub.id_number}</p>
+                  <a href={sub.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
                       className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                       Reject
                     </button>

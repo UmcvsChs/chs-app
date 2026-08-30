@@ -130,4 +130,17 @@ export const FEATURE_CATALOG: { title: string; rows: { feature: string; how: str
       { feature: "Developers", how: "Real developer application review.", destination: "N/A — admin only", admin: "Admin → Developers" },
     ],
   },
+  {
+    title: "10. Estate Management, Rent to Own, and Real Automation",
+    rows: [
+      { feature: "Estate Management", how: "A real, bounded estate of many housing units under one manager, distinct from delegating individual properties one at a time.", destination: "Manager → My Estates", admin: "Admin → Overview" },
+      { feature: "Estate subscription", how: "Real monthly pricing that scales with unit count, and drops per-unit as an estate grows — paid directly from the manager's wallet.", destination: "Manager → My Estates → Subscribe", admin: "N/A" },
+      { feature: "Bulk unit onboarding", how: "Upload a real CSV to add many units at once instead of one at a time — the real answer to onboarding an estate of hundreds of units.", destination: "Manager → My Estates → [Estate]", admin: "N/A" },
+      { feature: "Estate service charges", how: "A real, distinct-from-rent charge billed to every occupied unit at once; vacant units are automatically skipped.", destination: "Manager dashboard / Tenant dashboard", admin: "N/A" },
+      { feature: "Rent to Own / Mortgage", how: "A genuinely new listing category — progressive ownership through real monthly installments, with real ownership-percentage tracking that automatically completes the sale at 100%.", destination: "Property listing page / Owner dashboard", admin: "N/A" },
+      { feature: "Reminder Engine", how: "One real, generic escalation system: rent-due cadence, maintenance follow-up (artisan → manager), and shortlet guest-message escalation (host → admin) — multi-channel (in-app, SMS, email).", destination: "N/A — automatic, background", admin: "N/A" },
+      { feature: "Shortlet/Hotel guest-host messaging", how: "Real in-app communication for the duration of a booking, with genuine host anonymity toward the guest — never toward CHS, which can always intervene directly.", destination: "My Bookings (guest) / Owner dashboard (host)", admin: "N/A" },
+      { feature: "Maintenance Reserve — real funding", how: "An owner can fund their Maintenance Reserve directly from their Main Wallet for a real, larger repair; artisan payments draw from the Reserve first, and unused funds can be withdrawn back freely.", destination: "Wallet page", admin: "N/A" },
+    ],
+  },
 ];

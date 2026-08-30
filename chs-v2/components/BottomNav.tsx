@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 // invented as something real.
 export default function BottomNav() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [showMore, setShowMore] = useState(false);
 
   const MORE_ITEMS = [
@@ -30,6 +30,16 @@ export default function BottomNav() {
     { icon: "❓", label: "Help & FAQs", href: null, note: "Coming soon — was a placeholder in the original app too" },
     { icon: "📞", label: "Contact us", href: null, note: "support@chs.ng" },
   ];
+
+  // The real fix for a genuine, confirmed gap: logout only ever
+  // existed on the homepage's own header — anyone navigating through
+  // a real role dashboard on mobile had no reachable way to log out
+  // at all, since this persistent nav never included it.
+  async function handleLogout() {
+    setShowMore(false);
+    await signOut();
+    router.push("/");
+  }
 
   return (
     <>
@@ -80,6 +90,13 @@ export default function BottomNav() {
                 </div>
               )
             ))}
+            {session && (
+              <button onClick={handleLogout}
+                className="flex items-center gap-3 px-4 py-3 w-full text-left border-t border-gray-100 mt-1">
+                <span className="text-xl">🚪</span>
+                <span className="text-sm font-semibold text-chs-red">Log Out</span>
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -53,6 +53,8 @@ export default function GuideContent() {
       <p>From the Wallet page, tap &quot;Send to another CHS user,&quot; enter their phone number or email, confirm you&apos;ve found the right person by name, enter an amount, and confirm. The transfer is instant and moves real money between the two wallets — you cannot send to yourself, and a transfer is blocked if your balance is insufficient or your wallet is currently frozen.</p>
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">3.4 Frozen wallets</h3>
       <p>CHS reserves the right to freeze a wallet pending a genuine investigation into suspected fraud or a policy violation. A frozen wallet can still be viewed, but withdrawals and transfers are blocked until the matter is resolved. If your wallet is frozen, you&apos;ll see this clearly on your Wallet page.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">3.5 Maintenance Reserve (Property Owners)</h3>
+      <p>Your Maintenance Reserve is a real, separate balance for funding repairs. You can move money into it directly from your Main Wallet at any time — useful when a real maintenance bill is larger than what&apos;s already set aside. When you confirm a maintenance job complete, payment is drawn from your Maintenance Reserve first, and only from your Main Wallet for any real shortfall. Unused Maintenance Reserve funds can be withdrawn back to your Main Wallet at any time, with no approval required.</p>
       <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">4. Finding a Property (Buyers &amp; Tenants)</h2>
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">4.1 Searching and filtering</h3>
       <p>The homepage shows real, active, CHS-verified listings. Use the Rent / Sale / Shortlet tabs to narrow by purpose, and the search tool to filter by state, LGA, area, price range, property type, and minimum bedrooms.</p>
@@ -63,7 +65,7 @@ export default function GuideContent() {
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">4.4 The Sale Approval checkpoint</h3>
       <p>Once an owner accepts your offer on a for-sale property, the deal doesn&apos;t move straight to paperwork and escrow — CHS reviews and clears it first. This is the real checkpoint between an offer being accepted and money actually moving, designed to protect both sides before anything becomes final.</p>
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">4.5 Shortlet bookings</h3>
-      <p>A shortlet is paid instantly through your CHS Wallet at time of booking, and held in escrow — not released to the host until your check-in is genuinely confirmed. You&apos;ll be asked for real guest details (name, phone, valid ID) before a booking is confirmed.</p>
+      <p>A shortlet is paid instantly through your CHS Wallet at time of booking, and held in escrow — not released to the host until your check-in is genuinely confirmed. You&apos;ll be asked for real guest details (name, phone, valid ID) before a booking is confirmed. Once booked, use the real in-app messaging on your booking to reach your host directly — hosts may keep their identity private from guests, but CHS always knows who they are, and can step in directly if a host doesn&apos;t respond.</p>
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">4.6 Rent-to-Own</h3>
       <p>Some sale listings offer a rent-to-own path — paying a monthly amount that counts toward eventually owning the property outright, alongside a minimum deposit and a set number of years. Where available, this is shown directly on the property&apos;s listing page with the real monthly amount, the percentage that counts toward ownership, and the minimum deposit required.</p>
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">4.7 Talk to an Agent (Concierge)</h3>
@@ -171,7 +173,25 @@ export default function GuideContent() {
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">16.7 Sub-admin action history</h3>
       <p>Once a sub-admin&apos;s request is approved or rejected, it doesn&apos;t just disappear — &quot;View sub-admin action history&quot; on the Overview tab shows a real, permanent record of every past decision, who made it, and any note attached.</p>
       <div className="border-t border-gray-200 my-3" />
-      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">17. Getting Help</h2>
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">17. Rent to Own / Mortgage</h2>
+      <p>Some properties are listed under Rent to Own / Mortgage instead of a straight sale — a real way to progressively own a property through monthly installments rather than one lump-sum payment.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">17.1 As a buyer</h3>
+      <p>On a Rent to Own listing, tap &quot;Request Rent to Own / Mortgage.&quot; The owner reviews and approves your request before it begins. Once active, pay each real monthly installment from your Wallet — your real ownership percentage grows with every payment. Reaching 100% ownership automatically completes the agreement; the property becomes genuinely yours, with no further approval step needed.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">17.2 As a seller</h3>
+      <p>When listing under this category, set your real total price, real monthly installment amount, and the real term in years. Real buyer requests appear on your Owner dashboard — review and approve to start the agreement. You receive each real installment directly into your wallet as it&apos;s paid.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">18. Estate Management (Property Managers)</h2>
+      <p>If you manage a real, bounded estate of many housing units, CHS&apos;s Estate Management tools let you run the whole estate from one dashboard rather than juggling individual properties.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">18.1 Setting up your estate</h3>
+      <p>From Manager → My Estates, create a real estate with its name, address, and planned unit count. Subscribe to unlock it — real monthly pricing scales with how many units you manage, and gets cheaper per unit as your estate grows.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">18.2 Adding units</h3>
+      <p>Upload a real CSV file to add many units at once, instead of one at a time — the real answer to onboarding an estate with hundreds of housing units.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">18.3 Your real dashboard</h3>
+      <p>See real, live occupancy, open disputes, pending maintenance, and service charge collection across your entire estate in one place — no need to check each property separately.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">18.4 Service charges</h3>
+      <p>Bill every real occupied unit at once for a genuine service charge (security, common area maintenance) — this is entirely separate from rent, and vacant units are automatically skipped.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">19. Getting Help</h2>
       <p>If something in the app doesn&apos;t behave the way this guide describes, or you&apos;re stuck on something not covered here, use &quot;Property request&quot; / &quot;Talk to an Agent&quot; to reach the CHS team directly, or Community Feedback to flag a general platform issue. For anything urgent involving an active transaction or payment, contact CHS support directly rather than waiting.</p>
       <p>This guide reflects the CHS platform as it stands today, including every feature described above. As new features are added, this guide should be updated alongside them — the same discipline applied to the platform&apos;s Terms &amp; Conditions.</p>
     </div>

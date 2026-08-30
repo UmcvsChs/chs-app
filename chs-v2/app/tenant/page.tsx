@@ -30,6 +30,7 @@ interface TenancyWithProperty {
   lease_end: string;
   annual_rent: number;
   status: string;
+  notice_given_at: string | null;
   properties: { title: string; location_area: string; owner_identity_visible_to_tenant: boolean } | null;
   landlord: { full_name: string } | null;
   manager: { full_name: string } | null;
@@ -57,6 +58,8 @@ export default function TenantDashboard() {
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
   const [payingRentId, setPayingRentId] = useState<string | null>(null);
   const [payRentMessage, setPayRentMessage] = useState<Record<string, string>>({});
+  const [givingNoticeId, setGivingNoticeId] = useState<string | null>(null);
+  const [noticeMessage, setNoticeMessage] = useState<Record<string, string>>({});
   const [serviceCharges, setServiceCharges] = useState<{ id: string; amount: number; description: string; due_date: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [payingChargeId, setPayingChargeId] = useState<string | null>(null);
   const [chargeMessage, setChargeMessage] = useState<string | null>(null);
@@ -81,7 +84,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
+        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, notice_given_at, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -133,6 +136,19 @@ export default function TenantDashboard() {
       return;
     }
     setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "✓ Rent paid — lease renewed." }));
+    loadData();
+  }
+
+  async function handleGiveNotice(tenancyId: string) {
+    setGivingNoticeId(tenancyId);
+    setNoticeMessage((prev) => ({ ...prev, [tenancyId]: "" }));
+    const { error } = await supabase.rpc("give_non_renewal_notice", { p_tenancy_id: tenancyId });
+    setGivingNoticeId(null);
+    if (error) {
+      setNoticeMessage((prev) => ({ ...prev, [tenancyId]: error.message }));
+      return;
+    }
+    setNoticeMessage((prev) => ({ ...prev, [tenancyId]: "✓ Notice given — your landlord has been informed." }));
     loadData();
   }
 
@@ -261,6 +277,33 @@ export default function TenantDashboard() {
                 <p className="text-xs text-gray-500 mt-1">
                   {t.lease_start} → {t.lease_end}
                 </p>
+                {(() => {
+                  const daysLeft = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  const withinNoticeWindow = daysLeft <= 90 && daysLeft > 0;
+                  return (
+                    <div className={`mt-1.5 rounded-lg px-2.5 py-1.5 ${withinNoticeWindow && !t.notice_given_at ? "bg-chs-amber-light" : "bg-[var(--zone-card)]"}`}>
+                      <p className="text-xs font-bold text-chs-charcoal">
+                        {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
+                      </p>
+                      {t.notice_given_at ? (
+                        <p className="text-[10px] text-green-700 mt-0.5">✓ You&apos;ve given notice — not renewing this tenancy</p>
+                      ) : (
+                        <>
+                          {withinNoticeWindow && (
+                            <p className="text-[10px] text-chs-amber-dark mt-0.5">
+                              If you&apos;re not renewing, please give notice — the requested window (90 days before lease end) is closing.
+                            </p>
+                          )}
+                          <button onClick={() => handleGiveNotice(t.id)} disabled={givingNoticeId === t.id}
+                            className="mt-1 text-[10px] font-semibold text-chs-red underline disabled:opacity-50">
+                            {givingNoticeId === t.id ? "Submitting..." : "I&apos;m not renewing — give notice"}
+                          </button>
+                        </>
+                      )}
+                      {noticeMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{noticeMessage[t.id]}</p>}
+                    </div>
+                  );
+                })()}
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(t.annual_rent)}/year</p>
                 {payRentMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{payRentMessage[t.id]}</p>}
                 <button onClick={() => handlePayRent(t.id)} disabled={payingRentId === t.id}
