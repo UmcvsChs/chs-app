@@ -16,7 +16,7 @@ Complete Housing Solutions (CHS) — a Nigerian real estate PWA covering the ful
 - **Backend:** Supabase (Postgres + Auth + Storage + Edge Functions), project ref `havwhdgjqgtxtqklkqfm`
 - **Payments:** Paystack — currently on a **test key** (`pk_test_...`), not yet switched to live
 - **Hosting:** Netlify, connected to GitHub for auto-deploy (confirm this is still true before assuming a push auto-deploys — it was manual drag-and-drop earlier in the project's history)
-- **Migrations:** `backend/` (01–10, original schema) and `backend-v2/` (11–95, everything since) — sequential, numbered, meant to be read and applied in order
+- **Migrations:** `backend/` (01–10, original schema) and `backend-v2/` (11–105, everything since) — sequential, numbered, meant to be read and applied in order
 - **Documentation:** `CHS_USERS_GUIDE.docx` (+ in-app `/guide`), `CHS_COMPLETE_FEATURE_CATALOG.pdf` (+ in-app `/admin/feature-catalog`, + segmented `CHS_FEATURE_CATALOG_SEGMENTED.xlsx`), this handover note, and the progress log
 
 ## 3. Real Architectural Patterns Established
@@ -35,18 +35,20 @@ A new agent should follow these, not reinvent them:
 
 ## 4. Known Gaps — Read Before Assuming Something Works
 
-**Fixed since the last version of this document** (kept here briefly so a new agent doesn't waste time re-discovering these): shortlet host payout never released from escrow; no way for a tenant to pay real rent; artisan maintenance payments and job resolution never worked; dispute rulings had no real financial consequence; vendor referral fees and agent referral payouts were never actually charged/paid; developer application approval never elevated a real account role; management delegation could never be turned off; Urgent Sale pricing never reverted after expiry. All 23 are detailed in `CHS_PROGRESS_LOG.md`.
+**Fixed since the last version of this document** (kept here briefly so a new agent doesn't waste time re-discovering these): identity verification self-certified without real admin review; mobile logout was only reachable from the homepage; House Rules appeared on Sale listings where it made no sense; the "similar properties" advertising system had a real geographic-matching bug; sellers had no way to attach a real message when responding to an offer; the rent countdown and 90-day non-renewal notice had never been built despite the real database column existing; **most significantly, there was no real mechanism anywhere for a buyer to actually pay a seller the purchase price of a property** — only commission had ever been tested. All of these are detailed in `CHS_PROGRESS_LOG.md`.
 
 **Still genuinely open:**
 
 - **No real recurring billing exists for any promotion package** (Classic/Premium/Elite/Signature), including Signature specifically. The database rows and pricing exist; the actual Paystack subscription charge was never built. Anyone assigned one of these packages today is effectively getting it free.
 - **Pre-launch admin test mode** (Admin → Overview → "Switch role for testing") and the **Construction Roadmap test-unlock button** are both explicitly temporary. Remove both — and the underlying `grant_roadmap_access_test()` function — before real launch.
 - **A real, substantial set of demo accounts exist in the live database**, built specifically so the client could manually test negotiation → payment → commission across categories: phone numbers `08050000001` through `08050000010`, PIN `123456` for all, covering Land/House/Office/Hotel/Shortlet buyer-seller and host-guest pairs, with real funded wallets and real live listings. These are clearly marked by name (`Demo Land Seller`, etc.) but are real, fully-verified, functioning accounts — clean up or keep, but know they exist before launch.
+- **The mobile viewport/horizontal-scroll bug has been fixed twice** (a missing viewport meta tag, then a root-level `overflow-x: hidden` after the first fix reduced but didn't fully eliminate it) — **awaiting the client's next real-device confirmation** that it's genuinely resolved. Check with them before assuming this is closed.
 - **True server-side pagination was never built.** The homepage and admin queues are capped (e.g. `.limit(300)`), not genuinely paginated — fine for now, will need real work as the catalog grows.
 - **Paystack is still on a test key.** Real payments do not move real money yet.
 - **No custom domain configured.** Still on the default Netlify subdomain (`extraordinary-conkies-312c3d.netlify.app`) — note that WebAuthn's `WEBAUTHN_RP_ID`/`WEBAUTHN_ORIGIN` secrets will need updating to match whenever a real domain is set up, since WebAuthn ties strictly to the exact origin.
 - **WebAuthn's domain configuration could not be directly verified.** The cryptographic implementation itself is genuinely solid, but secret values can never be read back once set — only overwritten. If biometric login ever seems to fail for every real user, this is the first place to check.
 - **Real architectural design generation does not exist**, and was explicitly confirmed not to be a realistic near-term build — it would require either specialized generative-design/CAD software or real, licensed architects, not standard web development. Engage CHS's document delivery is a real human-upload tracker, not a generator.
+- **The real sale-payment and escrow-hold mechanism is new and has only been tested with synthetic data, not a real end-to-end client walkthrough yet.** Genuinely correct in every test run, but worth a close first real-world pass — particularly the interaction between required-document verification and the payment gate.
 - **Database backups / point-in-time recovery on Supabase — never confirmed.**
 - **No uptime or error monitoring** — an outage today would be discovered from a user complaint, not an alert.
 - **13 of the original 16 app views were never systematically compared against the original design spec** (a note from the very first handover, still open).
@@ -59,6 +61,10 @@ A new agent should follow these, not reinvent them:
 - **Rent to Own / Mortgage** (`backend-v2/91`, `94`) — a genuinely new listing category, not the same thing as "Hire." Real installment payments, real ownership-percentage tracking, automatic conversion to a completed sale at 100%.
 - **Shortlet/Hotel guest-host messaging** (`backend-v2/92`) — real in-app communication with genuine host anonymity toward the guest, never toward CHS itself.
 - **Maintenance Reserve, now genuinely functional** (`backend-v2/95`) — real external funding, real artisan-payment draw order (reserve first, main wallet for any shortfall), real unrestricted withdrawal.
+- **The real Sale purchase-price payment mechanism** (`backend-v2/101`, `102`) — the single most significant fix of the engagement. Previously, only commission had ever been built or tested for a Sale; there was no way for a buyer to actually pay a seller. Now a single, transparent checkout: buyer's total automatically includes their own commission (shown as both percentage and real value), seller's net automatically excludes theirs.
+- **Real, sourced legal document requirements and an escrow hold for Sale proceeds** (`backend-v2/103`, `104`, `105`) — Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor's Consent, Tax Clearance Certificate, Sale Agreement, and conditionally Building Plan Approval, sourced from genuine Nigerian legal references. A buyer's payment is blocked until every required document is CHS-verified; a seller's proceeds are held (visible, not withdrawable) until CHS confirms the real, physical legal transfer is complete.
+- **Real, admin-reviewed buyer identity verification** (`backend-v2/96`–`98`) — previously self-certified the instant the form was filled in; now a genuine pending → admin-review → approved flow.
+- **Rent countdown and 90-day non-renewal notice** (`backend-v2/99`) — a real, live day-count on the tenant dashboard and a genuine notice mechanism, built after confirming the underlying database column had existed unused since early in the project.
 
 ## 6. Where to Find Things
 
@@ -75,3 +81,6 @@ Every future batch of work should:
 3. Update this handover note if a new architectural pattern, gap, or critical fact emerges.
 4. Update the Users Guide and Feature Catalog (both formats) if user-facing or admin-facing functionality changed.
 5. Rebuild and verify (lint + full production build) before packaging anything for GitHub/Netlify.
+6. **When testing a real function that's expected to fail, run the setup/funding step as a separate call from the failing call.** Supabase's implicit transaction batching means a later statement's error can silently roll back an earlier, successful update in the same request — caught more than once by verifying real database state after a test rather than trusting a query appeared to succeed.
+7. **Before assuming a client-reported visual bug is fully fixed, get their explicit confirmation from a real device.** A compiled, built, and packaged fix is not the same as a confirmed fix for anything involving rendering — this class of bug has needed a second real pass before, and standing here waiting on that same confirmation again.
+8. **When researching a real-world legal or regulatory requirement (documents, permits, compliance) for a feature, cite genuine, current sources and say so plainly — never invent a plausible-sounding list.** This mattered directly for the Sale legal-document requirements.

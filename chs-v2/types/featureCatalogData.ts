@@ -143,4 +143,18 @@ export const FEATURE_CATALOG: { title: string; rows: { feature: string; how: str
       { feature: "Maintenance Reserve — real funding", how: "An owner can fund their Maintenance Reserve directly from their Main Wallet for a real, larger repair; artisan payments draw from the Reserve first, and unused funds can be withdrawn back freely.", destination: "Wallet page", admin: "N/A" },
     ],
   },
+  {
+    title: "11. Real Sale Payment, Escrow, and Client-Testing Fixes",
+    rows: [
+      { feature: "Real Sale purchase-price payment", how: "The genuine mechanism for a buyer to pay a seller the actual purchase price — not just commission. A single, transparent checkout: the buyer's total automatically includes their own commission (shown as both a percentage and a real value), the seller's net automatically excludes theirs.", destination: "Property page, once an offer is accepted", admin: "N/A" },
+      { feature: "Real, sourced Sale legal documents", how: "Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor's Consent, Tax Clearance Certificate, Sale Agreement, and (for a developed property) Building Plan Approval — sourced from genuine Nigerian legal references. Required at listing time; a buyer's payment is blocked until every one is CHS-verified.", destination: "List a property (Sale)", admin: "Admin → Face Verification tab (Sale documents)" },
+      { feature: "Escrow hold on sale proceeds", how: "A seller's real proceeds are visible in their wallet the instant a buyer pays, but not withdrawable until CHS confirms the real, physical legal documents have been transferred to the buyer.", destination: "Wallet page", admin: "Admin → Face Verification tab (Confirm legal transfer)" },
+      { feature: "Real, admin-reviewed identity verification", how: "A buyer's ID submission previously self-certified the instant the form was filled in. Now creates a genuine pending record, reviewed and approved by real CHS staff before it counts.", destination: "Making an offer (if not yet verified)", admin: "Admin → Face Verification tab" },
+      { feature: "Mobile logout", how: "A working logout in the persistent bottom navigation's More menu — previously only reachable from the homepage.", destination: "Bottom nav → More", admin: "N/A" },
+      { feature: "Context-aware House Rules", how: "Only appears for Rent, Lease, Shortlet, and Rent to Own listings — no longer shown on a Sale listing where it never applied.", destination: "Owner dashboard", admin: "N/A" },
+      { feature: "Real, progressive nearby-properties matching", how: "The \"similar properties\" advertising system now genuinely widens from exact area → LGA → state, and matches property type, rather than matching the whole state regardless of relevance.", destination: "Property detail page", admin: "N/A" },
+      { feature: "Seller response note on an offer", how: "A real, optional message a seller can attach when accepting or declining an offer — delivered directly to the buyer's notification, matching the note a buyer could already leave.", destination: "Owner dashboard", admin: "N/A" },
+      { feature: "Rent countdown and 90-day non-renewal notice", how: "A real, live day-count to next rent on the tenant dashboard, and a genuine notice mechanism that honestly records whether notice was given within or after the requested 90-day window.", destination: "Tenant dashboard", admin: "N/A" },
+    ],
+  },
 ];

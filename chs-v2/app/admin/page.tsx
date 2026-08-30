@@ -78,6 +78,7 @@ export default function AdminDashboard() {
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [totalCommissionEarnings, setTotalCommissionEarnings] = useState(0);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
   const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
 
@@ -285,6 +286,14 @@ export default function AdminDashboard() {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     setPendingBuyerIds((buyerIdData as unknown as typeof pendingBuyerIds) || []);
+
+    // Real, previously-missing commission earnings summary — sums
+    // every real, paid commission, not a projection or estimate.
+    const { data: commissionData } = await supabase
+      .from("transaction_commissions")
+      .select("commission_amount")
+      .eq("status", "paid");
+    setTotalCommissionEarnings((commissionData || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
 
     const { data: saleDocsData } = await supabase
       .from("property_sale_documents")
@@ -890,6 +899,11 @@ export default function AdminDashboard() {
       <div className="px-4 py-4 space-y-3">
         {activeTab === "overview" && (
           <div className="grid grid-cols-2 gap-3">
+            <div className="col-span-2 bg-chs-charcoal rounded-xl p-4">
+              <p className="text-[10px] uppercase text-white/60 font-semibold">💰 Real Platform Commission Earnings (all-time)</p>
+              <p className="text-2xl font-bold text-white mt-1">{formatNaira(totalCommissionEarnings)}</p>
+              <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Rent-to-Own — updates automatically as real transactions complete.</p>
+            </div>
             {profile?.is_super_admin && pendingLoginRequests.length > 0 && (
               <div className="col-span-2 bg-red-50 border-2 border-red-200 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-bold text-red-700">🔐 Admin logins awaiting your approval</p>

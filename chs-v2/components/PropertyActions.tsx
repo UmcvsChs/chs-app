@@ -36,11 +36,15 @@ export default function PropertyActions({ property }: { property: Property }) {
   // been tested. Built as one real, transparent checkout that
   // includes the buyer's own commission automatically.
   const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string } | null>(null);
-  const [breakdown, setBreakdown] = useState<{ offer_amount: number; buyer_pct: number; buyer_commission: number; buyer_total: number; seller_net: number } | null>(null);
-  const [docsVerified, setDocsVerified] = useState<boolean | null>(null);
+  const [breakdown, setBreakdown] = useState<{ offer_amount: number; buyer_pct: number; buyer_commission: number; buyer_total: number } | null>(null);
   const [paying, setPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [myPaidOffer, setMyPaidOffer] = useState<{ id: string; document_deadline: string; legal_transfer_confirmed: boolean } | null>(null);
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [requestingRefund, setRequestingRefund] = useState(false);
+  const [refundError, setRefundError] = useState<string | null>(null);
+  const [refundSuccess, setRefundSuccess] = useState(false);
 
   useEffect(() => {
     if (!session || property.purpose !== "sale") return;
@@ -55,6 +59,11 @@ export default function PropertyActions({ property }: { property: Property }) {
       .then(({ data }) => {
         setMyAcceptedOffer(data);
         if (data) {
+          // Real, deliberate design per direct client instruction: the
+          // buyer only ever sees their own real numbers — price, their
+          // own commission, their own total. What the seller nets is
+          // never shown here; each side sees only what they themselves
+          // owe, matching how real negotiation actually works.
           supabase.rpc("get_sale_commission_breakdown", { p_offer_id: data.id }).then(({ data: bd }) => {
             if (bd && bd[0]) {
               setBreakdown({
@@ -62,19 +71,37 @@ export default function PropertyActions({ property }: { property: Property }) {
                 buyer_pct: Number(bd[0].buyer_pct),
                 buyer_commission: Number(bd[0].buyer_commission),
                 buyer_total: Number(bd[0].buyer_total),
-                seller_net: Number(bd[0].seller_net),
               });
             }
           });
-          // Real check, matching what pay_for_property itself enforces
-          // — a buyer sees clearly, before even trying to pay, whether
-          // CHS has genuinely verified every real legal document yet.
-          supabase.rpc("are_sale_documents_verified", { p_property_id: property.id }).then(({ data: verified }) => {
-            setDocsVerified(!!verified);
-          });
         }
       });
+    supabase
+      .from("offers")
+      .select("id, document_deadline, legal_transfer_confirmed")
+      .eq("property_id", property.id)
+      .eq("buyer_id", session.user.id)
+      .eq("payment_status", "paid")
+      .eq("legal_transfer_confirmed", false)
+      .maybeSingle()
+      .then(({ data }) => {
+        setMyPaidOffer(data);
+        if (data) setDeadlinePassed(new Date(data.document_deadline).getTime() < Date.now());
+      });
   }, [session, property.id, property.purpose]);
+
+  async function handleRequestRefund() {
+    if (!myPaidOffer) return;
+    setRequestingRefund(true);
+    setRefundError(null);
+    const { error: rpcError } = await supabase.rpc("request_sale_refund", { p_offer_id: myPaidOffer.id });
+    setRequestingRefund(false);
+    if (rpcError) {
+      setRefundError(rpcError.message);
+      return;
+    }
+    setRefundSuccess(true);
+  }
 
   async function handlePayForProperty() {
     if (!myAcceptedOffer) return;
@@ -151,6 +178,29 @@ export default function PropertyActions({ property }: { property: Property }) {
     setSubmitting(false);
   }
 
+  if (myPaidOffer) {
+    if (refundSuccess) {
+      return (
+        <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
+          <p className="text-sm font-bold text-green-700">✓ Refund issued — your full payment is back in your wallet.</p>
+        </div>
+      );
+    }
+    return (
+      <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-4">
+        <p className="text-sm font-bold text-chs-charcoal mb-1">✓ Payment complete — CHS is coordinating your legal document transfer</p>
+        <p className="text-xs text-gray-500 mb-3">
+          Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
+        </p>
+        {refundError && <p className="text-xs text-chs-red mb-2">{refundError}</p>}
+        <button onClick={handleRequestRefund} disabled={!deadlinePassed || requestingRefund}
+          className="w-full py-2.5 rounded-full bg-chs-amber-dark text-white text-sm font-semibold disabled:opacity-40">
+          {requestingRefund ? "Processing..." : deadlinePassed ? "Request refund & cancel this deal" : "Refund available after the deadline above"}
+        </button>
+      </div>
+    );
+  }
+
   if (myAcceptedOffer && breakdown) {
     if (paymentSuccess) {
       return (
@@ -164,20 +214,14 @@ export default function PropertyActions({ property }: { property: Property }) {
         <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Offer accepted — proceed to payment</p>
         <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
           <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">Commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
-          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due for this transaction</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
-          <p className="text-[10px] text-gray-400 pt-1">For full transparency: the seller will receive {formatNaira(breakdown.seller_net)}, net of their own real commission — nothing here is hidden from either side.</p>
+          <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
         </div>
-        {docsVerified === false && (
-          <div className="bg-chs-amber-light rounded-lg p-3 mb-3">
-            <p className="text-xs font-semibold text-chs-amber-dark">⏳ Waiting on CHS document verification</p>
-            <p className="text-[10px] text-gray-600 mt-1">
-              Before payment can proceed, CHS must confirm every real legal document for this property — Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor&apos;s Consent, Tax Clearance, and Sale Agreement. You&apos;ll be notified the moment it&apos;s ready.
-            </p>
-          </div>
-        )}
+        <p className="text-[10px] text-gray-500 mb-3">
+          After payment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered to you within 14 working days. If they haven&apos;t arrived by then, you can request a full refund and cancel this deal, right from your dashboard.
+        </p>
         {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
-        <button onClick={handlePayForProperty} disabled={paying || docsVerified === false}
+        <button onClick={handlePayForProperty} disabled={paying}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
           {paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`}
         </button>

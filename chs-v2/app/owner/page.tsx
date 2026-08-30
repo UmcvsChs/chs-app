@@ -471,11 +471,14 @@ export default function OwnerDashboard() {
                         <span className="font-semibold">{formatNaira(offer.amount)}</span>
                         <span className="text-gray-400 capitalize">{offer.status}</span>
                       </div>
-                      {property.purpose === "sale" && (
-                        <p className="text-[10px] text-gray-400 mt-0.5">
-                          If accepted and paid, you&apos;ll receive ~{formatNaira(offer.amount * 0.94)} (net of the real 6% seller commission) — full, transparent breakdown shown to the buyer at checkout.
-                        </p>
-                      )}                      {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
+                      {property.purpose === "sale" && offer.status === "pending" && (
+                        <div className="bg-white rounded-md p-2 mt-1.5 space-y-1 border border-gray-100">
+                          <div className="flex justify-between text-[10px]"><span className="text-gray-500">Total buyer will pay you</span><span className="font-semibold">{formatNaira(offer.amount)}</span></div>
+                          <div className="flex justify-between text-[10px]"><span className="text-gray-500">Our commission (6%)</span><span className="font-semibold">{formatNaira(offer.amount * 0.06)}</span></div>
+                          <div className="flex justify-between text-[10px] border-t border-gray-100 pt-1"><span className="font-bold text-chs-charcoal">You will net</span><span className="font-bold text-chs-red">{formatNaira(offer.amount * 0.94)}</span></div>
+                        </div>
+                      )}
+                      {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
                       {offer.status === "pending" && (
                         <div className="mt-2">
                           <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}

@@ -110,6 +110,26 @@ export default function TermsContent() {
         <p>An owner&apos;s Maintenance Reserve may be funded directly from their own Main Wallet at any time, in addition to whatever automatic allocation already applies. When a maintenance job is confirmed complete, payment is drawn from the Maintenance Reserve first; any real shortfall is drawn from the Main Wallet. Unused Maintenance Reserve funds may be withdrawn back to the Main Wallet by the owner at any time, without requiring CHS approval.</p>
       </div>
 
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">26. Sale payment and total due</p>
+        <p>Once a seller accepts an offer, the buyer&apos;s real total due is calculated automatically and shown before payment: the accepted price, the buyer&apos;s commission (both the percentage and the real Naira value shown), and the combined total. This total is charged in a single transaction — CHS does not charge the purchase price and commission separately. The seller likewise sees, in advance, the real net amount they will receive after their own commission is deducted.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">27. Required legal documents for a Sale listing</p>
+        <p>Before listing a property under Sale, an owner must upload soft copies of the real legal documents required to transfer ownership under Nigerian law: Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor&apos;s Consent, Tax Clearance Certificate, and Sale Agreement — plus Building Plan Approval where the property includes a real structure. CHS independently verifies each document. A buyer&apos;s payment cannot proceed until every required document for that property has been confirmed verified by CHS.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">28. Escrow hold on sale proceeds</p>
+        <p>When a buyer completes payment for a property, the seller&apos;s net proceeds are immediately visible in their CHS Wallet, but held and not withdrawable. Funds are released to the seller&apos;s spendable balance only once CHS confirms that the real, physical legal documents — Deed of Assignment, Certificate of Occupancy, and all other required documents — have genuinely been prepared (through a qualified barrister where required) and delivered to the new owner. This protection exists to ensure a buyer receives real, complete legal ownership before a seller can access sale proceeds.</p>
+      </div>
+
+      <div className="border-t border-gray-200 pt-4 mt-2">
+        <p className="font-bold text-chs-charcoal mb-2">29. Non-renewal notice</p>
+        <p>A tenant who does not intend to renew their tenancy should give notice at least 90 real days before their lease end date. CHS displays a real, live countdown to lease end on the tenant&apos;s dashboard, and highlights this window as it approaches. Notice given after this window is still recorded and forwarded to the landlord, honestly noted as later than the requested period, rather than refused.</p>
+      </div>
+
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
         This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support.
       </p>
