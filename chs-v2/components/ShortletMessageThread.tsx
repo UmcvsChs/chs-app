@@ -31,6 +31,7 @@ export default function ShortletMessageThread({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMessages();
@@ -40,7 +41,7 @@ export default function ShortletMessageThread({
   }, [bookingId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
   }, [messages]);
 
   async function loadMessages() {
@@ -79,7 +80,7 @@ export default function ShortletMessageThread({
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3 mt-2">
       <p className="text-xs font-bold text-chs-charcoal mb-2">💬 Messages</p>
-      <div className="max-h-56 overflow-y-auto space-y-1.5 mb-2">
+      <div ref={containerRef} className="max-h-56 overflow-y-auto space-y-1.5 mb-2">
         {messages.length === 0 ? (
           <p className="text-[10px] text-gray-400">No messages yet.</p>
         ) : (

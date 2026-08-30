@@ -505,13 +505,15 @@ export default function OwnerDashboard() {
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold">My Properties</h1>
-          <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2 shrink-0">
+            <h1 className="font-serif text-lg font-bold">My Properties</h1>
             <NotificationBell />
-            <Link href="/market-demand" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+          </div>
+          <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Link href="/market-demand" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Market Demand
             </Link>
-            <Link href="/engage-chs" className="relative bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+            <Link href="/engage-chs" className="shrink-0 whitespace-nowrap relative bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Engage CHS
               {engageUnreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-chs-red text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -519,7 +521,7 @@ export default function OwnerDashboard() {
                 </span>
               )}
             </Link>
-            <Link href="/list-property" className="bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
+            <Link href="/list-property" className="shrink-0 whitespace-nowrap bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
               + List a property
             </Link>
           </div>

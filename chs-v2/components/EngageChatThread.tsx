@@ -42,6 +42,7 @@ export default function EngageChatThread({
   const [sending, setSending] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const voiceSupported = typeof window !== "undefined" &&
@@ -65,7 +66,7 @@ export default function EngageChatThread({
   }, [open]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
   }, [messages]);
 
   async function checkUnread() {
@@ -161,7 +162,7 @@ export default function EngageChatThread({
         <button onClick={() => setOpen(false)} className="text-gray-400 text-base">✕</button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-2.5">
         {messages.length === 0 ? (
           <p className="text-[11px] text-gray-400 text-center py-6">No messages yet.</p>
         ) : (

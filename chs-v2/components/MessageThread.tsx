@@ -27,6 +27,7 @@ export default function MessageThread({
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMessages();
@@ -36,7 +37,7 @@ export default function MessageThread({
   }, [tenancyId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
   }, [messages]);
 
   async function loadMessages() {
@@ -82,7 +83,7 @@ export default function MessageThread({
         <button onClick={onClose} className="text-gray-400 text-lg">✕</button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3">
+      <div ref={containerRef} className="flex-1 overflow-y-auto p-3">
         {loading ? (
           <p className="text-xs text-gray-400 text-center py-6">Loading...</p>
         ) : messages.length === 0 ? (

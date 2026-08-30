@@ -19,6 +19,7 @@ export default function OwnerAdminMessageThread({ ownerId, viewerRole }: { owner
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadMessages();
@@ -28,7 +29,7 @@ export default function OwnerAdminMessageThread({ ownerId, viewerRole }: { owner
   }, [ownerId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (containerRef.current) containerRef.current.scrollTop = containerRef.current.scrollHeight;
   }, [messages]);
 
   async function loadMessages() {
@@ -54,7 +55,7 @@ export default function OwnerAdminMessageThread({ ownerId, viewerRole }: { owner
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3">
       <p className="text-xs font-bold text-chs-charcoal mb-2">💬 Direct line to CHS</p>
-      <div className="max-h-56 overflow-y-auto space-y-1.5 mb-2">
+      <div ref={containerRef} className="max-h-56 overflow-y-auto space-y-1.5 mb-2">
         {messages.length === 0 ? (
           <p className="text-[10px] text-gray-400">No messages yet — say hello.</p>
         ) : (
