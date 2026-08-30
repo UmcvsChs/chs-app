@@ -50,6 +50,8 @@ export default function OwnerDashboard() {
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
   const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
+  const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
+  const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
   const [confirmingJobId, setConfirmingJobId] = useState<string | null>(null);
   const [confirmJobMessage, setConfirmJobMessage] = useState<Record<string, string>>({});
   const [engageUnreadCount, setEngageUnreadCount] = useState(0);
@@ -247,6 +249,21 @@ export default function OwnerDashboard() {
     loadData();
   }
 
+
+  async function handleAcceptWithInstallment(offerId: string) {
+    setActionError(null);
+    const pct = Number(downpaymentPct[offerId]);
+    if (!pct || pct <= 0 || pct > 100) {
+      setActionError("Please enter a real, valid down payment percentage between 1 and 100.");
+      return;
+    }
+    const { error } = await supabase.rpc("accept_offer_with_installment", { p_offer_id: offerId, p_downpayment_pct: pct });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
 
   async function handleOfferDecision(offerId: string, status: "accepted" | "rejected") {
     setActionError(null);
@@ -484,8 +501,18 @@ export default function OwnerDashboard() {
                           <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
                             placeholder="Optional message to the buyer — e.g. a reason, or the amount you'd actually accept"
                             rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          <label className="flex items-center gap-1.5 mb-1.5">
+                            <input type="checkbox" checked={!!acceptWithInstallment[offer.id]}
+                              onChange={(e) => setAcceptWithInstallment((prev) => ({ ...prev, [offer.id]: e.target.checked }))} />
+                            <span className="text-[10px] text-gray-600">Accept a down payment instead of full payment</span>
+                          </label>
+                          {acceptWithInstallment[offer.id] && (
+                            <input type="number" min={1} max={100} placeholder="Minimum down payment %, e.g. 30"
+                              value={downpaymentPct[offer.id] || ""} onChange={(e) => setDownpaymentPct((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                              className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          )}
                           <div className="flex gap-2">
-                            <button onClick={() => handleOfferDecision(offer.id, "accepted")}
+                            <button onClick={() => acceptWithInstallment[offer.id] ? handleAcceptWithInstallment(offer.id) : handleOfferDecision(offer.id, "accepted")}
                               className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                               Offer Accepted — Proceed to Payment
                             </button>

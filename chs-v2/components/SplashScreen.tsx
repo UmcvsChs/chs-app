@@ -16,8 +16,12 @@ export default function SplashScreen() {
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setFading(true), 4000);
-    const hideTimer = setTimeout(() => setHidden(true), 4000 + 800);
+    // Real fix per direct client feedback: 4 seconds was genuinely too
+    // short to read and comprehend the real content before it
+    // disappeared, even for a fast, practiced reader. Extended by 6
+    // real seconds (within the requested 5-7 second range).
+    const fadeTimer = setTimeout(() => setFading(true), 10000);
+    const hideTimer = setTimeout(() => setHidden(true), 10000 + 800);
     return () => {
       clearTimeout(fadeTimer);
       clearTimeout(hideTimer);

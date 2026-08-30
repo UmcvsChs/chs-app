@@ -35,8 +35,9 @@ export default function PropertyActions({ property }: { property: Property }) {
   // actually pay for the property at all — only commission had ever
   // been tested. Built as one real, transparent checkout that
   // includes the buyer's own commission automatically.
-  const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string } | null>(null);
+  const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string; accepts_installment: boolean; downpayment_pct: number | null; amount_paid: number; amount: number } | null>(null);
   const [breakdown, setBreakdown] = useState<{ offer_amount: number; buyer_pct: number; buyer_commission: number; buyer_total: number } | null>(null);
+  const [installmentAmount, setInstallmentAmount] = useState<number | "">("");
   const [paying, setPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -50,7 +51,7 @@ export default function PropertyActions({ property }: { property: Property }) {
     if (!session || property.purpose !== "sale") return;
     supabase
       .from("offers")
-      .select("id")
+      .select("id, accepts_installment, downpayment_pct, amount_paid, amount")
       .eq("property_id", property.id)
       .eq("buyer_id", session.user.id)
       .eq("status", "accepted")
@@ -114,6 +115,31 @@ export default function PropertyActions({ property }: { property: Property }) {
       return;
     }
     setPaymentSuccess(true);
+  }
+
+  async function handlePaySaleInstallment() {
+    if (!myAcceptedOffer || !installmentAmount) return;
+    setPaying(true);
+    setPaymentError(null);
+    const { error: rpcError } = await supabase.rpc("pay_sale_installment", { p_offer_id: myAcceptedOffer.id, p_amount: installmentAmount });
+    setPaying(false);
+    if (rpcError) {
+      setPaymentError(rpcError.message);
+      return;
+    }
+    setInstallmentAmount("");
+    // Real re-fetch to show the updated remaining balance, or the
+    // real "fully paid" success state if this was the final payment.
+    const { data } = await supabase
+      .from("offers")
+      .select("id, accepts_installment, downpayment_pct, amount_paid, amount, payment_status")
+      .eq("id", myAcceptedOffer.id)
+      .single();
+    if (data?.payment_status === "paid") {
+      setPaymentSuccess(true);
+    } else {
+      setMyAcceptedOffer(data);
+    }
   }
 
   // The real fix for #17's core problem: an unregistered visitor trying
@@ -212,19 +238,43 @@ export default function PropertyActions({ property }: { property: Property }) {
     return (
       <div className="bg-white rounded-xl border-2 border-chs-red p-4">
         <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Offer accepted — proceed to payment</p>
-        <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
-          <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
-          <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
-          <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
-        </div>
-        <p className="text-[10px] text-gray-500 mb-3">
-          After payment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered to you within 14 working days. If they haven&apos;t arrived by then, you can request a full refund and cancel this deal, right from your dashboard.
-        </p>
-        {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
-        <button onClick={handlePayForProperty} disabled={paying}
-          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-          {paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`}
-        </button>
+        {myAcceptedOffer.accepts_installment ? (
+          <>
+            <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Real amount paid so far</span><span className="font-semibold">{formatNaira(myAcceptedOffer.amount_paid)}</span></div>
+              <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Real remaining balance</span><span className="font-bold text-chs-red">{formatNaira(myAcceptedOffer.amount - myAcceptedOffer.amount_paid)}</span></div>
+            </div>
+            {myAcceptedOffer.amount_paid === 0 && (
+              <p className="text-[10px] text-gray-500 mb-2">The seller requires a real minimum down payment of {myAcceptedOffer.downpayment_pct}% ({formatNaira(breakdown.offer_amount * (myAcceptedOffer.downpayment_pct || 0) / 100)}) to begin. Platform commission ({breakdown.buyer_pct}%) is added to whatever amount you pay each time.</p>
+            )}
+            <input type="number" placeholder="Amount to pay now" value={installmentAmount}
+              onChange={(e) => setInstallmentAmount(e.target.value ? Number(e.target.value) : "")}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" />
+            <p className="text-[10px] text-gray-500 mb-3">After your final installment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered within 14 working days — if not, you can request a full refund.</p>
+            {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
+            <button onClick={handlePaySaleInstallment} disabled={paying || !installmentAmount}
+              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
+              {paying ? "Processing payment..." : "Pay this installment now"}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
+              <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+              <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
+            </div>
+            <p className="text-[10px] text-gray-500 mb-3">
+              After payment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered to you within 14 working days. If they haven&apos;t arrived by then, you can request a full refund and cancel this deal, right from your dashboard.
+            </p>
+            {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
+            <button onClick={handlePayForProperty} disabled={paying}
+              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
+              {paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`}
+            </button>
+          </>
+        )}
       </div>
     );
   }
