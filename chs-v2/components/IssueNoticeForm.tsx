@@ -22,10 +22,12 @@ export default function IssueNoticeForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
-  const [noticeType, setNoticeType] = useState<"sale" | "renovation" | "rent_review" | "quit">("sale");
+  const [noticeType, setNoticeType] = useState<"sale" | "renovation" | "rent_review" | "quit" | "warning" | "query">("sale");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLegalWarning, setShowLegalWarning] = useState(false);
+  const [legalWarningAcknowledged, setLegalWarningAcknowledged] = useState(false);
 
   const categoryFields = NOTICE_CATEGORY_FIELDS[noticeType] || [];
 
@@ -37,6 +39,28 @@ export default function IssueNoticeForm({
     // real requirement from the original app.
     if (noticeType === "quit" && !fieldValues.reason?.trim()) {
       setError("A notice to quit must state a reason — this protects both you and the tenant if it's ever disputed.");
+      return;
+    }
+    // Real, sourced legal safeguard: under Nigerian tenancy law, a
+    // yearly tenant (the standard CHS tenancy) is entitled to a real
+    // 6-month notice to quit — a shorter notice has genuinely been
+    // struck down in real Nigerian case law (e.g. ODIGBO v. ABUBAKAR).
+    // Real, narrow exceptions do exist (rent arrears, misconduct), so
+    // this warns clearly rather than blocking outright.
+    if (noticeType === "quit" && fieldValues.vacate_by && !legalWarningAcknowledged) {
+      const daysNotice = Math.ceil((new Date(fieldValues.vacate_by).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (daysNotice < 180) {
+        setShowLegalWarning(true);
+        setError(`Under Nigerian tenancy law, a yearly tenant is entitled to at least 6 months' (180 days) real notice — this is only ${daysNotice} real days. A shorter notice may be legally invalid unless a real exception applies (e.g. genuine rent arrears or tenant misconduct). Please confirm below if you have a valid legal reason to proceed anyway.`);
+        return;
+      }
+    }
+    if (noticeType === "warning" && !fieldValues.reason?.trim()) {
+      setError("A formal warning must state what it's about — this protects both you and the tenant if it's ever disputed.");
+      return;
+    }
+    if (noticeType === "query" && !fieldValues.subject?.trim()) {
+      setError("A query must state its subject clearly.");
       return;
     }
     setError(null);
@@ -115,7 +139,7 @@ export default function IssueNoticeForm({
             </select>
           ) : (
             <input
-              type="text"
+              type={f.type === "date" ? "date" : "text"}
               value={fieldValues[f.id] || ""}
               onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })}
               placeholder={f.placeholder}
@@ -126,6 +150,12 @@ export default function IssueNoticeForm({
       ))}
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
+      {showLegalWarning && (
+        <label className="flex items-start gap-2 bg-white border border-chs-amber-dark rounded-lg p-2.5">
+          <input type="checkbox" checked={legalWarningAcknowledged} onChange={(e) => { setLegalWarningAcknowledged(e.target.checked); setError(null); }} className="mt-0.5" />
+          <span className="text-[11px] text-gray-600">I confirm I have a genuine legal reason for a shorter notice period (e.g. real rent arrears or documented tenant misconduct), and wish to proceed.</span>
+        </label>
+      )}
 
       <div className="flex gap-2">
         <button type="button" onClick={onCancel}

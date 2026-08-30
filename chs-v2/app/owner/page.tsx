@@ -22,6 +22,10 @@ import TransactionCommissions from "@/components/TransactionCommissions";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
+import NotificationBell from "@/components/NotificationBell";
+import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
+import OfferMessageThread from "@/components/OfferMessageThread";
+import MessageThread from "@/components/MessageThread";
 
 interface TenancyBasic {
   id: string;
@@ -29,6 +33,8 @@ interface TenancyBasic {
   property_id: string;
   status: string;
   management_delegated: boolean;
+  lease_end: string;
+  notice_given_at: string | null;
 }
 
 interface PropertyWithActivity extends Property {
@@ -46,12 +52,37 @@ export default function OwnerDashboard() {
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
-  const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; approved_vendor: string | null; approved_amount: number | null; properties: { title: string }[] | null; fault_quotations: { vendor_name: string; amount: number; artisans: { user_id: string; trade: string } | null }[] | null }[]>([]);
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
   const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
+  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
+  const [dispatchMethod, setDispatchMethod] = useState<Record<string, string>>({});
+  const [dispatchTracking, setDispatchTracking] = useState<Record<string, string>>({});
+  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+  const [portfolioSummary, setPortfolioSummary] = useState<{ total_properties: number; active_listings: number; occupied_or_sold: number; total_real_earnings: number; pending_offers: number; open_fault_reports: number } | null>(null);
+  const [showConcernForm, setShowConcernForm] = useState(false);
+  const [concernSubject, setConcernSubject] = useState("");
+  const [concernMessage, setConcernMessage] = useState("");
+  const [submittingConcern, setSubmittingConcern] = useState(false);
+  const [concernSubmitted, setConcernSubmitted] = useState(false);
+  const [showMessageThread, setShowMessageThread] = useState(false);
+  const [earningsLedger, setEarningsLedger] = useState<{ id: string; amount: number; description: string; created_at: string; wallet_type: string }[]>([]);
+  const [showEarningsLedger, setShowEarningsLedger] = useState(false);
+  const [messagingTenancy, setMessagingTenancy] = useState<TenancyBasic | null>(null);
+  const [linkingAgentPropertyId, setLinkingAgentPropertyId] = useState<string | null>(null);
+  const [postListingAgentId, setPostListingAgentId] = useState("");
+  const [linkingAgent, setLinkingAgent] = useState(false);
+  const [linkAgentError, setLinkAgentError] = useState<string | null>(null);
+  const [revokingAgentId, setRevokingAgentId] = useState<string | null>(null);
+  const [replacingAgentPropertyId, setReplacingAgentPropertyId] = useState<string | null>(null);
+  const [newAgentName, setNewAgentName] = useState("");
+  const [newAgentPhone, setNewAgentPhone] = useState("");
+  const [newAgentChsId, setNewAgentChsId] = useState("");
+  const [submittingReplacement, setSubmittingReplacement] = useState(false);
+  const [replacementRequestSubmitted, setReplacementRequestSubmitted] = useState(false);
   const [confirmingJobId, setConfirmingJobId] = useState<string | null>(null);
   const [confirmJobMessage, setConfirmJobMessage] = useState<Record<string, string>>({});
   const [engageUnreadCount, setEngageUnreadCount] = useState(0);
@@ -116,7 +147,7 @@ export default function OwnerDashboard() {
     // properties. Only a delegated manager's dashboard ever showed this.
     supabase
       .from("fault_reports")
-      .select("id, category, description, status, property_id, properties!inner(title, owner_id)")
+      .select("id, category, description, status, approved_vendor, approved_amount, property_id, properties!inner(title, owner_id), fault_quotations(vendor_name, amount, artisans(user_id, trade))")
       .eq("properties.owner_id", session.user.id)
       .neq("status", "resolved")
       .then(({ data }) => setFaultReports((data as unknown as typeof faultReports) || []));
@@ -127,6 +158,35 @@ export default function OwnerDashboard() {
       .eq("seller_id", session.user.id)
       .eq("status", "requested")
       .then(({ data }) => setRentToOwnRequests((data as unknown as typeof rentToOwnRequests) || []));
+
+    // Real fix found through direct client testing: a seller had no
+    // way to see a real payment had landed, no visibility into their
+    // real held balance for that specific sale, and nowhere to mark
+    // real documents as sent.
+    supabase
+      .from("offers")
+      .select("id, amount, properties!inner(title, owner_id), document_dispatch_requests(id, status)")
+      .eq("properties.owner_id", session.user.id)
+      .eq("payment_status", "paid")
+      .eq("legal_transfer_confirmed", false)
+      .then(({ data }) => setPaidOffersAwaitingDispatch((data as unknown as typeof paidOffersAwaitingDispatch) || []));
+
+    // Real, genuine portfolio-wide summary — replacing what used to
+    // require mentally tallying numbers down a long scrolling list.
+    supabase.rpc("get_owner_portfolio_summary", { p_owner_id: session.user.id }).then(({ data }) => {
+      if (data && data[0]) setPortfolioSummary(data[0]);
+    });
+
+    // Real, itemized earnings ledger — every real credit this owner
+    // has genuinely received, not a single opaque total.
+    supabase
+      .from("wallet_transactions")
+      .select("id, amount, description, created_at, wallet_type")
+      .eq("user_id", session.user.id)
+      .eq("direction", "credit")
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data }) => setEarningsLedger(data || []));
 
     const { data: ownedProperties } = await supabase
       .from("properties")
@@ -181,7 +241,7 @@ export default function OwnerDashboard() {
 
     const { data: ownedTenancies } = await supabase
       .from("tenancies")
-      .select("id, tenant_id, property_id, status, management_delegated")
+      .select("id, tenant_id, property_id, status, management_delegated, lease_end, notice_given_at")
       .eq("landlord_id", session.user.id);
     setTenancies(ownedTenancies || []);
 
@@ -250,6 +310,78 @@ export default function OwnerDashboard() {
   }
 
 
+  async function handleRaiseConcern() {
+    if (!concernSubject.trim() || !concernMessage.trim()) return;
+    setSubmittingConcern(true);
+    const { error } = await supabase.rpc("raise_owner_concern", { p_property_id: null, p_subject: concernSubject.trim(), p_message: concernMessage.trim() });
+    setSubmittingConcern(false);
+    if (!error) {
+      setConcernSubmitted(true);
+      setConcernSubject("");
+      setConcernMessage("");
+    }
+  }
+
+  async function handleRevokeAgent(propertyId: string) {
+    setRevokingAgentId(propertyId);
+    setActionError(null);
+    const { error } = await supabase.rpc("revoke_managing_agent", { p_property_id: propertyId });
+    setRevokingAgentId(null);
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
+  async function handleRequestReplacement(propertyId: string) {
+    setSubmittingReplacement(true);
+    const { error } = await supabase.rpc("request_agent_replacement", {
+      p_property_id: propertyId,
+      p_chs_id: newAgentChsId.trim(),
+      p_name: newAgentName.trim(),
+      p_phone: newAgentPhone.trim(),
+    });
+    setSubmittingReplacement(false);
+    if (!error) {
+      setReplacementRequestSubmitted(true);
+      setNewAgentName("");
+      setNewAgentPhone("");
+      setNewAgentChsId("");
+    }
+  }
+
+  async function handleLinkAgentPostListing(propertyId: string) {
+    if (!postListingAgentId.trim()) return;
+    setLinkingAgent(true);
+    setLinkAgentError(null);
+    const { error } = await supabase.rpc("link_managing_agent_by_id", { p_property_id: propertyId, p_chs_agent_id: postListingAgentId.trim() });
+    setLinkingAgent(false);
+    if (error) {
+      setLinkAgentError(error.message);
+      return;
+    }
+    setLinkingAgentPropertyId(null);
+    setPostListingAgentId("");
+    loadData();
+  }
+
+  async function handleMarkDispatched(offerId: string) {
+    setDispatchingId(offerId);
+    setActionError(null);
+    const { error } = await supabase.rpc("mark_documents_dispatched", {
+      p_offer_id: offerId,
+      p_method: dispatchMethod[offerId] || "Courier",
+      p_tracking: dispatchTracking[offerId] || null,
+    });
+    setDispatchingId(null);
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   async function handleAcceptWithInstallment(offerId: string) {
     setActionError(null);
     const pct = Number(downpaymentPct[offerId]);
@@ -276,19 +408,24 @@ export default function OwnerDashboard() {
     // A real notification for the actual buyer — this is exactly the
     // gap the client specifically flagged: someone acting on something
     // with no way to ever tell the other real person it happened.
-    // The real fix here: the seller's own genuine message, if they
-    // wrote one, not just a fixed, generic line either way.
+    // This fixed, system-generated text is always safe to deliver
+    // directly — it's the seller's own free-text note, if they wrote
+    // one, that carries the real risk of taking a live negotiation
+    // off-platform, so that part alone routes through real CHS
+    // moderation instead of straight to the buyer.
     if (offer) {
       await supabase.rpc("notify_user", {
         p_user_id: offer.buyer_id,
         p_title: status === "accepted" ? "Your offer was accepted! Proceed to payment" : "Your offer was declined",
-        p_body: sellerNote
-          ? sellerNote
-          : status === "accepted"
-            ? "The owner has accepted your offer. Return to the property page to see your real total due and complete payment."
-            : "The owner has declined your offer on this property.",
+        p_body: status === "accepted"
+          ? "The owner has accepted your offer. Return to the property page to see your real total due and complete payment."
+          : "The owner has declined your offer on this property.",
         p_link: `/property/${offer.property_id}`,
       });
+
+      if (sellerNote) {
+        await supabase.rpc("send_precommit_message", { p_offer_id: offerId, p_text: sellerNote });
+      }
 
       // The exact real nudge restored from the original app — a
       // genuine, real-world source of stale listings is an owner who
@@ -369,7 +506,8 @@ export default function OwnerDashboard() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">My Properties</h1>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <NotificationBell />
             <Link href="/market-demand" className="bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Market Demand
             </Link>
@@ -404,7 +542,86 @@ export default function OwnerDashboard() {
             <p className="font-serif text-lg font-bold">{formatNaira(rentCollected)}</p>
             <p className="text-[9px] text-white/60 uppercase">Rent collected</p>
           </div>
+          {portfolioSummary && (
+            <>
+              <div className="text-center">
+                <p className="font-serif text-lg font-bold">{portfolioSummary.occupied_or_sold}</p>
+                <p className="text-[9px] text-white/60 uppercase">Sold / Occupied</p>
+              </div>
+              <div className="text-center">
+                <p className="font-serif text-lg font-bold">{portfolioSummary.pending_offers}</p>
+                <p className="text-[9px] text-white/60 uppercase">Pending offers</p>
+              </div>
+              <div className="text-center">
+                <p className="font-serif text-lg font-bold">{portfolioSummary.open_fault_reports}</p>
+                <p className="text-[9px] text-white/60 uppercase">Open faults</p>
+              </div>
+            </>
+          )}
         </div>
+        <p className="text-[9px] text-white/50 uppercase font-semibold mt-4 mb-1.5">Quick Actions</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          <button onClick={() => { setShowConcernForm(!showConcernForm); setShowMessageThread(false); setShowEarningsLedger(false); }}
+            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showConcernForm ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="text-base">⚠️</span>
+            <span className="text-[8px] text-white font-semibold leading-tight">Raise a<br />Concern</span>
+          </button>
+          <button onClick={() => { setShowMessageThread(!showMessageThread); setShowConcernForm(false); setShowEarningsLedger(false); }}
+            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showMessageThread ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="text-base">💬</span>
+            <span className="text-[8px] text-white font-semibold leading-tight">Direct Line<br />to CHS</span>
+          </button>
+          <button onClick={() => { setShowEarningsLedger(!showEarningsLedger); setShowConcernForm(false); setShowMessageThread(false); }}
+            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showEarningsLedger ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="text-base">📊</span>
+            <span className="text-[8px] text-white font-semibold leading-tight">Earnings<br />History</span>
+          </button>
+          <Link href="/list-property"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center bg-chs-red">
+            <span className="text-base">➕</span>
+            <span className="text-[8px] text-white font-semibold leading-tight">List a<br />Property</span>
+          </Link>
+        </div>
+        {showConcernForm && (
+          <div className="bg-white rounded-lg p-3 mt-2">
+            {concernSubmitted ? (
+              <p className="text-xs text-green-700 font-semibold text-center py-2">✓ Your concern has been sent to CHS — you&apos;ll be notified once it&apos;s addressed.</p>
+            ) : (
+              <>
+                <input type="text" placeholder="Subject" value={concernSubject} onChange={(e) => setConcernSubject(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs mb-1.5" />
+                <textarea placeholder="Describe your concern in detail" value={concernMessage} onChange={(e) => setConcernMessage(e.target.value)}
+                  rows={3} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs mb-1.5" />
+                <button onClick={handleRaiseConcern} disabled={submittingConcern || !concernSubject.trim() || !concernMessage.trim()}
+                  className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                  {submittingConcern ? "Sending..." : "Send to CHS"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        {showMessageThread && session && (
+          <div className="mt-2">
+            <OwnerAdminMessageThread ownerId={session.user.id} viewerRole="owner" />
+          </div>
+        )}
+        {showEarningsLedger && (
+          <div className="bg-white rounded-lg p-3 mt-2 max-h-72 overflow-y-auto">
+            {earningsLedger.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-3">No real earnings recorded yet.</p>
+            ) : (
+              earningsLedger.map((tx) => (
+                <div key={tx.id} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
+                  <div>
+                    <p className="text-[11px] text-chs-charcoal font-semibold">{tx.description}</p>
+                    <p className="text-[9px] text-gray-400">{new Date(tx.created_at).toLocaleDateString()} · {tx.wallet_type === "escrow_held" ? "Held (pending document transfer)" : "Main wallet"}</p>
+                  </div>
+                  <p className="text-xs font-bold text-green-700">+{formatNaira(tx.amount)}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {actionError && (
@@ -468,6 +685,67 @@ export default function OwnerDashboard() {
                 </button>
               </div>
 
+              {property.purpose !== "sale" && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  {property.managing_agent_id ? (
+                    <>
+                      <p className="text-[10px] text-green-700 font-semibold mb-1">✓ A real agent has full management authority on this property</p>
+                      <button onClick={() => handleRevokeAgent(property.id)} disabled={revokingAgentId === property.id}
+                        className="text-[10px] font-semibold text-chs-red underline">
+                        {revokingAgentId === property.id ? "Revoking..." : "⚠️ Relieve this agent of duty"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => setLinkingAgentPropertyId(linkingAgentPropertyId === property.id ? null : property.id)}
+                        className="text-[10px] font-semibold text-chs-red underline">
+                        🤝 Grant an agent full management authority
+                      </button>
+                      <button onClick={() => setReplacingAgentPropertyId(replacingAgentPropertyId === property.id ? null : property.id)}
+                        className="text-[10px] font-semibold text-chs-charcoal underline ml-3">
+                        Request a new agent through CHS
+                      </button>
+                    </>
+                  )}
+                  {linkingAgentPropertyId === property.id && !property.managing_agent_id && (
+                    <div className="mt-2 bg-[var(--zone-card)] rounded-lg p-2.5">
+                      <input type="text" placeholder="Agent's real CHS ID, e.g. CHS-AGT-12345" value={postListingAgentId}
+                        onChange={(e) => setPostListingAgentId(e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                      {linkAgentError && <p className="text-[10px] text-chs-red mb-1.5">{linkAgentError}</p>}
+                      <button onClick={() => handleLinkAgentPostListing(property.id)} disabled={linkingAgent}
+                        className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                        {linkingAgent ? "Linking..." : "Link this agent"}
+                      </button>
+                    </div>
+                  )}
+                  {replacingAgentPropertyId === property.id && (
+                    <div className="mt-2 bg-[var(--zone-card)] rounded-lg p-2.5">
+                      {replacementRequestSubmitted ? (
+                        <p className="text-[10px] text-green-700 font-semibold text-center py-1">✓ Sent to CHS — we&apos;ll verify their identity and grant access.</p>
+                      ) : (
+                        <>
+                          <p className="text-[9px] text-gray-500 mb-1.5">Real name, phone, or CHS ID — whatever you have. CHS will verify before granting any access.</p>
+                          <input type="text" placeholder="New agent's real name" value={newAgentName}
+                            onChange={(e) => setNewAgentName(e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          <input type="text" placeholder="Phone number" value={newAgentPhone}
+                            onChange={(e) => setNewAgentPhone(e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          <input type="text" placeholder="Real CHS ID, if you have it (optional)" value={newAgentChsId}
+                            onChange={(e) => setNewAgentChsId(e.target.value)}
+                            className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          <button onClick={() => handleRequestReplacement(property.id)} disabled={submittingReplacement}
+                            className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                            {submittingReplacement ? "Sending..." : "Send to CHS for verification"}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Real fix, confirmed by direct testing: this
                   previously showed unconditionally for every
                   listing, including a land sale where "house rules"
@@ -499,7 +777,7 @@ export default function OwnerDashboard() {
                       {offer.status === "pending" && (
                         <div className="mt-2">
                           <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
-                            placeholder="Optional message to the buyer — e.g. a reason, or the amount you'd actually accept"
+                            placeholder="Optional message to the buyer — reviewed by CHS before delivery. Please don't include a phone number or email; all negotiation stays on-platform until payment is made."
                             rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
                           <label className="flex items-center gap-1.5 mb-1.5">
                             <input type="checkbox" checked={!!acceptWithInstallment[offer.id]}
@@ -522,6 +800,9 @@ export default function OwnerDashboard() {
                             </button>
                           </div>
                         </div>
+                      )}
+                      {(offer.status === "pending" || offer.status === "accepted") && (
+                        <OfferMessageThread offerId={offer.id} viewerRole="seller" viewerId={session?.user.id || ""} />
                       )}
                     </div>
                   ))}
@@ -591,8 +872,13 @@ export default function OwnerDashboard() {
           {tenancies.map((t) => (
             <div key={t.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500 capitalize">{t.status}</span>
-                <div className="flex gap-3">
+                <span className="text-xs text-gray-500 capitalize">{t.status}</span>                <div className="flex gap-3">
+                  <button
+                    onClick={() => setMessagingTenancy(t)}
+                    className="text-[10px] font-semibold text-chs-red underline"
+                  >
+                    💬 Message tenant
+                  </button>
                   <button
                     onClick={() => { setIssuingNoticeTenancy(t); setNoticeIssued(false); }}
                     className="text-[10px] font-semibold text-chs-charcoal underline"
@@ -607,6 +893,15 @@ export default function OwnerDashboard() {
                   </button>
                 </div>
               </div>
+              {t.lease_end && (() => {
+                const daysLeft = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                return (
+                  <p className="text-[10px] text-gray-500 mt-1.5">
+                    {daysLeft > 0 ? `${daysLeft} real day${daysLeft !== 1 ? "s" : ""} to next rent due` : "Rent is due"}
+                    {t.notice_given_at && <span className="text-green-700 font-semibold"> · Tenant has given non-renewal notice</span>}
+                  </p>
+                );
+              })()}
               {t.management_delegated && (
                 <div className="mt-2 pt-2 border-t border-gray-100">
                   <p className="text-[10px] text-chs-amber-dark font-semibold mb-1">✓ CHS is managing this property</p>
@@ -615,6 +910,16 @@ export default function OwnerDashboard() {
               )}
             </div>
           ))}
+
+          {messagingTenancy && session && (
+            <MessageThread
+              tenancyId={messagingTenancy.id}
+              session={session}
+              recipientId={messagingTenancy.tenant_id}
+              recipientLabel="Your tenant"
+              onClose={() => setMessagingTenancy(null)}
+            />
+          )}
         </div>
       )}
 
@@ -631,6 +936,49 @@ export default function OwnerDashboard() {
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
             </div>
           ))}
+        </div>
+      )}
+
+      {paidOffersAwaitingDispatch.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="bg-chs-red rounded-xl p-4 mb-2">
+            <p className="text-sm font-bold text-white mb-1">💰 Real payment received — action needed</p>
+            <p className="text-[11px] text-white/80">A buyer has paid in full. Your real net proceeds are visible in your Wallet, held until you send real documents and the buyer confirms receipt.</p>
+          </div>
+          {paidOffersAwaitingDispatch.map((offer) => {
+            const dispatchReq = offer.document_dispatch_requests?.[0];
+            return (
+              <div key={offer.id} className="bg-white rounded-xl border-2 border-chs-red p-3 mb-2">
+                <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
+                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — real proceeds held pending document transfer.</p>
+                {!dispatchReq && (
+                  <p className="text-[10px] text-gray-400 mb-2">Waiting on the buyer to request their documents, or you can send them proactively below.</p>
+                )}
+                {dispatchReq?.status === "requested" && (
+                  <p className="text-[10px] bg-chs-amber-light text-chs-amber-dark rounded-full px-2 py-1 mb-2 inline-block">⏳ Buyer has requested your real documents</p>
+                )}
+                {dispatchReq?.status === "dispatched" ? (
+                  <p className="text-[10px] bg-green-50 text-green-700 rounded-full px-2 py-1 inline-block">📦 Marked dispatched — waiting on buyer to confirm receipt</p>
+                ) : (
+                  <>
+                    <select value={dispatchMethod[offer.id] || "Courier"} onChange={(e) => setDispatchMethod((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5">
+                      <option>Courier</option>
+                      <option>Barrister / Legal representative</option>
+                      <option>Hand delivery</option>
+                    </select>
+                    <input type="text" placeholder="Tracking reference (optional)" value={dispatchTracking[offer.id] || ""}
+                      onChange={(e) => setDispatchTracking((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                    <button onClick={() => handleMarkDispatched(offer.id)} disabled={dispatchingId === offer.id}
+                      className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                      {dispatchingId === offer.id ? "Saving..." : "✓ Mark real documents as sent"}
+                    </button>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -662,6 +1010,20 @@ export default function OwnerDashboard() {
               <span className="inline-block mt-1 text-[9px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
                 {f.status.replace(/_/g, " ")}
               </span>
+              {f.fault_quotations && f.fault_quotations.length > 0 && (
+                <div className="bg-[var(--zone-card)] rounded-lg p-2 mt-2">
+                  <p className="text-[9px] font-bold text-gray-500 uppercase mb-1">Real artisan correspondence</p>
+                  {f.fault_quotations.map((q, i) => (
+                    <div key={i} className="flex justify-between text-[10px] py-0.5">
+                      <span className="text-chs-charcoal">
+                        {q.vendor_name}{q.artisans?.trade ? ` (${q.artisans.trade})` : ""}
+                        {f.approved_vendor === q.vendor_name && <span className="text-green-700 font-semibold"> ✓ Approved</span>}
+                      </span>
+                      <span className="font-semibold">{formatNaira(q.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               {f.status === "completed_pending_confirmation" && (
                 <div className="mt-2">
                   {confirmJobMessage[f.id] && <p className="text-[10px] text-gray-600 mb-1">{confirmJobMessage[f.id]}</p>}

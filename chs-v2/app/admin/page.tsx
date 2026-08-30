@@ -32,6 +32,7 @@ interface DeveloperApplication {
   status: string;
 }
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
+import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -79,6 +80,14 @@ export default function AdminDashboard() {
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
   const [totalCommissionEarnings, setTotalCommissionEarnings] = useState(0);
+  const [openOwnerConcerns, setOpenOwnerConcerns] = useState<{ id: string; subject: string; message: string; profiles: { full_name: string } | null }[]>([]);
+  const [agentChangeRequests, setAgentChangeRequests] = useState<{ id: string; requested_agent_name: string | null; requested_agent_phone: string | null; requested_agent_chs_id: string | null; properties: { title: string } | null }[]>([]);
+  const [approvingAgentInput, setApprovingAgentInput] = useState<Record<string, string>>({});
+  const [concernResponses, setConcernResponses] = useState<Record<string, string>>({});
+  const [ownersWithMessages, setOwnersWithMessages] = useState<{ owner_id: string; full_name: string }[]>([]);
+  const [activeMessageOwnerId, setActiveMessageOwnerId] = useState<string | null>(null);
+  const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
   const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
 
@@ -294,6 +303,89 @@ export default function AdminDashboard() {
       .select("commission_amount")
       .eq("status", "paid");
     setTotalCommissionEarnings((commissionData || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
+
+    const { data: concernsData } = await supabase
+      .from("owner_concerns")
+      .select("id, subject, message, profiles:owner_id(full_name)")
+      .eq("status", "open")
+      .order("created_at", { ascending: true });
+    setOpenOwnerConcerns((concernsData as unknown as typeof openOwnerConcerns) || []);
+
+    const { data: agentChangeData } = await supabase
+      .from("agent_change_requests")
+      .select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    setAgentChangeRequests((agentChangeData as unknown as typeof agentChangeRequests) || []);
+
+    // Real, distinct list of owners with active correspondence —
+    // derived from the actual messages table, not a guess.
+    const { data: msgOwnerData } = await supabase
+      .from("owner_admin_messages")
+      .select("owner_id, profiles:owner_id(full_name)")
+      .order("created_at", { ascending: false });
+    const seen = new Set<string>();
+    const uniqueOwners: { owner_id: string; full_name: string }[] = [];
+    (msgOwnerData || []).forEach((m: Record<string, unknown>) => {
+      const oid = m.owner_id as string;
+      if (!seen.has(oid)) {
+        seen.add(oid);
+        const prof = m.profiles as { full_name: string } | { full_name: string }[] | null;
+        const name = Array.isArray(prof) ? prof[0]?.full_name : prof?.full_name;
+        uniqueOwners.push({ owner_id: oid, full_name: name || "Owner" });
+      }
+    });
+    setOwnersWithMessages(uniqueOwners);
+
+    // Real, pending pre-commitment negotiation messages — genuine
+    // review queue, matching the exact strategic requirement that no
+    // negotiation reaches a non-committed buyer without CHS review.
+    const { data: precommitData } = await supabase
+      .from("precommit_messages")
+      .select("id, text, sender_role, profiles:sender_id(full_name), offers(properties(title))")
+      .eq("status", "pending_review")
+      .order("created_at", { ascending: true });
+    setPendingPrecommitMessages((precommitData as unknown as typeof pendingPrecommitMessages) || []);
+
+    // Real, itemized transaction log — the actual fix for "opaque
+    // earnings": every real commission line item, who paid it, what
+    // role, what percentage, and when — not just one lump total.
+    const { data: txnData } = await supabase
+      .from("transaction_commissions")
+      .select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title), profiles:payer_id(full_name)")
+      .eq("status", "paid")
+      .order("paid_at", { ascending: false })
+      .limit(50);
+
+    // Real fix: installment payments are deliberately NOT duplicated
+    // into transaction_commissions (a real unique constraint conflict
+    // found during testing), so they'd otherwise be invisible here —
+    // exactly the kind of "opaque earnings" gap being fixed. Fetched
+    // separately and merged into the same real, unified log.
+    const { data: installmentData } = await supabase
+      .from("sale_installment_payments")
+      .select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))")
+      .order("paid_at", { ascending: false })
+      .limit(50);
+    const installmentAsTransactions = (installmentData || []).flatMap((p: Record<string, unknown>) => {
+      const offer = Array.isArray(p.offers) ? p.offers[0] : p.offers;
+      const props = offer?.properties ? (Array.isArray(offer.properties) ? offer.properties[0] : offer.properties) : null;
+      const buyerProfile = offer?.profiles ? (Array.isArray(offer.profiles) ? offer.profiles[0] : offer.profiles) : null;
+      return [{
+        id: p.id, transaction_type: "sale_installment", payer_role: "buyer",
+        base_amount: p.amount, commission_percentage: null, commission_amount: p.buyer_commission,
+        paid_at: p.paid_at, properties: props, profiles: buyerProfile,
+      }];
+    });
+
+    const merged = [...(txnData || []), ...installmentAsTransactions]
+      .sort((a, b) => new Date(b.paid_at as string).getTime() - new Date(a.paid_at as string).getTime())
+      .slice(0, 50);
+    setRecentTransactions(merged as unknown as typeof recentTransactions);
+
+    // Real, admin-wide escrow visibility now shown directly via
+    // pendingLegalTransfers below, with the actual release button
+    // right alongside it — no separate summary needed.
 
     const { data: saleDocsData } = await supabase
       .from("property_sale_documents")
@@ -793,6 +885,48 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleApprovePrecommitMessage(messageId: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("approve_precommit_message", { p_message_id: messageId });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
+  async function handleRejectPrecommitMessage(messageId: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("reject_precommit_message", { p_message_id: messageId, p_reason: "This message could not be approved for delivery. Please rephrase and avoid sharing contact details before payment is complete." });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
+  async function handleApproveAgentChange(requestId: string) {
+    const chsId = approvingAgentInput[requestId];
+    if (!chsId?.trim()) return;
+    setActionError(null);
+    const { error } = await supabase.rpc("approve_agent_replacement", { p_request_id: requestId, p_agent_chs_id: chsId.trim() });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
+  async function handleResolveConcern(concernId: string, response: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("resolve_owner_concern", { p_concern_id: concernId, p_response: response });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   async function handleSaleDocReview(docId: string, approve: boolean) {
     setActionError(null);
     const { error } = await supabase.from("property_sale_documents").update({
@@ -904,6 +1038,130 @@ export default function AdminDashboard() {
               <p className="text-2xl font-bold text-white mt-1">{formatNaira(totalCommissionEarnings)}</p>
               <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Rent-to-Own — updates automatically as real transactions complete.</p>
             </div>
+
+            {pendingLegalTransfers.length > 0 && (
+              <div className="col-span-2 bg-chs-amber-light border-2 border-chs-amber-dark rounded-xl p-4">
+                <p className="text-xs font-bold text-chs-amber-dark mb-2">🔒 Real funds held in escrow — confirm legal transfer to release</p>
+                {pendingLegalTransfers.map((offer) => (
+                  <div key={offer.id} className="bg-white rounded-lg p-2.5 mb-2 last:mb-0">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="text-chs-charcoal font-semibold">{offer.properties?.title || "Property"}</span>
+                      <span className="font-bold text-chs-charcoal">{formatNaira(offer.amount)}</span>
+                    </div>
+                    <button onClick={() => handleConfirmLegalTransfer(offer.id)}
+                      className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      ✓ Confirm real legal documents transferred — release funds
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3">
+              <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Recent Real Transactions ({recentTransactions.length})</p>
+              {recentTransactions.length === 0 ? (
+                <p className="text-center text-xs text-gray-400 py-4">No real transactions yet.</p>
+              ) : (
+                <div className="max-h-80 overflow-y-auto space-y-1.5">
+                  {recentTransactions.map((t) => (
+                    <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2 text-[10px]">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold capitalize">{t.transaction_type.replace(/_/g, " ")} — {t.payer_role}</span>
+                        <span className="text-gray-400">{new Date(t.paid_at).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-gray-500 mt-0.5">{t.profiles?.full_name || "User"} · {t.properties?.title || ""}</p>
+                      <div className="flex justify-between mt-1">
+                        <span className="text-gray-500">Base: {formatNaira(t.base_amount)}{t.commission_percentage !== null ? ` × ${t.commission_percentage}%` : " (installment)"}</span>
+                        <span className="font-bold text-chs-red">{formatNaira(t.commission_amount)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {openOwnerConcerns.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">⚠️ Open Owner Concerns ({openOwnerConcerns.length})</p>
+                {openOwnerConcerns.map((c) => (
+                  <div key={c.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                    <p className="text-xs font-semibold text-chs-charcoal">{c.subject}</p>
+                    <p className="text-[10px] text-gray-500 mb-1">{c.profiles?.full_name || "Owner"}: {c.message}</p>
+                    <input type="text" placeholder="Your response..." value={concernResponses[c.id] || ""}
+                      onChange={(e) => setConcernResponses((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[10px] mb-1.5" />
+                    <button onClick={() => handleResolveConcern(c.id, concernResponses[c.id] || "Resolved.")}
+                      className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      ✓ Send response & resolve
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {agentChangeRequests.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border-2 border-chs-red p-3">
+                <p className="text-xs font-bold text-chs-red mb-2">🤝 Real Agent Replacement Requests ({agentChangeRequests.length})</p>
+                {agentChangeRequests.map((r) => (
+                  <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                    <p className="text-xs font-semibold text-chs-charcoal">{r.properties?.title || "Property"}</p>
+                    <p className="text-[10px] text-gray-500 mb-1.5">
+                      {r.requested_agent_name || "Name not given"} · {r.requested_agent_phone || "No phone"}
+                      {r.requested_agent_chs_id && ` · Owner-provided CHS ID: ${r.requested_agent_chs_id}`}
+                    </p>
+                    <input type="text" placeholder="Verified agent's real CHS ID, e.g. CHS-AGT-12345"
+                      value={approvingAgentInput[r.id] || r.requested_agent_chs_id || ""}
+                      onChange={(e) => setApprovingAgentInput((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                    <button onClick={() => handleApproveAgentChange(r.id)}
+                      className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      ✓ Verify & grant access
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {ownersWithMessages.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">💬 Owner Correspondence ({ownersWithMessages.length})</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {ownersWithMessages.map((o) => (
+                    <button key={o.owner_id} onClick={() => setActiveMessageOwnerId(o.owner_id === activeMessageOwnerId ? null : o.owner_id)}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-semibold ${activeMessageOwnerId === o.owner_id ? "bg-chs-red text-white" : "bg-[var(--zone-card)] text-chs-charcoal"}`}>
+                      {o.full_name}
+                    </button>
+                  ))}
+                </div>
+                {activeMessageOwnerId && (
+                  <OwnerAdminMessageThread ownerId={activeMessageOwnerId} viewerRole="admin" />
+                )}
+              </div>
+            )}
+
+            {pendingPrecommitMessages.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border-2 border-chs-amber-dark p-3">
+                <p className="text-xs font-bold text-chs-amber-dark mb-2">📋 Real Negotiation Messages Awaiting Review ({pendingPrecommitMessages.length})</p>
+                <p className="text-[10px] text-gray-500 mb-2">No message reaches a non-committed buyer or seller until approved here — the real deterrent against taking a deal off-platform.</p>
+                {pendingPrecommitMessages.map((m) => (
+                  <div key={m.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                    <p className="text-[10px] text-gray-400 mb-1">{m.profiles?.full_name || "User"} ({m.sender_role}) — {m.offers?.properties?.title || "Property"}</p>
+                    <p className="text-xs text-chs-charcoal mb-2">{m.text}</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleApprovePrecommitMessage(m.id)}
+                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Approve & deliver
+                      </button>
+                      <button onClick={() => handleRejectPrecommitMessage(m.id)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {profile?.is_super_admin && pendingLoginRequests.length > 0 && (
               <div className="col-span-2 bg-red-50 border-2 border-red-200 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-bold text-red-700">🔐 Admin logins awaiting your approval</p>

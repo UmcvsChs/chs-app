@@ -100,18 +100,18 @@ export default function HomePageClient({ properties, platformStats }: { properti
 
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)]">
-      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
-        <div>
+      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start gap-2 overflow-hidden">
+        <div className="shrink-0">
           <h1 className="font-serif text-xl font-bold">CHS</h1>
           <p className="text-xs text-white/70">Complete Housing Solutions</p>
           <Link href="/marketplace" className="text-[10px] text-white/60 underline mt-1 inline-block">
             Visit the Marketplace →
           </Link>
         </div>
-        <div className="text-xs flex items-center gap-2">
+        <div className="text-xs flex items-center gap-2 overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ThemeToggle />
           {loading ? null : session && profile ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
               <NotificationBell />
               <Link href="/profile" className="w-7 h-7 rounded-full bg-white/15 overflow-hidden flex items-center justify-center shrink-0">
                 {profile.avatar_url ? (

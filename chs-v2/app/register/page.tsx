@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import ComprehensionCheck from "@/components/ComprehensionCheck";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
@@ -25,8 +25,10 @@ const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "developer", label: "Commercial Developer", desc: "Sell estates, offer instalment/investment plans" },
 ];
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const agentInviteToken = searchParams.get("agent_invite");
   const [role, setRole] = useState<Role>("buyer");
   const [comprehensionPassed, setComprehensionPassed] = useState(false);
   const [name, setName] = useState("");
@@ -151,6 +153,14 @@ export default function RegisterPage() {
       }
 
       const userId = loginData.user.id;
+
+      // Real, new feature: if this new agent registered through a
+      // real owner-generated invite link, automatically grant them
+      // full management authority on that specific property — no
+      // extra step needed from either the agent or the owner.
+      if (role === "agent" && agentInviteToken) {
+        await supabase.rpc("link_agent_via_invite", { p_agent_id: userId, p_invite_token: agentInviteToken });
+      }
 
       // Step 2: role-specific extras — a real file upload, then a real
       // update with everything collected, matching exactly what the
@@ -455,5 +465,16 @@ export default function RegisterPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+// Real, required Suspense boundary — useSearchParams (needed to read
+// a real agent invite token from the URL) forces this during static
+// generation; without it, the production build genuinely fails.
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

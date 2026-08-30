@@ -163,6 +163,14 @@ export default function AgentDashboard() {
           </div>
         )}
 
+        {profile?.chs_agent_id && (
+          <div className="bg-chs-charcoal rounded-xl p-3 text-center">
+            <p className="text-[9px] text-white/60 uppercase font-semibold">Your Real CHS Agent ID</p>
+            <p className="text-lg font-bold text-white mt-0.5 tracking-wide">{profile.chs_agent_id}</p>
+            <p className="text-[10px] text-white/50 mt-1">Share this with a property owner to be granted full management authority on their listing — messaging their tenant, notices, maintenance, and earnings, exactly as an owner would.</p>
+          </div>
+        )}
+
         <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">Your referral link</p>
           <p className="text-xs text-gray-500 mb-3">

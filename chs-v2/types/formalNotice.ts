@@ -5,7 +5,7 @@ export interface FormalNotice {
   id: string;
   reference: string;
   tenancy_id: string;
-  notice_type: "sale" | "renovation" | "rent_review" | "quit";
+  notice_type: "sale" | "renovation" | "rent_review" | "quit" | "warning" | "query";
   details: Record<string, string>;
   issued_by: string;
   issued_at: string;
@@ -19,6 +19,8 @@ export const NOTICE_TYPE_LABELS: Record<string, string> = {
   renovation: "Renovation Notice",
   rent_review: "Rent Review Notice",
   quit: "Notice to Quit",
+  warning: "Formal Warning",
+  query: "Query",
 };
 
 // The exact real per-category fields from the original app, restored
@@ -26,7 +28,7 @@ export const NOTICE_TYPE_LABELS: Record<string, string> = {
 export interface NoticeField {
   id: string;
   label: string;
-  type: "text" | "select";
+  type: "text" | "select" | "date";
   placeholder?: string;
   options?: string[];
 }
@@ -49,6 +51,14 @@ export const NOTICE_CATEGORY_FIELDS: Record<string, NoticeField[]> = {
   ],
   quit: [
     { id: "reason", label: "Stated reason for the notice to quit", type: "text", placeholder: "Required — e.g. owner requires property for personal use" },
-    { id: "vacate_by", label: "Vacate by", type: "text", placeholder: "e.g. 31 December 2026" },
+    { id: "vacate_by", label: "Vacate by (real date)", type: "date", placeholder: "" },
+  ],
+  warning: [
+    { id: "reason", label: "What is this warning about?", type: "text", placeholder: "Required — e.g. repeated late rent payment, property misuse" },
+    { id: "action_required", label: "What must the tenant do to resolve this?", type: "text", placeholder: "e.g. Settle outstanding balance within 7 days" },
+  ],
+  query: [
+    { id: "subject", label: "Subject of the query", type: "text", placeholder: "Required — e.g. unauthorized subletting suspected" },
+    { id: "details", label: "Details — what needs a response?", type: "text", placeholder: "Describe what you need the tenant to explain or address" },
   ],
 };

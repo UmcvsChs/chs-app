@@ -48,6 +48,7 @@ export interface Property {
   photos: string[];
   video_url: string | null;
   owner_identity_visible_to_tenant: boolean;
+  managing_agent_id: string | null;
   promoted_until: string | null;
 
   is_urgent_sale: boolean;

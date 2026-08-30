@@ -31,6 +31,7 @@ export interface Profile {
   association_name: string | null;
   membership_id: string | null;
   membership_verified: boolean;
+  chs_agent_id: string | null;
   operating_lgas: string | null;
   years_experience: string | null;
   application_motivation: string | null;

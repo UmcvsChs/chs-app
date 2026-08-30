@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 
-// Redesigned to genuinely fill the screen the way the reference app
-// does — a bordered mark in its own frame, a real bold title, a real
-// subtitle, and a tagline, rather than one small logo image floating
-// alone in a large empty gradient. The mark itself (icon-512.png) was
-// also regenerated with bolder, less padding — the earlier version's
-// generous padding, correct for in-app display, was making Android's
-// own auto-generated PWA splash (the very first frame, before this
-// component even mounts) look small and centered in a void.
+// Real background image (glowing rooftop arc + amber city skyline)
+// per the client's final approved design, generated externally and
+// verified here for genuine image quality (checked directly for
+// noise/artifacts before use) and real file size (compressed to
+// ~150KB) before being wired in. The logo, all text, and the three
+// loading dots remain real, live HTML/CSS on top — not baked into
+// the image — so they stay crisp, accessible, and the dots keep
+// their genuine pulse animation.
 export default function SplashScreen() {
   const [fading, setFading] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -32,37 +32,39 @@ export default function SplashScreen() {
 
   return (
     <div
-      className="fixed inset-0 z-[999] flex flex-col items-center justify-center px-6 transition-opacity duration-[800ms]"
+      className="fixed inset-0 z-[999] flex flex-col items-center px-6 transition-opacity duration-[800ms]"
       style={{
-        background: "linear-gradient(180deg, #4B627A 0%, #1C1B1A 50%, #B56A28 100%)",
+        backgroundImage: "url(/splash-background.jpg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: "#0d0c0c",
         opacity: fading ? 0 : 1,
         pointerEvents: fading ? "none" : "auto",
+        paddingTop: "19vh",
       }}
     >
-      <div
-        className="rounded-3xl p-6 mb-7"
-        style={{ border: "2px solid rgba(255,255,255,0.35)" }}
-      >
-        <Image
-          src="/icon-512.png"
-          alt="CHS"
-          width={140}
-          height={140}
-          priority
-          style={{ width: 140, height: 140, borderRadius: 24 }}
-        />
-      </div>
+      <Image
+        src="/icon-512.png"
+        alt="CHS"
+        width={220}
+        height={220}
+        priority
+        style={{ width: 220, height: 220, marginBottom: 8 }}
+      />
 
-      <h1 className="font-serif text-[34px] leading-tight font-bold text-white text-center tracking-wide">
+      <h1
+        className="font-serif leading-tight text-white text-center tracking-wide"
+        style={{ fontSize: 44, fontWeight: 800 }}
+      >
         COMPLETE HOUSING
       </h1>
       <div className="w-16 h-[2px] bg-white/40 my-2" />
-      <p className="text-lg font-semibold text-[#E8A33D] tracking-[0.2em] mb-4">SOLUTIONS</p>
+      <p className="text-xl font-bold text-[#E8A33D] tracking-[0.2em] mb-4">SOLUTIONS</p>
 
-      <p className="text-[13px] text-white/70 text-center max-w-[280px] leading-relaxed">
+      <p className="text-[15px] text-white/80 text-center max-w-[300px] leading-relaxed font-medium">
         Nigeria&apos;s trusted property platform — connecting owners, tenants, buyers, agents, and property managers nationwide.
       </p>
-      <p className="text-[13px] text-white/60 italic mt-3">Your property, our commitment</p>
+      <p className="text-[15px] text-[#E8A33D] italic mt-3 font-semibold">Your property, our commitment</p>
 
       <div className="flex gap-2 mt-7">
         {[0, 1, 2].map((i) => (

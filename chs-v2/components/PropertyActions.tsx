@@ -11,6 +11,7 @@ import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
 import ShortletBookingForm from "./ShortletBookingForm";
 import IdentityVerificationGate from "./IdentityVerificationGate";
+import OfferMessageThread from "./OfferMessageThread";
 
 type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet";
 
@@ -44,6 +45,10 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [myPaidOffer, setMyPaidOffer] = useState<{ id: string; document_deadline: string; legal_transfer_confirmed: boolean } | null>(null);
   const [deadlinePassed, setDeadlinePassed] = useState(false);
   const [requestingRefund, setRequestingRefund] = useState(false);
+  const [dispatchStatus, setDispatchStatus] = useState<"none" | "requested" | "dispatched">("none");
+  const [requestingDispatch, setRequestingDispatch] = useState(false);
+  const [confirmingDocuments, setConfirmingDocuments] = useState(false);
+  const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState(false);
 
@@ -87,9 +92,35 @@ export default function PropertyActions({ property }: { property: Property }) {
       .maybeSingle()
       .then(({ data }) => {
         setMyPaidOffer(data);
-        if (data) setDeadlinePassed(new Date(data.document_deadline).getTime() < Date.now());
+        if (data) {
+          setDeadlinePassed(new Date(data.document_deadline).getTime() < Date.now());
+          supabase.from("document_dispatch_requests").select("status").eq("offer_id", data.id).maybeSingle().then(({ data: dispatch }) => {
+            setDispatchStatus((dispatch?.status as "requested" | "dispatched") || "none");
+          });
+        }
       });
   }, [session, property.id, property.purpose]);
+
+  async function handleRequestDispatch() {
+    if (!myPaidOffer) return;
+    setRequestingDispatch(true);
+    const { error } = await supabase.rpc("request_document_dispatch", { p_offer_id: myPaidOffer.id });
+    setRequestingDispatch(false);
+    if (!error) setDispatchStatus("requested");
+  }
+
+  async function handleConfirmDocumentsReceived() {
+    if (!myPaidOffer) return;
+    setConfirmingDocuments(true);
+    setRefundError(null);
+    const { error } = await supabase.rpc("confirm_documents_received", { p_offer_id: myPaidOffer.id });
+    setConfirmingDocuments(false);
+    if (error) {
+      setRefundError(error.message);
+      return;
+    }
+    setDocumentsConfirmed(true);
+  }
 
   async function handleRequestRefund() {
     if (!myPaidOffer) return;
@@ -212,15 +243,41 @@ export default function PropertyActions({ property }: { property: Property }) {
         </div>
       );
     }
+    if (documentsConfirmed) {
+      return (
+        <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
+          <p className="text-sm font-bold text-green-700">✓ You confirmed receipt — the seller&apos;s funds have been released.</p>
+        </div>
+      );
+    }
     return (
       <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-4">
-        <p className="text-sm font-bold text-chs-charcoal mb-1">✓ Payment complete — CHS is coordinating your legal document transfer</p>
+        <p className="text-sm font-bold text-chs-charcoal mb-1">✓ Payment complete — this property is now yours!</p>
         <p className="text-xs text-gray-500 mb-3">
           Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
         </p>
+        {dispatchStatus === "none" && (
+          <button onClick={handleRequestDispatch} disabled={requestingDispatch}
+            className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold mb-2 disabled:opacity-50">
+            {requestingDispatch ? "Sending request..." : "Request soft copies of my documents"}
+          </button>
+        )}
+        {dispatchStatus === "requested" && (
+          <p className="text-xs bg-chs-amber-light text-chs-amber-dark rounded-lg p-2.5 mb-2">⏳ Waiting on the seller to dispatch your real documents.</p>
+        )}
+        {dispatchStatus === "dispatched" && (
+          <>
+            <p className="text-xs bg-green-50 text-green-700 rounded-lg p-2.5 mb-2">📦 The seller has marked your real documents as dispatched. Confirm below once you genuinely receive them.</p>
+            {refundError && <p className="text-xs text-chs-red mb-2">{refundError}</p>}
+            <button onClick={handleConfirmDocumentsReceived} disabled={confirmingDocuments}
+              className="w-full py-2.5 rounded-full bg-green-600 text-white text-sm font-semibold mb-2 disabled:opacity-50">
+              {confirmingDocuments ? "Processing..." : "✓ I've received my real documents"}
+            </button>
+          </>
+        )}
         {refundError && <p className="text-xs text-chs-red mb-2">{refundError}</p>}
         <button onClick={handleRequestRefund} disabled={!deadlinePassed || requestingRefund}
-          className="w-full py-2.5 rounded-full bg-chs-amber-dark text-white text-sm font-semibold disabled:opacity-40">
+          className="w-full py-2.5 rounded-full bg-gray-200 text-gray-600 text-sm font-semibold disabled:opacity-40">
           {requestingRefund ? "Processing..." : deadlinePassed ? "Request refund & cancel this deal" : "Refund available after the deadline above"}
         </button>
       </div>
@@ -236,6 +293,7 @@ export default function PropertyActions({ property }: { property: Property }) {
       );
     }
     return (
+      <>
       <div className="bg-white rounded-xl border-2 border-chs-red p-4">
         <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Offer accepted — proceed to payment</p>
         {myAcceptedOffer.accepts_installment ? (
@@ -276,6 +334,8 @@ export default function PropertyActions({ property }: { property: Property }) {
           </>
         )}
       </div>
+      {session && <OfferMessageThread offerId={myAcceptedOffer.id} viewerRole="buyer" viewerId={session.user.id} />}
+    </>
     );
   }
 

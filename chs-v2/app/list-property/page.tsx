@@ -88,6 +88,9 @@ export default function ListPropertyPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
   const [saleDocuments, setSaleDocuments] = useState<Record<string, File | null>>({});
+  const [agentAuthorityChoice, setAgentAuthorityChoice] = useState<"none" | "id" | "invite">("none");
+  const [agentChsId, setAgentChsId] = useState("");
+  const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   // Real ownership context fields — restored, found missing during
   // the systematic property listing form comparison. Genuinely useful
   // structured context for CHS's real verification team, not just a
@@ -263,6 +266,26 @@ export default function ListPropertyPage() {
       }
     }
 
+    // Real, new feature: linking a managing agent at listing time,
+    // either by their real CHS ID directly, or generating a real
+    // invite link for one who hasn't registered yet.
+    if (purpose !== "sale" && agentAuthorityChoice === "id" && agentChsId.trim()) {
+      const { error: linkError } = await supabase.rpc("link_managing_agent_by_id", {
+        p_property_id: newProperty.id,
+        p_chs_agent_id: agentChsId.trim(),
+      });
+      if (linkError) {
+        setError(linkError.message);
+        return;
+      }
+    } else if (purpose !== "sale" && agentAuthorityChoice === "invite") {
+      const { data: token } = await supabase.rpc("generate_agent_invite_link", { p_property_id: newProperty.id });
+      if (token) {
+        setGeneratedInviteLink(`${window.location.origin}/register?agent_invite=${token}`);
+        return;
+      }
+    }
+
     // Sent to the Owner dashboard, not the property's own public detail
     // page — that page currently has no way to know it's really the
     // owner viewing their own not-yet-verified listing (a real,
@@ -274,6 +297,22 @@ export default function ListPropertyPage() {
 
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
+  }
+
+  if (generatedInviteLink) {
+    return (
+      <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8 flex items-center justify-center">
+        <div className="max-w-md bg-white rounded-xl border-2 border-green-600 p-6 text-center">
+          <p className="text-sm font-bold text-green-700 mb-2">✓ Listing created — share this real link with your agent</p>
+          <p className="text-xs text-gray-500 mb-3">The moment they register through this link, they&apos;ll be automatically granted full management authority on this property.</p>
+          <input readOnly value={generatedInviteLink} onClick={(e) => (e.target as HTMLInputElement).select()}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-xs mb-3 text-center" />
+          <button onClick={() => router.push("/owner")} className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold">
+            Go to my dashboard
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -609,6 +648,33 @@ export default function ListPropertyPage() {
               </div>
             )}
           </div>
+
+          {purpose !== "sale" && (
+            <div className="border-t border-gray-200 pt-3 mt-2">
+              <p className="text-xs font-bold text-chs-charcoal mb-1">Do you have an agent managing this property on your behalf?</p>
+              <p className="text-[10px] text-gray-500 mb-2">If yes, they&apos;ll get the exact same real tools you use — messaging your tenant, notices, maintenance, earnings — once a tenant moves in.</p>
+              <div className="flex gap-2 mb-2">
+                <button type="button" onClick={() => setAgentAuthorityChoice("id")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold ${agentAuthorityChoice === "id" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}>
+                  I have their CHS ID
+                </button>
+                <button type="button" onClick={() => setAgentAuthorityChoice("invite")}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold ${agentAuthorityChoice === "invite" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}>
+                  They haven&apos;t registered yet
+                </button>
+              </div>
+              {agentAuthorityChoice === "id" && (
+                <input type="text" placeholder="e.g. CHS-AGT-12345" value={agentChsId}
+                  onChange={(e) => setAgentChsId(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              )}
+              {agentAuthorityChoice === "invite" && (
+                <p className="text-[10px] text-gray-500 bg-[var(--zone-card)] rounded-lg p-2.5">
+                  A real, unique registration link will be generated once you submit this listing — share it with your agent, and they&apos;ll be automatically linked the moment they register.
+                </p>
+              )}
+            </div>
+          )}
 
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
