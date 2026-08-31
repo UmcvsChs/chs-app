@@ -37,6 +37,14 @@ export default function PropertyActions({ property }: { property: Property }) {
   // been tested. Built as one real, transparent checkout that
   // includes the buyer's own commission automatically.
   const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string; accepts_installment: boolean; downpayment_pct: number | null; amount_paid: number; amount: number } | null>(null);
+  // Real, new fix per direct client testing: a buyer previously had no
+  // way to see or respond to negotiation messages until their offer
+  // was already accepted — meaning the exact real moment a seller
+  // declines and asks for a better price, the buyer had nowhere to
+  // continue the conversation at all. This tracks their most recent
+  // real offer regardless of status, as long as it's still genuinely
+  // negotiable (not yet paid for).
+  const [myLatestOffer, setMyLatestOffer] = useState<{ id: string; status: string } | null>(null);
   const [breakdown, setBreakdown] = useState<{ offer_amount: number; buyer_pct: number; buyer_commission: number; buyer_total: number } | null>(null);
   const [installmentAmount, setInstallmentAmount] = useState<number | "">("");
   const [paying, setPaying] = useState(false);
@@ -54,6 +62,17 @@ export default function PropertyActions({ property }: { property: Property }) {
 
   useEffect(() => {
     if (!session || property.purpose !== "sale") return;
+    supabase
+      .from("offers")
+      .select("id, status")
+      .eq("property_id", property.id)
+      .eq("buyer_id", session.user.id)
+      .eq("payment_status", "unpaid")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setMyLatestOffer(data));
+
     supabase
       .from("offers")
       .select("id, accepts_installment, downpayment_pct, amount_paid, amount")
@@ -282,6 +301,28 @@ export default function PropertyActions({ property }: { property: Property }) {
           className="w-full py-2.5 rounded-full bg-gray-200 text-gray-600 text-sm font-semibold disabled:opacity-40">
           {requestingRefund ? "Processing..." : deadlinePassed ? "Request refund & cancel this deal" : "Refund available after the deadline above"}
         </button>
+      </div>
+    );
+  }
+
+  // Real, new negotiation view — shown whenever the buyer has a real,
+  // still-negotiable offer that hasn't been accepted (pending, or
+  // declined with a real counter-message from the seller). This is
+  // the exact gap found through direct client testing: a seller could
+  // decline and ask for a better price, but the buyer had nowhere to
+  // see that message or respond with a revised number at all.
+  if (myLatestOffer && myLatestOffer.status !== "accepted" && session) {
+    return (
+      <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-4">
+        <p className="text-sm font-bold text-chs-charcoal mb-1">
+          {myLatestOffer.status === "rejected" ? "Your offer was declined — negotiation continues below" : "Your offer is with the seller"}
+        </p>
+        <p className="text-xs text-gray-500 mb-2">
+          {myLatestOffer.status === "rejected"
+            ? "The seller may have left a real counter-message below. Reply with a revised offer to keep negotiating."
+            : "You'll be notified here the moment the seller responds."}
+        </p>
+        <OfferMessageThread offerId={myLatestOffer.id} viewerRole="buyer" viewerId={session.user.id} />
       </div>
     );
   }

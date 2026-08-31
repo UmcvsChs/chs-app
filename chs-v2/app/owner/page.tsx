@@ -850,9 +850,9 @@ export default function OwnerDashboard() {
                           </div>
                         </div>
                       )}
-                      {(offer.status === "pending" || offer.status === "accepted") && (
+                      {offer.status !== "accepted" || !offer.payment_status || offer.payment_status === "unpaid" ? (
                         <OfferMessageThread offerId={offer.id} viewerRole="seller" viewerId={session?.user.id || ""} />
-                      )}
+                      ) : null}
                     </div>
                   ))}
                 </div>

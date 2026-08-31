@@ -10,6 +10,7 @@ export interface Offer {
   amount: number;
   note: string | null;
   status: "pending" | "accepted" | "rejected" | "withdrawn";
+  payment_status?: "unpaid" | "paid";
   chs_cleared: boolean;
   created_at: string;
 }
