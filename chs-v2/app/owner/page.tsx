@@ -58,6 +58,10 @@ export default function OwnerDashboard() {
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
   const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
   const [offerActionMode, setOfferActionMode] = useState<Record<string, "accept" | "decline" | null>>({});
+  const [negotiatedAcceptId, setNegotiatedAcceptId] = useState<string | null>(null);
+  const [negotiatedAmount, setNegotiatedAmount] = useState("");
+  const [negotiatedCondition, setNegotiatedCondition] = useState("");
+  const [negotiatedDeadline, setNegotiatedDeadline] = useState("");
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
   const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
@@ -381,6 +385,23 @@ export default function OwnerDashboard() {
       setActionError(error.message);
       return;
     }
+    loadData();
+  }
+
+  async function handleAcceptWithTerms(offerId: string, originalAmount: number) {
+    setActionError(null);
+    const finalAmount = negotiatedAmount ? Number(negotiatedAmount) : originalAmount;
+    const { error } = await supabase.rpc("accept_offer_with_terms", {
+      p_offer_id: offerId,
+      p_final_amount: finalAmount,
+      p_condition_note: negotiatedCondition.trim() || null,
+      p_deadline_days: negotiatedDeadline ? Number(negotiatedDeadline) : null,
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    setNegotiatedAcceptId(null);
     loadData();
   }
 
@@ -850,9 +871,42 @@ export default function OwnerDashboard() {
                           </div>
                         </div>
                       )}
-                      {offer.status !== "accepted" || !offer.payment_status || offer.payment_status === "unpaid" ? (
-                        <OfferMessageThread offerId={offer.id} viewerRole="seller" viewerId={session?.user.id || ""} />
-                      ) : null}
+                      <OfferMessageThread offerId={offer.id} viewerRole="seller" viewerId={session?.user.id || ""} />
+                      {offer.status !== "accepted" && (
+                        <div className="mt-2">
+                          {negotiatedAcceptId === offer.id ? (
+                            <div className="bg-[var(--zone-card)] rounded-lg p-2.5">
+                              <p className="text-[10px] font-semibold text-gray-600 mb-1">Final agreed amount (from your real chat above)</p>
+                              <input type="number" placeholder={`Default: ${offer.amount}`} value={negotiatedAmount}
+                                onChange={(e) => setNegotiatedAmount(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                              <p className="text-[10px] font-semibold text-gray-600 mb-1">Any real condition? (optional — e.g. a payment deadline)</p>
+                              <textarea rows={2} placeholder="e.g. Payment must be made within 7 days, or this deal will be revoked."
+                                value={negotiatedCondition} onChange={(e) => setNegotiatedCondition(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                              <input type="number" placeholder="Deadline in days (optional)" value={negotiatedDeadline}
+                                onChange={(e) => setNegotiatedDeadline(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                              {actionError && <p className="text-[10px] text-chs-red mb-1.5">{actionError}</p>}
+                              <div className="flex gap-2">
+                                <button onClick={() => handleAcceptWithTerms(offer.id, offer.amount)}
+                                  className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                                  Confirm — Offer Accepted, Proceed to Payment
+                                </button>
+                                <button onClick={() => setNegotiatedAcceptId(null)}
+                                  className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => { setNegotiatedAcceptId(offer.id); setNegotiatedAmount(""); setNegotiatedCondition(""); setNegotiatedDeadline(""); setActionError(null); }}
+                              className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                              ✓ We&apos;ve agreed — Accept &amp; Set Terms
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -36,7 +36,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   // actually pay for the property at all — only commission had ever
   // been tested. Built as one real, transparent checkout that
   // includes the buyer's own commission automatically.
-  const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string; accepts_installment: boolean; downpayment_pct: number | null; amount_paid: number; amount: number } | null>(null);
+  const [myAcceptedOffer, setMyAcceptedOffer] = useState<{ id: string; accepts_installment: boolean; downpayment_pct: number | null; amount_paid: number; amount: number; acceptance_condition: string | null } | null>(null);
   // Real, new fix per direct client testing: a buyer previously had no
   // way to see or respond to negotiation messages until their offer
   // was already accepted — meaning the exact real moment a seller
@@ -55,6 +55,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [requestingRefund, setRequestingRefund] = useState(false);
   const [dispatchStatus, setDispatchStatus] = useState<"none" | "requested" | "dispatched">("none");
   const [requestingDispatch, setRequestingDispatch] = useState(false);
+  const [deliveryNote, setDeliveryNote] = useState("");
   const [confirmingDocuments, setConfirmingDocuments] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export default function PropertyActions({ property }: { property: Property }) {
 
     supabase
       .from("offers")
-      .select("id, accepts_installment, downpayment_pct, amount_paid, amount")
+      .select("id, accepts_installment, downpayment_pct, amount_paid, amount, acceptance_condition")
       .eq("property_id", property.id)
       .eq("buyer_id", session.user.id)
       .eq("status", "accepted")
@@ -123,7 +124,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   async function handleRequestDispatch() {
     if (!myPaidOffer) return;
     setRequestingDispatch(true);
-    const { error } = await supabase.rpc("request_document_dispatch", { p_offer_id: myPaidOffer.id });
+    const { error } = await supabase.rpc("request_document_dispatch", { p_offer_id: myPaidOffer.id, p_delivery_note: deliveryNote.trim() || null });
     setRequestingDispatch(false);
     if (!error) setDispatchStatus("requested");
   }
@@ -182,7 +183,7 @@ export default function PropertyActions({ property }: { property: Property }) {
     // real "fully paid" success state if this was the final payment.
     const { data } = await supabase
       .from("offers")
-      .select("id, accepts_installment, downpayment_pct, amount_paid, amount, payment_status")
+      .select("id, accepts_installment, downpayment_pct, amount_paid, amount, payment_status, acceptance_condition")
       .eq("id", myAcceptedOffer.id)
       .single();
     if (data?.payment_status === "paid") {
@@ -272,16 +273,22 @@ export default function PropertyActions({ property }: { property: Property }) {
       );
     }
     return (
+      <>
       <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-4">
         <p className="text-sm font-bold text-chs-charcoal mb-1">✓ Payment complete — this property is now yours!</p>
         <p className="text-xs text-gray-500 mb-3">
           Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
         </p>
         {dispatchStatus === "none" && (
-          <button onClick={handleRequestDispatch} disabled={requestingDispatch}
-            className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold mb-2 disabled:opacity-50">
-            {requestingDispatch ? "Sending request..." : "Request soft copies of my documents"}
-          </button>
+          <>
+            <textarea placeholder="Optional — your delivery address for the hard copies, and when you'd like to receive them"
+              value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)}
+              rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+            <button onClick={handleRequestDispatch} disabled={requestingDispatch}
+              className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold mb-2 disabled:opacity-50">
+              {requestingDispatch ? "Sending request..." : "Request soft copies of my documents"}
+            </button>
+          </>
         )}
         {dispatchStatus === "requested" && (
           <p className="text-xs bg-chs-amber-light text-chs-amber-dark rounded-lg p-2.5 mb-2">⏳ Waiting on the seller to dispatch your real documents.</p>
@@ -302,6 +309,15 @@ export default function PropertyActions({ property }: { property: Property }) {
           {requestingRefund ? "Processing..." : deadlinePassed ? "Request refund & cancel this deal" : "Refund available after the deadline above"}
         </button>
       </div>
+      {/* Real, new fix — a genuine, free chat channel remains
+          available post-payment so the buyer and seller can safely
+          exchange real contact details and coordinate the physical
+          document handover, exactly matching what the backend
+          already permits once payment is complete. */}
+      {session && myPaidOffer && (
+        <OfferMessageThread offerId={myPaidOffer.id} viewerRole="buyer" viewerId={session.user.id} />
+      )}
+    </>
     );
   }
 
@@ -339,6 +355,11 @@ export default function PropertyActions({ property }: { property: Property }) {
       <>
       <div className="bg-white rounded-xl border-2 border-chs-red p-4">
         <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Offer accepted — proceed to payment</p>
+        {myAcceptedOffer.acceptance_condition && (
+          <p className="text-xs bg-chs-amber-light text-chs-amber-dark rounded-lg p-2.5 mb-3">
+            ⚠️ {myAcceptedOffer.acceptance_condition}
+          </p>
+        )}
         {myAcceptedOffer.accepts_installment ? (
           <>
             <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
