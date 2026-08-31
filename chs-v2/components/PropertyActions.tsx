@@ -226,7 +226,9 @@ export default function PropertyActions({ property }: { property: Property }) {
     });
 
     if (insertError) {
-      setError("Could not submit your offer. Please try again.");
+      setError(insertError.message.includes("contact info") || insertError.message.includes("phone number") || insertError.message.includes("email")
+        ? insertError.message
+        : "Could not submit your offer. Please try again.");
       setSubmitting(false);
       return;
     }

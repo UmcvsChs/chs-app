@@ -402,7 +402,9 @@ export default function OwnerDashboard() {
     const sellerNote = sellerOfferNotes[offerId]?.trim() || null;
     const { data: offer, error } = await supabase.from("offers").update({ status, seller_response_note: sellerNote }).eq("id", offerId).select("*, properties(title)").single();
     if (error) {
-      setActionError("Could not update this offer. Please try again.");
+      setActionError(error.message.includes("phone number") || error.message.includes("email")
+        ? error.message
+        : "Could not update this offer. Please try again.");
       return;
     }
     // A real notification for the actual buyer — this is exactly the
@@ -433,12 +435,18 @@ export default function OwnerDashboard() {
       // closes. Nudging right at the moment the deal starts moving
       // forward, not waiting until it's fully done, since that's the
       // actual point the owner is genuinely thinking about it.
+      // Real fix per direct client testing: this used to ask the
+      // owner to manually remember to mark a listing sold — stale
+      // advice from before payment itself automatically updated the
+      // property's real status. Replaced with an accurate message
+      // reflecting what genuinely happens now, with no manual step
+      // left for the owner to forget.
       if (status === "accepted") {
         const propertyTitle = (offer as unknown as { properties?: { title: string } }).properties?.title || "This property";
         await supabase.rpc("notify_user", {
           p_user_id: session!.user.id,
-          p_title: "📌 Reminder: update your listing status",
-          p_body: `${propertyTitle} — you've accepted an offer of ${formatNaira(offer.amount)}. Once this sale is finalised, remember to mark the listing as sold so buyers stop asking about a property that's no longer available.`,
+          p_title: "✓ Offer accepted",
+          p_body: `${propertyTitle} — you've accepted an offer of ${formatNaira(offer.amount)}. Once the buyer completes payment, CHS automatically marks this listing sold and removes it from search — no action needed from you.`,
           p_link: `/property/${offer.property_id}`,
         });
       }

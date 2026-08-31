@@ -44,7 +44,7 @@ export default function SplashScreen() {
       }}
     >
       <Image
-        src="/icon-512.png"
+        src="/logo-mark.png"
         alt="CHS"
         width={220}
         height={220}
