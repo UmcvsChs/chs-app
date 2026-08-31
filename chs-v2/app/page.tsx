@@ -16,20 +16,33 @@ export const dynamic = "force-dynamic";
 // Next.js app is built, not an approximation of it.
 export default async function Home() {
   const supabase = await createClient();
-  // Real fix: this had no limit at all — every active property, no
-  // matter how many, was fetched on every single homepage visit. The
-  // purpose-tab and search filtering below happens client-side from
-  // this array (see HomePageClient), so a true page-by-page "load
-  // more" needs that filtering moved server-side first — a bigger,
-  // separate change. This cap is the honest, safe fix available right
-  // now: it stops the payload from growing without bound as the
-  // catalog grows, without changing how filtering currently works.
-  const { data: properties, error } = await supabase
-    .from("properties")
-    .select("*")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(300);
+  // Real bug found through direct client testing: a single flat
+  // limit, ordered purely by recency, let one purpose (Rent) —
+  // suddenly holding hundreds of newly-created estate units —
+  // completely crowd out every other real category. A buyer clicking
+  // "For Sale" or "Shortlet" got a genuinely empty result even though
+  // real, active listings existed, simply because none of them were
+  // recent enough to survive into the fetched set at all. Real fix:
+  // fetch a guaranteed, bounded sample from every real purpose
+  // separately, so no single category can ever starve the others.
+  const PURPOSES = ["rent", "sale", "lease", "hire", "shortlet", "rent_to_own"] as const;
+  const PER_PURPOSE_LIMIT = 100;
+
+  const results = await Promise.all(
+    PURPOSES.map((purpose) =>
+      supabase
+        .from("properties")
+        .select("*")
+        .eq("status", "active")
+        .eq("purpose", purpose)
+        .order("created_at", { ascending: false })
+        .limit(PER_PURPOSE_LIMIT)
+    )
+  );
+
+  const firstError = results.find((r) => r.error)?.error;
+  const properties = results.flatMap((r) => r.data || []);
+  const error = firstError;
 
   if (error) {
     // Honest, visible failure rather than a silent empty page — matches

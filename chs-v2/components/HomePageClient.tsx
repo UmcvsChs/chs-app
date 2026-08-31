@@ -22,6 +22,7 @@ const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
   { value: "lease", label: "For Lease" },
   { value: "hire", label: "For Hire" },
   { value: "shortlet", label: "Shortlet" },
+  { value: "rent_to_own", label: "Mortgage" },
 ];
 
 interface PlatformStats {
@@ -85,6 +86,14 @@ export default function HomePageClient({ properties, platformStats }: { properti
             carpark: ["car park", "parking"],
             factory: ["factory", "fabrication"],
           };
+          // Real, new "Others" category per direct client request —
+          // schools, filling stations, hospitals, and any real facility
+          // that genuinely doesn't fit a predefined type. Matches
+          // anything that fails every other category's keywords,
+          // rather than requiring its own hardcoded, incomplete list.
+          if (activeType === "others") {
+            return !Object.values(keywords).some((kws) => kws.some((kw) => t.includes(kw)));
+          }
           return (keywords[activeType] || []).some((kw) => t.includes(kw));
         });
 
@@ -211,6 +220,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
           { value: "farm", label: "🌾 Farmland" },
           { value: "carpark", label: "🚗 Car Park" },
           { value: "factory", label: "🏗️ Factory" },
+          { value: "others", label: "🏛️ Others" },
         ].map((t) => (
           <button
             key={t.value}

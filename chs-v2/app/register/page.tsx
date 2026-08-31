@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import ComprehensionCheck from "@/components/ComprehensionCheck";
+import TermsContent from "@/components/TermsContent";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
@@ -455,6 +456,21 @@ function RegisterPageContent() {
           )}
 
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
+
+          {/* Real, serious gap found through direct client testing: the
+              comprehension check below asked genuine questions about
+              escrow, fees, and payment release — but nothing on this
+              page ever showed the actual real terms those questions
+              were about. A new user had no honest way to answer
+              correctly except guessing. Fixed by showing the real,
+              complete Terms & Conditions in a genuinely readable,
+              scrollable panel directly above the quiz. */}
+          <div>
+            <p className="text-xs font-bold text-chs-charcoal mb-1">Please read before continuing</p>
+            <div className="max-h-72 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-white text-[11px] leading-relaxed">
+              <TermsContent />
+            </div>
+          </div>
 
           <ComprehensionCheck onPassed={setComprehensionPassed} />
 

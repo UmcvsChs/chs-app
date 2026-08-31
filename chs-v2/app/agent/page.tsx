@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/format";
 import GuidePrompt from "@/components/GuidePrompt";
 import MessageThread from "@/components/MessageThread";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
+import WalletQuickView from "@/components/WalletQuickView";
 
 const STAGE_LABELS: Record<string, string> = {
   enquiry: "New enquiry",
@@ -157,7 +158,10 @@ export default function AgentDashboard() {
     <div className="min-h-screen zone-agent bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">Agent Dashboard</h1>
+        <div className="flex justify-between items-end mt-1 gap-2">
+          <h1 className="font-serif text-lg font-bold">Agent Dashboard</h1>
+          {session && <WalletQuickView userId={session.user.id} extra="agent_earnings" />}
+        </div>
 
         {/* Real Agent ID card — restored, found missing during the
             systematic Agent dashboard comparison. Deliberately honest:

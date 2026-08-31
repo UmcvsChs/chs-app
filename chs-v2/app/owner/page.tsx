@@ -23,6 +23,7 @@ import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
 import NotificationBell from "@/components/NotificationBell";
+import WalletQuickView from "@/components/WalletQuickView";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import OfferMessageThread from "@/components/OfferMessageThread";
 import MessageThread from "@/components/MessageThread";
@@ -539,6 +540,8 @@ export default function OwnerDashboard() {
             </Link>
           </div>
         </div>
+
+        {session && <div className="mt-3"><WalletQuickView userId={session.user.id} extra="escrow_held" /></div>}
 
         {/* Real summary stats — restored, found missing during the
             systematic Owner dashboard comparison against the real
