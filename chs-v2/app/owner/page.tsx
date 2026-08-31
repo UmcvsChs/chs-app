@@ -56,6 +56,7 @@ export default function OwnerDashboard() {
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
   const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
+  const [offerActionMode, setOfferActionMode] = useState<Record<string, "accept" | "decline" | null>>({});
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
   const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
@@ -400,6 +401,10 @@ export default function OwnerDashboard() {
   async function handleOfferDecision(offerId: string, status: "accepted" | "rejected") {
     setActionError(null);
     const sellerNote = sellerOfferNotes[offerId]?.trim() || null;
+    if (status === "rejected" && !sellerNote) {
+      setActionError("Please state a real reason for declining — this protects both you and the buyer if it's ever disputed, and helps them understand what it would take to reach a deal.");
+      return;
+    }
     const { data: offer, error } = await supabase.from("offers").update({ status, seller_response_note: sellerNote }).eq("id", offerId).select("*, properties(title)").single();
     if (error) {
       setActionError(error.message.includes("phone number") || error.message.includes("email")
@@ -784,7 +789,19 @@ export default function OwnerDashboard() {
                         </div>
                       )}
                       {offer.note && <p className="text-gray-500 mt-1">{offer.note}</p>}
-                      {offer.status === "pending" && (
+                      {offer.status === "pending" && !offerActionMode[offer.id] && (
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => setOfferActionMode((prev) => ({ ...prev, [offer.id]: "accept" }))}
+                            className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                            Accept Offer
+                          </button>
+                          <button onClick={() => { setOfferActionMode((prev) => ({ ...prev, [offer.id]: "decline" })); setActionError(null); }}
+                            className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                            Decline Offer
+                          </button>
+                        </div>
+                      )}
+                      {offer.status === "pending" && offerActionMode[offer.id] === "accept" && (
                         <div className="mt-2">
                           <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
                             placeholder="Optional message to the buyer — reviewed by CHS before delivery. Please don't include a phone number or email; all negotiation stays on-platform until payment is made."
@@ -799,14 +816,33 @@ export default function OwnerDashboard() {
                               value={downpaymentPct[offer.id] || ""} onChange={(e) => setDownpaymentPct((prev) => ({ ...prev, [offer.id]: e.target.value }))}
                               className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
                           )}
+                          {actionError && <p className="text-[10px] text-chs-red mb-1.5">{actionError}</p>}
                           <div className="flex gap-2">
                             <button onClick={() => acceptWithInstallment[offer.id] ? handleAcceptWithInstallment(offer.id) : handleOfferDecision(offer.id, "accepted")}
                               className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                              Offer Accepted — Proceed to Payment
+                              Confirm — Offer Accepted, Proceed to Payment
                             </button>
+                            <button onClick={() => setOfferActionMode((prev) => ({ ...prev, [offer.id]: null }))}
+                              className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                              Back
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {offer.status === "pending" && offerActionMode[offer.id] === "decline" && (
+                        <div className="mt-2">
+                          <textarea value={sellerOfferNotes[offer.id] || ""} onChange={(e) => setSellerOfferNotes((prev) => ({ ...prev, [offer.id]: e.target.value }))}
+                            placeholder="Required — why you're declining, and what you'd actually accept if anything. Reviewed by CHS before delivery; no phone numbers or emails."
+                            rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                          {actionError && <p className="text-[10px] text-chs-red mb-1.5">{actionError}</p>}
+                          <div className="flex gap-2">
                             <button onClick={() => handleOfferDecision(offer.id, "rejected")}
-                              className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                              Decline
+                              className="flex-1 py-1.5 rounded-full bg-gray-600 text-white text-[10px] font-semibold">
+                              Confirm Decline
+                            </button>
+                            <button onClick={() => { setOfferActionMode((prev) => ({ ...prev, [offer.id]: null })); setActionError(null); }}
+                              className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                              Back
                             </button>
                           </div>
                         </div>

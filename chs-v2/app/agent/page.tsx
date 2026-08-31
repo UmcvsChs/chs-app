@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { AgentReferral } from "@/types/agentReferral";
 import { formatNaira } from "@/lib/format";
 import GuidePrompt from "@/components/GuidePrompt";
+import MessageThread from "@/components/MessageThread";
+import IssueNoticeForm from "@/components/IssueNoticeForm";
 
 const STAGE_LABELS: Record<string, string> = {
   enquiry: "New enquiry",
@@ -25,6 +27,37 @@ export default function AgentDashboard() {
   const [templateCopied, setTemplateCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
+
+  // Real, new feature per direct client request: agents genuinely
+  // manage far more individual, scattered properties than estate
+  // managers manage estates, and deserve the same real tools — a
+  // portfolio view, direct tenant messaging, and formal notices —
+  // without needing a formal "estate" container, since their real
+  // properties span different owners and locations.
+  interface ManagedProperty {
+    id: string;
+    title: string;
+    status: string;
+    tenancies: { id: string; tenant_id: string; status: string }[];
+  }
+  const [managedPortfolio, setManagedPortfolio] = useState<{
+    total_managed_properties: number; occupied_units: number; vacant_units: number;
+    pending_maintenance: number; pending_disputes: number; total_collected_this_month: number;
+  } | null>(null);
+  const [managedProperties, setManagedProperties] = useState<ManagedProperty[]>([]);
+  const [messagingTenancy, setMessagingTenancy] = useState<{ id: string; tenant_id: string } | null>(null);
+  const [issuingNoticeTenancyId, setIssuingNoticeTenancyId] = useState<string | null>(null);
+
+  async function loadManagedPortfolio() {
+    if (!session) return;
+    const { data: overview } = await supabase.rpc("get_agent_managed_portfolio", { p_agent_id: session.user.id });
+    setManagedPortfolio(overview || null);
+    const { data: props } = await supabase
+      .from("properties")
+      .select("id, title, status, tenancies(id, tenant_id, status)")
+      .eq("managing_agent_id", session.user.id);
+    setManagedProperties((props as unknown as ManagedProperty[]) || []);
+  }
 
   async function loadReferrals() {
     if (!session) return;
@@ -68,6 +101,7 @@ export default function AgentDashboard() {
     // async and only calls setState after a genuine await on Supabase's
     // response, so this is the standard, safe "fetch on mount" pattern.
     loadReferrals();
+    loadManagedPortfolio();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile, testModeRole]);
 
@@ -170,6 +204,84 @@ export default function AgentDashboard() {
             <p className="text-[10px] text-white/50 mt-1">Share this with a property owner to be granted full management authority on their listing — messaging their tenant, notices, maintenance, and earnings, exactly as an owner would.</p>
           </div>
         )}
+
+        {managedPortfolio && managedPortfolio.total_managed_properties > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-sm font-bold text-chs-charcoal mb-3">🏘️ Your Real Managed Portfolio</p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="bg-[var(--zone-card)] rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-chs-charcoal">{managedPortfolio.total_managed_properties}</p>
+                <p className="text-[9px] text-gray-400">Properties</p>
+              </div>
+              <div className="bg-[var(--zone-card)] rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-green-600">{managedPortfolio.occupied_units}</p>
+                <p className="text-[9px] text-gray-400">Occupied</p>
+              </div>
+              <div className="bg-[var(--zone-card)] rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-chs-amber-dark">{managedPortfolio.vacant_units}</p>
+                <p className="text-[9px] text-gray-400">Vacant</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-chs-red">{managedPortfolio.pending_maintenance}</p>
+                <p className="text-[9px] text-gray-400">Maintenance</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-2 text-center">
+                <p className="text-lg font-bold text-chs-red">{managedPortfolio.pending_disputes}</p>
+                <p className="text-[9px] text-gray-400">Disputes</p>
+              </div>
+              <div className="bg-[var(--zone-card)] rounded-lg p-2 text-center">
+                <p className="text-[11px] font-bold text-chs-charcoal">{formatNaira(managedPortfolio.total_collected_this_month)}</p>
+                <p className="text-[9px] text-gray-400">This month</p>
+              </div>
+            </div>
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {managedProperties.map((p) => {
+                const activeTenancy = p.tenancies?.find((t) => t.status === "active");
+                return (
+                  <div key={p.id} className="bg-[var(--zone-card)] rounded-lg p-2.5">
+                    <div className="flex justify-between items-center">
+                      <p className="text-xs font-semibold text-chs-charcoal">{p.title}</p>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full text-gray-500 bg-white">{p.status}</span>
+                    </div>
+                    {activeTenancy && (
+                      <div className="flex gap-3 mt-1.5">
+                        <button onClick={() => setMessagingTenancy(activeTenancy)} className="text-[10px] font-semibold text-chs-red underline">
+                          💬 Message tenant
+                        </button>
+                        <button onClick={() => setIssuingNoticeTenancyId(activeTenancy.id)} className="text-[10px] font-semibold text-chs-charcoal underline">
+                          Issue notice
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {messagingTenancy && session && (
+          <MessageThread
+            tenancyId={messagingTenancy.id}
+            session={session}
+            recipientId={messagingTenancy.tenant_id}
+            recipientLabel="Your tenant"
+            onClose={() => setMessagingTenancy(null)}
+          />
+        )}
+
+        {issuingNoticeTenancyId && session && (() => {
+          const tenancy = managedProperties.flatMap((p) => p.tenancies).find((t) => t.id === issuingNoticeTenancyId);
+          return tenancy ? (
+            <IssueNoticeForm
+              tenancyId={tenancy.id}
+              tenantId={tenancy.tenant_id}
+              session={session}
+              onSuccess={() => { setIssuingNoticeTenancyId(null); loadManagedPortfolio(); }}
+              onCancel={() => setIssuingNoticeTenancyId(null)}
+            />
+          ) : null;
+        })()}
 
         <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">Your referral link</p>
