@@ -28,16 +28,29 @@ export default async function Home() {
   const PURPOSES = ["rent", "sale", "lease", "hire", "shortlet", "rent_to_own"] as const;
   const PER_PURPOSE_LIMIT = 100;
 
+  // Real, serious gap found through direct testing: a suspended or
+  // self-deactivated owner's real listings kept showing as fully
+  // active and bookable to the public, with no way for a buyer to
+  // know the account behind them couldn't actually respond. Excluded
+  // here at the source, before anything reaches the page.
+  const { data: blockedOwners } = await supabase
+    .from("profiles")
+    .select("id")
+    .in("status", ["suspended", "deactivated"]);
+  const blockedOwnerIds = (blockedOwners || []).map((o) => o.id);
+
   const results = await Promise.all(
-    PURPOSES.map((purpose) =>
-      supabase
+    PURPOSES.map((purpose) => {
+      let query = supabase
         .from("properties")
         .select("*")
-        .eq("status", "active")
-        .eq("purpose", purpose)
-        .order("created_at", { ascending: false })
-        .limit(PER_PURPOSE_LIMIT)
-    )
+        .in("status", ["active", "coming_soon"])
+        .eq("purpose", purpose);
+      if (blockedOwnerIds.length > 0) {
+        query = query.not("owner_id", "in", `(${blockedOwnerIds.join(",")})`);
+      }
+      return query.order("created_at", { ascending: false }).limit(PER_PURPOSE_LIMIT);
+    })
   );
 
   const firstError = results.find((r) => r.error)?.error;

@@ -83,6 +83,12 @@ export default function AdminDashboard() {
   const [openOwnerConcerns, setOpenOwnerConcerns] = useState<{ id: string; subject: string; message: string; profiles: { full_name: string } | null }[]>([]);
   const [agentChangeRequests, setAgentChangeRequests] = useState<{ id: string; requested_agent_name: string | null; requested_agent_phone: string | null; requested_agent_chs_id: string | null; properties: { title: string } | null }[]>([]);
   const [approvingAgentInput, setApprovingAgentInput] = useState<Record<string, string>>({});
+  const [suspendPhone, setSuspendPhone] = useState("");
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendResult, setSuspendResult] = useState<string | null>(null);
+  const [suspending, setSuspending] = useState(false);
+  const [pendingAppeals, setPendingAppeals] = useState<{ id: string; message: string; profiles: { full_name: string; phone: string } | null }[]>([]);
+  const [appealResponses, setAppealResponses] = useState<Record<string, string>>({});
   const [concernResponses, setConcernResponses] = useState<Record<string, string>>({});
   const [ownersWithMessages, setOwnersWithMessages] = useState<{ owner_id: string; full_name: string }[]>([]);
   const [activeMessageOwnerId, setActiveMessageOwnerId] = useState<string | null>(null);
@@ -317,6 +323,13 @@ export default function AdminDashboard() {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     setAgentChangeRequests((agentChangeData as unknown as typeof agentChangeRequests) || []);
+
+    const { data: appealsData } = await supabase
+      .from("account_appeals")
+      .select("id, message, profiles:user_id(full_name, phone)")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+    setPendingAppeals((appealsData as unknown as typeof pendingAppeals) || []);
 
     // Real, distinct list of owners with active correspondence —
     // derived from the actual messages table, not a guess.
@@ -905,6 +918,33 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  async function handleSuspendAccount() {
+    if (!suspendPhone.trim() || !suspendReason.trim()) return;
+    setSuspending(true);
+    setSuspendResult(null);
+    const { data: userProfile } = await supabase.from("profiles").select("id, full_name").eq("phone", suspendPhone.trim()).maybeSingle();
+    if (!userProfile) {
+      setSuspendResult("No real, registered account found with that phone number.");
+      setSuspending(false);
+      return;
+    }
+    const { error } = await supabase.rpc("suspend_user_account", { p_user_id: userProfile.id, p_reason: suspendReason.trim() });
+    setSuspending(false);
+    if (error) {
+      setSuspendResult(error.message);
+      return;
+    }
+    setSuspendResult(`✓ ${userProfile.full_name}'s account has been suspended.`);
+    setSuspendPhone("");
+    setSuspendReason("");
+  }
+
+  async function handleResolveAppeal(appealId: string, approve: boolean) {
+    const response = appealResponses[appealId] || (approve ? "Reviewed and reinstated." : "Reviewed — suspension upheld.");
+    const { error } = await supabase.rpc("resolve_account_appeal", { p_appeal_id: appealId, p_approve: approve, p_response: response });
+    if (!error) loadData();
+  }
+
   async function handleApproveAgentChange(requestId: string) {
     const chsId = approvingAgentInput[requestId];
     if (!chsId?.trim()) return;
@@ -1038,6 +1078,43 @@ export default function AdminDashboard() {
               <p className="text-2xl font-bold text-white mt-1">{formatNaira(totalCommissionEarnings)}</p>
               <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Rent-to-Own — updates automatically as real transactions complete.</p>
             </div>
+
+            <div className="col-span-2 bg-white rounded-xl border-2 border-chs-red p-4">
+              <p className="text-xs font-bold text-chs-red mb-2">🛡️ Suspend a Real Account</p>
+              <input type="tel" placeholder="Phone number" value={suspendPhone} onChange={(e) => setSuspendPhone(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+              <textarea rows={2} placeholder="Real, genuine reason — required, and shown to the user"
+                value={suspendReason} onChange={(e) => setSuspendReason(e.target.value)}
+                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+              {suspendResult && <p className="text-[10px] text-gray-600 mb-1.5">{suspendResult}</p>}
+              <button onClick={handleSuspendAccount} disabled={suspending || !suspendPhone.trim() || !suspendReason.trim()}
+                className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                {suspending ? "Suspending..." : "Suspend this account"}
+              </button>
+            </div>
+
+            {pendingAppeals.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">⚖️ Real Account Appeals ({pendingAppeals.length})</p>
+                {pendingAppeals.map((a) => (
+                  <div key={a.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                    <p className="text-xs font-semibold text-chs-charcoal">{a.profiles?.full_name} · {a.profiles?.phone}</p>
+                    <p className="text-[11px] text-gray-600 mb-1.5">{a.message}</p>
+                    <input type="text" placeholder="Your response..." value={appealResponses[a.id] || ""}
+                      onChange={(e) => setAppealResponses((prev) => ({ ...prev, [a.id]: e.target.value }))}
+                      className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[10px] mb-1.5" />
+                    <div className="flex gap-2">
+                      <button onClick={() => handleResolveAppeal(a.id, true)} className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        ✓ Approve — Reinstate
+                      </button>
+                      <button onClick={() => handleResolveAppeal(a.id, false)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Deny — Uphold
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {pendingLegalTransfers.length > 0 && (
               <div className="col-span-2 bg-chs-amber-light border-2 border-chs-amber-dark rounded-xl p-4">

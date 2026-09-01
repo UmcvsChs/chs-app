@@ -49,6 +49,7 @@ export interface Property {
   video_url: string | null;
   owner_identity_visible_to_tenant: boolean;
   managing_agent_id: string | null;
+  agent_commission_pct: number | null;
   promoted_until: string | null;
 
   is_urgent_sale: boolean;
@@ -60,7 +61,7 @@ export interface Property {
   verification_status: "pending" | "verified" | "rejected";
   verification_notes: string | null;
 
-  status: "active" | "rented" | "sold" | "delisted";
+  status: "active" | "rented" | "sold" | "delisted" | "coming_soon";
   created_at: string;
 
   // Added this session — Estate Management and the extended commission model.

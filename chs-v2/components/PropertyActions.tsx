@@ -85,6 +85,24 @@ export default function PropertyActions({ property }: { property: Property }) {
       .then(({ data }) => {
         setMyAcceptedOffer(data);
         if (data) {
+          // Real, new fix — a property with a genuine, agent-set
+          // commission rate uses a completely different real
+          // breakdown: the buyer pays exactly the agreed price with
+          // no CHS commission added on top, since CHS's real cut in
+          // this model comes only from the agent's own earnings.
+          if (property.agent_commission_pct) {
+            supabase.rpc("get_agent_commission_breakdown", { p_offer_id: data.id }).then(({ data: bd }) => {
+              if (bd && bd[0]) {
+                setBreakdown({
+                  offer_amount: Number(bd[0].offer_amount),
+                  buyer_pct: 0,
+                  buyer_commission: 0,
+                  buyer_total: Number(bd[0].buyer_total),
+                });
+              }
+            });
+            return;
+          }
           // Real, deliberate design per direct client instruction: the
           // buyer only ever sees their own real numbers — price, their
           // own commission, their own total. What the seller nets is
@@ -159,7 +177,13 @@ export default function PropertyActions({ property }: { property: Property }) {
     if (!myAcceptedOffer) return;
     setPaying(true);
     setPaymentError(null);
-    const { error: rpcError } = await supabase.rpc("pay_for_property", { p_offer_id: myAcceptedOffer.id });
+    // Real fix — a property with a genuine, agent-set commission rate
+    // must use the real, separate agent-managed payment function, not
+    // the standard CHS-commission one, or the whole real point of the
+    // model (CHS's cut coming only from the agent's earnings) breaks.
+    const { error: rpcError } = property.agent_commission_pct
+      ? await supabase.rpc("pay_for_property_agent_managed", { p_offer_id: myAcceptedOffer.id })
+      : await supabase.rpc("pay_for_property", { p_offer_id: myAcceptedOffer.id });
     setPaying(false);
     if (rpcError) {
       setPaymentError(rpcError.message);
@@ -384,7 +408,9 @@ export default function PropertyActions({ property }: { property: Property }) {
           <>
             <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
               <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
-              <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+              {!property.agent_commission_pct && (
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+              )}
               <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
             </div>
             <p className="text-[10px] text-gray-500 mb-3">

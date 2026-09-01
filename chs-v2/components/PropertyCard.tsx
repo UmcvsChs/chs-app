@@ -25,6 +25,11 @@ export default function PropertyCard({ property }: { property: Property }) {
             🚨 URGENT SALE
           </span>
         )}
+        {property.status === "coming_soon" && (
+          <span className="absolute top-2 right-2 bg-chs-charcoal text-white text-[9px] font-bold px-2 py-1 rounded-full z-10">
+            📢 COMING SOON
+          </span>
+        )}
         {property.photos && property.photos.length > 0 ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

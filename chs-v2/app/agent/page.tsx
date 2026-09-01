@@ -39,6 +39,7 @@ export default function AgentDashboard() {
     id: string;
     title: string;
     status: string;
+    agent_commission_pct: number | null;
     tenancies: { id: string; tenant_id: string; status: string }[];
   }
   const [managedPortfolio, setManagedPortfolio] = useState<{
@@ -48,6 +49,17 @@ export default function AgentDashboard() {
   const [managedProperties, setManagedProperties] = useState<ManagedProperty[]>([]);
   const [messagingTenancy, setMessagingTenancy] = useState<{ id: string; tenant_id: string } | null>(null);
   const [issuingNoticeTenancyId, setIssuingNoticeTenancyId] = useState<string | null>(null);
+  const [commissionRateInputId, setCommissionRateInputId] = useState<string | null>(null);
+  const [commissionRateValue, setCommissionRateValue] = useState("");
+
+  async function handleSetCommissionRate(propertyId: string) {
+    if (!commissionRateValue) return;
+    const { error } = await supabase.rpc("set_agent_commission_rate", { p_property_id: propertyId, p_pct: Number(commissionRateValue) });
+    if (!error) {
+      setCommissionRateInputId(null);
+      loadManagedPortfolio();
+    }
+  }
 
   async function loadManagedPortfolio() {
     if (!session) return;
@@ -55,7 +67,7 @@ export default function AgentDashboard() {
     setManagedPortfolio(overview || null);
     const { data: props } = await supabase
       .from("properties")
-      .select("id, title, status, tenancies(id, tenant_id, status)")
+      .select("id, title, status, agent_commission_pct, tenancies(id, tenant_id, status)")
       .eq("managing_agent_id", session.user.id);
     setManagedProperties((props as unknown as ManagedProperty[]) || []);
   }
@@ -255,6 +267,26 @@ export default function AgentDashboard() {
                         <button onClick={() => setIssuingNoticeTenancyId(activeTenancy.id)} className="text-[10px] font-semibold text-chs-charcoal underline">
                           Issue notice
                         </button>
+                      </div>
+                    )}
+                    {p.status === "active" && (
+                      <div className="mt-1.5">
+                        {p.agent_commission_pct ? (
+                          <p className="text-[10px] text-green-700">✓ Your real commission rate: {p.agent_commission_pct}% (CHS takes 3% of that only)</p>
+                        ) : commissionRateInputId === p.id ? (
+                          <div className="flex gap-1.5">
+                            <input type="number" placeholder="Your real rate, e.g. 10" value={commissionRateValue}
+                              onChange={(e) => setCommissionRateValue(e.target.value)}
+                              className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-[10px]" />
+                            <button onClick={() => handleSetCommissionRate(p.id)} className="px-2 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                              Set
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => { setCommissionRateInputId(p.id); setCommissionRateValue(""); }} className="text-[10px] text-chs-red underline">
+                            Set my real commission rate for this property
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

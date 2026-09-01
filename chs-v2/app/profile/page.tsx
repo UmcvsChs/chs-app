@@ -37,6 +37,8 @@ export default function ProfilePage() {
   const [notifyMarketing, setNotifyMarketing] = useState(true);
   const [diasporaMode, setDiasporaMode] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
+  const [showDeactivateConfirm, setShowDeactivateConfirm] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
 
   useEffect(() => {
     if (!session) return;
@@ -76,6 +78,12 @@ export default function ProfilePage() {
     setProfileState(editState.trim());
     setEditingProfile(false);
     await refreshProfile();
+  }
+
+  async function handleDeactivate() {
+    setDeactivating(true);
+    await supabase.rpc("deactivate_my_account");
+    window.location.reload();
   }
 
   async function handleSaveSettings() {
@@ -314,6 +322,30 @@ export default function ProfilePage() {
           <div className="border-t border-gray-100 pt-3">
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Bank account for withdrawals</p>
             {session && <BankAccountSecurity session={session} registeredName={profile?.full_name || ""} />}
+          </div>
+
+          <div className="border-t border-gray-100 pt-3 mt-3">
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Account</p>
+            {showDeactivateConfirm ? (
+              <div className="bg-chs-amber-light rounded-lg p-3">
+                <p className="text-[11px] text-chs-amber-dark mb-2">
+                  This temporarily hides your account and listings from CHS. Nothing is deleted — log back in any time to reactivate instantly.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={handleDeactivate} disabled={deactivating}
+                    className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                    {deactivating ? "Deactivating..." : "Yes, deactivate my account"}
+                  </button>
+                  <button onClick={() => setShowDeactivateConfirm(false)} className="px-3 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => setShowDeactivateConfirm(true)} className="text-xs text-gray-400 underline">
+                Deactivate my account
+              </button>
+            )}
           </div>
         </div>
       </div>

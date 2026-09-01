@@ -62,6 +62,8 @@ export default function OwnerDashboard() {
   const [negotiatedAmount, setNegotiatedAmount] = useState("");
   const [negotiatedCondition, setNegotiatedCondition] = useState("");
   const [negotiatedDeadline, setNegotiatedDeadline] = useState("");
+  const [comingSoonNoteId, setComingSoonNoteId] = useState<string | null>(null);
+  const [comingSoonNoteValue, setComingSoonNoteValue] = useState("");
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
   const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
@@ -521,6 +523,14 @@ export default function OwnerDashboard() {
     loadData();
   }
 
+  async function handleMarkComingSoon(propertyId: string) {
+    const { error } = await supabase.rpc("mark_property_coming_soon", { p_property_id: propertyId, p_note: comingSoonNoteValue.trim() || null });
+    if (!error) {
+      setComingSoonNoteId(null);
+      loadData();
+    }
+  }
+
   async function handleTogglePrivacy(propertyId: string, visible: boolean) {
     setActionError(null);
     const { error } = await supabase.from("properties").update({ owner_identity_visible_to_tenant: visible }).eq("id", propertyId);
@@ -722,6 +732,31 @@ export default function OwnerDashboard() {
                 >
                   Keep private
                 </button>
+                {property.status === "active" && (
+                  comingSoonNoteId === property.id ? (
+                    <div className="flex gap-1.5 mt-1.5 w-full">
+                      <input type="text" placeholder="Optional — e.g. 'Available from March 2027'"
+                        value={comingSoonNoteValue} onChange={(e) => setComingSoonNoteValue(e.target.value)}
+                        className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-[10px]" />
+                      <button onClick={() => handleMarkComingSoon(property.id)}
+                        className="px-2 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Confirm
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setComingSoonNoteId(property.id); setComingSoonNoteValue(""); }}
+                      className="text-[9px] font-semibold px-2 py-1 rounded-full border bg-[var(--zone-card)] text-gray-600 border-gray-200"
+                    >
+                      📢 Mark as Coming Soon
+                    </button>
+                  )
+                )}
+                {property.status === "coming_soon" && (
+                  <span className="text-[9px] font-semibold px-2 py-1 rounded-full bg-chs-charcoal text-white">
+                    📢 Coming Soon — live
+                  </span>
+                )}
               </div>
 
               {property.purpose !== "sale" && (
