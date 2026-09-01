@@ -52,7 +52,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
@@ -89,6 +89,37 @@ export default function AdminDashboard() {
   const [suspending, setSuspending] = useState(false);
   const [pendingAppeals, setPendingAppeals] = useState<{ id: string; message: string; profiles: { full_name: string; phone: string } | null }[]>([]);
   const [appealResponses, setAppealResponses] = useState<Record<string, string>>({});
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<"today" | "week" | "month" | "quarter">("month");
+  interface AnalyticsReport {
+    period_start: string; period_end: string;
+    sold_properties_count: number; sold_properties_value: number;
+    new_tenancies_count: number; new_tenancies_value: number;
+    shortlet_bookings_count: number; shortlet_bookings_value: number;
+    new_listings_count: number; new_users_count: number;
+    total_commission_revenue: number;
+    commission_by_type: { transaction_type: string; count: number; total: number }[];
+    service_charges_collected: number;
+  }
+  const [analyticsReport, setAnalyticsReport] = useState<AnalyticsReport | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  function getPeriodRange(period: typeof analyticsPeriod) {
+    const end = new Date();
+    const start = new Date();
+    if (period === "today") start.setHours(0, 0, 0, 0);
+    else if (period === "week") start.setDate(start.getDate() - 7);
+    else if (period === "month") start.setMonth(start.getMonth() - 1);
+    else if (period === "quarter") start.setMonth(start.getMonth() - 3);
+    return { start: start.toISOString(), end: end.toISOString() };
+  }
+
+  async function loadAnalytics(period: typeof analyticsPeriod) {
+    setLoadingAnalytics(true);
+    const { start, end } = getPeriodRange(period);
+    const { data } = await supabase.rpc("get_admin_analytics_report", { p_start_date: start, p_end_date: end });
+    setAnalyticsReport(data);
+    setLoadingAnalytics(false);
+  }
   const [concernResponses, setConcernResponses] = useState<Record<string, string>>({});
   const [ownersWithMessages, setOwnersWithMessages] = useState<{ owner_id: string; full_name: string }[]>([]);
   const [activeMessageOwnerId, setActiveMessageOwnerId] = useState<string | null>(null);
@@ -1025,6 +1056,7 @@ export default function AdminDashboard() {
       <div className="flex border-b border-gray-200 bg-white px-4 overflow-x-auto">
         {([
           { key: "overview", label: "Overview", domain: null },
+          { key: "analytics", label: "📊 Analytics", domain: null },
           { key: "finance", label: "Finance", domain: "finance" },
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
@@ -1401,6 +1433,89 @@ export default function AdminDashboard() {
               <p className="font-serif text-lg font-bold text-chs-charcoal">📝 Concierge Requests</p>
               <p className="text-[10px] text-gray-400 mt-1">Every &quot;Talk to an Agent&quot; submission, real and unfiltered →</p>
             </Link>
+          </div>
+        )}
+
+        {activeTab === "analytics" && (
+          <div className="space-y-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {([
+                { key: "today", label: "Today" },
+                { key: "week", label: "This Week" },
+                { key: "month", label: "This Month" },
+                { key: "quarter", label: "This Quarter" },
+              ] as const).map((p) => (
+                <button key={p.key} onClick={() => { setAnalyticsPeriod(p.key); loadAnalytics(p.key); }}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                    analyticsPeriod === p.key ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
+                  }`}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+
+            {loadingAnalytics && <p className="text-xs text-gray-400 text-center py-8">Loading real report...</p>}
+
+            {!loadingAnalytics && analyticsReport && (
+              <>
+                <p className="text-[10px] text-gray-400">
+                  {new Date(analyticsReport.period_start).toLocaleDateString()} — {new Date(analyticsReport.period_end).toLocaleDateString()}
+                </p>
+
+                <div className="bg-chs-charcoal rounded-xl p-4">
+                  <p className="text-[10px] uppercase text-white/60 font-semibold">💰 Real Commission Revenue (this period)</p>
+                  <p className="text-2xl font-bold text-white mt-1">{formatNaira(analyticsReport.total_commission_revenue)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{analyticsReport.sold_properties_count}</p>
+                    <p className="text-[10px] text-gray-400">Properties sold</p>
+                    <p className="text-[10px] text-green-700 font-semibold mt-0.5">{formatNaira(analyticsReport.sold_properties_value)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{analyticsReport.new_tenancies_count}</p>
+                    <p className="text-[10px] text-gray-400">New tenancies (rented)</p>
+                    <p className="text-[10px] text-green-700 font-semibold mt-0.5">{formatNaira(analyticsReport.new_tenancies_value)} annual rent</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{analyticsReport.shortlet_bookings_count}</p>
+                    <p className="text-[10px] text-gray-400">Shortlet bookings</p>
+                    <p className="text-[10px] text-green-700 font-semibold mt-0.5">{formatNaira(analyticsReport.shortlet_bookings_value)}</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{analyticsReport.new_listings_count}</p>
+                    <p className="text-[10px] text-gray-400">New listings created</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{analyticsReport.new_users_count}</p>
+                    <p className="text-[10px] text-gray-400">New real users</p>
+                  </div>
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xl font-bold text-chs-charcoal">{formatNaira(analyticsReport.service_charges_collected)}</p>
+                    <p className="text-[10px] text-gray-400">Service charges collected</p>
+                  </div>
+                </div>
+
+                {analyticsReport.commission_by_type.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-3">
+                    <p className="text-xs font-bold text-chs-charcoal mb-2">Commission by transaction type</p>
+                    {analyticsReport.commission_by_type.map((c) => (
+                      <div key={c.transaction_type} className="flex justify-between text-xs py-1 border-b border-gray-50 last:border-0">
+                        <span className="text-gray-500 capitalize">{c.transaction_type.replace(/_/g, " ")} ({c.count})</span>
+                        <span className="font-semibold">{formatNaira(c.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {!loadingAnalytics && !analyticsReport && (
+              <button onClick={() => loadAnalytics(analyticsPeriod)} className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold">
+                Load real report
+              </button>
+            )}
           </div>
         )}
 

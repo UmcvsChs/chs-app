@@ -31,6 +31,31 @@ export default function EstatesPage() {
   const [address, setAddress] = useState("");
   const [state, setState] = useState(NIGERIAN_STATES[0]);
   const [totalUnits, setTotalUnits] = useState<number | "">("");
+  const [showManagerReport, setShowManagerReport] = useState(false);
+  const [managerReportPeriod, setManagerReportPeriod] = useState<"week" | "month" | "quarter">("month");
+  const [managerReport, setManagerReport] = useState<{
+    new_tenancies_count: number; service_charges_billed: number; service_charges_collected: number; maintenance_resolved: number;
+  } | null>(null);
+  const [loadingManagerReport, setLoadingManagerReport] = useState(false);
+
+  // Real, new feature per direct client request: a genuine, date-
+  // range activity report a manager can generate across their whole
+  // real portfolio of estates, for their own records or to prepare
+  // something to submit — not just a live, un-datable snapshot.
+  async function loadManagerReport(period: typeof managerReportPeriod) {
+    if (!session) return;
+    setLoadingManagerReport(true);
+    const end = new Date();
+    const start = new Date();
+    if (period === "week") start.setDate(start.getDate() - 7);
+    else if (period === "month") start.setMonth(start.getMonth() - 1);
+    else start.setMonth(start.getMonth() - 3);
+    const { data } = await supabase.rpc("get_manager_activity_report", {
+      p_manager_id: session.user.id, p_start_date: start.toISOString(), p_end_date: end.toISOString(),
+    });
+    setManagerReport(data);
+    setLoadingManagerReport(false);
+  }
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activatingId, setActivatingId] = useState<string | null>(null);
@@ -118,6 +143,37 @@ export default function EstatesPage() {
             <button onClick={() => setShowCreate(true)} className="px-3 py-1.5 rounded-full bg-chs-red text-white text-xs font-semibold">
               + New Estate
             </button>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
+          <button onClick={() => { setShowManagerReport(!showManagerReport); if (!managerReport) loadManagerReport("month"); }}
+            className="text-sm font-bold text-chs-charcoal">
+            📊 {showManagerReport ? "Hide" : "Generate"} my activity report — across all my estates
+          </button>
+          {showManagerReport && (
+            <div className="mt-3">
+              <div className="flex gap-2 mb-2">
+                {(["week", "month", "quarter"] as const).map((p) => (
+                  <button key={p} onClick={() => { setManagerReportPeriod(p); loadManagerReport(p); }}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+                      managerReportPeriod === p ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
+                    }`}>
+                    {p === "week" ? "This Week" : p === "month" ? "This Month" : "This Quarter"}
+                  </button>
+                ))}
+              </div>
+              {loadingManagerReport ? (
+                <p className="text-[11px] text-gray-400 text-center py-4">Loading real report...</p>
+              ) : managerReport ? (
+                <div className="space-y-1.5 text-xs bg-[var(--zone-card)] rounded-lg p-3">
+                  <div className="flex justify-between"><span className="text-gray-500">New tenancies this period</span><span className="font-semibold">{managerReport.new_tenancies_count}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Service charges billed</span><span className="font-semibold">{formatNaira(managerReport.service_charges_billed)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Service charges collected</span><span className="font-bold text-green-700">{formatNaira(managerReport.service_charges_collected)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Maintenance resolved</span><span className="font-semibold">{managerReport.maintenance_resolved}</span></div>
+                </div>
+              ) : null}
+            </div>
           )}
         </div>
 

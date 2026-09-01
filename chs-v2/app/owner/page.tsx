@@ -64,6 +64,30 @@ export default function OwnerDashboard() {
   const [negotiatedDeadline, setNegotiatedDeadline] = useState("");
   const [comingSoonNoteId, setComingSoonNoteId] = useState<string | null>(null);
   const [comingSoonNoteValue, setComingSoonNoteValue] = useState("");
+  const [showActivityReport, setShowActivityReport] = useState(false);
+  const [activityReportPeriod, setActivityReportPeriod] = useState<"week" | "month" | "quarter">("month");
+  const [activityReport, setActivityReport] = useState<{
+    properties_sold: { title: string; amount: number; paid_at: string }[];
+    new_tenancies: { title: string; annual_rent: number; created_at: string }[];
+    total_earned_this_period: number;
+    offers_received: number;
+  } | null>(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  async function loadActivityReport(period: typeof activityReportPeriod) {
+    if (!session) return;
+    setLoadingReport(true);
+    const end = new Date();
+    const start = new Date();
+    if (period === "week") start.setDate(start.getDate() - 7);
+    else if (period === "month") start.setMonth(start.getMonth() - 1);
+    else start.setMonth(start.getMonth() - 3);
+    const { data } = await supabase.rpc("get_owner_activity_report", {
+      p_owner_id: session.user.id, p_start_date: start.toISOString(), p_end_date: end.toISOString(),
+    });
+    setActivityReport(data);
+    setLoadingReport(false);
+  }
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
   const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
@@ -487,12 +511,16 @@ export default function OwnerDashboard() {
     setActionError(null);
 
     if (status === "approved") {
-      // The real fix: this now genuinely creates the tenancy and
-      // generates the correct, two-sided rental commission (5%
-      // tenant, 5.5% landlord) at the exact same real moment —
-      // previously this only flipped a status label and never
-      // created a real tenancy at all.
-      const { error } = await supabase.rpc("approve_rental_application", { p_application_id: applicationId });
+      // Real fix — an agent-managed property with its own real
+      // commission rate must use the real, separate agent-managed
+      // approval function, or the whole point of that model (CHS's
+      // cut coming only from the agent's own earnings) breaks.
+      const { data: appRow } = await supabase.from("rental_applications").select("property_id").eq("id", applicationId).single();
+      const { data: propRow } = appRow ? await supabase.from("properties").select("agent_commission_pct").eq("id", appRow.property_id).single() : { data: null };
+
+      const { error } = propRow?.agent_commission_pct
+        ? await supabase.rpc("approve_rental_application_agent_managed", { p_application_id: applicationId })
+        : await supabase.rpc("approve_rental_application", { p_application_id: applicationId });
       if (error) {
         setActionError(error.message);
         return;
@@ -573,6 +601,41 @@ export default function OwnerDashboard() {
         </div>
 
         {session && <div className="mt-3"><WalletQuickView userId={session.user.id} extra="escrow_held" /></div>}
+
+        {/* Real, new feature per direct client request: a genuine,
+            date-range activity report an owner can generate themselves
+            — for their own records, or to prepare something to share —
+            rather than only ever seeing a live, un-datable snapshot. */}
+        <div className="mt-3">
+          <button onClick={() => { setShowActivityReport(!showActivityReport); if (!activityReport) loadActivityReport("month"); }}
+            className="text-xs font-semibold text-white/80 underline">
+            📊 {showActivityReport ? "Hide" : "Generate"} my activity report
+          </button>
+          {showActivityReport && (
+            <div className="bg-white rounded-xl p-3 mt-2">
+              <div className="flex gap-2 mb-2">
+                {(["week", "month", "quarter"] as const).map((p) => (
+                  <button key={p} onClick={() => { setActivityReportPeriod(p); loadActivityReport(p); }}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+                      activityReportPeriod === p ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
+                    }`}>
+                    {p === "week" ? "This Week" : p === "month" ? "This Month" : "This Quarter"}
+                  </button>
+                ))}
+              </div>
+              {loadingReport ? (
+                <p className="text-[11px] text-gray-400 text-center py-4">Loading real report...</p>
+              ) : activityReport ? (
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex justify-between"><span className="text-gray-500">Total earned this period</span><span className="font-bold text-green-700">{formatNaira(activityReport.total_earned_this_period)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Properties sold</span><span className="font-semibold">{activityReport.properties_sold.length}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">New tenancies (rented)</span><span className="font-semibold">{activityReport.new_tenancies.length}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Offers received</span><span className="font-semibold">{activityReport.offers_received}</span></div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
 
         {/* Real summary stats — restored, found missing during the
             systematic Owner dashboard comparison against the real

@@ -51,6 +51,27 @@ export default function AgentDashboard() {
   const [issuingNoticeTenancyId, setIssuingNoticeTenancyId] = useState<string | null>(null);
   const [commissionRateInputId, setCommissionRateInputId] = useState<string | null>(null);
   const [commissionRateValue, setCommissionRateValue] = useState("");
+  const [showAgentReport, setShowAgentReport] = useState(false);
+  const [agentReportPeriod, setAgentReportPeriod] = useState<"week" | "month" | "quarter">("month");
+  const [agentReport, setAgentReport] = useState<{
+    real_commission_earned: number; deals_closed: number; new_tenancies_managed: number;
+  } | null>(null);
+  const [loadingAgentReport, setLoadingAgentReport] = useState(false);
+
+  async function loadAgentReport(period: typeof agentReportPeriod) {
+    if (!session) return;
+    setLoadingAgentReport(true);
+    const end = new Date();
+    const start = new Date();
+    if (period === "week") start.setDate(start.getDate() - 7);
+    else if (period === "month") start.setMonth(start.getMonth() - 1);
+    else start.setMonth(start.getMonth() - 3);
+    const { data } = await supabase.rpc("get_agent_activity_report", {
+      p_agent_id: session.user.id, p_start_date: start.toISOString(), p_end_date: end.toISOString(),
+    });
+    setAgentReport(data);
+    setLoadingAgentReport(false);
+  }
 
   async function handleSetCommissionRate(propertyId: string) {
     if (!commissionRateValue) return;
@@ -220,6 +241,36 @@ export default function AgentDashboard() {
             <p className="text-[10px] text-white/50 mt-1">Share this with a property owner to be granted full management authority on their listing — messaging their tenant, notices, maintenance, and earnings, exactly as an owner would.</p>
           </div>
         )}
+
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <button onClick={() => { setShowAgentReport(!showAgentReport); if (!agentReport) loadAgentReport("month"); }}
+            className="text-sm font-bold text-chs-charcoal">
+            📊 {showAgentReport ? "Hide" : "Generate"} my activity report
+          </button>
+          {showAgentReport && (
+            <div className="mt-3">
+              <div className="flex gap-2 mb-2">
+                {(["week", "month", "quarter"] as const).map((p) => (
+                  <button key={p} onClick={() => { setAgentReportPeriod(p); loadAgentReport(p); }}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+                      agentReportPeriod === p ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
+                    }`}>
+                    {p === "week" ? "This Week" : p === "month" ? "This Month" : "This Quarter"}
+                  </button>
+                ))}
+              </div>
+              {loadingAgentReport ? (
+                <p className="text-[11px] text-gray-400 text-center py-4">Loading real report...</p>
+              ) : agentReport ? (
+                <div className="space-y-1.5 text-xs bg-[var(--zone-card)] rounded-lg p-3">
+                  <div className="flex justify-between"><span className="text-gray-500">Real commission earned</span><span className="font-bold text-green-700">{formatNaira(agentReport.real_commission_earned)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Deals closed</span><span className="font-semibold">{agentReport.deals_closed}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">New tenancies managed</span><span className="font-semibold">{agentReport.new_tenancies_managed}</span></div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
 
         {managedPortfolio && managedPortfolio.total_managed_properties > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
