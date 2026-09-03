@@ -89,6 +89,47 @@ export default function AdminDashboard() {
   const [suspendResult, setSuspendResult] = useState<string | null>(null);
   const [suspending, setSuspending] = useState(false);
   const [pendingAppeals, setPendingAppeals] = useState<{ id: string; message: string; profiles: { full_name: string; phone: string } | null }[]>([]);
+  const [showAdminReportForm, setShowAdminReportForm] = useState(false);
+  const [adminReportActivities, setAdminReportActivities] = useState("");
+  const [adminReportTransactions, setAdminReportTransactions] = useState("");
+  const [adminReportComplaints, setAdminReportComplaints] = useState("");
+  const [submittingAdminReport, setSubmittingAdminReport] = useState(false);
+  const [adminReportResult, setAdminReportResult] = useState<string | null>(null);
+  const [adminReports, setAdminReports] = useState<{ id: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; created_at: string; staff_role_at_time: string | null; profiles: { full_name: string } | null }[]>([]);
+
+  async function handleSubmitAdminReport() {
+    if (!adminReportActivities.trim()) {
+      setAdminReportResult("Please describe your real activities for the day.");
+      return;
+    }
+    setSubmittingAdminReport(true);
+    setAdminReportResult(null);
+    const { error } = await supabase.rpc("submit_admin_daily_report", {
+      p_activities: adminReportActivities.trim(),
+      p_transactions: adminReportTransactions.trim() || null,
+      p_complaints: adminReportComplaints.trim() || null,
+    });
+    setSubmittingAdminReport(false);
+    if (error) {
+      setAdminReportResult(error.message);
+      return;
+    }
+    setAdminReportResult("✓ Real daily report submitted.");
+    setAdminReportActivities("");
+    setAdminReportTransactions("");
+    setAdminReportComplaints("");
+    setShowAdminReportForm(false);
+    loadAdminReports();
+  }
+
+  async function loadAdminReports() {
+    const { data } = await supabase
+      .from("admin_daily_reports")
+      .select("id, activities, transactions_handled, complaints_raised, created_at, staff_role_at_time, profiles:submitted_by(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setAdminReports((data as unknown as typeof adminReports) || []);
+  }
   const [appealResponses, setAppealResponses] = useState<Record<string, string>>({});
   const [analyticsPeriod, setAnalyticsPeriod] = useState<"today" | "week" | "month" | "quarter">("month");
   interface AnalyticsReport {
@@ -362,6 +403,7 @@ export default function AdminDashboard() {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
     setPendingAppeals((appealsData as unknown as typeof pendingAppeals) || []);
+    loadAdminReports();
 
     // Real, distinct list of owners with active correspondence —
     // derived from the actual messages table, not a guess.
@@ -1137,6 +1179,48 @@ export default function AdminDashboard() {
               <p className="text-2xl font-bold text-white mt-1">{formatNaira(totalCommissionEarnings)}</p>
               <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Rent-to-Own — updates automatically as real transactions complete.</p>
             </div>
+
+            {/* Real, new feature completing item #9 — CHS's own real
+                admin staff submitting a genuine daily report, visible
+                to the super admin, mirroring the same real pattern
+                already built and tested for agent/manager teams. */}
+            <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-4">
+              <button onClick={() => setShowAdminReportForm(!showAdminReportForm)} className="text-xs font-bold text-chs-charcoal">
+                📋 {showAdminReportForm ? "Hide" : "Submit"} My Daily Report
+              </button>
+              {showAdminReportForm && (
+                <div className="mt-2">
+                  <textarea rows={2} placeholder="What did you genuinely do today?" value={adminReportActivities}
+                    onChange={(e) => setAdminReportActivities(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                  <textarea rows={2} placeholder="Real transactions handled? (optional)" value={adminReportTransactions}
+                    onChange={(e) => setAdminReportTransactions(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                  <textarea rows={2} placeholder="Real complaints raised? (optional)" value={adminReportComplaints}
+                    onChange={(e) => setAdminReportComplaints(e.target.value)}
+                    className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                  {adminReportResult && <p className="text-[10px] text-gray-500 mb-1.5">{adminReportResult}</p>}
+                  <button onClick={handleSubmitAdminReport} disabled={submittingAdminReport}
+                    className="w-full py-2 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">
+                    {submittingAdminReport ? "Submitting..." : "Submit real report"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {profile?.is_super_admin && adminReports.length > 0 && (
+              <div className="col-span-2 bg-white rounded-xl border border-gray-100 p-3">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Real CHS Staff Daily Reports</p>
+                {adminReports.map((r) => (
+                  <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-[11px]">
+                    <p className="font-semibold text-chs-charcoal">{r.profiles?.full_name} {r.staff_role_at_time ? `(${r.staff_role_at_time})` : ""} — {new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="text-gray-600 mt-0.5">{r.activities}</p>
+                    {r.transactions_handled && <p className="text-green-700 mt-0.5">💰 {r.transactions_handled}</p>}
+                    {r.complaints_raised && <p className="text-chs-amber-dark mt-0.5">⚠️ {r.complaints_raised}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="col-span-2 bg-white rounded-xl border-2 border-chs-red p-4">
               <p className="text-xs font-bold text-chs-red mb-2">🛡️ Suspend a Real Account</p>
