@@ -134,7 +134,7 @@ export default function EstatesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--zone-bg)] px-4 py-8">
+    <div className="min-h-screen zone-manager bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/manager" className="text-xs text-gray-400 mb-4 inline-block">← Back to My Dashboard</Link>
         <div className="flex justify-between items-center mb-4">

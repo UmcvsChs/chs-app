@@ -217,7 +217,7 @@ export default function EstateDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--zone-bg)] px-4 py-8">
+    <div className="min-h-screen zone-manager bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/manager/estates" className="text-xs text-gray-400 mb-4 inline-block">← Back to My Estates</Link>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-4">🏘️ {estateName}</h1>

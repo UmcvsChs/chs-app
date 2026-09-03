@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
+import RoleBadge from "@/components/RoleBadge";
 import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
 import GuidePrompt from "@/components/GuidePrompt";
@@ -188,6 +189,7 @@ export default function ManagerDashboard() {
     <div className="min-h-screen zone-manager bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <RoleBadge label="Property Manager Dashboard" />
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">Property Manager</h1>
           <Link href="/manager/estates" className="text-[10px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">

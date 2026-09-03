@@ -33,6 +33,7 @@ interface DeveloperApplication {
 }
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
+import RoleBadge from "@/components/RoleBadge";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -1057,6 +1058,7 @@ export default function AdminDashboard() {
           </button>
         </div>
         <h1 className="font-serif text-lg font-bold mt-1">Admin</h1>
+        <RoleBadge label="CHS Admin Dashboard" />
         {/* The real, repeated request — admin genuinely being able to
             reach every other dashboard directly, not stuck on one
             screen with no way out but closing the app entirely. */}

@@ -24,6 +24,7 @@ import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
 import NotificationBell from "@/components/NotificationBell";
 import WalletQuickView from "@/components/WalletQuickView";
+import RoleBadge from "@/components/RoleBadge";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import OfferMessageThread from "@/components/OfferMessageThread";
 import MessageThread from "@/components/MessageThread";
@@ -602,6 +603,7 @@ export default function OwnerDashboard() {
     <div className="min-h-screen zone-owner bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <RoleBadge label="Owner Dashboard" />
         <div className="flex justify-between items-center mt-1">
           <div className="flex items-center gap-2 shrink-0">
             <h1 className="font-serif text-lg font-bold">My Properties</h1>

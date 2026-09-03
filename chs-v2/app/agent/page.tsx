@@ -11,6 +11,7 @@ import GuidePrompt from "@/components/GuidePrompt";
 import MessageThread from "@/components/MessageThread";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import WalletQuickView from "@/components/WalletQuickView";
+import RoleBadge from "@/components/RoleBadge";
 
 const STAGE_LABELS: Record<string, string> = {
   enquiry: "New enquiry",
@@ -56,6 +57,51 @@ export default function AgentDashboard() {
   const [ownerRateInputId, setOwnerRateInputId] = useState<string | null>(null);
   const [ownerRateValue, setOwnerRateValue] = useState("");
   const [ownerRateResult, setOwnerRateResult] = useState<string | null>(null);
+  const [showTeamSection, setShowTeamSection] = useState(false);
+  const [teamPhone, setTeamPhone] = useState("");
+  const [teamRoleLabel, setTeamRoleLabel] = useState("");
+  const [invitingTeam, setInvitingTeam] = useState(false);
+  const [teamResult, setTeamResult] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; role_label: string; member: { full_name: string } | null }[]>([]);
+  const [teamReports, setTeamReports] = useState<{ id: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; created_at: string; team_members: { role_label: string } | null }[]>([]);
+
+  async function loadTeamData() {
+    if (!session) return;
+    const { data: members } = await supabase
+      .from("team_members")
+      .select("id, role_label, member:member_id(full_name)")
+      .eq("parent_id", session.user.id)
+      .eq("status", "active");
+    setTeamMembers((members as unknown as typeof teamMembers) || []);
+
+    const { data: reports } = await supabase
+      .from("team_daily_reports")
+      .select("id, activities, transactions_handled, complaints_raised, created_at, team_members(role_label)")
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setTeamReports((reports as unknown as typeof teamReports) || []);
+  }
+
+  async function handleInviteTeamMember() {
+    if (!teamPhone.trim() || !teamRoleLabel.trim()) return;
+    setInvitingTeam(true);
+    setTeamResult(null);
+    const { error } = await supabase.rpc("invite_team_member", { p_phone: teamPhone.trim(), p_role_label: teamRoleLabel.trim() });
+    setInvitingTeam(false);
+    if (error) {
+      setTeamResult(error.message);
+      return;
+    }
+    setTeamResult("✓ Real team member added.");
+    setTeamPhone("");
+    setTeamRoleLabel("");
+    loadTeamData();
+  }
+
+  async function handleRemoveTeamMember(teamMemberId: string) {
+    const { error } = await supabase.rpc("remove_team_member", { p_team_member_id: teamMemberId });
+    if (!error) loadTeamData();
+  }
 
   async function handleSetOwnerRate(ownerId: string) {
     if (!ownerRateValue) return;
@@ -153,6 +199,7 @@ export default function AgentDashboard() {
     // response, so this is the standard, safe "fetch on mount" pattern.
     loadReferrals();
     loadManagedPortfolio();
+    loadTeamData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, profile, testModeRole]);
 
@@ -208,6 +255,7 @@ export default function AgentDashboard() {
     <div className="min-h-screen zone-agent bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <RoleBadge label="Agent Dashboard" />
         <div className="flex justify-between items-end mt-1 gap-2">
           <h1 className="font-serif text-lg font-bold">Agent Dashboard</h1>
           {session && <WalletQuickView userId={session.user.id} extra="agent_earnings" />}
@@ -294,6 +342,62 @@ export default function AgentDashboard() {
             re-entered per property. Reviewable and adjustable at any
             time; changing it here updates every real property this
             agent manages for that specific owner immediately. */}
+
+        {/* Real, new feature per direct client request: a genuine
+            mini-admin capability — inviting real, separate staff
+            accounts, assigning them a role, and seeing their real
+            daily activity reports. */}
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <button onClick={() => setShowTeamSection(!showTeamSection)} className="text-sm font-bold text-chs-charcoal">
+            👥 {showTeamSection ? "Hide" : "Manage"} My Team
+          </button>
+          {showTeamSection && (
+            <div className="mt-3">
+              <div className="flex gap-1.5 mb-2">
+                <input type="tel" placeholder="Staff's real CHS phone number" value={teamPhone}
+                  onChange={(e) => setTeamPhone(e.target.value)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                <input type="text" placeholder="Role (e.g. Office Staff)" value={teamRoleLabel}
+                  onChange={(e) => setTeamRoleLabel(e.target.value)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+              </div>
+              <button onClick={handleInviteTeamMember} disabled={invitingTeam}
+                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50 mb-2">
+                {invitingTeam ? "Adding..." : "+ Add real team member"}
+              </button>
+              {teamResult && <p className="text-[10px] text-gray-500 mb-2">{teamResult}</p>}
+
+              {teamMembers.map((m) => (
+                <div key={m.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-xs font-semibold text-chs-charcoal">{m.member?.full_name}</p>
+                      <p className="text-[10px] text-gray-400">{m.role_label}</p>
+                    </div>
+                    <button onClick={() => handleRemoveTeamMember(m.id)} className="text-[10px] text-chs-red underline">
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {teamReports.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Real Daily Reports</p>
+                  {teamReports.map((r) => (
+                    <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-[11px]">
+                      <p className="font-semibold text-chs-charcoal">{r.team_members?.role_label} — {new Date(r.created_at).toLocaleDateString()}</p>
+                      <p className="text-gray-600 mt-0.5">{r.activities}</p>
+                      {r.transactions_handled && <p className="text-green-700 mt-0.5">💰 {r.transactions_handled}</p>}
+                      {r.complaints_raised && <p className="text-chs-amber-dark mt-0.5">⚠️ {r.complaints_raised}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {managedProperties.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-sm font-bold text-chs-charcoal mb-1">💰 Your Real Commission Rate Per Owner</p>

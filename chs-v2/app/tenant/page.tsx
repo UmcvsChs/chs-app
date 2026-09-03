@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import HouseRulesAcknowledgment from "@/components/HouseRulesAcknowledgment";
+import RoleBadge from "@/components/RoleBadge";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -249,6 +250,7 @@ export default function TenantDashboard() {
     <div className="min-h-screen zone-tenant bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <RoleBadge label="Tenant Dashboard" />
         <div className="flex justify-between items-end mt-1 gap-2">
           <h1 className="font-serif text-lg font-bold">My Rentals</h1>
           {session && <WalletQuickView userId={session.user.id} extra="rent_savings" />}
