@@ -19,7 +19,7 @@ interface ApplicationWithProperty {
   status: string;
   move_in_date: string;
   created_at: string;
-  properties: { title: string; location_area: string } | null;
+  properties: { title: string; location_area: string; street_address: string | null } | null;
 }
 
 interface TenancyWithProperty {
@@ -32,7 +32,8 @@ interface TenancyWithProperty {
   annual_rent: number;
   status: string;
   notice_given_at: string | null;
-  properties: { title: string; location_area: string; owner_identity_visible_to_tenant: boolean } | null;
+  auto_pay_rent_enabled: boolean;
+  properties: { title: string; location_area: string; street_address: string | null; owner_identity_visible_to_tenant: boolean } | null;
   landlord: { full_name: string } | null;
   manager: { full_name: string } | null;
 }
@@ -42,7 +43,7 @@ interface InspectionWithProperty {
   requested_date: string;
   requested_time: string;
   status: string;
-  properties: { title: string; location_area: string } | null;
+  properties: { title: string; location_area: string; street_address: string | null } | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -60,6 +61,23 @@ export default function TenantDashboard() {
   const [payingRentId, setPayingRentId] = useState<string | null>(null);
   const [payRentMessage, setPayRentMessage] = useState<Record<string, string>>({});
   const [givingNoticeId, setGivingNoticeId] = useState<string | null>(null);
+  const [givingNoticeTenancyId, setGivingNoticeTenancyId] = useState<string | null>(null);
+  const [noticeMessageText, setNoticeMessageText] = useState("");
+  const [rentSavingsDeposit, setRentSavingsDeposit] = useState<Record<string, string>>({});
+  const [depositMessage, setDepositMessage] = useState<Record<string, string>>({});
+
+  async function handleToggleAutoPay(tenancyId: string, enabled: boolean) {
+    await supabase.rpc("toggle_auto_pay_rent", { p_tenancy_id: tenancyId, p_enabled: enabled });
+    loadData();
+  }
+
+  async function handleDepositRentSavings(tenancyId: string) {
+    const amount = Number(rentSavingsDeposit[tenancyId]);
+    if (!amount || amount <= 0) return;
+    const { error } = await supabase.rpc("deposit_to_rent_savings", { p_amount: amount });
+    setDepositMessage((prev) => ({ ...prev, [tenancyId]: error ? error.message : "✓ Deposited into your rent savings." }));
+    if (!error) setRentSavingsDeposit((prev) => ({ ...prev, [tenancyId]: "" }));
+  }
   const [noticeMessage, setNoticeMessage] = useState<Record<string, string>>({});
   const [serviceCharges, setServiceCharges] = useState<{ id: string; amount: number; description: string; due_date: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [payingChargeId, setPayingChargeId] = useState<string | null>(null);
@@ -80,17 +98,17 @@ export default function TenantDashboard() {
     const [applicationsRes, tenanciesRes, inspectionsRes, serviceChargesRes] = await Promise.all([
       supabase
         .from("rental_applications")
-        .select("id, status, move_in_date, created_at, properties(title, location_area)")
+        .select("id, status, move_in_date, created_at, properties(title, location_area, street_address)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, notice_given_at, properties(title, location_area, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
+        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, notice_given_at, auto_pay_rent_enabled, properties(title, location_area, street_address, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
         .from("inspections")
-        .select("id, requested_date, requested_time, status, properties(title, location_area)")
+        .select("id, requested_date, requested_time, status, properties(title, location_area, street_address)")
         .eq("requester_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -143,8 +161,9 @@ export default function TenantDashboard() {
   async function handleGiveNotice(tenancyId: string) {
     setGivingNoticeId(tenancyId);
     setNoticeMessage((prev) => ({ ...prev, [tenancyId]: "" }));
-    const { error } = await supabase.rpc("give_non_renewal_notice", { p_tenancy_id: tenancyId });
+    const { error } = await supabase.rpc("give_non_renewal_notice", { p_tenancy_id: tenancyId, p_message: noticeMessageText.trim() || null });
     setGivingNoticeId(null);
+    setGivingNoticeTenancyId(null);
     if (error) {
       setNoticeMessage((prev) => ({ ...prev, [tenancyId]: error.message }));
       return;
@@ -225,6 +244,16 @@ export default function TenantDashboard() {
       </div>
 
       <div className="px-4 py-4 space-y-5">
+        {/* Real, new fix per direct client testing: shortlet/hotel
+            bookings genuinely exist and work correctly (tracked as a
+            real "guest"), but lived on a completely separate page with
+            no visible connection to this one — exactly why it felt
+            like "two feeds that don't correspond at all." This makes
+            that connection explicit and immediate. */}
+        <Link href="/my-bookings" className="block bg-chs-amber-light rounded-xl p-3">
+          <p className="text-xs font-bold text-chs-amber-dark">🏨 Booked a shortlet, hotel, or event space instead?</p>
+          <p className="text-[11px] text-gray-600 mt-0.5">Those are tracked separately, as a real guest booking — tap here to see them.</p>
+        </Link>
         {notices.length > 0 && (
           <div>
             <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Formal notices</p>
@@ -267,6 +296,7 @@ export default function TenantDashboard() {
             {tenancies.map((t) => (
               <div key={t.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{t.properties?.title}</p>
+                <p className="text-xs font-semibold text-gray-600">📍 {t.properties?.street_address || "No street address on file"}</p>
                 <p className="text-xs text-gray-500">{t.properties?.location_area}</p>
                 {/* Real owner identity display — restored, found
                     missing entirely during the systematic Owner
@@ -298,10 +328,27 @@ export default function TenantDashboard() {
                               If you&apos;re not renewing, please give notice — the requested window (90 days before lease end) is closing.
                             </p>
                           )}
-                          <button onClick={() => handleGiveNotice(t.id)} disabled={givingNoticeId === t.id}
-                            className="mt-1 text-[10px] font-semibold text-chs-red underline disabled:opacity-50">
-                            {givingNoticeId === t.id ? "Submitting..." : "I&apos;m not renewing — give notice"}
-                          </button>
+                          {givingNoticeTenancyId === t.id ? (
+                            <div className="mt-1.5">
+                              <textarea rows={2} placeholder="Optional — let your landlord know why, or any real details (e.g. relocating, found a place closer to work)"
+                                value={noticeMessageText} onChange={(e) => setNoticeMessageText(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                              <div className="flex gap-2">
+                                <button onClick={() => handleGiveNotice(t.id)} disabled={givingNoticeId === t.id}
+                                  className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                                  {givingNoticeId === t.id ? "Submitting..." : "Confirm — I'm not renewing"}
+                                </button>
+                                <button onClick={() => setGivingNoticeTenancyId(null)} className="px-3 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button onClick={() => { setGivingNoticeTenancyId(t.id); setNoticeMessageText(""); }}
+                              className="mt-1 text-[10px] font-semibold text-chs-red underline">
+                              I&apos;m not renewing — give notice
+                            </button>
+                          )}
                         </>
                       )}
                       {noticeMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{noticeMessage[t.id]}</p>}
@@ -314,6 +361,24 @@ export default function TenantDashboard() {
                   className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
                   {payingRentId === t.id ? "Processing..." : `Pay rent — ${formatNaira(t.annual_rent)}`}
                 </button>
+                <div className="mt-1.5 bg-white rounded-lg p-2">
+                  <label className="flex items-center gap-1.5">
+                    <input type="checkbox" checked={!!t.auto_pay_rent_enabled}
+                      onChange={(e) => handleToggleAutoPay(t.id, e.target.checked)} />
+                    <span className="text-[10px] font-semibold text-gray-600">Auto-pay this rent from my Rent Savings the moment it&apos;s due</span>
+                  </label>
+                  {t.auto_pay_rent_enabled && (
+                    <div className="flex gap-1.5 mt-1.5">
+                      <input type="number" placeholder="Add to rent savings" value={rentSavingsDeposit[t.id] || ""}
+                        onChange={(e) => setRentSavingsDeposit((prev) => ({ ...prev, [t.id]: e.target.value }))}
+                        className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-[10px]" />
+                      <button onClick={() => handleDepositRentSavings(t.id)} className="px-2 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
+                        Deposit
+                      </button>
+                    </div>
+                  )}
+                  {depositMessage[t.id] && <p className="text-[10px] text-gray-500 mt-1">{depositMessage[t.id]}</p>}
+                </div>
                 <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
                   Submit move-in condition report
                 </Link>
@@ -369,7 +434,7 @@ export default function TenantDashboard() {
                 <RaiseDisputeForm
                   session={session}
                   tenancyId={disputingTenancy.id}
-                  againstUserId={disputingTenancy.landlord_id}
+                  againstUserId={disputingTenancy.manager_id || disputingTenancy.landlord_id}
                   onSuccess={() => setDisputeSubmitted(true)}
                   onCancel={() => setDisputingTenancy(null)}
                 />

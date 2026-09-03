@@ -65,6 +65,7 @@ export default function ListPropertyPage() {
   const [ownershipDeclared, setOwnershipDeclared] = useState(false);
   const [propertyType, setPropertyType] = useState(PROPERTY_TYPE_CATEGORIES[0].options[0]);
   const [locationArea, setLocationArea] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
   const [locationLga, setLocationLga] = useState("");
   const [locationState, setLocationState] = useState("Kaduna");
   const [price, setPrice] = useState<number | "">("");
@@ -116,6 +117,7 @@ export default function ListPropertyPage() {
 
   function validate(): string | null {
     if (!title.trim()) return "Please enter a title for this property.";
+    if (!streetAddress.trim()) return "Please enter a real, specific street address or house number.";
     if (!locationArea.trim()) return "Please enter the location area.";
     if (purpose === "shortlet") {
       if (!pricePerNight || pricePerNight < 1000) return "Please enter a valid nightly price.";
@@ -156,6 +158,7 @@ export default function ListPropertyPage() {
         title: title.trim(),
         purpose,
         property_type: propertyType,
+        street_address: streetAddress.trim(),
         location_area: locationArea.trim(),
         location_lga: locationLga.trim() || null,
         location_state: locationState,
@@ -376,6 +379,15 @@ export default function ListPropertyPage() {
               <option value="">Select an LGA</option>
               {(LGA_BY_STATE[locationState] || []).map((lga) => <option key={lga}>{lga}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Street address / house number (required)</label>
+            <input type="text" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)}
+              placeholder="e.g. House 12, Shagari Road" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <p className="text-[10px] text-gray-400 mt-1">
+              A real, specific address — this is how CHS, the occupant, and future analytics identify this exact property, not just its general neighborhood.
+            </p>
           </div>
 
           <div>

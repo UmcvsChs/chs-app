@@ -124,7 +124,7 @@ export default function AdminDashboard() {
   const [ownersWithMessages, setOwnersWithMessages] = useState<{ owner_id: string; full_name: string }[]>([]);
   const [activeMessageOwnerId, setActiveMessageOwnerId] = useState<string | null>(null);
   const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
-  const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string } | null; profiles: { full_name: string } | null }[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
   const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
 
@@ -396,7 +396,7 @@ export default function AdminDashboard() {
     // role, what percentage, and when — not just one lump total.
     const { data: txnData } = await supabase
       .from("transaction_commissions")
-      .select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title), profiles:payer_id(full_name)")
+      .select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title, street_address), profiles:payer_id(full_name)")
       .eq("status", "paid")
       .order("paid_at", { ascending: false })
       .limit(50);
@@ -422,7 +422,29 @@ export default function AdminDashboard() {
       }];
     });
 
-    const merged = [...(txnData || []), ...installmentAsTransactions]
+    // Real fix per direct client testing: a tenant's actual rent
+    // payment (peer-to-peer, not a CHS commission) was invisible to
+    // admin entirely — the money genuinely reached the landlord (this
+    // was verified directly), but admin had no way to see it happened
+    // at all. Merged in here too, clearly labeled as rent rather than
+    // CHS earnings, so admin retains real oversight of platform-wide
+    // money movement, not just CHS's own commission revenue.
+    const { data: rentData } = await supabase
+      .from("rent_payments")
+      .select("id, amount, created_at, tenancies(property_id, properties(title, street_address))")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    const rentAsTransactions = (rentData || []).map((r: Record<string, unknown>) => {
+      const tenancy = Array.isArray(r.tenancies) ? r.tenancies[0] : r.tenancies;
+      const props = tenancy?.properties ? (Array.isArray(tenancy.properties) ? tenancy.properties[0] : tenancy.properties) : null;
+      return {
+        id: r.id, transaction_type: "rent_payment (not CHS earnings)", payer_role: "tenant",
+        base_amount: r.amount, commission_percentage: null, commission_amount: 0,
+        paid_at: r.created_at, properties: props, profiles: null,
+      };
+    });
+
+    const merged = [...(txnData || []), ...installmentAsTransactions, ...rentAsTransactions]
       .sort((a, b) => new Date(b.paid_at as string).getTime() - new Date(a.paid_at as string).getTime())
       .slice(0, 50);
     setRecentTransactions(merged as unknown as typeof recentTransactions);
@@ -1179,6 +1201,9 @@ export default function AdminDashboard() {
                         <span className="text-gray-400">{new Date(t.paid_at).toLocaleDateString()}</span>
                       </div>
                       <p className="text-gray-500 mt-0.5">{t.profiles?.full_name || "User"} · {t.properties?.title || ""}</p>
+                      {t.properties?.street_address && (
+                        <p className="text-gray-400">📍 {t.properties.street_address}</p>
+                      )}
                       <div className="flex justify-between mt-1">
                         <span className="text-gray-500">Base: {formatNaira(t.base_amount)}{t.commission_percentage !== null ? ` × ${t.commission_percentage}%` : " (installment)"}</span>
                         <span className="font-bold text-chs-red">{formatNaira(t.commission_amount)}</span>

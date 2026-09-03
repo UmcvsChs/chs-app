@@ -57,7 +57,10 @@ export default function MyBookingsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
-        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-4">🏠 My Shortlet Bookings</h1>
+        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">🏠 My Shortlet Bookings</h1>
+        <Link href="/tenant" className="text-xs text-chs-red font-semibold underline mb-4 inline-block">
+          Looking for a long-term rental instead? See My Rentals →
+        </Link>
 
         {bookings.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-10">No shortlet bookings yet.</p>

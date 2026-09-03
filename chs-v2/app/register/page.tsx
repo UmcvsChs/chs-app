@@ -18,7 +18,7 @@ const PROFESSIONS = [
 type Role = "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer";
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
-  { value: "buyer", label: "Buyer", desc: "Searching to purchase, rent, lease or hire a property" },
+  { value: "buyer", label: "Buyer / Guest", desc: "Searching to purchase, rent, lease, hire, or book a shortlet/hotel stay — this one real account covers all of it" },
   { value: "tenant", label: "Tenant", desc: "Already renting, or about to start renting, through CHS" },
   { value: "owner", label: "Property Owner", desc: "Listing a property to sell, rent, lease, or hire out" },
   { value: "agent", label: "Agent", desc: "Marketing properties and earning referral commission" },
