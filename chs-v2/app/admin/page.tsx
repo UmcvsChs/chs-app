@@ -1059,6 +1059,9 @@ export default function AdminDashboard() {
         </div>
         <h1 className="font-serif text-lg font-bold mt-1">Admin</h1>
         <RoleBadge label="CHS Admin Dashboard" />
+        <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
+          💵 CHS Expenses & Income →
+        </Link>
         {/* The real, repeated request — admin genuinely being able to
             reach every other dashboard directly, not stuck on one
             screen with no way out but closing the app entirely. */}

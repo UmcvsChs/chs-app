@@ -352,6 +352,10 @@ export default function AgentDashboard() {
           📋 My Tenant Register →
         </Link>
 
+        <Link href="/expenses" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
+          💵 My Expenses & Income →
+        </Link>
+
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <button onClick={() => setShowTeamSection(!showTeamSection)} className="text-sm font-bold text-chs-charcoal">
             👥 {showTeamSection ? "Hide" : "Manage"} My Team
