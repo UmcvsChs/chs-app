@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, use } from "react";
-import { useRouter } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { uploadDocument } from "@/lib/storage";
 import { ConditionRoom } from "@/types/conditionReport";
 
 function generateReference(): string {
@@ -20,11 +21,18 @@ export default function ConditionReportPage({
 }) {
   const { tenancyId } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Real, new fix — this page previously only ever handled a move-in
+  // report. A real move-out report, with a real court affidavit
+  // requirement, was described and agreed on earlier but never
+  // actually built. Both now share this same real form.
+  const reportType = searchParams.get("type") === "move_out" ? "move_out" : "move_in";
   const { session, loading: authLoading } = useAuth();
 
   const [rooms, setRooms] = useState<ConditionRoom[]>([
     { name: "Living Room", items: [{ item: "Walls", condition: "good" }], notes: "" },
   ]);
+  const [affidavitFile, setAffidavitFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -68,8 +76,23 @@ export default function ConditionReportPage({
       setError("Please name every room before submitting.");
       return;
     }
+    // Real, deliberate requirement per direct client design: a
+    // move-out report requires a genuine court-issued affidavit —
+    // the tenant's real undertaking of the condition they're leaving
+    // the property in — uploaded as real evidence both sides can see.
+    if (reportType === "move_out" && !affidavitFile) {
+      setError("A real court affidavit is required for a move-out report — see the note below for what this means and why.");
+      return;
+    }
     setError(null);
     setSubmitting(true);
+
+    let affidavitUrl: string | null = null;
+    let affidavitReference: string | null = null;
+    if (affidavitFile) {
+      affidavitUrl = await uploadDocument(affidavitFile, session.user.id, "move-out-affidavit");
+      affidavitReference = "AFFIDAVIT-" + Math.floor(100000 + Math.random() * 900000);
+    }
 
     const { error: insertError } = await supabase.from("condition_reports").insert({
       reference: generateReference(),
@@ -78,6 +101,9 @@ export default function ConditionReportPage({
       tenant_confirmed: true,
       status: "pending_review",
       submitted_at: new Date().toISOString(),
+      report_type: reportType,
+      affidavit_url: affidavitUrl,
+      affidavit_reference: affidavitReference,
     });
 
     if (insertError) {
@@ -100,7 +126,7 @@ export default function ConditionReportPage({
   if (success) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
-        <p className="text-lg font-semibold text-chs-charcoal mb-2">✓ Condition report submitted</p>
+        <p className="text-lg font-semibold text-chs-charcoal mb-2">✓ {reportType === "move_out" ? "Move-out" : "Move-in"} condition report submitted</p>
         <p className="text-sm text-gray-500 mb-4">
           This is now on record — a real, dated document both you and your landlord can refer back to.
         </p>
@@ -112,10 +138,13 @@ export default function ConditionReportPage({
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8 pb-16">
       <div className="max-w-md mx-auto">
-        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Move-in condition report</h1>
+        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">
+          {reportType === "move_out" ? "Move-out condition report" : "Move-in condition report"}
+        </h1>
         <p className="text-sm text-gray-500 mb-6">
-          Document the real condition of each room now — this genuinely protects both you and your
-          landlord if a dispute ever comes up later.
+          {reportType === "move_out"
+            ? "Document the real condition of each room as you leave — this genuinely protects both you and your landlord if a dispute ever comes up later."
+            : "Document the real condition of each room now — this genuinely protects both you and your landlord if a dispute ever comes up later."}
         </p>
 
         {rooms.map((room, roomIndex) => (
@@ -170,6 +199,21 @@ export default function ConditionReportPage({
         <button onClick={addRoom} className="w-full py-2.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold mb-4">
           + Add another room
         </button>
+
+        {reportType === "move_out" && (
+          <div className="bg-chs-amber-light rounded-xl p-4 mb-4">
+            <p className="text-xs font-bold text-chs-amber-dark mb-1">📜 Real court affidavit required</p>
+            <p className="text-[11px] text-gray-600 mb-2">
+              Beyond normal wear and tear, you&apos;re required to obtain a real, sworn affidavit from a nearby High Court — a genuine undertaking stating the condition you met this property in, the condition you&apos;re leaving it in, and that you take real responsibility for any damage caused by your own negligence or action while in occupation. Upload the signed, stamped affidavit below.
+            </p>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setAffidavitFile(e.target.files?.[0] || null)}
+              className="w-full text-xs"
+            />
+          </div>
+        )}
 
         {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{error}</p>}
 

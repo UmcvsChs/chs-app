@@ -317,6 +317,9 @@ export default function TenantDashboard() {
                 <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
                   Submit move-in condition report
                 </Link>
+                <Link href={`/condition-report/${t.id}?type=move_out`} className="block mt-1 text-[10px] font-semibold text-chs-charcoal underline">
+                  Submit move-out condition report (requires a real court affidavit)
+                </Link>
                 {session && <HouseRulesAcknowledgment tenancyId={t.id} propertyId={t.property_id} session={session} />}
                 <span className="inline-block mt-1 text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full capitalize">
                   {t.status.replace(/_/g, " ")}

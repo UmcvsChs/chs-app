@@ -122,6 +122,23 @@ export default function OwnerDashboard() {
   const [showGuide, setShowGuide] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyBasic | null>(null);
+  const [viewingConditionReportsTenancyId, setViewingConditionReportsTenancyId] = useState<string | null>(null);
+  const [conditionReports, setConditionReports] = useState<{
+    id: string; report_type: string; submitted_at: string; rooms: unknown; affidavit_url: string | null;
+  }[]>([]);
+
+  async function handleViewConditionReports(tenancyId: string) {
+    if (viewingConditionReportsTenancyId === tenancyId) {
+      setViewingConditionReportsTenancyId(null);
+      return;
+    }
+    setViewingConditionReportsTenancyId(tenancyId);
+    const { data } = await supabase.from("condition_reports")
+      .select("id, report_type, submitted_at, rooms, affidavit_url")
+      .eq("tenancy_id", tenancyId)
+      .order("submitted_at", { ascending: false });
+    setConditionReports(data || []);
+  }
   const [issuingNoticeTenancy, setIssuingNoticeTenancy] = useState<TenancyBasic | null>(null);
   const [noticeIssued, setNoticeIssued] = useState(false);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
@@ -1092,6 +1109,12 @@ export default function OwnerDashboard() {
                   >
                     Raise a dispute
                   </button>
+                  <button
+                    onClick={() => handleViewConditionReports(t.id)}
+                    className="text-[10px] font-semibold text-chs-charcoal underline"
+                  >
+                    📋 Condition reports
+                  </button>
                 </div>
               </div>
               {t.lease_end && (() => {
@@ -1107,6 +1130,25 @@ export default function OwnerDashboard() {
                 <div className="mt-2 pt-2 border-t border-gray-100">
                   <p className="text-[10px] text-chs-amber-dark font-semibold mb-1">✓ CHS is managing this property</p>
                   <RequestTermination tenancyId={t.id} onDone={loadData} />
+                </div>
+              )}
+              {viewingConditionReportsTenancyId === t.id && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  {conditionReports.length === 0 ? (
+                    <p className="text-[10px] text-gray-400">No real condition reports submitted yet.</p>
+                  ) : (
+                    conditionReports.map((r) => (
+                      <div key={r.id} className="bg-white rounded-lg p-2 mb-1.5 text-[10px]">
+                        <p className="font-semibold text-chs-charcoal capitalize">{r.report_type.replace(/_/g, " ")} — {new Date(r.submitted_at).toLocaleDateString()}</p>
+                        <p className="text-gray-500">{(r.rooms as { name: string }[]).length} room(s) documented</p>
+                        {r.affidavit_url && (
+                          <a href={r.affidavit_url} target="_blank" rel="noopener noreferrer" className="text-chs-red font-semibold underline">
+                            📜 View real court affidavit
+                          </a>
+                        )}
+                      </div>
+                    ))
+                  )}
                 </div>
               )}
             </div>

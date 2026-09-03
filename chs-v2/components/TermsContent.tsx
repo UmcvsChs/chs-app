@@ -9,11 +9,12 @@ export default function TermsContent() {
       <p><strong className="text-chs-charcoal">2. Every transaction started on CHS must be completed on CHS.</strong> Concluding a deal introduced through the platform outside it does not remove CHS&apos;s commission, which remains legally owed.</p>
       <p><strong className="text-chs-charcoal">3. Commission structure.</strong> CHS&apos;s real commission varies by category, always split between both sides of the transaction:</p>
       <ul className="list-disc pl-5 space-y-1">
-        <li><strong className="text-chs-charcoal">Residential/Commercial Rental or Lease</strong> (houses, offices, shops, warehouses, factories, land leased long-term): 5% from the Tenant/Lessee, 5.5% from the Landlord/Owner.</li>
+        <li><strong className="text-chs-charcoal">Residential/Commercial Rental or Lease</strong> (houses, offices, shops, warehouses, factories, land leased long-term): 6% from the Tenant/Lessee, 4% from the Landlord/Owner.</li>
         <li><strong className="text-chs-charcoal">Sale</strong> (houses, land, warehouses, factories, or any property sold outright): 6.5% from the Buyer, 6% from the Seller.</li>
         <li><strong className="text-chs-charcoal">Rent to Own / Mortgage</strong>: 5% from the Buyer, 5.5% from the Seller, charged on every real monthly installment as it&apos;s paid — not on the total price upfront.</li>
         <li><strong className="text-chs-charcoal">Shortlet</strong> (genuine short-term apartment/house stays): a real sliding scale by length of stay — 1–3 nights: 7% Guest / 5% Host; 4–13 nights: 6% Guest / 4% Host; 14+ nights: 5% Guest / 3% Host.</li>
         <li><strong className="text-chs-charcoal">Hotel &amp; Lodge, Event Centre, and casual/hourly Car Park bookings</strong>: a flat 6% from the Guest, 4% from the Host, regardless of duration.</li>
+        <li><strong className="text-chs-charcoal">Agent-managed listings</strong>: a real, independent agent who brings full management authority to a property may set their own commission rate with their client (matching real market practice). In this arrangement, CHS charges neither the buyer/tenant nor the owner directly — instead, CHS takes a real, capped 3% only from the agent&apos;s own commission earnings, once paid.</li>
       </ul>
       <p>No inspection fee as standard.</p>
       <p><strong className="text-chs-charcoal">4. Honesty and accurate information is mandatory.</strong> Falsified documents or fraudulent listings result in permanent suspension and may be reported to law enforcement.</p>

@@ -51,6 +51,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [myPaidOffer, setMyPaidOffer] = useState<{ id: string; document_deadline: string; legal_transfer_confirmed: boolean } | null>(null);
+  const [saleDocuments, setSaleDocuments] = useState<{ id: string; document_type: string; file_url: string; verification_status: string }[]>([]);
   const [deadlinePassed, setDeadlinePassed] = useState(false);
   const [requestingRefund, setRequestingRefund] = useState(false);
   const [dispatchStatus, setDispatchStatus] = useState<"none" | "requested" | "dispatched">("none");
@@ -132,6 +133,9 @@ export default function PropertyActions({ property }: { property: Property }) {
         setMyPaidOffer(data);
         if (data) {
           setDeadlinePassed(new Date(data.document_deadline).getTime() < Date.now());
+          supabase.from("property_sale_documents").select("id, document_type, file_url, verification_status")
+            .eq("property_id", property.id)
+            .then(({ data: docs }) => setSaleDocuments(docs || []));
           supabase.from("document_dispatch_requests").select("status").eq("offer_id", data.id).maybeSingle().then(({ data: dispatch }) => {
             setDispatchStatus((dispatch?.status as "requested" | "dispatched") || "none");
           });
@@ -303,6 +307,29 @@ export default function PropertyActions({ property }: { property: Property }) {
         <p className="text-xs text-gray-500 mb-3">
           Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
         </p>
+        {/* Real, new fix — the actual verified legal documents,
+            uploaded and confirmed by CHS at listing time, made
+            genuinely downloadable to the paying buyer directly. This
+            was a real gap: the whole "dispatch" flow below only ever
+            tracked physical hard-copy delivery — the real digital soft
+            copies were never actually reachable anywhere. */}
+        {saleDocuments.length > 0 && (
+          <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">📄 Your Real Property Documents</p>
+            {saleDocuments.map((d) => (
+              <div key={d.id} className="flex justify-between items-center text-xs py-1">
+                <span className="text-gray-600 capitalize">{d.document_type.replace(/_/g, " ")}</span>
+                {d.verification_status === "verified" ? (
+                  <a href={d.file_url} target="_blank" rel="noopener noreferrer" className="text-chs-red font-semibold underline">
+                    Download
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-gray-400">Not yet verified</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
         {dispatchStatus === "none" && (
           <>
             <textarea placeholder="Optional — your delivery address for the hard copies, and when you'd like to receive them"

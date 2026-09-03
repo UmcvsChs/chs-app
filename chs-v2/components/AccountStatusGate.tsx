@@ -16,7 +16,7 @@ export default function AccountStatusGate({ children }: { children: React.ReactN
   const [submitting, setSubmitting] = useState(false);
   const [reactivating, setReactivating] = useState(false);
 
-  if (!profile || (profile.status !== "suspended" && profile.status !== "deactivated")) {
+  if (!profile || (profile.status !== "suspended" && profile.status !== "deactivated" && profile.status !== "pending" && profile.status !== "rejected")) {
     return <>{children}</>;
   }
 
@@ -32,6 +32,37 @@ export default function AccountStatusGate({ children }: { children: React.ReactN
     setReactivating(true);
     await supabase.rpc("reactivate_my_account");
     window.location.reload();
+  }
+
+  if (profile.status === "pending") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--zone-bg)] px-6">
+        <div className="max-w-sm w-full bg-white rounded-xl border border-gray-200 p-6 text-center">
+          <p className="text-2xl mb-2">⏳</p>
+          <p className="text-sm font-bold text-chs-charcoal mb-2">Your registration is under review</p>
+          <p className="text-xs text-gray-500 mb-4">
+            You&apos;re genuinely registered — CHS staff just need to review your details before you can use the app. This is usually quick. You&apos;ll get a real notification the moment you&apos;re approved.
+          </p>
+          <button onClick={() => window.location.reload()} className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold">
+            Check again
+          </button>
+          <button onClick={signOut} className="w-full mt-2 text-xs text-gray-400 underline">Sign out</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (profile.status === "rejected") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--zone-bg)] px-6">
+        <div className="max-w-sm w-full bg-white rounded-xl border-2 border-chs-red p-6 text-center">
+          <p className="text-2xl mb-2">✕</p>
+          <p className="text-sm font-bold text-chs-charcoal mb-2">Your registration wasn&apos;t approved</p>
+          <p className="text-xs text-gray-500 mb-4">Contact CHS support for real details on why, and what you can do next.</p>
+          <button onClick={signOut} className="w-full py-2.5 rounded-full bg-gray-200 text-gray-600 text-sm font-semibold">Sign out</button>
+        </div>
+      </div>
+    );
   }
 
   if (profile.status === "deactivated") {
