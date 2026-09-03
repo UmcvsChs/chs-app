@@ -196,6 +196,9 @@ export default function ManagerDashboard() {
             🏘️ My Estates
           </Link>
         </div>
+        <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
+          📋 My Tenant Register →
+        </Link>
 
         {/* Real summary stats — restored, found missing during the
             systematic Manager dashboard comparison. Every number

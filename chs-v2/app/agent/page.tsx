@@ -347,6 +347,11 @@ export default function AgentDashboard() {
             mini-admin capability — inviting real, separate staff
             accounts, assigning them a role, and seeing their real
             daily activity reports. */}
+
+        <Link href="/agent/tenant-register" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
+          📋 My Tenant Register →
+        </Link>
+
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <button onClick={() => setShowTeamSection(!showTeamSection)} className="text-sm font-bold text-chs-charcoal">
             👥 {showTeamSection ? "Hide" : "Manage"} My Team
