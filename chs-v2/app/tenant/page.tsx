@@ -58,6 +58,10 @@ export default function TenantDashboard() {
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [applications, setApplications] = useState<ApplicationWithProperty[]>([]);
   const [tenancies, setTenancies] = useState<TenancyWithProperty[]>([]);
+  // Real, new fix per direct client request — the countdown display
+  // should genuinely reflect that a subsequent-year renewal owes no
+  // tenant commission, not leave the tenant to wonder or assume.
+  const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
   const [payingRentId, setPayingRentId] = useState<string | null>(null);
   const [payRentMessage, setPayRentMessage] = useState<Record<string, string>>({});
   const [givingNoticeId, setGivingNoticeId] = useState<string | null>(null);
@@ -119,7 +123,15 @@ export default function TenantDashboard() {
     ]);
 
     setApplications((applicationsRes.data as unknown as ApplicationWithProperty[]) || []);
-    setTenancies((tenanciesRes.data as unknown as TenancyWithProperty[]) || []);
+    const realTenancies = (tenanciesRes.data as unknown as TenancyWithProperty[]) || [];
+    setTenancies(realTenancies);
+    if (realTenancies.length > 0) {
+      const { data: priorPayments } = await supabase
+        .from("rent_payments")
+        .select("tenancy_id")
+        .in("tenancy_id", realTenancies.map((t) => t.id));
+      setTenanciesWithPriorPayment(new Set((priorPayments || []).map((p) => p.tenancy_id)));
+    }
     setInspections((inspectionsRes.data as unknown as InspectionWithProperty[]) || []);
     setServiceCharges((serviceChargesRes.data as typeof serviceCharges) || []);
 
@@ -319,6 +331,11 @@ export default function TenantDashboard() {
                       <p className="text-xs font-bold text-chs-charcoal">
                         {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
                       </p>
+                      {tenanciesWithPriorPayment.has(t.id) && (
+                        <p className="text-[10px] text-green-700 font-semibold mt-0.5">
+                          ✓ This is a renewal — you owe no CHS commission this year, only the rent itself
+                        </p>
+                      )}
                       {t.notice_given_at ? (
                         <p className="text-[10px] text-green-700 mt-0.5">✓ You&apos;ve given notice — not renewing this tenancy</p>
                       ) : (

@@ -50,6 +50,7 @@ export default function OwnerDashboard() {
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
+  const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
@@ -293,6 +294,13 @@ export default function OwnerDashboard() {
       .select("id, tenant_id, property_id, status, management_delegated, lease_end, notice_given_at")
       .eq("landlord_id", session.user.id);
     setTenancies(ownedTenancies || []);
+    if (ownedTenancies && ownedTenancies.length > 0) {
+      const { data: priorPayments } = await supabase
+        .from("rent_payments")
+        .select("tenancy_id")
+        .in("tenancy_id", ownedTenancies.map((t) => t.id));
+      setTenanciesWithPriorPayment(new Set((priorPayments || []).map((p) => p.tenancy_id)));
+    }
 
     const { data: ownedEngageRequests } = await supabase
       .from("engage_chs_requests")
@@ -1123,6 +1131,9 @@ export default function OwnerDashboard() {
                   <p className="text-[10px] text-gray-500 mt-1.5">
                     {daysLeft > 0 ? `${daysLeft} real day${daysLeft !== 1 ? "s" : ""} to next rent due` : "Rent is due"}
                     {t.notice_given_at && <span className="text-green-700 font-semibold"> · Tenant has given non-renewal notice</span>}
+                    {tenanciesWithPriorPayment.has(t.id) && (
+                      <span className="text-chs-amber-dark font-semibold"> · This renewal earns you a real, reduced 3% commission — your tenant pays nothing further</span>
+                    )}
                   </p>
                 );
               })()}

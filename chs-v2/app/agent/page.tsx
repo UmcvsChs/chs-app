@@ -40,6 +40,8 @@ export default function AgentDashboard() {
     title: string;
     status: string;
     agent_commission_pct: number | null;
+    owner_id: string;
+    owner: { full_name: string } | null;
     tenancies: { id: string; tenant_id: string; status: string }[];
   }
   const [managedPortfolio, setManagedPortfolio] = useState<{
@@ -51,6 +53,21 @@ export default function AgentDashboard() {
   const [issuingNoticeTenancyId, setIssuingNoticeTenancyId] = useState<string | null>(null);
   const [commissionRateInputId, setCommissionRateInputId] = useState<string | null>(null);
   const [commissionRateValue, setCommissionRateValue] = useState("");
+  const [ownerRateInputId, setOwnerRateInputId] = useState<string | null>(null);
+  const [ownerRateValue, setOwnerRateValue] = useState("");
+  const [ownerRateResult, setOwnerRateResult] = useState<string | null>(null);
+
+  async function handleSetOwnerRate(ownerId: string) {
+    if (!ownerRateValue) return;
+    const { error } = await supabase.rpc("set_owner_commission_rate", { p_owner_id: ownerId, p_pct: Number(ownerRateValue) });
+    if (error) {
+      setOwnerRateResult(error.message);
+      return;
+    }
+    setOwnerRateResult("✓ Real rate updated — applied to every property you manage for this owner.");
+    setOwnerRateInputId(null);
+    loadManagedPortfolio();
+  }
   const [showAgentReport, setShowAgentReport] = useState(false);
   const [agentReportPeriod, setAgentReportPeriod] = useState<"week" | "month" | "quarter">("month");
   const [agentReport, setAgentReport] = useState<{
@@ -88,7 +105,7 @@ export default function AgentDashboard() {
     setManagedPortfolio(overview || null);
     const { data: props } = await supabase
       .from("properties")
-      .select("id, title, status, agent_commission_pct, tenancies(id, tenant_id, status)")
+      .select("id, title, status, agent_commission_pct, owner_id, owner:owner_id(full_name), tenancies(id, tenant_id, status)")
       .eq("managing_agent_id", session.user.id);
     setManagedProperties((props as unknown as ManagedProperty[]) || []);
   }
@@ -271,6 +288,48 @@ export default function AgentDashboard() {
             </div>
           )}
         </div>
+
+        {/* Real, new feature per direct client design: a genuine,
+            standing commission rate per owner relationship — not
+            re-entered per property. Reviewable and adjustable at any
+            time; changing it here updates every real property this
+            agent manages for that specific owner immediately. */}
+        {managedProperties.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-sm font-bold text-chs-charcoal mb-1">💰 Your Real Commission Rate Per Owner</p>
+            <p className="text-[10px] text-gray-400 mb-3">
+              Each owner negotiates their own real rate with you — set it once here, and it applies automatically to every property you manage for them.
+            </p>
+            {Array.from(new Map(managedProperties.map((p) => [p.owner_id, p])).values()).map((p) => (
+              <div key={p.owner_id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                <p className="text-xs font-semibold text-chs-charcoal mb-1">{p.owner?.full_name || "Owner"}</p>
+                {ownerRateInputId === p.owner_id ? (
+                  <div className="flex gap-1.5">
+                    <input type="number" placeholder={`Current: ${p.agent_commission_pct || "not set"}%`}
+                      value={ownerRateValue} onChange={(e) => setOwnerRateValue(e.target.value)}
+                      className="flex-1 px-2 py-1 rounded-lg border border-gray-200 text-[11px]" />
+                    <button onClick={() => handleSetOwnerRate(p.owner_id)} className="px-2 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Save
+                    </button>
+                    <button onClick={() => setOwnerRateInputId(null)} className="px-2 py-1 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex justify-between items-center">
+                    <p className="text-[11px] text-gray-600">
+                      {p.agent_commission_pct ? `${p.agent_commission_pct}% agreed rate` : "No real rate set yet"}
+                    </p>
+                    <button onClick={() => { setOwnerRateInputId(p.owner_id); setOwnerRateValue(""); }} className="text-[10px] text-chs-red underline">
+                      {p.agent_commission_pct ? "Adjust" : "Set rate"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {ownerRateResult && <p className="text-[10px] text-gray-500 mt-2">{ownerRateResult}</p>}
+          </div>
+        )}
 
         {managedPortfolio && managedPortfolio.total_managed_properties > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
