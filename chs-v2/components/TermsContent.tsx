@@ -131,6 +131,13 @@ export default function TermsContent() {
         <p>A tenant who does not intend to renew their tenancy should give notice at least 90 real days before their lease end date. CHS displays a real, live countdown to lease end on the tenant&apos;s dashboard, and highlights this window as it approaches. Notice given after this window is still recorded and forwarded to the landlord, honestly noted as later than the requested period, rather than refused.</p>
       </div>
 
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">30. Alternative service of legal notice — please read carefully</p>
+        <p>
+          By registering as a tenant, you agree that CHS and/or your landlord may validly serve you any real legal document — including a court process, eviction notice, or quit notice — using the phone number, email address, or WhatsApp/social media contact you supplied at registration, if you become genuinely unreachable through normal means (e.g. your phone is switched off, your registered number is no longer active, or you cannot otherwise be reached after real, documented attempts). This does not replace your legal right to be heard; it exists solely so a landlord is not left without recourse when a tenant cannot be physically located — for example, if a property is abandoned or locked with rent unpaid and the tenant cannot be reached. Service through any of these real channels, once genuinely attempted and documented, is treated as valid notice for the purposes of this agreement.
+        </p>
+      </div>
+
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
         This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support.
       </p>

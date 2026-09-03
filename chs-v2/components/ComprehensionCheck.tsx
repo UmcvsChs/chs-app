@@ -5,7 +5,7 @@ import { useState } from "react";
 // A real, genuine consumer-protection gate — restored, found
 // completely missing during the systematic Register view comparison.
 // Forces someone registering to actually read the real Terms &
-// Conditions, then correctly answer 3 real questions about the
+// Conditions, then correctly answer 4 real questions about the
 // protections that actually matter (escrow, no unauthorized fees,
 // when payment releases) before they can create an account.
 const QUESTIONS = [
@@ -33,10 +33,18 @@ const QUESTIONS = [
       { label: "Only after the conditions for release are met — funds are held in escrow", correct: true },
     ],
   },
+  {
+    q: "If you become genuinely unreachable, can a landlord or CHS serve you a real legal notice (like an eviction or court process) through your email or WhatsApp?",
+    options: [
+      { label: "No, this is never allowed under any circumstances", correct: false },
+      { label: "Yes — if you agreed to it at registration and genuine attempts to reach you have failed", correct: true },
+      { label: "Only if you reply and agree to receive it that way each time", correct: false },
+    ],
+  },
 ];
 
 export default function ComprehensionCheck({ onPassed }: { onPassed: (passed: boolean) => void }) {
-  const [answers, setAnswers] = useState<(number | null)[]>([null, null, null]);
+  const [answers, setAnswers] = useState<(number | null)[]>([null, null, null, null]);
   const [checked, setChecked] = useState(false);
 
   function handleAnswer(qIdx: number, optIdx: number) {
@@ -56,7 +64,7 @@ export default function ComprehensionCheck({ onPassed }: { onPassed: (passed: bo
   return (
     <div className="bg-gray-50 rounded-xl p-3 space-y-3">
       <p className="text-xs font-bold text-chs-charcoal">Quick comprehension check</p>
-      <p className="text-[10px] text-gray-500">Please answer all three questions correctly to confirm you understood the terms above.</p>
+      <p className="text-[10px] text-gray-500">Please answer all four questions correctly to confirm you understood the terms above.</p>
       {QUESTIONS.map((q, qIdx) => (
         <div key={qIdx}>
           <label className="text-[11px] font-semibold text-gray-700">{qIdx + 1}. {q.q}</label>
