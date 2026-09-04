@@ -57,6 +57,33 @@ export default function AgentDashboard() {
   const [ownerRateInputId, setOwnerRateInputId] = useState<string | null>(null);
   const [ownerRateValue, setOwnerRateValue] = useState("");
   const [ownerRateResult, setOwnerRateResult] = useState<string | null>(null);
+  const [showRemitForm, setShowRemitForm] = useState(false);
+  const [remitOwnerId, setRemitOwnerId] = useState("");
+  const [remitAmount, setRemitAmount] = useState("");
+  const [remitNote, setRemitNote] = useState("");
+  const [remitting, setRemitting] = useState(false);
+  const [remitResult, setRemitResult] = useState<string | null>(null);
+
+  async function handleRemit() {
+    if (!remitOwnerId || !remitAmount) {
+      setRemitResult("Please select the real owner and enter the real amount collected.");
+      return;
+    }
+    setRemitting(true);
+    setRemitResult(null);
+    const { error } = await supabase.rpc("remit_collected_rent_to_owner", {
+      p_owner_id: remitOwnerId, p_amount: Number(remitAmount), p_note: remitNote.trim() || null,
+    });
+    setRemitting(false);
+    if (error) {
+      setRemitResult(error.message);
+      return;
+    }
+    setRemitResult("✓ Real remittance complete — the owner's wallet has been credited.");
+    setRemitOwnerId("");
+    setRemitAmount("");
+    setRemitNote("");
+  }
   const [showTeamSection, setShowTeamSection] = useState(false);
   const [teamPhone, setTeamPhone] = useState("");
   const [teamRoleLabel, setTeamRoleLabel] = useState("");
@@ -456,6 +483,42 @@ export default function AgentDashboard() {
               </div>
             ))}
             {ownerRateResult && <p className="text-[10px] text-gray-500 mt-2">{ownerRateResult}</p>}
+          </div>
+        )}
+
+        {/* Real, new feature per direct client request: a genuine,
+            digital way to remit rent collected in person to an
+            owner's wallet, with the agent's own agreed commission
+            automatically deducted — settling money that used to "get
+            hung" or leave an owner unsure whether they were ever
+            paid. */}
+        {managedProperties.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <button onClick={() => setShowRemitForm(!showRemitForm)} className="text-sm font-bold text-chs-charcoal">
+              💸 {showRemitForm ? "Hide" : "Remit"} Collected Rent to an Owner
+            </button>
+            {showRemitForm && (
+              <div className="mt-3">
+                <select value={remitOwnerId} onChange={(e) => setRemitOwnerId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white mb-2">
+                  <option value="">Select the real owner</option>
+                  {Array.from(new Map(managedProperties.map((p) => [p.owner_id, p])).values()).map((p) => (
+                    <option key={p.owner_id} value={p.owner_id}>
+                      {p.owner?.full_name || "Owner"} {p.agent_commission_pct ? `(${p.agent_commission_pct}% agreed)` : "(no rate set)"}
+                    </option>
+                  ))}
+                </select>
+                <input type="number" placeholder="Real amount collected (₦)" value={remitAmount} onChange={(e) => setRemitAmount(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" />
+                <textarea placeholder="Note (e.g. which property, which period)" value={remitNote} onChange={(e) => setRemitNote(e.target.value)}
+                  rows={2} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" />
+                {remitResult && <p className="text-xs text-gray-600 mb-2">{remitResult}</p>}
+                <button onClick={handleRemit} disabled={remitting}
+                  className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
+                  {remitting ? "Remitting..." : "Remit to owner's wallet"}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
