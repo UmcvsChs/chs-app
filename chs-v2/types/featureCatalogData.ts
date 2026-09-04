@@ -158,6 +158,7 @@ export const FEATURE_CATALOG: { title: string; rows: { feature: string; how: str
       { feature: "CHS staff daily report", how: "Any real internal admin staff member can submit their own daily activity report, visible to the super admin.", destination: "N/A — admin only", admin: "Admin → Overview → Submit My Daily Report" },
       { feature: "Critical data-protection fixes", how: "A direct security audit found and closed a real, proven exposure — any logged-in user could previously read another user's NIN, phone, and ID documents. Fixed at both the database and file-storage level, re-verified after the fix.", destination: "N/A — platform-wide", admin: "See the separate Security Audit report" },
       { feature: "Missing database indexes added", how: "Dozens of real foreign-key columns had no index — invisible at small scale, a genuine slowdown waiting to happen as real data grows. Added across every high-traffic table.", destination: "N/A — platform-wide", admin: "See the separate Scalability Assessment report" },
+      { feature: "Real, editable Contact Us details", how: "Four real, distinct contact emails (Support, Inquiry, Engage CHS, Admin) and two real phone numbers — genuinely admin-editable at any time, not hardcoded into the app.", destination: "More menu → Contact us — every role", admin: "Admin → Overview → Edit Real Contact Details" },
     ],
   },
   {

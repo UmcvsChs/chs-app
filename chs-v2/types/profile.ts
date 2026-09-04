@@ -4,7 +4,8 @@
 
 export interface Profile {
   id: string;
-  role: "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer" | "admin";  full_name: string;
+  role: "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer" | "admin" | "guest" | "staff";  full_name: string;
+  gender?: "male" | "female" | null;
   phone: string;
   email: string | null;
   state: string;

@@ -89,6 +89,60 @@ export default function AdminDashboard() {
   const [suspendResult, setSuspendResult] = useState<string | null>(null);
   const [suspending, setSuspending] = useState(false);
   const [pendingAppeals, setPendingAppeals] = useState<{ id: string; message: string; profiles: { full_name: string; phone: string } | null }[]>([]);
+  const [adminNotifications, setAdminNotifications] = useState<{ id: string; title: string; body: string; read: boolean; created_at: string }[]>([]);
+  const [showNotifBell, setShowNotifBell] = useState(false);
+  const unreadNotifCount = adminNotifications.filter((n) => !n.read).length;
+
+  useEffect(() => {
+    if (!session) return;
+    supabase.from("notifications").select("id, title, body, read, created_at").eq("user_id", session.user.id)
+      .order("created_at", { ascending: false }).limit(30)
+      .then(({ data }) => setAdminNotifications(data || []));
+
+    // Real-time — a genuine, live update the moment a new
+    // notification lands, matching a WhatsApp-style badge rather than
+    // only refreshing when the page is manually reloaded.
+    const channel = supabase
+      .channel("admin-notifications")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` },
+        (payload) => setAdminNotifications((prev) => [payload.new as typeof adminNotifications[0], ...prev]))
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  async function handleOpenNotifBell() {
+    setShowNotifBell(!showNotifBell);
+    if (!showNotifBell && unreadNotifCount > 0) {
+      await supabase.from("notifications").update({ read: true }).eq("user_id", session?.user.id).eq("read", false);
+      setAdminNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    }
+  }
+  const [showContactSettings, setShowContactSettings] = useState(false);
+  const [contactSettingsValues, setContactSettingsValues] = useState<Record<string, string> | null>(null);
+  const [savingContactSettings, setSavingContactSettings] = useState(false);
+  const [contactSettingsResult, setContactSettingsResult] = useState<string | null>(null);
+
+  async function loadContactSettings() {
+    const { data } = await supabase.rpc("get_contact_settings");
+    setContactSettingsValues(data || {});
+  }
+
+  async function handleSaveContactSettings() {
+    if (!contactSettingsValues) return;
+    setSavingContactSettings(true);
+    setContactSettingsResult(null);
+    for (const [key, value] of Object.entries(contactSettingsValues)) {
+      const { error } = await supabase.rpc("update_contact_setting", { p_key: key, p_value: value });
+      if (error) {
+        setContactSettingsResult(error.message);
+        setSavingContactSettings(false);
+        return;
+      }
+    }
+    setSavingContactSettings(false);
+    setContactSettingsResult("✓ Real contact details updated.");
+  }
   const [showAdminReportForm, setShowAdminReportForm] = useState(false);
   const [adminReportActivities, setAdminReportActivities] = useState("");
   const [adminReportTransactions, setAdminReportTransactions] = useState("");
@@ -323,7 +377,7 @@ export default function AdminDashboard() {
     // table, not a growing queue, so it's left unlimited.
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("rental_applications").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -673,6 +727,16 @@ export default function AdminDashboard() {
       .eq("id", applicationId);
     if (error) {
       setActionError("Could not update this application. Please try again.");
+      return;
+    }
+    loadData();
+  }
+
+  async function handleRelayOwnerDecision(applicationId: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("relay_owner_decision_to_tenant", { p_application_id: applicationId });
+    if (error) {
+      setActionError(error.message);
       return;
     }
     loadData();
@@ -1095,10 +1159,38 @@ export default function AdminDashboard() {
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-          <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
-            Log out
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Real, new feature per direct client request: a genuine,
+                live notification bell — no more relying on admin to
+                remember to check for pending items. */}
+            <button onClick={handleOpenNotifBell} className="relative bg-white/15 p-2 rounded-full">
+              🔔
+              {unreadNotifCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-chs-red text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+                </span>
+              )}
+            </button>
+            <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
+              Log out
+            </button>
+          </div>
         </div>
+        {showNotifBell && (
+          <div className="bg-white rounded-xl mt-2 p-3 max-h-72 overflow-y-auto">
+            {adminNotifications.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No notifications yet.</p>
+            ) : (
+              adminNotifications.map((n) => (
+                <div key={n.id} className={`p-2 rounded-lg mb-1.5 ${n.read ? "bg-gray-50" : "bg-chs-amber-light"}`}>
+                  <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
+                  <p className="text-[10px] text-gray-500">{n.body}</p>
+                  <p className="text-[9px] text-gray-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
         <h1 className="font-serif text-lg font-bold mt-1">Admin</h1>
         <RoleBadge label="CHS Admin Dashboard" />
         <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
@@ -1129,8 +1221,8 @@ export default function AdminDashboard() {
           { key: "finance", label: "Finance", domain: "finance" },
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
-          { key: "liveness", label: `Face Verification (${pendingLiveness.length + pendingBuyerIds.length})`, domain: "registration_setup" },
-          { key: "registrations", label: `Registrations (${pendingProfiles.length})`, domain: "registration_setup" },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
+          { key: "registrations", label: `Registrations (${pendingProfiles.length + pendingBuyerIds.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
@@ -1221,6 +1313,40 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
+
+            {/* Real, new feature per direct client request: CHS's own
+                four real contact emails and two phone numbers,
+                genuinely editable here — not hardcoded — so admin can
+                update these themselves without a developer. */}
+            <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-4">
+              <button onClick={() => { setShowContactSettings(!showContactSettings); if (!contactSettingsValues) loadContactSettings(); }} className="text-xs font-bold text-chs-charcoal">
+                ✉️ {showContactSettings ? "Hide" : "Edit"} Real Contact Details
+              </button>
+              {showContactSettings && contactSettingsValues && (
+                <div className="mt-3 space-y-2">
+                  {([
+                    { key: "contact_email_support", label: "Support email" },
+                    { key: "contact_email_inquiry", label: "Inquiry email" },
+                    { key: "contact_email_engage", label: "Engage CHS email" },
+                    { key: "contact_email_admin", label: "Admin email" },
+                    { key: "contact_phone_primary", label: "Primary phone" },
+                    { key: "contact_phone_secondary", label: "Secondary phone" },
+                  ] as const).map((f) => (
+                    <div key={f.key}>
+                      <label className="text-[10px] font-semibold text-gray-600">{f.label}</label>
+                      <input type="text" value={contactSettingsValues[f.key] || ""}
+                        onChange={(e) => setContactSettingsValues({ ...contactSettingsValues, [f.key]: e.target.value })}
+                        className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                    </div>
+                  ))}
+                  {contactSettingsResult && <p className="text-[10px] text-gray-500">{contactSettingsResult}</p>}
+                  <button onClick={handleSaveContactSettings} disabled={savingContactSettings}
+                    className="w-full py-2 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">
+                    {savingContactSettings ? "Saving..." : "Save real contact details"}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="col-span-2 bg-white rounded-xl border-2 border-chs-red p-4">
               <p className="text-xs font-bold text-chs-red mb-2">🛡️ Suspend a Real Account</p>
@@ -1835,29 +1961,6 @@ export default function AdminDashboard() {
               ))
             )}
 
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Buyer ID Verifications ({pendingBuyerIds.length})</p>
-            {pendingBuyerIds.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No buyer ID verifications pending review.</p>
-            ) : (
-              pendingBuyerIds.map((sub) => (
-                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
-                  <p className="text-xs text-gray-500 mb-2">{sub.id_type} — {sub.id_number}</p>
-                  <a href={sub.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
-                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Approve
-                    </button>
-                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
-                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-
             <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">📜 Real Sale Legal Documents ({pendingSaleDocs.length})</p>
             {pendingSaleDocs.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No sale documents pending review.</p>
@@ -1923,18 +2026,86 @@ export default function AdminDashboard() {
             ))
           ))}
 
+        {/* Real, critical fix — the root cause of a real, repeated
+            client complaint (raised four times) that a buyer's ID/NIN
+            verification "vanishes." It never actually did — the real
+            submission was always landing correctly in the database.
+            The real bug was that this review UI lived under an
+            unrelated tab called "Face Verification," which nobody
+            would think to check for a NIN/ID card submission. Moved
+            here, into "Registrations," which is genuinely where an
+            admin looks for anything needing a new user's approval. */}
+        {activeTab === "registrations" && (
+          <>
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Buyer ID Verifications ({pendingBuyerIds.length})</p>
+            {pendingBuyerIds.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No buyer ID verifications pending review.</p>
+            ) : (
+              pendingBuyerIds.map((sub) => (
+                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
+                  <p className="text-xs text-gray-500 mb-2">{sub.id_type} — {sub.id_number}</p>
+                  <a href={sub.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        )}
+
         {activeTab === "applications" &&
           (pendingApplications.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending rental applications.</p>
           ) : (
             pendingApplications.map((app) => (
-              <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-sm font-semibold text-chs-charcoal">Guarantor: {app.guarantor_name}</p>
-                <p className="text-xs text-gray-500">{app.guarantor_phone} — Move-in: {app.move_in_date}</p>
-                <button onClick={() => handleApplicationScreened(app.id)}
-                  className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                  Documents cleared — send to owner
-                </button>
+              <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title || "Property"}</p>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  {app.properties?.street_address ? `${app.properties.street_address}, ` : ""}{app.properties?.location_area}
+                  {" — Owner: "}{app.properties?.profiles?.full_name} ({app.properties?.profiles?.phone})
+                </p>
+
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">Applicant</p>
+                <p className="text-xs text-chs-charcoal">{app.tenant?.full_name} — {app.tenant?.phone}</p>
+                <p className="text-[11px] text-gray-500">{app.applicant_occupation} · {app.applicant_present_address}</p>
+                <p className="text-[11px] text-gray-500">Income: {app.applicant_income_source}</p>
+                <p className="text-[11px] text-gray-500">{app.applicant_id_type} — {app.applicant_id_number}</p>
+                {app.applicant_id_document_url && (
+                  <a href={app.applicant_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View applicant ID</a>
+                )}
+
+                <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">Guarantor</p>
+                <p className="text-xs text-chs-charcoal">{app.guarantor_name} — {app.guarantor_phone}</p>
+                <p className="text-[11px] text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
+                <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
+                <p className="text-[11px] text-gray-500">Move-in: {app.move_in_date} {app.guarantor_consented ? "· ✓ Consent given" : "· ⚠️ No consent recorded"}</p>
+
+                {app.status === "pending" && (
+                  <button onClick={() => handleApplicationScreened(app.id)}
+                    className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    Documents cleared — send to owner
+                  </button>
+                )}
+                {app.status === "owner_decided_pending_relay" && (
+                  <div className="mt-2 bg-chs-amber-light rounded-lg p-2">
+                    <p className="text-[10px] font-bold text-chs-charcoal mb-1">
+                      Real owner decision: {app.owner_decision === "approved" ? "✅ Approved" : "❌ Declined"}
+                    </p>
+                    <button onClick={() => handleRelayOwnerDecision(app.id)}
+                      className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Relay this decision to the applicant
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           ))}

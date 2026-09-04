@@ -31,6 +31,10 @@ export default function RentalApplicationForm({
   const [idFile, setIdFile] = useState<File | null>(null);
   const [guarantorName, setGuarantorName] = useState("");
   const [guarantorPhone, setGuarantorPhone] = useState("");
+  const [guarantorRelationship, setGuarantorRelationship] = useState("");
+  const [guarantorAddress, setGuarantorAddress] = useState("");
+  const [guarantorOccupation, setGuarantorOccupation] = useState("");
+  const [guarantorConsented, setGuarantorConsented] = useState(false);
   const [moveInDate, setMoveInDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +51,14 @@ export default function RentalApplicationForm({
     }
     if (!guarantorName.trim() || !guarantorPhone.trim()) {
       setError("Please enter your guarantor's name and phone number.");
+      return;
+    }
+    if (!guarantorRelationship.trim() || !guarantorAddress.trim() || !guarantorOccupation.trim()) {
+      setError("Please provide your guarantor's relationship to you, their address, and their occupation — a real guarantor needs to be a genuinely identifiable, reachable person.");
+      return;
+    }
+    if (!guarantorConsented) {
+      setError("Your guarantor's consent is required before this application can be submitted.");
       return;
     }
     if (!moveInDate) {
@@ -71,6 +83,10 @@ export default function RentalApplicationForm({
       applicant_id_document_url: idDocumentUrl,
       guarantor_name: guarantorName.trim(),
       guarantor_phone: guarantorPhone.trim(),
+      guarantor_relationship: guarantorRelationship.trim(),
+      guarantor_address: guarantorAddress.trim(),
+      guarantor_occupation: guarantorOccupation.trim(),
+      guarantor_consented: guarantorConsented,
       move_in_date: moveInDate,
     });
 
@@ -142,6 +158,40 @@ export default function RentalApplicationForm({
           placeholder="08XXXXXXXXX"
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
         />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Your relationship to your guarantor</label>
+        <input type="text" value={guarantorRelationship} onChange={(e) => setGuarantorRelationship(e.target.value)}
+          placeholder="e.g. Uncle, Pastor, Employer, Family friend" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s address</label>
+        <input type="text" value={guarantorAddress} onChange={(e) => setGuarantorAddress(e.target.value)}
+          placeholder="A real, verifiable address" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s occupation</label>
+        <input type="text" value={guarantorOccupation} onChange={(e) => setGuarantorOccupation(e.target.value)}
+          placeholder="e.g. Civil servant, Business owner" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+
+      {/* Real, new consent statement per direct client request — a
+          guarantor needs to genuinely understand what they're
+          agreeing to, in plain language, not a single blank field. */}
+      <div className="bg-chs-amber-light rounded-lg p-3 border border-chs-amber-dark">
+        <p className="text-xs font-bold text-chs-charcoal mb-1">What your guarantor is agreeing to</p>
+        <p className="text-[11px] text-gray-600 mb-2">
+          By providing their details here, your guarantor is confirming: &quot;I know this applicant personally.
+          I am providing my real, verifiable address and contact details. If this tenant fails to pay rent or
+          breaches the tenancy agreement and cannot be reached, I understand I may be contacted and held
+          responsible for helping resolve the matter.&quot; CHS or the property owner may call your guarantor
+          directly to confirm they understand and accept this before your application proceeds.
+        </p>
+        <label className="flex items-start gap-2 text-[11px] text-chs-charcoal">
+          <input type="checkbox" checked={guarantorConsented} onChange={(e) => setGuarantorConsented(e.target.checked)}
+            className="mt-0.5" />
+          <span>I confirm my guarantor is a real person who has agreed to stand as my guarantor under these terms.</span>
+        </label>
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Preferred move-in date</label>

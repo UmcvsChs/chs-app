@@ -557,12 +557,12 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
-  if (activeForm === "shortlet" && session && property.price_per_night) {
+  if (activeForm === "shortlet" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <ShortletBookingForm
           propertyId={property.id}
-          pricePerNight={property.price_per_night}
+          pricePerNight={property.price_per_night || property.price}
           session={session}
           onSuccess={() => setShortletSuccess(true)}
         />
@@ -615,7 +615,7 @@ export default function PropertyActions({ property }: { property: Property }) {
           </>
         )
       )}
-      {property.purpose === "shortlet" && property.price_per_night && (
+      {property.purpose === "shortlet" && (property.price_per_night || property.price) && (
         <button
           onClick={() => requireLoginThen(() => setActiveForm("shortlet"))}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"

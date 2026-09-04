@@ -33,6 +33,13 @@ export const metadata: Metadata = {
   description: "Complete Housing Solutions — Nigeria's trusted property platform, connecting owners, tenants, buyers, agents, and property managers nationwide",
   // manifest.ts (in this same folder) is automatically linked by
   // Next.js — no manual <link> tag needed for that part.
+  // Real, necessary fix found while preparing real iPhone testing
+  // instructions: no apple-touch-icon existed at all, meaning "Add to
+  // Home Screen" on a real iPhone would have used a generic or
+  // screenshot-based icon instead of the real CHS logo.
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     // iOS Safari doesn't use the manifest for its own home-screen
     // install prompt the way Android does — this is the real, separate

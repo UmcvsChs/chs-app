@@ -8,14 +8,14 @@ import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 
-import { NIGERIAN_STATES } from "@/lib/geoData";
+import { NIGERIAN_STATES, LGA_BY_STATE } from "@/lib/geoData";
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 const PROFESSIONS = [
   "Estate Surveyor & Valuer", "Property Manager", "Quantity Surveyor",
   "Structural Engineer", "Facility Manager", "Real Estate Consultant", "Other professional",
 ];
 
-type Role = "buyer" | "guest" | "tenant" | "owner" | "agent" | "manager" | "developer";
+type Role = "buyer" | "guest" | "tenant" | "owner" | "agent" | "manager" | "developer" | "staff" | "others";
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "buyer", label: "Buyer", desc: "Searching to purchase, rent, lease, or hire a property" },
@@ -25,6 +25,8 @@ const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "agent", label: "Agent", desc: "Marketing properties and earning referral commission" },
   { value: "manager", label: "Property Manager", desc: "Managing properties professionally on behalf of owners" },
   { value: "developer", label: "Commercial Developer", desc: "Sell estates, offer instalment/investment plans" },
+  { value: "staff", label: "Staff / Employee", desc: "Invited by an agent or property manager to join their real team — register here, then ask them to add your phone number" },
+  { value: "others", label: "Others (Artisan / Market Seller / Service Provider)", desc: "Fixing, building, selling home items, or offering another real service — register here, then choose your specific category next" },
 ];
 
 function RegisterPageContent() {
@@ -34,6 +36,7 @@ function RegisterPageContent() {
   const [role, setRole] = useState<Role>("buyer");
   const [comprehensionPassed, setComprehensionPassed] = useState(false);
   const [name, setName] = useState("");
+  const [gender, setGender] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [nin, setNin] = useState("");
@@ -43,7 +46,7 @@ function RegisterPageContent() {
 
   // Agent-specific
   const [agentType, setAgentType] = useState<"independent" | "chs_official">("independent");
-  const [lgas, setLgas] = useState("");
+  const [lgaList, setLgaList] = useState<string[]>([]);
   const [experience, setExperience] = useState("Less than 1 year");
   const [association, setAssociation] = useState("");
   const [membershipId, setMembershipId] = useState("");
@@ -131,7 +134,12 @@ function RegisterPageContent() {
           },
           body: JSON.stringify({
             name: name.trim(), phone: phone.trim(), pin, nin: nin.trim(),
-            email: email.trim() || null, state, role,
+            // Real fix — "others" is a real, meaningful choice for the
+            // person registering, but not a real database role; their
+            // artisan/vendor status is tracked in its own real table
+            // once they pick a specific category next, so their base
+            // account is simply a buyer-equivalent account.
+            email: email.trim() || null, state, role: role === "others" ? "buyer" : role,
           }),
         }
       );
@@ -156,6 +164,14 @@ function RegisterPageContent() {
 
       const userId = loginData.user.id;
 
+      // Real, new feature per direct client request: a real gender
+      // field, so the app can genuinely greet someone respectfully
+      // ("Hi Mr. Samson" / "Hi Miss Jennifer") instead of a bare
+      // first name — applies to every real role, not just one.
+      if (gender) {
+        await supabase.from("profiles").update({ gender }).eq("id", userId);
+      }
+
       // Real, new feature: if this new agent registered through a
       // real owner-generated invite link, automatically grant them
       // full management authority on that specific property — no
@@ -176,7 +192,7 @@ function RegisterPageContent() {
             association_name: association.trim() || null,
             membership_id: membershipId.trim() || null,
             membership_verified: false,
-            operating_lgas: lgas.trim() || null,
+            operating_lgas: lgaList.length > 0 ? lgaList.join(", ") : null,
             years_experience: experience,
             valid_id_type: idType,
             valid_id_number: idNumber.trim(),
@@ -226,7 +242,24 @@ function RegisterPageContent() {
       sessionStorage.removeItem("chs_pending_return_to");
       return pending;
     }
-    return "/";
+    // Real, confirmed bug fix — this always fell back to the
+    // homepage regardless of which real role someone just registered
+    // as, completely ignoring the same role-aware routing that
+    // already existed correctly on the login page. A brand new
+    // owner/agent/manager/tenant account should land on their own
+    // real dashboard immediately, not the generic homepage.
+    const roleToPath: Record<string, string> = {
+      admin: "/admin",
+      owner: "/owner",
+      agent: "/agent",
+      manager: "/manager",
+      tenant: "/tenant",
+      buyer: "/",
+      guest: "/",
+      staff: "/staff",
+      others: "/choose-category",
+    };
+    return roleToPath[role] || "/";
   }
 
   return (
@@ -259,6 +292,17 @@ function RegisterPageContent() {
             <label className="text-xs font-semibold text-gray-600">Full name</label>
             <input type="text" value={name} onChange={(e) => { setName(e.target.value); setError(null); }}
               placeholder="Your full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Gender</label>
+            <div className="grid grid-cols-2 gap-2 mt-1">
+              {[{ value: "male", label: "Male" }, { value: "female", label: "Female" }].map((g) => (
+                <button key={g.value} type="button" onClick={() => setGender(g.value)}
+                  className={`py-2.5 rounded-lg border-2 text-sm font-semibold ${gender === g.value ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
+                  {g.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number</label>
@@ -325,9 +369,22 @@ function RegisterPageContent() {
                 </p>
               )}
               <div>
-                <label className="text-xs font-semibold text-gray-600">LGA coverage areas</label>
-                <input type="text" value={lgas} onChange={(e) => setLgas(e.target.value)}
-                  placeholder="e.g. Kaduna North, Chikun, Igabi" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                <label className="text-xs font-semibold text-gray-600">LGA coverage areas in {state}</label>
+                <p className="text-[10px] text-gray-400 mb-1">Select every real LGA you cover, or choose statewide.</p>
+                <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-2">
+                  <input type="checkbox" checked={lgaList.length > 0 && lgaList.length === (LGA_BY_STATE[state] || []).length}
+                    onChange={(e) => setLgaList(e.target.checked ? [...(LGA_BY_STATE[state] || [])] : [])} />
+                  <span className="font-semibold">Statewide (all LGAs in {state})</span>
+                </label>
+                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                  {(LGA_BY_STATE[state] || []).map((lga) => (
+                    <label key={lga} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                      <input type="checkbox" checked={lgaList.includes(lga)}
+                        onChange={(e) => setLgaList(e.target.checked ? [...lgaList, lga] : lgaList.filter((l) => l !== lga))} />
+                      {lga}
+                    </label>
+                  ))}
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Years of real estate experience</label>

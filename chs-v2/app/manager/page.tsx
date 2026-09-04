@@ -199,6 +199,9 @@ export default function ManagerDashboard() {
         <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           📋 My Tenant Register →
         </Link>
+        <Link href="/agent/property-register" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
+          🏠 My Properties &amp; Owners Register →
+        </Link>
         <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
           💵 My Expenses & Income →
         </Link>

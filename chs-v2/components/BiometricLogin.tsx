@@ -47,8 +47,18 @@ export default function BiometricLogin({ onLoggedIn }: { onLoggedIn: () => void 
       const { error: otpError } = await supabase.auth.verifyOtp({ type: "email", token_hash: result.token_hash });
       if (otpError) throw new Error("Could not establish your session");
 
+      // Real, confirmed bug fix — this always sent every real user to
+      // the homepage after biometric login, regardless of their real
+      // role, completely bypassing the same role-aware routing every
+      // other login path correctly uses.
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
+      const roleToPath: Record<string, string> = {
+        admin: "/admin", owner: "/owner", agent: "/agent", manager: "/manager", tenant: "/tenant", buyer: "/", guest: "/", staff: "/staff",
+      };
+
       onLoggedIn();
-      router.push("/");
+      router.push(roleToPath[profile?.role || ""] || "/");
     } catch (e) {
       setStatus("error");
       setError(e instanceof Error ? e.message : "Biometric login failed. Please use your phone number and PIN instead.");

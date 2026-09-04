@@ -18,9 +18,9 @@ const QUESTIONS = [
     ],
   },
   {
-    q: "Can an Agent demand an inspection fee or caution fee that CHS has not published?",
+    q: "Can a CHS agent (acting on CHS's own commission structure) demand an inspection fee or caution fee that CHS has not published?",
     options: [
-      { label: "Yes, agents can set their own fees", correct: false },
+      { label: "Yes, CHS agents can set their own fees", correct: false },
       { label: "No — this is strictly prohibited and results in permanent suspension", correct: true },
       { label: "Only for premium listings", correct: false },
     ],

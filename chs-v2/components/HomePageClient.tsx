@@ -130,7 +130,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
                   <span className="text-[10px] font-bold text-white">{profile.full_name.charAt(0).toUpperCase()}</span>
                 )}
               </Link>
-              <span className="text-white/80">Hi, {profile.full_name.split(" ")[0]}</span>
+              <span className="text-white/80">Hi, {profile.gender === "male" ? "Mr. " : profile.gender === "female" ? "Miss " : ""}{profile.full_name.split(" ")[0]}</span>
               <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                 Wallet
               </Link>

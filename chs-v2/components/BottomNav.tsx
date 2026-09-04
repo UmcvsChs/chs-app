@@ -28,7 +28,7 @@ export default function BottomNav() {
     { icon: "📝", label: "Property request", href: "/concierge" },
     { icon: "🗺️", label: "Area guide", href: null, note: "Coming soon — was a placeholder in the original app too" },
     { icon: "❓", label: "Help & FAQs", href: null, note: "Coming soon — was a placeholder in the original app too" },
-    { icon: "📞", label: "Contact us", href: null, note: "support@chs.ng" },
+    { icon: "📞", label: "Contact us", href: "/contact" },
   ];
 
   // The real fix for a genuine, confirmed gap: logout only ever

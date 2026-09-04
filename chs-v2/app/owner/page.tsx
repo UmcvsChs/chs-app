@@ -536,28 +536,15 @@ export default function OwnerDashboard() {
   async function handleApplicationDecision(applicationId: string, status: "approved" | "owner_declined") {
     setActionError(null);
 
-    if (status === "approved") {
-      // Real fix — an agent-managed property with its own real
-      // commission rate must use the real, separate agent-managed
-      // approval function, or the whole point of that model (CHS's
-      // cut coming only from the agent's own earnings) breaks.
-      const { data: appRow } = await supabase.from("rental_applications").select("property_id").eq("id", applicationId).single();
-      const { data: propRow } = appRow ? await supabase.from("properties").select("agent_commission_pct").eq("id", appRow.property_id).single() : { data: null };
-
-      const { error } = propRow?.agent_commission_pct
-        ? await supabase.rpc("approve_rental_application_agent_managed", { p_application_id: applicationId })
-        : await supabase.rpc("approve_rental_application", { p_application_id: applicationId });
-      if (error) {
-        setActionError(error.message);
-        return;
-      }
-      loadData();
-      return;
-    }
-
-    const { error } = await supabase.from("rental_applications").update({ status }).eq("id", applicationId).select("*, properties(title)").single();
+    // Real, important fix per direct client request: an owner's
+    // decision no longer finalizes the application directly — it's
+    // recorded, then CHS admin relays it to the applicant. This
+    // keeps CHS genuinely in the loop both ways, matching their real,
+    // stated business model, rather than the owner and tenant
+    // connecting automatically with no CHS involvement in between.
+    const { error } = await supabase.rpc("record_owner_decision", { p_application_id: applicationId, p_decision: status });
     if (error) {
-      setActionError("Could not update this application. Please try again.");
+      setActionError(error.message);
       return;
     }
     loadData();
@@ -1048,15 +1035,18 @@ export default function OwnerDashboard() {
                       <p className="text-gray-500">Move-in: {app.move_in_date}</p>
                       <p className="text-gray-400 capitalize mt-1">Status: {app.status.replace(/_/g, " ")}</p>
                       {app.status === "awaiting_owner_decision" && (
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => handleApplicationDecision(app.id, "approved")}
-                            className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                            Approve
-                          </button>
-                          <button onClick={() => handleApplicationDecision(app.id, "owner_declined")}
-                            className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                            Decline
-                          </button>
+                        <div className="mt-2">
+                          <p className="text-[10px] text-gray-400 mb-1.5">Your decision is relayed to the applicant by CHS.</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleApplicationDecision(app.id, "approved")}
+                              className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                              Approve
+                            </button>
+                            <button onClick={() => handleApplicationDecision(app.id, "owner_declined")}
+                              className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                              Decline
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
