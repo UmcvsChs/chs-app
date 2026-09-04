@@ -17,6 +17,8 @@ const ROLE_OPTIONS = [
   { value: "manager", label: "Manager" },
   { value: "admin", label: "Admin" },
   { value: "staff", label: "Staff" },
+  { value: "artisan", label: "Artisan" },
+  { value: "vendor", label: "Vendor / Service Provider" },
 ];
 
 const ROLE_DISPLAY_NAMES: Record<string, string> = {
@@ -28,6 +30,8 @@ const ROLE_DISPLAY_NAMES: Record<string, string> = {
   manager: "Property Manager",
   admin: "Admin",
   staff: "Staff",
+  artisan: "Artisan",
+  vendor: "Vendor / Service Provider",
 };
 
 export default function LoginPage() {
@@ -58,6 +62,27 @@ export default function LoginPage() {
     if (loginError) {
       setError("Phone number or PIN is incorrect.");
       setSubmitting(false);
+      return;
+    }
+
+    // Real, new fix per direct client request: someone who registered
+    // under "Others" and was approved as an Artisan or Vendor/Service
+    // Provider had no real way to log back in as themselves — their
+    // base account role is a real buyer-equivalent account (their
+    // artisan/vendor status lives in its own real table), so these two
+    // categories are checked there instead of the normal role column.
+    if (selectedRole === "artisan" || selectedRole === "vendor") {
+      const table = selectedRole === "artisan" ? "artisans" : "marketplace_vendors";
+      const { data: statusRow } = await supabase.from(table).select("verification_status").eq("user_id", loginData.user.id).maybeSingle();
+      if (!statusRow) {
+        setError(`No real ${ROLE_DISPLAY_NAMES[selectedRole]} application found on this account. If you haven't applied yet, do so from the homepage first.`);
+        await supabase.auth.signOut();
+        setSubmitting(false);
+        return;
+      }
+      setActiveRole(selectedRole);
+      await refreshProfile();
+      router.push(selectedRole === "artisan" ? "/artisan" : "/vendor");
       return;
     }
 

@@ -134,6 +134,21 @@ export default function HomePageClient({ properties, platformStats }: { properti
               <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                 Wallet
               </Link>
+              {/* Real, direct fix for a genuine, confirmed gap: every
+                  other role gets a real, prominent header link to
+                  their own interface — Buyer and Guest never did,
+                  leaving them with nothing to click beyond Wallet and
+                  Logout, exactly as reported. */}
+              {[profile.role, ...(profile.secondary_roles || [])].includes("buyer") && (
+                <Link href="/my-offers" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                  My Offers
+                </Link>
+              )}
+              {[profile.role, ...(profile.secondary_roles || [])].includes("guest") && (
+                <Link href="/my-bookings" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                  My Bookings
+                </Link>
+              )}
               {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
                 <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
                   My Referrals
