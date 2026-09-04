@@ -50,6 +50,7 @@ export interface Property {
   owner_identity_visible_to_tenant: boolean;
   managing_agent_id: string | null;
   agent_commission_pct: number | null;
+  custom_fees: { label: string; percentage: number }[] | null;
   promoted_until: string | null;
 
   is_urgent_sale: boolean;
