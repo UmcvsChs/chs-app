@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { compressImage } from "@/lib/imageCompression";
 import LivenessCheck from "@/components/LivenessCheck";
 import BiometricSetup from "@/components/BiometricSetup";
 import BankAccountSecurity from "@/components/BankAccountSecurity";
@@ -131,10 +132,13 @@ export default function ProfilePage() {
     setUploading(true);
     setPreview(URL.createObjectURL(file));
 
-    const ext = file.name.split(".").pop();
+    // Real, consistent fix — the same compression used for property
+    // photos applies here too, for the same real storage benefit.
+    const compressed = await compressImage(file);
+    const ext = compressed.name.split(".").pop();
     const path = `${session.user.id}/avatar/photo-${Date.now()}.${ext}`;
 
-    const { error: uploadError } = await supabase.storage.from("property-media").upload(path, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage.from("property-media").upload(path, compressed, { upsert: true });
     if (uploadError) {
       setError("Could not upload this image. Please try again.");
       setUploading(false);

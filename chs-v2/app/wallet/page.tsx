@@ -227,6 +227,9 @@ export default function WalletPage() {
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
+        <Link href="/my-receipts" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
+          🧾 My Real Receipts →
+        </Link>
       </div>
 
       {session && <TransactionCommissions session={session} />}
