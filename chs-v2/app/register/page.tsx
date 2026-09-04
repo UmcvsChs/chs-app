@@ -73,39 +73,61 @@ function RegisterPageContent() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null);
 
-  function validate(): string | null {
-    if (!name.trim() || !phone.trim()) return "Please enter your full name and phone number.";
-    if (!/^\d{11}$/.test(nin.trim())) return "Please enter a valid 11-digit NIN.";
-    if (!/^\d{6}$/.test(pin)) return "Please create a 6-digit PIN (numbers only).";
-    if (pin !== pinConfirm) return "Your PIN and confirmation don't match.";
+  function validate(): { message: string; fieldId: string } | null {
+    if (!name.trim()) return { message: "Please enter your full name.", fieldId: "field-name" };
+    if (!phone.trim()) return { message: "Please enter your phone number.", fieldId: "field-phone" };
+    if (!/^\d{11}$/.test(nin.trim())) return { message: "Please enter a valid 11-digit NIN.", fieldId: "field-nin" };
+    if (!/^\d{6}$/.test(pin)) return { message: "Please create a 6-digit PIN (numbers only).", fieldId: "field-pin" };
+    if (pin !== pinConfirm) return { message: "Your PIN and confirmation don't match.", fieldId: "field-pin-confirm" };
 
     if (role === "agent") {
       const associationNamed = association.trim() && association.trim().toLowerCase() !== "none";
       if (associationNamed && !membershipId.trim()) {
-        return `Please enter your ${association} membership ID/registration number.`;
+        return { message: `Please enter your ${association} membership ID/registration number.`, fieldId: "field-membership-id" };
       }
-      if (!idType) return "Please select which type of ID you're providing.";
+      if (!idType) return { message: "Please select which type of ID you're providing.", fieldId: "field-id-type" };
       if (!validateIdNumberFormat(idType, idNumber)) {
-        return idType === "National ID (NIN slip)" ? "Please enter a valid 11-digit NIN." : `Please enter your ${idType} number.`;
+        return { message: idType === "National ID (NIN slip)" ? "Please enter a valid 11-digit NIN." : `Please enter your ${idType} number.`, fieldId: "field-id-number" };
       }
-      if (!idFile) return `Please upload a photo or scan of your ${idType}.`;
+      if (!idFile) return { message: `Please upload a photo or scan of your ${idType}.`, fieldId: "field-id-file" };
     }
 
     if (role === "manager") {
-      if (!operatingStates.trim()) return "Please enter which states you operate in.";
-      if (!certFile) return "Please upload your professional certificate or licence.";
+      if (!operatingStates.trim()) return { message: "Please enter which states you operate in.", fieldId: "field-operating-states" };
+      if (!certFile) return { message: "Please upload your professional certificate or licence.", fieldId: "field-cert-file" };
     }
 
     if (role === "developer") {
-      if (!companyName.trim()) return "Please enter your company or development name.";
-      if (!cacNumber.trim()) return "Please enter your CAC registration number.";
-      if (offersInstalments === "") return "Please let us know whether you offer instalment purchase plans.";
-      if (acceptsInvestment === "") return "Please let us know whether you accept investment capital from buyers.";
+      if (!companyName.trim()) return { message: "Please enter your company or development name.", fieldId: "field-company-name" };
+      if (!cacNumber.trim()) return { message: "Please enter your CAC registration number.", fieldId: "field-cac-number" };
+      if (offersInstalments === "") return { message: "Please let us know whether you offer instalment purchase plans.", fieldId: "field-offers-instalments" };
+      if (acceptsInvestment === "") return { message: "Please let us know whether you accept investment capital from buyers.", fieldId: "field-accepts-investment" };
     }
 
     return null;
   }
+
+  // Real, new fix per direct client request: instead of leaving
+  // someone to hunt for whichever field they missed, the exact real
+  // field is scrolled into view and highlighted in red, the same way
+  // banking apps handle this.
+  function scrollToField(fieldId: string) {
+    setInvalidFieldId(fieldId);
+    requestAnimationFrame(() => {
+      const el = document.getElementById(fieldId);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
+
+  // Real, reusable helper — a genuinely highlighted red border on
+  // whichever exact field was actually missed, not a generic page-top
+  // error message the user has to go hunting for.
+  function fieldClass(fieldId: string, base: string) {
+    return invalidFieldId === fieldId ? `${base} border-chs-red border-2` : base;
+  }
+
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,10 +137,12 @@ function RegisterPageContent() {
     }
     const validationError = validate();
     if (validationError) {
-      setError(validationError);
+      setError(validationError.message);
+      scrollToField(validationError.fieldId);
       return;
     }
     setError(null);
+    setInvalidFieldId(null);
     setSubmitting(true);
 
     try {
@@ -289,9 +313,9 @@ function RegisterPageContent() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-gray-600">Full name</label>
-            <input type="text" value={name} onChange={(e) => { setName(e.target.value); setError(null); }}
-              placeholder="Your full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-xs font-semibold text-gray-600">Full name <span className="text-chs-red">*</span></label>
+            <input id="field-name" type="text" value={name} onChange={(e) => { setName(e.target.value); setError(null); }}
+              placeholder="Your full legal name" className={fieldClass("field-name", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Gender</label>
@@ -305,9 +329,9 @@ function RegisterPageContent() {
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Phone number</label>
-            <input type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setError(null); }}
-              placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-xs font-semibold text-gray-600">Phone number <span className="text-chs-red">*</span></label>
+            <input id="field-phone" type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setError(null); }}
+              placeholder="08XXXXXXXXX" className={fieldClass("field-phone", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Email address (optional)</label>
@@ -315,29 +339,29 @@ function RegisterPageContent() {
               placeholder="your@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN)</label>
-            <input type="text" inputMode="numeric" maxLength={11} value={nin}
+            <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN) <span className="text-chs-red">*</span></label>
+            <input id="field-nin" type="text" inputMode="numeric" maxLength={11} value={nin}
               onChange={(e) => { setNin(e.target.value.replace(/\D/g, "")); setError(null); }}
-              placeholder="11-digit NIN" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              placeholder="11-digit NIN" className={fieldClass("field-nin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">State</label>
+            <label className="text-xs font-semibold text-gray-600">State <span className="text-chs-red">*</span></label>
             <select value={state} onChange={(e) => setState(e.target.value)}
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
               {NIGERIAN_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Create PIN (6 digits)</label>
-            <input type="password" inputMode="numeric" maxLength={6} value={pin}
+            <label className="text-xs font-semibold text-gray-600">Create PIN (6 digits) <span className="text-chs-red">*</span></label>
+            <input id="field-pin" type="password" inputMode="numeric" maxLength={6} value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-              placeholder="●●●●●●" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              placeholder="●●●●●●" className={fieldClass("field-pin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Confirm PIN</label>
-            <input type="password" inputMode="numeric" maxLength={6} value={pinConfirm}
+            <label className="text-xs font-semibold text-gray-600">Confirm PIN <span className="text-chs-red">*</span></label>
+            <input id="field-pin-confirm" type="password" inputMode="numeric" maxLength={6} value={pinConfirm}
               onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
-              placeholder="●●●●●●" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              placeholder="●●●●●●" className={fieldClass("field-pin-confirm", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
 
           {role === "agent" && (
@@ -401,14 +425,14 @@ function RegisterPageContent() {
               {association.trim() && association.trim().toLowerCase() !== "none" && (
                 <div>
                   <label className="text-xs font-semibold text-gray-600">Membership ID / registration number</label>
-                  <input type="text" value={membershipId} onChange={(e) => setMembershipId(e.target.value)}
+                  <input id="field-membership-id" type="text" value={membershipId} onChange={(e) => setMembershipId(e.target.value)}
                     placeholder="e.g. NIESV/VS/2847" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
                   <p className="text-[10px] text-gray-400 mt-1">CHS verifies this before your Official Agent badge activates.</p>
                 </div>
               )}
               <div>
                 <label className="text-xs font-semibold text-gray-600">Valid ID type</label>
-                <select value={idType} onChange={(e) => setIdType(e.target.value)}
+                <select id="field-id-type" value={idType} onChange={(e) => setIdType(e.target.value)}
                   className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                   <option value="">Select an ID type</option>
                   {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
@@ -416,13 +440,13 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">ID number</label>
-                <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
+                <input id="field-id-number" type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
                   placeholder={ID_TYPE_PLACEHOLDERS[idType] || "Select an ID type above first"}
                   className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload the ID selected above</label>
-                <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
+                <input id="field-id-file" type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
                   className="w-full mt-1 text-xs" />
               </div>
             </div>
@@ -445,12 +469,12 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">States of operation</label>
-                <input type="text" value={operatingStates} onChange={(e) => setOperatingStates(e.target.value)}
+                <input id="field-operating-states" type="text" value={operatingStates} onChange={(e) => setOperatingStates(e.target.value)}
                   placeholder="e.g. Kaduna, Abuja, Kano" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload professional certificate / licence</label>
-                <input type="file" accept="image/*,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)}
+                <input id="field-cert-file" type="file" accept="image/*,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)}
                   className="w-full mt-1 text-xs" />
               </div>
             </div>
@@ -461,12 +485,12 @@ function RegisterPageContent() {
               <p className="text-xs font-bold text-chs-charcoal">🏗️ Commercial Developer details</p>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Company / development name</label>
-                <input type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                <input id="field-company-name" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g. Millennium Homes Ltd" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">CAC registration number</label>
-                <input type="text" value={cacNumber} onChange={(e) => setCacNumber(e.target.value)}
+                <input id="field-cac-number" type="text" value={cacNumber} onChange={(e) => setCacNumber(e.target.value)}
                   placeholder="RC number" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
@@ -476,7 +500,7 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Do you offer instalment purchase plans?</label>
-                <select value={offersInstalments} onChange={(e) => setOffersInstalments(e.target.value as "yes" | "no")}
+                <select id="field-offers-instalments" value={offersInstalments} onChange={(e) => setOffersInstalments(e.target.value as "yes" | "no")}
                   className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                   <option value="">Select...</option>
                   <option value="yes">Yes</option>
@@ -485,7 +509,7 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Do you accept investment capital from buyers (co-investment)?</label>
-                <select value={acceptsInvestment} onChange={(e) => setAcceptsInvestment(e.target.value as "yes" | "no")}
+                <select id="field-accepts-investment" value={acceptsInvestment} onChange={(e) => setAcceptsInvestment(e.target.value as "yes" | "no")}
                   className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                   <option value="">Select...</option>
                   <option value="yes">Yes</option>
@@ -530,7 +554,7 @@ function RegisterPageContent() {
             </div>
           </div>
 
-          <ComprehensionCheck onPassed={setComprehensionPassed} />
+          <ComprehensionCheck role={role} onPassed={setComprehensionPassed} />
 
           <button type="submit" disabled={submitting || !comprehensionPassed}
             className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">

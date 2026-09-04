@@ -1,12 +1,15 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 
 // Real About Us content, restored exactly from the original app,
 // including the actual, real company registration details.
 export default function AboutPage() {
+  const router = useRouter();
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
-        <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-gray-400 mb-4 inline-block">← Back</button>
 
         <div className="text-center mb-6">
           <h1 className="font-serif text-2xl font-bold text-chs-red">Complete Housing Solutions</h1>

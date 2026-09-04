@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ARTICLES } from "@/types/blogArticles";
 
 export default function BlogPage() {
+  const router = useRouter();
   const [openKey, setOpenKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
-        <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-gray-400 mb-4 inline-block">← Back</button>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-6">CHS Insights</h1>
 
         {!openArticle ? (

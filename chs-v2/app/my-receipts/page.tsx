@@ -53,7 +53,7 @@ export default function MyReceiptsPage() {
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <RoleBadge label="My Receipts" />
         <h1 className="font-serif text-lg font-bold mt-1">My Real Receipts</h1>
       </div>

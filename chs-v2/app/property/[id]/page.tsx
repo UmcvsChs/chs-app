@@ -289,6 +289,33 @@ export default async function PropertyDetailPage({
           )}
         </p>
 
+        {/* Real, new feature per direct client request: an
+            independent agent's own, real, itemized fees — shown
+            transparently, upfront, rolling into one real "Total
+            Package" figure. Deliberately, visually distinct from a
+            CHS-managed listing, which charges none of these. */}
+        {property.custom_fees && property.custom_fees.length > 0 ? (
+          <div className="bg-chs-amber-light border border-chs-amber-dark rounded-xl p-3 mb-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">💰 Real Total Package (agent-listed)</p>
+            {property.custom_fees.map((fee, i) => (
+              <div key={i} className="flex justify-between text-xs text-gray-600 mb-1">
+                <span>{fee.label} ({fee.percentage}%)</span>
+                <span>{formatNaira(property.price * fee.percentage / 100)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-chs-amber-dark pt-1.5 mt-1.5">
+              <span>Total Package</span>
+              <span>{formatNaira(property.price + property.custom_fees.reduce((sum, f) => sum + property.price * f.percentage / 100, 0))}</span>
+            </div>
+            <p className="text-[10px] text-gray-500 mt-1.5">These are the real, independent agent&apos;s own fees — separate from CHS&apos;s own commission.</p>
+          </div>
+        ) : property.managing_agent_id && property.agent_commission_pct ? (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
+            <p className="text-xs font-bold text-green-700">✓ No custom fee, no legal fee, no inspection fee</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">CHS-managed — only the standard, published commission applies.</p>
+          </div>
+        ) : null}
+
         {property.is_urgent_sale && (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4">
             <p className="text-sm font-bold text-red-700 mb-1">🚨 Urgent Sale</p>

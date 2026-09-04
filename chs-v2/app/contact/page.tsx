@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 // Real, new page per direct client request: four real, distinct
@@ -18,6 +18,7 @@ interface ContactSettings {
 }
 
 export default function ContactUsPage() {
+  const router = useRouter();
   const [contact, setContact] = useState<ContactSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +63,7 @@ export default function ContactUsPage() {
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <h1 className="font-serif text-lg font-bold mt-1">Contact CHS</h1>
         <p className="text-xs text-white/60 mt-1">Real people, real channels — choose the one that fits what you need.</p>
       </div>

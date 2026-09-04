@@ -53,6 +53,7 @@ export default function ListPropertyPage() {
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("rent");
   const [hireCategory, setHireCategory] = useState("shortlet");
+  const [customFees, setCustomFees] = useState<{ label: string; percentage: number | "" }[]>([]);
   const [rentToOwnMonthly, setRentToOwnMonthly] = useState<number | "">("");
   const [rentToOwnYears, setRentToOwnYears] = useState<number | "">(5);
   const [rentToOwnPortionPct, setRentToOwnPortionPct] = useState<number | "">(100);
@@ -173,6 +174,10 @@ export default function ListPropertyPage() {
         // applies — a genuine Shortlet gets the length-of-stay sliding
         // scale, everything else in this bucket gets the flat rate.
         hire_category: purpose === "shortlet" ? hireCategory : purpose === "hire" ? (hireCategory || null) : null,
+        // Real, new feature per direct client request — only ever
+        // populated for an independent agent's own real fee
+        // practices, never for a CHS-managed listing.
+        custom_fees: profile?.role === "agent" ? customFees.filter((f) => f.label.trim() && f.percentage !== "").map((f) => ({ label: f.label.trim(), percentage: Number(f.percentage) })) : [],
         rent_to_own_monthly: purpose === "rent_to_own" ? rentToOwnMonthly : null,
         rent_to_own_years: purpose === "rent_to_own" ? rentToOwnYears : null,
         rent_to_own_portion_pct: purpose === "rent_to_own" ? rentToOwnPortionPct : null,
@@ -476,6 +481,35 @@ export default function ListPropertyPage() {
                 <option value="cinema_entertainment">Cinema / entertainment centre</option>
                 <option value="recreational_sports">Recreational centre / sports facility</option>
               </select>
+            </div>
+          )}
+
+          {/* Real, new feature per direct client request: an
+              independent agent's own, real fee practices — visible
+              and itemized on the listing itself, rolling up into one
+              real "Total Package" figure, deliberately distinct from
+              a CHS-managed listing which charges none of these. */}
+          {profile?.role === "agent" && purpose !== "sale" && (
+            <div className="border border-gray-200 rounded-lg p-3">
+              <label className="text-xs font-semibold text-gray-600">Your real fees (optional)</label>
+              <p className="text-[10px] text-gray-400 mb-2">
+                Add any real fee you genuinely charge — custom fee, legal fee, agent fee, whatever it is. These roll up into a real
+                &quot;Total Package&quot; figure shown clearly on your listing, alongside the actual rent.
+              </p>
+              {customFees.map((fee, i) => (
+                <div key={i} className="flex gap-1.5 mb-1.5">
+                  <input type="text" value={fee.label} placeholder="e.g. Legal fee"
+                    onChange={(e) => setCustomFees(customFees.map((f, j) => j === i ? { ...f, label: e.target.value } : f))}
+                    className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-xs" />
+                  <input type="number" value={fee.percentage} placeholder="%"
+                    onChange={(e) => setCustomFees(customFees.map((f, j) => j === i ? { ...f, percentage: e.target.value === "" ? "" : Number(e.target.value) } : f))}
+                    className="w-16 px-2 py-2 rounded-lg border border-gray-200 text-xs" />
+                  <button type="button" onClick={() => setCustomFees(customFees.filter((_, j) => j !== i))}
+                    className="px-2 text-chs-red text-xs font-bold">✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setCustomFees([...customFees, { label: "", percentage: "" }])}
+                className="text-[11px] text-chs-red underline">+ Add a real fee</button>
             </div>
           )}
 

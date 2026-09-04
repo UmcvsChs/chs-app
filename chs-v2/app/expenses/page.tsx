@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
@@ -103,7 +102,7 @@ export default function ExpensesPage() {
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <RoleBadge label="Expenses & Income" />
         <h1 className="font-serif text-lg font-bold mt-1">My Real Expenses & Income</h1>
       </div>

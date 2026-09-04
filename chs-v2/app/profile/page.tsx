@@ -175,7 +175,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
-        <Link href="/" className="text-xs text-gray-400 mb-4 inline-block">← Back to homepage</Link>
+        <button onClick={() => router.back()} className="text-xs text-gray-400 mb-4 inline-block">← Back</button>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">My Profile</h1>
         <p className="text-sm text-gray-500 mb-6">
           Add a photo or logo — real identification helps clients and customers recognise you.
