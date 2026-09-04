@@ -67,7 +67,7 @@ export interface Property {
   // Added this session — Estate Management and the extended commission model.
   estate_id: string | null;
   unit_label: string | null;
-  hire_category: "shortlet" | "event_centre" | "hotel_lodge" | "car_park_casual" | null;
+  hire_category: "shortlet" | "event_centre" | "hotel_lodge" | "car_park_casual" | "cinema_entertainment" | "recreational_sports" | null;
 }
 
 export type PropertyPurpose = Property["purpose"];

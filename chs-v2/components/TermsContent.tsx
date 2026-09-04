@@ -139,7 +139,7 @@ export default function TermsContent() {
       </div>
 
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
-        This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support.
+        This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support at <a href="mailto:support@completehousingsolutions.com" className="underline">support@completehousingsolutions.com</a>.
       </p>
     </div>
   );

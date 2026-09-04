@@ -15,10 +15,11 @@ const PROFESSIONS = [
   "Structural Engineer", "Facility Manager", "Real Estate Consultant", "Other professional",
 ];
 
-type Role = "buyer" | "tenant" | "owner" | "agent" | "manager" | "developer";
+type Role = "buyer" | "guest" | "tenant" | "owner" | "agent" | "manager" | "developer";
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
-  { value: "buyer", label: "Buyer / Guest", desc: "Searching to purchase, rent, lease, hire, or book a shortlet/hotel stay — this one real account covers all of it" },
+  { value: "buyer", label: "Buyer", desc: "Searching to purchase, rent, lease, or hire a property" },
+  { value: "guest", label: "Guest", desc: "Booking a shortlet apartment or a hotel/lodge stay" },
   { value: "tenant", label: "Tenant", desc: "Already renting, or about to start renting, through CHS" },
   { value: "owner", label: "Property Owner", desc: "Listing a property to sell, rent, lease, or hire out" },
   { value: "agent", label: "Agent", desc: "Marketing properties and earning referral commission" },

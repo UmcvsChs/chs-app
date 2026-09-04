@@ -10,10 +10,11 @@ import CurrencyInput from "./CurrencyInput";
 import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
 import ShortletBookingForm from "./ShortletBookingForm";
+import HireBookingForm from "./HireBookingForm";
 import IdentityVerificationGate from "./IdentityVerificationGate";
 import OfferMessageThread from "./OfferMessageThread";
 
-type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet";
+type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet" | "hire";
 
 export default function PropertyActions({ property }: { property: Property }) {
   const router = useRouter();
@@ -569,6 +570,20 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
+  if (activeForm === "hire" && session && property.price) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <HireBookingForm
+          propertyId={property.id}
+          pricePerDay={property.price}
+          hireCategoryLabel={property.property_type || "venue"}
+          session={session}
+          onSuccess={() => setShortletSuccess(true)}
+        />
+      </div>
+    );
+  }
+
   // Default state: show the real, relevant actions for this property's
   // purpose. Making an offer only makes sense for a sale property;
   // booking an inspection is genuinely useful for every property type;
@@ -608,7 +623,15 @@ export default function PropertyActions({ property }: { property: Property }) {
           Book now
         </button>
       )}
-      {property.purpose !== "sale" && property.purpose !== "shortlet" && (
+      {property.purpose === "hire" && property.hire_category && property.price && (
+        <button
+          onClick={() => requireLoginThen(() => setActiveForm("hire"))}
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
+        >
+          Book now
+        </button>
+      )}
+      {property.purpose !== "sale" && property.purpose !== "shortlet" && !(property.purpose === "hire" && property.hire_category) && (
         <button
           onClick={() => requireLoginThen(() => setActiveForm("rentalApplication"))}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"
@@ -616,7 +639,7 @@ export default function PropertyActions({ property }: { property: Property }) {
           Start rental application
         </button>
       )}
-      {property.purpose !== "shortlet" && (
+      {property.purpose !== "shortlet" && !(property.purpose === "hire" && property.hire_category) && (
         <button
           onClick={() => requireLoginThen(() => setActiveForm("inspection"))}
           className="w-full py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold"

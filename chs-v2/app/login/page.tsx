@@ -10,6 +10,7 @@ import BiometricLogin from "@/components/BiometricLogin";
 
 const ROLE_OPTIONS = [
   { value: "buyer", label: "Buyer" },
+  { value: "guest", label: "Guest" },
   { value: "tenant", label: "Tenant" },
   { value: "owner", label: "Owner" },
   { value: "agent", label: "Agent" },
@@ -19,6 +20,7 @@ const ROLE_OPTIONS = [
 
 const ROLE_DISPLAY_NAMES: Record<string, string> = {
   buyer: "Buyer",
+  guest: "Guest",
   tenant: "Tenant",
   owner: "Property Owner",
   agent: "Agent",
@@ -121,6 +123,7 @@ export default function LoginPage() {
       manager: "/manager",
       tenant: "/tenant",
       buyer: "/",
+      guest: "/",
     };
     router.push(roleToPath[selectedRole] || "/");
   }

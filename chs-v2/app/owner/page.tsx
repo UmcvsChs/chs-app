@@ -1183,7 +1183,7 @@ export default function OwnerDashboard() {
 
       {shortletBookings.length > 0 && (
         <div className="px-4 pb-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Shortlet Guests</p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Shortlet & Venue Bookings</p>
           {shortletBookings.map((b) => (
             <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
               <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>

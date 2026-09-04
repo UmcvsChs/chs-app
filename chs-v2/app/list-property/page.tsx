@@ -172,7 +172,7 @@ export default function ListPropertyPage() {
         // The real category that decides which real commission tier
         // applies — a genuine Shortlet gets the length-of-stay sliding
         // scale, everything else in this bucket gets the flat rate.
-        hire_category: purpose === "shortlet" ? hireCategory : null,
+        hire_category: purpose === "shortlet" ? hireCategory : purpose === "hire" ? (hireCategory || null) : null,
         rent_to_own_monthly: purpose === "rent_to_own" ? rentToOwnMonthly : null,
         rent_to_own_years: purpose === "rent_to_own" ? rentToOwnYears : null,
         rent_to_own_portion_pct: purpose === "rent_to_own" ? rentToOwnPortionPct : null,
@@ -338,7 +338,7 @@ export default function ListPropertyPage() {
             <label className="text-xs font-semibold text-gray-600">Purpose</label>
             <div className="grid grid-cols-4 gap-1.5 mt-1">
               {PURPOSE_OPTIONS.map((opt) => (
-                <button key={opt.value} type="button" onClick={() => setPurpose(opt.value)}
+                <button key={opt.value} type="button" onClick={() => { setPurpose(opt.value); setHireCategory(opt.value === "shortlet" ? "shortlet" : ""); }}
                   className={`py-2 rounded-lg border-2 text-[10px] font-semibold ${purpose === opt.value ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
                   {opt.label}
                 </button>
@@ -449,6 +449,32 @@ export default function ListPropertyPage() {
               <select value={pricePeriod} onChange={(e) => setPricePeriod(e.target.value)}
                 className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                 {["per year", "per month", "per week", "per day"].map((p) => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Real, new fix per direct client request: Hotel, Event
+              Centre, Hall, Car Park, Cinema, and Recreational/Sports
+              venues need real categorization to get a genuine instant
+              "Book now" guest flow, instead of incorrectly falling
+              through to a tenant-style rental application. This was
+              already built correctly for Shortlet — just never
+              actually reachable when Hire was the real chosen
+              purpose. */}
+          {purpose === "hire" && (
+            <div>
+              <label className="text-xs font-semibold text-gray-600">What kind of hire venue is this?</label>
+              <p className="text-[10px] text-gray-400 mb-1">
+                Choosing a real category here gives guests an instant &quot;Book now&quot; option instead of a rental application, and sets the correct real commission rate.
+              </p>
+              <select value={hireCategory} onChange={(e) => setHireCategory(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                <option value="">Not a guest-booking venue (e.g. a business premises leased short-term)</option>
+                <option value="hotel_lodge">Hotel or lodge room</option>
+                <option value="event_centre">Event centre / hall</option>
+                <option value="car_park_casual">Casual/hourly car park</option>
+                <option value="cinema_entertainment">Cinema / entertainment centre</option>
+                <option value="recreational_sports">Recreational centre / sports facility</option>
               </select>
             </div>
           )}

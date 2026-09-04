@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CHS — Complete Housing Solutions</title>
+<meta name="description" content="Verified property listings, funds held safely until every document transfers, and real accountability for buyers, tenants, owners, agents, and managers across Nigeria." />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --charcoal: #1C1B1A;
+    --charcoal-soft: #2A2825;
+    --cream: #FBF3E9;
+    --amber: #C4762C;
+    --amber-deep: #9B5A1F;
+    --slate: #4A6883;
+    --forest: #3F7A4F;
+    --white: #FFFFFF;
+    --line: rgba(28, 27, 26, 0.12);
+    --line-light: rgba(255, 255, 255, 0.14);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--charcoal);
+    background: var(--cream);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .wordmark {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  a { color: inherit; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--charcoal);
+    border-bottom: 1px solid var(--line-light);
+  }
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+  }
+  .wordmark { color: var(--white); font-size: 22px; }
+  .wordmark span { color: var(--amber); }
+  .nav-links { display: flex; align-items: center; gap: 28px; }
+  .nav-links a {
+    color: rgba(255,255,255,0.72); text-decoration: none; font-size: 14px; font-weight: 500;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-cta {
+    background: var(--amber); color: var(--white) !important; padding: 9px 20px;
+    border-radius: 100px; font-weight: 600; font-size: 14px;
+  }
+  .nav-toggle { display: none; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: var(--charcoal);
+    color: var(--white);
+    padding: 88px 0 100px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute; right: -10%; top: -30%;
+    width: 640px; height: 640px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(196,118,44,0.22), transparent 68%);
+  }
+  .hero-inner { position: relative; max-width: 720px; }
+  .eyebrow-line {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 28px;
+  }
+  .eyebrow-line .rule { width: 36px; height: 1px; background: var(--amber); }
+  .eyebrow-line span { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .hero h1 {
+    font-size: clamp(34px, 5vw, 54px);
+    line-height: 1.12;
+    margin-bottom: 24px;
+  }
+  .hero p.lede {
+    font-size: 18px; color: rgba(255,255,255,0.78); max-width: 560px; margin-bottom: 36px;
+  }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--amber); color: var(--white); padding: 14px 30px;
+    border-radius: 100px; font-weight: 600; font-size: 15px; text-decoration: none;
+    display: inline-block;
+  }
+  .btn-ghost {
+    border: 1px solid rgba(255,255,255,0.3); color: var(--white); padding: 14px 30px;
+    border-radius: 100px; font-weight: 600; font-size: 15px; text-decoration: none;
+    display: inline-block;
+  }
+
+  /* ---------- Ledger stats strip ---------- */
+  .ledger {
+    background: var(--white); border-bottom: 1px solid var(--line);
+  }
+  .ledger .wrap {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+  }
+  .ledger-item {
+    padding: 28px 20px; border-right: 1px solid var(--line);
+  }
+  .ledger-item:last-child { border-right: none; }
+  .ledger-item .num {
+    font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--charcoal);
+  }
+  .ledger-item .label {
+    font-size: 13px; color: rgba(28,27,26,0.6); margin-top: 4px;
+  }
+
+  /* ---------- Section shell ---------- */
+  section { padding: 88px 0; }
+  .section-head { max-width: 620px; margin-bottom: 56px; }
+  .section-head .kicker {
+    font-size: 13px; color: var(--amber-deep); font-weight: 600; margin-bottom: 10px;
+  }
+  .section-head h2 { font-size: clamp(26px, 3.4vw, 36px); line-height: 1.2; }
+  .section-head p { color: rgba(28,27,26,0.68); margin-top: 14px; font-size: 16px; max-width: 520px; }
+
+  /* ---------- Trust panels (document/ledger inspired) ---------- */
+  .trust-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 0;
+    border: 1px solid var(--line); background: var(--white);
+  }
+  .trust-panel {
+    padding: 32px 28px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .trust-panel:nth-child(3n) { border-right: none; }
+  .trust-panel .mark {
+    width: 36px; height: 36px; border-radius: 8px; background: var(--cream);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+    color: var(--amber-deep); font-weight: 700; font-family: 'Playfair Display', serif;
+  }
+  .trust-panel h3 { font-size: 17px; margin-bottom: 8px; }
+  .trust-panel p { font-size: 14px; color: rgba(28,27,26,0.66); }
+
+  /* ---------- How it works (real sequence, numbered) ---------- */
+  .steps { counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: 64px 1fr; gap: 24px;
+    padding: 26px 0; border-top: 1px solid var(--line);
+  }
+  .steps .step:last-child { border-bottom: 1px solid var(--line); }
+  .step-num {
+    font-family: 'Playfair Display', serif; font-size: 26px; color: var(--amber-deep); font-weight: 700;
+  }
+  .step h3 { font-size: 18px; margin-bottom: 6px; }
+  .step p { color: rgba(28,27,26,0.66); font-size: 15px; max-width: 520px; }
+
+  /* ---------- Audience tabs-as-cards ---------- */
+  .audience-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;
+  }
+  .audience-card {
+    background: var(--white); border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 22px;
+  }
+  .audience-card .tag {
+    font-size: 12px; font-weight: 600; color: var(--white); background: var(--charcoal);
+    display: inline-block; padding: 4px 11px; border-radius: 100px; margin-bottom: 16px;
+  }
+  .audience-card h3 { font-size: 17px; margin-bottom: 10px; }
+  .audience-card ul { list-style: none; font-size: 14px; color: rgba(28,27,26,0.68); }
+  .audience-card li { padding: 5px 0; border-top: 1px solid var(--line); }
+  .audience-card li:first-child { border-top: none; }
+
+  /* ---------- Business tools band (dark) ---------- */
+  .tools-band { background: var(--charcoal); color: var(--white); }
+  .tools-band .section-head h2 { color: var(--white); }
+  .tools-band .section-head p { color: rgba(255,255,255,0.68); }
+  .tools-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--line-light); }
+  .tool-item { background: var(--charcoal); padding: 26px 28px; }
+  .tool-item h3 { font-size: 16px; margin-bottom: 8px; color: var(--white); }
+  .tool-item p { font-size: 14px; color: rgba(255,255,255,0.62); }
+
+  /* ---------- Final CTA ---------- */
+  .cta-band { background: var(--amber); color: var(--white); text-align: center; padding: 90px 0; }
+  .cta-band h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 18px; }
+  .cta-band p { font-size: 16px; color: rgba(255,255,255,0.88); margin-bottom: 32px; }
+  .btn-on-amber {
+    background: var(--charcoal); color: var(--white); padding: 15px 34px;
+    border-radius: 100px; font-weight: 600; text-decoration: none; display: inline-block;
+  }
+
+  /* ---------- Footer ---------- */
+  footer { background: var(--charcoal-soft); color: rgba(255,255,255,0.6); padding: 56px 0 28px; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 40px; }
+  .footer-grid .wordmark { font-size: 19px; margin-bottom: 10px; }
+  .footer-grid p { font-size: 14px; max-width: 260px; }
+  .footer-col h4 { font-size: 13px; color: var(--white); margin-bottom: 14px; font-weight: 600; }
+  .footer-col a { display: block; font-size: 14px; text-decoration: none; color: rgba(255,255,255,0.6); padding: 5px 0; }
+  .footer-col a:hover { color: var(--white); }
+  .footer-bottom {
+    border-top: 1px solid var(--line-light); padding-top: 22px;
+    display: flex; justify-content: space-between; font-size: 13px; flex-wrap: wrap; gap: 10px;
+  }
+
+  @media (max-width: 860px) {
+    .nav-links { display: none; }
+    .ledger .wrap { grid-template-columns: repeat(2, 1fr); }
+    .ledger-item:nth-child(2n) { border-right: none; }
+    .trust-grid { grid-template-columns: 1fr; }
+    .trust-panel { border-right: none !important; }
+    .audience-grid { grid-template-columns: 1fr 1fr; }
+    .tools-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    .audience-grid { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 40px 1fr; }
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav wrap">
+    <a href="#" class="wordmark">C<span>H</span>S</a>
+    <nav class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#trust">Trust &amp; safety</a>
+      <a href="#for-you">Who it's for</a>
+      <a href="#business-tools">For agents &amp; managers</a>
+      <a href="https://extraordinary-conkies-312c3d.netlify.app" class="nav-cta">Open the app</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-inner">
+    <div class="eyebrow-line"><div class="rule"></div><span>Complete Housing Solutions</span></div>
+    <h1>Property in Nigeria, without the guesswork.</h1>
+    <p class="lede">
+      Every listing on CHS is checked before it goes live. Every payment is held until the paperwork
+      genuinely changes hands. Buyers, tenants, owners, agents, and property managers all work from
+      the same real record — not a phone number and a promise.
+    </p>
+    <div class="hero-actions">
+      <a href="https://extraordinary-conkies-312c3d.netlify.app" class="btn-primary">Open the app</a>
+      <a href="#how-it-works" class="btn-ghost">See how it works</a>
+    </div>
+  </div>
+</section>
+
+<div class="ledger">
+  <div class="wrap">
+    <div class="ledger-item">
+      <div class="num">6</div>
+      <div class="label">Ways to transact — sale, rent, lease, hire, shortlet, rent-to-own</div>
+    </div>
+    <div class="ledger-item">
+      <div class="num">100%</div>
+      <div class="label">Of sale funds held until documents are confirmed transferred</div>
+    </div>
+    <div class="ledger-item">
+      <div class="num">1</div>
+      <div class="label">Verified account per person — no anonymous listings</div>
+    </div>
+    <div class="ledger-item">
+      <div class="num">24/7</div>
+      <div class="label">Dispute channel between every buyer, seller, tenant, and owner</div>
+    </div>
+  </div>
+</div>
+
+<section id="trust">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Trust &amp; safety</div>
+      <h2>The market's real problem was never a shortage of listings.</h2>
+      <p>It was never knowing who you were really dealing with. CHS is built around removing that doubt, one real check at a time.</p>
+    </div>
+    <div class="trust-grid">
+      <div class="trust-panel">
+        <div class="mark">01</div>
+        <h3>Funds held, not just promised</h3>
+        <p>A sale payment sits in escrow until the real legal documents have genuinely transferred — never released on a handshake.</p>
+      </div>
+      <div class="trust-panel">
+        <div class="mark">02</div>
+        <h3>Documents checked, not just uploaded</h3>
+        <p>Certificate of Occupancy, Deed of Assignment, and every other required document is independently reviewed before a sale can proceed.</p>
+      </div>
+      <div class="trust-panel">
+        <div class="mark">03</div>
+        <h3>Real people, not blank profiles</h3>
+        <p>Identity verification and a documented history mean the person on the other end of a deal is genuinely accountable.</p>
+      </div>
+      <div class="trust-panel">
+        <div class="mark">04</div>
+        <h3>A record that doesn't disappear</h3>
+        <p>Every offer, message, and payment is timestamped and kept — the exact opposite of a conversation that "got hung."</p>
+      </div>
+      <div class="trust-panel">
+        <div class="mark">05</div>
+        <h3>Commission you can see coming</h3>
+        <p>The real percentage and the real amount are shown before anyone pays anything — never a surprise deduction after the fact.</p>
+      </div>
+      <div class="trust-panel">
+        <div class="mark">06</div>
+        <h3>Somewhere to take a real dispute</h3>
+        <p>A genuine review process sits behind every transaction, not just a support inbox that goes quiet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how-it-works" style="background: var(--white); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">How it works</div>
+      <h2>From browsing to keys, in a real, visible sequence.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Browse real, checked listings</h3>
+          <p>Search by state, area, price, and property type across sale, rent, lease, hire, shortlet, and rent-to-own — every listing reviewed before it's shown.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Make a real offer or application</h3>
+          <p>A buyer proposes a price directly to the owner; a tenant submits a rental application that CHS screens before it ever reaches the landlord.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div>
+          <h3>See the real total, before you pay anything</h3>
+          <p>A transparent breakdown — the price, the real commission, the combined total — shown in advance, charged once, never as a surprise second charge.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div>
+          <h3>Funds held until the real handover completes</h3>
+          <p>For a sale, your payment sits safely in escrow until CHS confirms the real legal documents have genuinely reached you.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div>
+          <h3>A real record, for as long as you need it</h3>
+          <p>Receipts, condition reports, and message history stay on file — real evidence if a question ever comes up later.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="for-you">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Who it's for</div>
+      <h2>The same real record, whichever side of the deal you're on.</h2>
+    </div>
+    <div class="audience-grid">
+      <div class="audience-card">
+        <span class="tag">Buyers</span>
+        <h3>Buy with real confidence</h3>
+        <ul>
+          <li>Verified listings only</li>
+          <li>Full cost shown upfront</li>
+          <li>Funds held until documents transfer</li>
+          <li>A real place to dispute a problem</li>
+        </ul>
+      </div>
+      <div class="audience-card">
+        <span class="tag">Tenants</span>
+        <h3>Rent without the run-around</h3>
+        <ul>
+          <li>Applications screened before landlords see them</li>
+          <li>A real countdown to your next rent</li>
+          <li>Optional auto-pay from a dedicated savings wallet</li>
+          <li>Move-in and move-out condition on record</li>
+        </ul>
+      </div>
+      <div class="audience-card">
+        <span class="tag">Owners</span>
+        <h3>List once, manage properly</h3>
+        <ul>
+          <li>Real buyers and tenants, ID-verified</li>
+          <li>Proceeds held safely until handover confirms</li>
+          <li>A real dashboard for every property you own</li>
+          <li>Delegate day-to-day management if you choose to</li>
+        </ul>
+      </div>
+      <div class="audience-card">
+        <span class="tag">Agents &amp; Managers</span>
+        <h3>Run a real business on CHS</h3>
+        <ul>
+          <li>Your own negotiated rate per owner</li>
+          <li>Digital remittance, commission auto-deducted</li>
+          <li>A real tenant register with verification</li>
+          <li>Your own mini dashboard for staff</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="business-tools" class="tools-band">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">For agents &amp; property managers</div>
+      <h2>Real business tools, not just a listings page.</h2>
+      <p>Built directly from what working agents and managers actually asked for — because a platform that only serves buyers and tenants only solves half the problem.</p>
+    </div>
+    <div class="tools-grid">
+      <div class="tool-item">
+        <h3>Your own commission, per owner</h3>
+        <p>Set the real rate you've negotiated with each owner — reviewable and adjustable any time, applied automatically across everything you manage for them.</p>
+      </div>
+      <div class="tool-item">
+        <h3>Digital remittance</h3>
+        <p>Collected rent in person? Remit it straight into the owner's real wallet, with your agreed commission deducted automatically — no more money that "got hung."</p>
+      </div>
+      <div class="tool-item">
+        <h3>A real tenant register</h3>
+        <p>Full biodata, property details, and ID verification for every tenant you manage — with a real reference number for easy identification.</p>
+      </div>
+      <div class="tool-item">
+        <h3>Your own mini dashboard</h3>
+        <p>Bring on real staff, assign them roles, and see their daily activity reports — the same kind of oversight CHS itself runs on.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-band">
+  <div class="wrap">
+    <h2>Your property, our real commitment.</h2>
+    <p>Open the app and see a live, verified listing for yourself.</p>
+    <a href="https://extraordinary-conkies-312c3d.netlify.app" class="btn-on-amber">Open the CHS app</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <div class="wordmark">C<span style="color: var(--amber);">H</span>S</div>
+        <p>Complete Housing Solutions — a real, verified way to buy, sell, rent, lease, hire, and manage property across Nigeria.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Platform</h4>
+        <a href="#how-it-works">How it works</a>
+        <a href="#trust">Trust &amp; safety</a>
+        <a href="#for-you">Who it's for</a>
+        <a href="#business-tools">Agents &amp; managers</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="#">About CHS</a>
+        <a href="mailto:support@completehousingsolutions.com">Contact us</a>
+        <a href="#">Careers</a>
+      </div>
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <a href="#">Terms &amp; conditions</a>
+        <a href="#">Privacy policy</a>
+        <a href="#">Dispute resolution</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Complete Housing Solutions. All rights reserved.</span>
+      <span>Operated by Stadt-Thélima</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
