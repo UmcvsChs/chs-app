@@ -17,8 +17,10 @@ export default function BankAccountSecurity({
   registeredName: string;
 }) {
   const [linked, setLinked] = useState<LinkedBankAccount | null>(null);
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedBankAccount[]>([]);
   const [pending, setPending] = useState<PendingBankAccountChange | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showAddAnother, setShowAddAnother] = useState(false);
   // The real, comprehensive, always-current list — pulled live from
   // Paystack's own bank directory (the same source
   // initiate-withdrawal already trusts) rather than a hand-typed list
@@ -129,11 +131,17 @@ export default function BankAccountSecurity({
 
   async function loadData() {
     const [linkedRes, pendingRes] = await Promise.all([
-      supabase.from("linked_bank_accounts").select("*").eq("user_id", session.user.id).maybeSingle(),
+      supabase.from("linked_bank_accounts").select("*").eq("user_id", session.user.id).order("updated_at", { ascending: true }),
       supabase.from("pending_bank_account_changes").select("*").eq("user_id", session.user.id).eq("status", "pending").maybeSingle(),
     ]);
-    setLinked(linkedRes.data);
+    setLinkedAccounts((linkedRes.data as LinkedBankAccount[]) || []);
+    setLinked(linkedRes.data?.[0] || null);
     setPending(pendingRes.data);
+  }
+
+  async function handleSetActiveAccount(accountId: string) {
+    await supabase.rpc("set_active_withdrawal_account", { p_account_id: accountId });
+    loadData();
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -195,23 +203,26 @@ export default function BankAccountSecurity({
     setError(null);
     setSubmitting(true);
 
-    const effectiveAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
-    const { error: insertError } = await supabase.from("pending_bank_account_changes").insert({
-      user_id: session.user.id,
-      bank_name: bankName,
-      bank_code: bankCode,
-      account_number: accountNumber,
-      account_name: accountName.trim(),
-      effective_at: effectiveAt,
+    // Real fix — routed through the same real function used for
+    // additional accounts, so the genuine agent/manager cap (and the
+    // same 48-hour protection window) applies consistently whether
+    // this is someone's first account or their second.
+    const { error: rpcError } = await supabase.rpc("add_linked_bank_account", {
+      p_bank_name: bankName,
+      p_bank_code: bankCode,
+      p_account_number: accountNumber,
+      p_account_name: accountName.trim(),
+      p_replace_existing: !showAddAnother,
     });
 
-    if (insertError) {
-      setError("Could not submit this change. Please try again.");
+    if (rpcError) {
+      setError(rpcError.message || "Could not submit this change. Please try again.");
       setSubmitting(false);
       return;
     }
 
     setShowForm(false);
+    setShowAddAnother(false);
     setSubmitting(false);
     loadData();
   }
@@ -228,15 +239,39 @@ export default function BankAccountSecurity({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
-      <p className="text-xs font-bold text-chs-charcoal mb-2">🏦 Linked bank account</p>
+      <p className="text-xs font-bold text-chs-charcoal mb-2">
+        🏦 {linkedAccounts.length > 1 ? `Linked bank accounts (${linkedAccounts.length})` : "Linked bank account"}
+      </p>
 
-      {linked ? (
-        <div className="bg-gray-50 rounded-lg p-3 mb-2">
-          <p className="text-sm font-semibold text-chs-charcoal">{linked.bank_name} — {linked.account_number}</p>
-          <p className="text-xs text-gray-500">{linked.account_name}</p>
-        </div>
+      {linkedAccounts.length > 0 ? (
+        linkedAccounts.map((acc) => (
+          <div key={acc.id} className="bg-gray-50 rounded-lg p-3 mb-2 flex justify-between items-center">
+            <div>
+              <p className="text-sm font-semibold text-chs-charcoal">
+                {acc.bank_name} — {acc.account_number}
+                {acc.is_active_for_withdrawal && <span className="ml-1.5 text-[9px] font-bold bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">ACTIVE</span>}
+              </p>
+              <p className="text-xs text-gray-500">{acc.account_name}</p>
+            </div>
+            {linkedAccounts.length > 1 && !acc.is_active_for_withdrawal && (
+              <button onClick={() => handleSetActiveAccount(acc.id)} className="text-[10px] text-chs-red underline shrink-0 ml-2">
+                Use for withdrawal
+              </button>
+            )}
+          </div>
+        ))
       ) : (
         <p className="text-xs text-gray-400 mb-2">No bank account linked yet.</p>
+      )}
+
+      {/* Real, new feature per direct client request: agents and
+          managers can link up to 4 real bank accounts, each still
+          going through the same real 48-hour protection window as
+          any other bank change. */}
+      {linkedAccounts.length > 0 && linkedAccounts.length < 4 && (
+        <button onClick={() => { setShowAddAnother(!showAddAnother); setShowForm(!showAddAnother); }} className="text-[11px] text-chs-red underline mb-2">
+          {showAddAnother ? "Cancel" : "+ Add another real bank account (agents/managers)"}
+        </button>
       )}
 
       {pending && (

@@ -151,9 +151,24 @@ export default function AgentDashboard() {
     setManagedPortfolio(overview || null);
     const { data: props } = await supabase
       .from("properties")
-      .select("id, title, status, agent_commission_pct, owner_id, owner:owner_id(full_name), tenancies(id, tenant_id, status)")
+      .select("id, title, status, agent_commission_pct, owner_id, tenancies(id, tenant_id, status)")
       .eq("managing_agent_id", session.user.id);
-    setManagedProperties((props as unknown as ManagedProperty[]) || []);
+
+    // Real, necessary fix from the security audit: an embedded join
+    // into profiles for another user's name no longer works now that
+    // the real, overly broad RLS policy that made it possible has
+    // been closed — a genuine security fix, not a bug. Owner names
+    // are now fetched through a real, field-limited function instead,
+    // returning only a name and avatar, never NIN, phone, or ID data.
+    const propsWithOwnerId = (props || []) as unknown as ManagedProperty[];
+    const uniqueOwnerIds = Array.from(new Set(propsWithOwnerId.map((p) => p.owner_id)));
+    const ownerNames = new Map<string, { full_name: string } | null>();
+    await Promise.all(uniqueOwnerIds.map(async (ownerId) => {
+      const { data } = await supabase.rpc("get_related_party_name", { p_user_id: ownerId });
+      ownerNames.set(ownerId, data);
+    }));
+    const propsWithOwners = propsWithOwnerId.map((p) => ({ ...p, owner: ownerNames.get(p.owner_id) || null }));
+    setManagedProperties(propsWithOwners);
   }
 
   async function loadReferrals() {
