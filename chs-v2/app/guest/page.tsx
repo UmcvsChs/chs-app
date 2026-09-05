@@ -12,6 +12,8 @@ import { Property } from "@/types/property";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import ShortletRating from "@/components/ShortletRating";
+import CancelBookingButton from "@/components/CancelBookingButton";
 
 // Real, new dashboard completing the real symmetry the client
 // directly pointed out: Host just got its own real, dedicated
@@ -111,6 +113,10 @@ export default function GuestDashboardPage() {
                 <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full inline-block mt-1 ${b.status === "pending_host_review" ? "text-chs-red bg-chs-amber-light" : "text-gray-500 bg-gray-100"}`}>
                   {b.status === "pending_host_review" ? "⏳ Awaiting host decision" : b.status}
                 </span>
+                {(b.status === "pending_host_review" || b.status === "confirmed") && (
+                  <CancelBookingButton bookingId={b.id} onCancelled={() => setBookings((prev) => prev.map((x) => x.id === b.id ? { ...x, status: "cancelled" } : x))} />
+                )}
+                {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate your real stay with this host" />}
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
                 {/* Real, direct fix for a genuine, confirmed gap: a

@@ -53,6 +53,8 @@ export default function ListPropertyPage() {
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("rent");
   const [hireCategory, setHireCategory] = useState("shortlet");
+  const [depositEnabled, setDepositEnabled] = useState(false);
+  const [depositAmount, setDepositAmount] = useState<number | "">("");
   const [customFees, setCustomFees] = useState<{ label: string; percentage: number | "" }[]>([]);
   const [rentToOwnMonthly, setRentToOwnMonthly] = useState<number | "">("");
   const [rentToOwnYears, setRentToOwnYears] = useState<number | "">(5);
@@ -174,6 +176,8 @@ export default function ListPropertyPage() {
         // applies — a genuine Shortlet gets the length-of-stay sliding
         // scale, everything else in this bucket gets the flat rate.
         hire_category: purpose === "shortlet" ? hireCategory : purpose === "hire" ? (hireCategory || null) : null,
+        security_deposit_enabled: (purpose === "shortlet" || purpose === "hire") ? depositEnabled : false,
+        security_deposit_amount: depositEnabled && depositAmount ? Number(depositAmount) : 0,
         // Real, new feature per direct client request — only ever
         // populated for an independent agent's own real fee
         // practices, never for a CHS-managed listing.
@@ -481,6 +485,28 @@ export default function ListPropertyPage() {
                 <option value="cinema_entertainment">Cinema / entertainment centre</option>
                 <option value="recreational_sports">Recreational centre / sports facility</option>
               </select>
+            </div>
+          )}
+
+          {/* Real, new feature per direct client request: a genuine,
+              flexible security deposit — the host decides per
+              listing whether it applies at all, and it's
+              automatically limited to real first-time guests only,
+              waived once a guest has 3+ real ratings on file. */}
+          {(purpose === "shortlet" || purpose === "hire") && (
+            <div className="border border-gray-200 rounded-lg p-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-2">
+                <input type="checkbox" checked={depositEnabled} onChange={(e) => setDepositEnabled(e.target.checked)} />
+                Require a refundable security deposit
+              </label>
+              <p className="text-[10px] text-gray-400 mb-2">
+                Only ever charged to a genuinely first-time guest — automatically waived once they have 3+ real ratings on CHS.
+              </p>
+              {depositEnabled && (
+                <input type="number" min={0} value={depositAmount}
+                  onChange={(e) => setDepositAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="Real deposit amount (₦)" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              )}
             </div>
           )}
 

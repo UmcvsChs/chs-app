@@ -29,6 +29,8 @@ interface RealPricing {
   nights: number;
   base_amount: number;
   guest_commission_amount: number;
+  security_deposit_required: boolean;
+  security_deposit_amount: number;
   real_total_guest_pays: number;
 }
 
@@ -65,9 +67,9 @@ export default function ShortletBookingForm({
     if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) {
       return;
     }
-    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut })
+    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut, p_guest_id: session.user.id })
       .then(({ data }) => setPricing(data));
-  }, [checkIn, checkOut, propertyId]);
+  }, [checkIn, checkOut, propertyId, session.user.id]);
 
   const validDateRange = checkIn && checkOut && new Date(checkOut) > new Date(checkIn);
 
@@ -189,10 +191,27 @@ export default function ShortletBookingForm({
             <span>CHS service fee</span>
             <span>{formatNaira(pricing.guest_commission_amount)}</span>
           </div>
+          {pricing.security_deposit_required && (
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Refundable security deposit</span>
+              <span>{formatNaira(pricing.security_deposit_amount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
             <span>Real total you&apos;ll pay</span>
             <span>{formatNaira(pricing.real_total_guest_pays)}</span>
           </div>
+        </div>
+      )}
+
+      {pricing?.security_deposit_required && (
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs font-bold text-chs-charcoal">🛡️ Refundable security deposit</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">
+            Since this is your first real stay at this property, a refundable {formatNaira(pricing.security_deposit_amount)} deposit
+            applies — held safely and returned to you after checkout if no real damage is reported. Guests with 3+ real
+            ratings never pay this.
+          </p>
         </div>
       )}
 

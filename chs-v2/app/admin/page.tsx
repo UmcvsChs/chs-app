@@ -53,7 +53,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
@@ -112,6 +112,39 @@ export default function AdminDashboard() {
     id_document_url: string | null; selfie_url: string | null; created_at: string;
   }[]>([]);
   const [tenantRegisterLoading, setTenantRegisterLoading] = useState(false);
+  const [heldDeposits, setHeldDeposits] = useState<{
+    id: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
+    security_deposit_amount: number; properties: { title: string; owner_id: string }[] | null;
+  }[]>([]);
+  const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
+
+  // Real, new feature completing the deposit mechanism — admin, not
+  // the host directly, resolves a held deposit, matching the same
+  // CHS-mediated pattern used everywhere else: a claim isn't just the
+  // host's word against the guest's.
+  useEffect(() => {
+    supabase.from("shortlet_bookings")
+      .select("id, guest_full_name, guest_phone, check_in, check_out, security_deposit_amount, properties(title, owner_id)")
+      .eq("security_deposit_status", "held")
+      .then(({ data }) => setHeldDeposits((data as unknown as typeof heldDeposits) || []));
+  }, []);
+
+  async function handleResolveDeposit(bookingId: string, decision: "released_to_guest" | "claimed_by_host") {
+    if (decision === "claimed_by_host" && !(depositReasons[bookingId] || "").trim()) {
+      setActionError("Please write a real reason before claiming this deposit for the host.");
+      return;
+    }
+    const { error } = await supabase.rpc("resolve_security_deposit", {
+      p_booking_id: bookingId,
+      p_decision: decision,
+      p_reason: depositReasons[bookingId] || null,
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    setHeldDeposits((prev) => prev.filter((d) => d.id !== bookingId));
+  }
 
   // Real, new feature completing the one, honest, remaining gap
   // flagged directly to the client — CHS admin previously had zero
@@ -1303,6 +1336,7 @@ export default function AdminDashboard() {
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
           { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
+          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
         ] as { key: Tab; label: string; domain: string | null }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
@@ -2517,6 +2551,42 @@ export default function AdminDashboard() {
                     )}
                   </div>
                   <p className="text-[9px] text-gray-400 mt-1">Recorded {new Date(t.created_at).toLocaleDateString()}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "shortletdeposits" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-2">
+              Real security deposits currently held, awaiting a genuine decision — released back to the guest if there was no real damage, or claimed for the host if there was, always with a real, recorded reason.
+            </p>
+            {heldDeposits.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real deposits currently held.</p>
+            ) : (
+              heldDeposits.map((d) => (
+                <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{d.properties?.[0]?.title || "Property"}</p>
+                  <p className="text-xs text-gray-500">{d.guest_full_name} · {d.guest_phone} · {d.check_in} → {d.check_out}</p>
+                  <p className="text-sm font-bold text-chs-charcoal mt-1">Real deposit held: {formatNaira(d.security_deposit_amount)}</p>
+                  <input
+                    type="text"
+                    placeholder="If claiming for the host: real reason (e.g. real, reported damage)"
+                    value={depositReasons[d.id] || ""}
+                    onChange={(e) => setDepositReasons({ ...depositReasons, [d.id]: e.target.value })}
+                    className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] my-2"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleResolveDeposit(d.id, "released_to_guest")}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Release to guest
+                    </button>
+                    <button onClick={() => handleResolveDeposit(d.id, "claimed_by_host")}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Claim for host
+                    </button>
+                  </div>
                 </div>
               ))
             )}

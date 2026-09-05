@@ -11,6 +11,7 @@ import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import HostBookingDecision from "@/components/HostBookingDecision";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import ShortletRating from "@/components/ShortletRating";
 
 // Real, new dashboard completing a direct, thorough client decision:
 // Host is a genuine, separate role from Owner — a real, different
@@ -148,6 +149,7 @@ export default function HostDashboardPage() {
                     )}
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
+                    {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate this real guest" />}
                     {/* Real, direct fix for a genuine, confirmed gap:
                         a host had no real way to report an issue with
                         a guest — the dispute form existed for Owner

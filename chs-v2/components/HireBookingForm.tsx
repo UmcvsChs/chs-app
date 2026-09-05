@@ -51,7 +51,7 @@ export default function HireBookingForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
-  const [pricing, setPricing] = useState<{ nights: number; base_amount: number; guest_commission_amount: number; real_total_guest_pays: number } | null>(null);
+  const [pricing, setPricing] = useState<{ nights: number; base_amount: number; guest_commission_amount: number; security_deposit_required: boolean; security_deposit_amount: number; real_total_guest_pays: number } | null>(null);
   const [houseRulesUrl, setHouseRulesUrl] = useState<string | null>(null);
   const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
 
@@ -69,9 +69,9 @@ export default function HireBookingForm({
     if (!startDate || !endDate || new Date(endDate) < new Date(startDate)) {
       return;
     }
-    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: startDate, p_check_out: endDate })
+    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: startDate, p_check_out: endDate, p_guest_id: session.user.id })
       .then(({ data }) => setPricing(data));
-  }, [startDate, endDate, propertyId]);
+  }, [startDate, endDate, propertyId, session.user.id]);
 
   async function loadExistingBookings() {
     const { data } = await supabase
@@ -204,6 +204,12 @@ export default function HireBookingForm({
             <span>CHS service fee</span>
             <span>{formatNaira(pricing.guest_commission_amount)}</span>
           </div>
+          {pricing.security_deposit_required && (
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>Refundable security deposit</span>
+              <span>{formatNaira(pricing.security_deposit_amount)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
             <span>Real total you&apos;ll pay</span>
             <span>{formatNaira(pricing.real_total_guest_pays)}</span>
