@@ -82,6 +82,29 @@ export default function AdminDashboard() {
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingAgentIds, setPendingAgentIds] = useState<{ id: string; full_name: string; phone: string; valid_id_type: string; valid_id_number: string; valid_id_document_url: string }[]>([]);
   const [pendingManagerCerts, setPendingManagerCerts] = useState<{ id: string; full_name: string; phone: string; profession: string; professional_registration_number: string | null; certificate_document_url: string }[]>([]);
+  const [pendingRegistrationsFull, setPendingRegistrationsFull] = useState<{
+    id: string; full_name: string; phone: string; role: string; state: string; created_at: string;
+    id_type: string | null; id_number: string | null; document_url: string | null;
+  }[]>([]);
+  const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    supabase.rpc("get_pending_registrations_full").then(({ data }) => setPendingRegistrationsFull(data || []));
+  }, []);
+
+  async function handleRejectWithReason(userId: string) {
+    const reason = (rejectReasons[userId] || "").trim();
+    if (!reason) {
+      setActionError("Please write a real reason before rejecting this registration.");
+      return;
+    }
+    const { error } = await supabase.rpc("reject_registration_with_reason", { p_user_id: userId, p_reason: reason });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    setPendingRegistrationsFull((prev) => prev.filter((p) => p.id !== userId));
+  }
   const [tenantRegisterSearch, setTenantRegisterSearch] = useState("");
   const [tenantRegisterResults, setTenantRegisterResults] = useState<{
     id: string; reference_number: string; full_name: string; phone: string; location_area: string; street_address: string | null;
@@ -125,23 +148,6 @@ export default function AdminDashboard() {
       .then(({ data }) => setPendingManagerCerts(data || []));
   }, []);
 
-  async function handleAgentIdReview(userId: string, approved: boolean) {
-    if (approved) {
-      await supabase.from("profiles").update({ valid_id_verified: true }).eq("id", userId);
-    } else {
-      await supabase.from("profiles").update({ valid_id_document_url: null, valid_id_number: null }).eq("id", userId);
-    }
-    setPendingAgentIds((prev) => prev.filter((a) => a.id !== userId));
-  }
-
-  async function handleManagerCertReview(userId: string, approved: boolean) {
-    if (approved) {
-      await supabase.from("profiles").update({ professional_credentials_verified: true }).eq("id", userId);
-    } else {
-      await supabase.from("profiles").update({ certificate_document_url: null }).eq("id", userId);
-    }
-    setPendingManagerCerts((prev) => prev.filter((m) => m.id !== userId));
-  }
   const [totalCommissionEarnings, setTotalCommissionEarnings] = useState(0);
   const [openOwnerConcerns, setOpenOwnerConcerns] = useState<{ id: string; subject: string; message: string; profiles: { full_name: string } | null }[]>([]);
   const [agentChangeRequests, setAgentChangeRequests] = useState<{ id: string; requested_agent_name: string | null; requested_agent_phone: string | null; requested_agent_chs_id: string | null; properties: { title: string } | null }[]>([]);
@@ -1284,7 +1290,7 @@ export default function AdminDashboard() {
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
-          { key: "registrations", label: `Registrations (${pendingProfiles.length + pendingBuyerIds.length + pendingAgentIds.length + pendingManagerCerts.length})`, domain: "registration_setup" },
+          { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
@@ -2065,128 +2071,72 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "registrations" &&
-          (pendingProfiles.length === 0 ? (
-            <p className="text-center text-sm text-gray-400 py-8">No pending registrations.</p>
-          ) : (
-            pendingProfiles.map((p) => {
-              const hasSubmittedId = pendingBuyerIds.some((b) => b.user_id === p.id) || pendingAgentIds.some((a) => a.id === p.id) || pendingManagerCerts.some((m) => m.id === p.id);
-              return (
-              <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
-                <p className="text-xs text-gray-500">
-                  {p.phone} — {p.role} — {p.state}
-                </p>
-                {/* Real, critical fix per a direct, confirmed client
-                    complaint — a real account reached "pending
-                    approval" having only ever typed an NIN number,
-                    with admin given no way to know a real ID
-                    document was never actually submitted. This makes
-                    that fact impossible to miss. */}
-                {hasSubmittedId ? (
-                  <p className="text-[10px] font-bold text-green-700 mt-1">✓ Real ID document submitted — see the sections below</p>
-                ) : (
-                  <p className="text-[10px] font-bold text-chs-red mt-1">⚠️ No real ID document submitted yet — do not approve blind</p>
-                )}
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => handleProfileDecision(p.id, "approved")}
-                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                    Approve
-                  </button>
-                  <button onClick={() => handleProfileDecision(p.id, "rejected")}
-                    className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                    Reject
-                  </button>
-                </div>
-              </div>
-              );
-            })
-          ))}
-
-        {/* Real, critical fix — the root cause of a real, repeated
-            client complaint (raised four times) that a buyer's ID/NIN
-            verification "vanishes." It never actually did — the real
-            submission was always landing correctly in the database.
-            The real bug was that this review UI lived under an
-            unrelated tab called "Face Verification," which nobody
-            would think to check for a NIN/ID card submission. Moved
-            here, into "Registrations," which is genuinely where an
-            admin looks for anything needing a new user's approval. */}
         {activeTab === "registrations" && (
-          <>
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Buyer ID Verifications ({pendingBuyerIds.length})</p>
-            {pendingBuyerIds.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No buyer ID verifications pending review.</p>
+          <div>
+            {/* Real, comprehensive fix per direct, confirmed client
+                feedback with a real screenshot: the earlier version
+                only showed a yes/no label while the actual document,
+                ID type, and ID number sat in a separate section admin
+                had to scroll down and cross-reference — still
+                genuinely "approving blind." Every real KYC detail now
+                sits directly on the same card, whichever role or
+                verification source it actually comes from, with a
+                real, required reason captured when rejecting. */}
+            {pendingRegistrationsFull.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No pending registrations.</p>
             ) : (
-              pendingBuyerIds.map((sub) => (
-                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
-                  <p className="text-xs text-gray-500 mb-2">{sub.id_type} — {sub.id_number}</p>
-                  <a href={sub.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
-                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Approve
-                    </button>
-                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
-                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                      Reject
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
+              pendingRegistrationsFull.map((p) => (
+                <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
+                  <p className="text-xs text-gray-500">{p.phone} — {p.role} — {p.state}</p>
 
-            {/* Real, new fix — a completely separate, previously
-                invisible gap from the buyer-ID one above: Agent and
-                Property Manager credentials, confirmed uploading and
-                saving correctly, but never shown to admin anywhere. */}
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Agent ID Verifications ({pendingAgentIds.length})</p>
-            {pendingAgentIds.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No agent ID verifications pending review.</p>
-            ) : (
-              pendingAgentIds.map((a) => (
-                <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{a.full_name} — {a.phone}</p>
-                  <p className="text-xs text-gray-500 mb-2">{a.valid_id_type} — {a.valid_id_number}</p>
-                  <a href={a.valid_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleAgentIdReview(a.id, true)}
-                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Approve
-                    </button>
-                    <button onClick={() => handleAgentIdReview(a.id, false)}
-                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                      Reject
-                    </button>
+                  <div className="border-t border-gray-200 mt-2 pt-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase">Real KYC detail submitted</p>
+                    {p.document_url ? (
+                      <>
+                        <p className="text-xs text-chs-charcoal mt-1">
+                          <span className="font-semibold">{p.role === "manager" ? "Profession" : "ID type"}:</span> {p.id_type || "—"}
+                        </p>
+                        <p className="text-xs text-chs-charcoal">
+                          <span className="font-semibold">{p.role === "manager" ? "Reg. number" : "ID number"}:</span> {p.id_number || "—"}
+                        </p>
+                        <a href={p.document_url} target="_blank" rel="noreferrer" className="text-[11px] text-chs-red underline font-semibold block mt-1">
+                          🔍 View the real, uploaded document — compare the name and number against what&apos;s above
+                        </a>
+                      </>
+                    ) : (
+                      <p className="text-xs font-bold text-chs-red mt-1">⚠️ No real document uploaded — nothing to verify. Do not approve blind.</p>
+                    )}
                   </div>
-                </div>
-              ))
-            )}
 
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🎓 Real Manager Credential Verifications ({pendingManagerCerts.length})</p>
-            {pendingManagerCerts.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No manager credentials pending review.</p>
-            ) : (
-              pendingManagerCerts.map((m) => (
-                <div key={m.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{m.full_name} — {m.phone}</p>
-                  <p className="text-xs text-gray-500 mb-2">{m.profession} {m.professional_registration_number ? `— Reg. ${m.professional_registration_number}` : ""}</p>
-                  <a href={m.certificate_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded certificate</a>
-                  <div className="flex gap-2">
-                    <button onClick={() => handleManagerCertReview(m.id, true)}
-                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Approve
-                    </button>
-                    <button onClick={() => handleManagerCertReview(m.id, false)}
-                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                      Reject
-                    </button>
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      placeholder="If rejecting: real reason (e.g. name doesn't match ID, wrong ID type)"
+                      value={rejectReasons[p.id] || ""}
+                      onChange={(e) => setRejectReasons({ ...rejectReasons, [p.id]: e.target.value })}
+                      className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2"
+                    />
+                    <div className="flex gap-2">
+                      <button onClick={async () => {
+                          handleProfileDecision(p.id, "approved");
+                          if (p.role === "agent") await supabase.from("profiles").update({ valid_id_verified: true }).eq("id", p.id);
+                          if (p.role === "manager") await supabase.from("profiles").update({ professional_credentials_verified: true }).eq("id", p.id);
+                          setPendingRegistrationsFull((prev) => prev.filter((x) => x.id !== p.id));
+                        }}
+                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Approve
+                      </button>
+                      <button onClick={() => handleRejectWithReason(p.id)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Reject with reason
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
             )}
-          </>
+          </div>
         )}
 
         {activeTab === "applications" &&

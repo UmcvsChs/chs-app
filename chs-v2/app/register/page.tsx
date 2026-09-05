@@ -33,11 +33,14 @@ function RegisterPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const agentInviteToken = searchParams.get("agent_invite");
-  const [role, setRole] = useState<Role>("buyer");
+  const prefillName = searchParams.get("prefillName");
+  const prefillPhone = searchParams.get("prefillPhone");
+  const prefillRole = searchParams.get("role");
+  const [role, setRole] = useState<Role>((prefillRole as Role) || "buyer");
   const [comprehensionPassed, setComprehensionPassed] = useState(false);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(prefillName || "");
   const [gender, setGender] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(prefillPhone || "");
   const [email, setEmail] = useState("");
   const [nin, setNin] = useState("");
   const [state, setState] = useState("Kaduna");
@@ -295,6 +298,15 @@ function RegisterPageContent() {
         });
       }
 
+      // Real, automatic linking per direct client request — if this
+      // registration came from a real tenant invitation link, claim
+      // it immediately, with zero extra step for the tenant.
+      const pendingInviteToken = sessionStorage.getItem("chs_pending_tenant_invite_token");
+      if (pendingInviteToken) {
+        sessionStorage.removeItem("chs_pending_tenant_invite_token");
+        await supabase.rpc("claim_tenant_invite", { p_token: pendingInviteToken });
+      }
+
       router.push(getReturnPath());
     } catch {
       setError("Could not reach CHS servers. Please check your connection and try again.");
@@ -375,7 +387,7 @@ function RegisterPageContent() {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number <span className="text-chs-red">*</span></label>
-            <input id="field-phone" type="tel" inputMode="numeric" maxLength={11} value={phone}
+            <input id="field-phone" type="tel" inputMode="numeric" autoComplete="tel" name="phone" maxLength={11} value={phone}
               onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="08XXXXXXXXX" className={fieldClass("field-phone", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
@@ -386,7 +398,7 @@ function RegisterPageContent() {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN) <span className="text-chs-red">*</span></label>
-            <input id="field-nin" type="text" inputMode="numeric" maxLength={11} value={nin}
+            <input id="field-nin" type="text" inputMode="numeric" autoComplete="off" name="nin-not-a-real-autofill-category" maxLength={11} value={nin}
               onChange={(e) => { setNin(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="11-digit NIN" className={fieldClass("field-nin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
@@ -427,13 +439,13 @@ function RegisterPageContent() {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Create PIN (6 digits) <span className="text-chs-red">*</span></label>
-            <input id="field-pin" type="password" inputMode="numeric" maxLength={6} value={pin}
+            <input id="field-pin" type="password" inputMode="numeric" autoComplete="new-password" name="new-pin" maxLength={6} value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
               placeholder="●●●●●●" className={fieldClass("field-pin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Confirm PIN <span className="text-chs-red">*</span></label>
-            <input id="field-pin-confirm" type="password" inputMode="numeric" maxLength={6} value={pinConfirm}
+            <input id="field-pin-confirm" type="password" inputMode="numeric" autoComplete="new-password" name="confirm-pin" maxLength={6} value={pinConfirm}
               onChange={(e) => setPinConfirm(e.target.value.replace(/\D/g, ""))}
               placeholder="●●●●●●" className={fieldClass("field-pin-confirm", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>

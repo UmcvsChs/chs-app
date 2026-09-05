@@ -206,6 +206,9 @@ export default function LoginPage() {
             <label className="text-xs font-semibold text-gray-600">Phone number</label>
             <input
               type="tel"
+              inputMode="numeric"
+              autoComplete="tel"
+              name="phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="08XXXXXXXXX"
@@ -218,6 +221,8 @@ export default function LoginPage() {
             <input
               type="password"
               inputMode="numeric"
+              autoComplete="current-password"
+              name="pin"
               maxLength={6}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}

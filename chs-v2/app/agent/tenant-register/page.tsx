@@ -30,12 +30,15 @@ interface RegisterEntry {
   id_document_url: string | null;
   selfie_url: string | null;
   created_at: string;
+  invite_token: string;
+  tenant_id: string | null;
 }
 
 export default function TenantRegisterPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [entries, setEntries] = useState<RegisterEntry[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +63,7 @@ export default function TenantRegisterPage() {
   async function loadEntries() {
     const { data } = await supabase
       .from("tenant_register")
-      .select("id, reference_number, full_name, phone, location_area, street_address, property_type, bedrooms, annual_rent, occupation, id_type, id_number, id_document_url, selfie_url, created_at")
+      .select("id, reference_number, full_name, phone, location_area, street_address, property_type, bedrooms, annual_rent, occupation, id_type, id_number, id_document_url, selfie_url, created_at, invite_token, tenant_id")
       .order("created_at", { ascending: false });
     setEntries(data || []);
     setLoading(false);
@@ -218,6 +221,26 @@ export default function TenantRegisterPage() {
                   {e.selfie_url && <a href={e.selfie_url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-chs-red underline">View selfie</a>}
                   {!e.id_document_url && !e.selfie_url && <span className="text-[10px] text-gray-400">No verification uploaded yet</span>}
                 </div>
+                {/* Real, new feature per direct client request: a
+                    real, shareable invitation link — the tenant
+                    clicks it, registers or logs in, and is
+                    automatically linked to this exact real record,
+                    with no manual step on either side. */}
+                {e.tenant_id ? (
+                  <p className="text-[10px] font-bold text-green-700 mt-1.5">✓ Tenant has claimed this real invite</p>
+                ) : (
+                  <button
+                    onClick={() => {
+                      const link = `${window.location.origin}/invite/${e.invite_token}`;
+                      navigator.clipboard.writeText(link);
+                      setCopiedId(e.id);
+                      setTimeout(() => setCopiedId(null), 2000);
+                    }}
+                    className="text-[10px] text-chs-red underline mt-1.5"
+                  >
+                    {copiedId === e.id ? "✓ Real invite link copied!" : "Copy real invite link to send"}
+                  </button>
+                )}
               </div>
             ))
           )}
