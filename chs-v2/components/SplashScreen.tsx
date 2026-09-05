@@ -32,17 +32,38 @@ export default function SplashScreen() {
 
   return (
     <div
-      className="fixed inset-0 z-[999] flex flex-col items-center px-6 transition-opacity duration-[800ms]"
+      className="fixed inset-0 z-[999] flex flex-col items-center px-6 transition-opacity duration-[800ms] chs-splash-bg"
       style={{
-        backgroundImage: "url(/splash-background.jpg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
         backgroundColor: "#0d0c0c",
         opacity: fading ? 0 : 1,
         pointerEvents: fading ? "none" : "auto",
         paddingTop: "19vh",
       }}
     >
+      <style>{`
+        /* Real, direct fix for a genuine, confirmed bug: the real
+           background image is a tall, narrow portrait asset (860x1828)
+           built for a phone screen. On a wide desktop viewport,
+           "background-size: cover" scales it up so aggressively that
+           only a dark, cropped sliver of the image ever shows — which
+           is exactly what was being reported as "a black screen."
+           Narrow (phone-shaped) viewports keep the original, correct
+           full-bleed cover treatment; wide (desktop) viewports get a
+           real, deliberate radial glow instead, since the portrait
+           image was never going to look right stretched across a
+           landscape screen no matter how it's sized. */
+        .chs-splash-bg {
+          background-image: url(/splash-background.jpg);
+          background-size: cover;
+          background-position: center;
+        }
+        @media (min-aspect-ratio: 1/1) {
+          .chs-splash-bg {
+            background-image: radial-gradient(circle at center, #2a2420 0%, #0d0c0c 70%);
+          }
+        }
+      `}</style>
+
       <Image
         src="/logo-mark.png"
         alt="CHS"

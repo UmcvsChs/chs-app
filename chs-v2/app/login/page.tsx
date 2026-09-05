@@ -14,6 +14,7 @@ const ROLE_OPTIONS = [
   { value: "tenant", label: "Tenant" },
   { value: "owner", label: "Owner" },
   { value: "host", label: "Host" },
+  { value: "developer", label: "Commercial Developer" },
   { value: "agent", label: "Agent" },
   { value: "manager", label: "Manager" },
   { value: "admin", label: "Admin" },
@@ -28,6 +29,7 @@ const ROLE_DISPLAY_NAMES: Record<string, string> = {
   tenant: "Tenant",
   owner: "Property Owner",
   host: "Host",
+  developer: "Commercial Developer",
   agent: "Agent",
   manager: "Property Manager",
   admin: "Admin",
@@ -154,6 +156,7 @@ export default function LoginPage() {
       tenant: "/tenant",
       buyer: "/",
       guest: "/guest",
+      developer: "/developer",
       staff: "/staff",
     };
     router.push(roleToPath[selectedRole] || "/");

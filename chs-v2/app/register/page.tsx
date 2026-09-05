@@ -339,6 +339,7 @@ function RegisterPageContent() {
       tenant: "/tenant",
       buyer: "/",
       guest: "/guest",
+      developer: "/developer",
       staff: "/staff",
       others: "/choose-category",
     };

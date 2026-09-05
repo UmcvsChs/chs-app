@@ -54,7 +54,7 @@ export default function BiometricLogin({ onLoggedIn }: { onLoggedIn: () => void 
       const { data: { user } } = await supabase.auth.getUser();
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", user?.id).single();
       const roleToPath: Record<string, string> = {
-        admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager", tenant: "/tenant", buyer: "/", guest: "/guest", staff: "/staff",
+        admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager", tenant: "/tenant", buyer: "/", guest: "/guest", staff: "/staff", developer: "/developer",
       };
 
       onLoggedIn();
