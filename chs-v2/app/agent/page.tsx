@@ -89,6 +89,8 @@ export default function AgentDashboard() {
   const [teamRoleLabel, setTeamRoleLabel] = useState("");
   const [invitingTeam, setInvitingTeam] = useState(false);
   const [teamResult, setTeamResult] = useState<string | null>(null);
+  const [showSubscriptionOffer, setShowSubscriptionOffer] = useState(false);
+  const [subscriptionSubmitting, setSubscriptionSubmitting] = useState(false);
   const [teamMembers, setTeamMembers] = useState<{ id: string; role_label: string; member: { full_name: string } | null }[]>([]);
   const [teamReports, setTeamReports] = useState<{ id: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; created_at: string; team_members: { role_label: string } | null }[]>([]);
 
@@ -116,6 +118,10 @@ export default function AgentDashboard() {
     const { error } = await supabase.rpc("invite_team_member", { p_phone: teamPhone.trim(), p_role_label: teamRoleLabel.trim() });
     setInvitingTeam(false);
     if (error) {
+      if (error.message.includes("subscription_required")) {
+        setShowSubscriptionOffer(true);
+        return;
+      }
       setTeamResult(error.message);
       return;
     }
@@ -123,6 +129,18 @@ export default function AgentDashboard() {
     setTeamPhone("");
     setTeamRoleLabel("");
     loadTeamData();
+  }
+
+  async function handlePurchaseSubscription(planType: "monthly" | "six_month" | "annual") {
+    setSubscriptionSubmitting(true);
+    const { data, error } = await supabase.rpc("purchase_team_subscription", { p_plan_type: planType });
+    setSubscriptionSubmitting(false);
+    if (error) {
+      setTeamResult(error.message.includes("insufficient_balance") ? "Insufficient wallet balance for this real plan." : error.message);
+      return;
+    }
+    setShowSubscriptionOffer(false);
+    setTeamResult(`✓ Subscribed — ${data.real_months_of_access} real months of access for ₦${data.amount_paid.toLocaleString()}.`);
   }
 
   async function handleRemoveTeamMember(teamMemberId: string) {
@@ -421,6 +439,32 @@ export default function AgentDashboard() {
                 {invitingTeam ? "Adding..." : "+ Add real team member"}
               </button>
               {teamResult && <p className="text-[10px] text-gray-500 mb-2">{teamResult}</p>}
+
+              {/* Real, new revenue feature per direct client decision:
+                  free for up to 2 real staff, a real subscription
+                  required from the 3rd onward, with real discounts
+                  for longer commitments. */}
+              {showSubscriptionOffer && (
+                <div className="bg-chs-amber-light rounded-lg p-3 mb-2">
+                  <p className="text-xs font-bold text-chs-charcoal mb-1">You&apos;ve reached the real free limit (2 staff)</p>
+                  <p className="text-[10px] text-gray-500 mb-2">A real, active subscription is required to add a 3rd team member.</p>
+                  <button onClick={() => handlePurchaseSubscription("monthly")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    Monthly — pay 1 month, get 1 month
+                  </button>
+                  <button onClick={() => handlePurchaseSubscription("six_month")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    6 months — pay 6, get <strong>2 free</strong> (8 real months)
+                  </button>
+                  <button onClick={() => handlePurchaseSubscription("annual")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    12 months — pay 12, get <strong>6 free</strong> (18 real months)
+                  </button>
+                  <button onClick={() => setShowSubscriptionOffer(false)} className="text-[10px] text-gray-400 underline mt-1">
+                    Not now
+                  </button>
+                </div>
+              )}
 
               {teamMembers.map((m) => (
                 <div key={m.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">

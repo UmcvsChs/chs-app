@@ -54,6 +54,48 @@ export default function ManagerDashboard() {
   const [paymentHistoryTenancy, setPaymentHistoryTenancy] = useState<TenancyWithProperty | null>(null);
   const [paymentRecords, setPaymentRecords] = useState<{ description: string | null; amount: number; created_at: string; direction: string }[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  // Real, direct fix for a genuine, confirmed gap found while
+  // building the team-subscription feature: Manager had no real team
+  // management UI at all, even though staff tools were explicitly
+  // meant for both Agent and Manager equally.
+  const [showTeamSection, setShowTeamSection] = useState(false);
+  const [teamPhone, setTeamPhone] = useState("");
+  const [teamRoleLabel, setTeamRoleLabel] = useState("");
+  const [invitingTeam, setInvitingTeam] = useState(false);
+  const [teamResult, setTeamResult] = useState<string | null>(null);
+  const [showSubscriptionOffer, setShowSubscriptionOffer] = useState(false);
+  const [subscriptionSubmitting, setSubscriptionSubmitting] = useState(false);
+
+  async function handleInviteTeamMember() {
+    if (!teamPhone.trim() || !teamRoleLabel.trim()) return;
+    setInvitingTeam(true);
+    setTeamResult(null);
+    const { error } = await supabase.rpc("invite_team_member", { p_phone: teamPhone.trim(), p_role_label: teamRoleLabel.trim() });
+    setInvitingTeam(false);
+    if (error) {
+      if (error.message.includes("subscription_required")) {
+        setShowSubscriptionOffer(true);
+        return;
+      }
+      setTeamResult(error.message);
+      return;
+    }
+    setTeamResult("✓ Real team member added.");
+    setTeamPhone("");
+    setTeamRoleLabel("");
+  }
+
+  async function handlePurchaseSubscription(planType: "monthly" | "six_month" | "annual") {
+    setSubscriptionSubmitting(true);
+    const { data, error } = await supabase.rpc("purchase_team_subscription", { p_plan_type: planType });
+    setSubscriptionSubmitting(false);
+    if (error) {
+      setTeamResult(error.message.includes("insufficient_balance") ? "Insufficient wallet balance for this real plan." : error.message);
+      return;
+    }
+    setShowSubscriptionOffer(false);
+    setTeamResult(`✓ Subscribed — ${data.real_months_of_access} real months of access for ₦${data.amount_paid.toLocaleString()}.`);
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -235,6 +277,51 @@ export default function ManagerDashboard() {
       )}
 
       <div className="px-4 py-4 space-y-5">
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <button onClick={() => setShowTeamSection(!showTeamSection)} className="text-sm font-bold text-chs-charcoal">
+            👥 {showTeamSection ? "Hide" : "Manage"} My Team
+          </button>
+          {showTeamSection && (
+            <div className="mt-3">
+              <div className="flex gap-1.5 mb-2">
+                <input type="tel" placeholder="Staff's real CHS phone number" value={teamPhone}
+                  onChange={(e) => setTeamPhone(e.target.value)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                <input type="text" placeholder="Role (e.g. Office Staff)" value={teamRoleLabel}
+                  onChange={(e) => setTeamRoleLabel(e.target.value)}
+                  className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+              </div>
+              <button onClick={handleInviteTeamMember} disabled={invitingTeam}
+                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50 mb-2">
+                {invitingTeam ? "Adding..." : "+ Add real team member"}
+              </button>
+              {teamResult && <p className="text-[10px] text-gray-500 mb-2">{teamResult}</p>}
+
+              {showSubscriptionOffer && (
+                <div className="bg-chs-amber-light rounded-lg p-3 mb-2">
+                  <p className="text-xs font-bold text-chs-charcoal mb-1">You&apos;ve reached the real free limit (2 staff)</p>
+                  <p className="text-[10px] text-gray-500 mb-2">A real, active subscription is required to add a 3rd team member.</p>
+                  <button onClick={() => handlePurchaseSubscription("monthly")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    Monthly — pay 1 month, get 1 month
+                  </button>
+                  <button onClick={() => handlePurchaseSubscription("six_month")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    6 months — pay 6, get <strong>2 free</strong> (8 real months)
+                  </button>
+                  <button onClick={() => handlePurchaseSubscription("annual")} disabled={subscriptionSubmitting}
+                    className="w-full py-1.5 rounded-full bg-white border border-gray-200 text-[11px] font-semibold mb-1.5 text-left px-3">
+                    12 months — pay 12, get <strong>6 free</strong> (18 real months)
+                  </button>
+                  <button onClick={() => setShowSubscriptionOffer(false)} className="text-[10px] text-gray-400 underline mt-1">
+                    Not now
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-2">Managed tenancies ({tenancies.length})</p>
           {tenancies.length === 0 ? (
