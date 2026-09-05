@@ -28,6 +28,7 @@ import RoleBadge from "@/components/RoleBadge";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import OfferMessageThread from "@/components/OfferMessageThread";
 import MessageThread from "@/components/MessageThread";
+import DocumentViewLink from "@/components/DocumentViewLink";
 
 interface TenancyBasic {
   id: string;
@@ -1184,7 +1185,7 @@ export default function OwnerDashboard() {
                   admin screen anywhere ever showed it, defeating the
                   actual, stated purpose of collecting it at all. */}
               {b.guest_id_document_url && (
-                <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+                <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
               )}
               <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />

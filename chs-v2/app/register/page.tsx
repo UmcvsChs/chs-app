@@ -88,6 +88,9 @@ function RegisterPageContent() {
     // real, uploaded ID document is what's actually checked.
     if (role !== "agent" && role !== "manager") {
       if (!idType) return { message: "Please select which type of ID you're uploading.", fieldId: "field-reg-id-type" };
+      if (idType !== "National ID (NIN slip)" && !idNumber.trim()) {
+        return { message: `Please enter your real ${idType} number.`, fieldId: "field-reg-id-number" };
+      }
       if (!idFile) return { message: "Please upload a real photo or scan of your ID — a typed NIN number alone cannot be verified.", fieldId: "field-reg-id-file" };
     }
     if (!/^\d{6}$/.test(pin)) return { message: "Please create a 6-digit PIN (numbers only).", fieldId: "field-pin" };
@@ -293,7 +296,7 @@ function RegisterPageContent() {
         await supabase.from("buyer_id_verifications").insert({
           user_id: userId,
           id_type: idType,
-          id_number: nin.trim(),
+          id_number: idType === "National ID (NIN slip)" ? nin.trim() : idNumber.trim(),
           id_document_url: idDocumentUrl,
           status: "pending",
         });
@@ -425,6 +428,21 @@ function RegisterPageContent() {
                   {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              {/* Real, direct fix for a genuine, confirmed bug: any ID
+                  type other than NIN had nowhere to actually enter its
+                  own real number — the system was silently saving the
+                  person's NIN as the "id_number" regardless of which
+                  document they actually chose, so a driver's licence
+                  or passport number was never captured at all. */}
+              {idType && idType !== "National ID (NIN slip)" && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">Your real {idType} number <span className="text-chs-red">*</span></label>
+                  <input id="field-reg-id-number" type="text" value={idNumber}
+                    onChange={(e) => { setIdNumber(e.target.value); setError(null); }}
+                    placeholder={`The real number on your ${idType}`}
+                    className={fieldClass("field-reg-id-number", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload a real photo or scan of this ID <span className="text-chs-red">*</span></label>
                 <input id="field-reg-id-file" type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}

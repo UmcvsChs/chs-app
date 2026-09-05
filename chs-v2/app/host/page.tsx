@@ -12,6 +12,7 @@ import ShortletMessageThread from "@/components/ShortletMessageThread";
 import HostBookingDecision from "@/components/HostBookingDecision";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import ShortletRating from "@/components/ShortletRating";
+import DocumentViewLink from "@/components/DocumentViewLink";
 
 // Real, new dashboard completing a direct, thorough client decision:
 // Host is a genuine, separate role from Owner — a real, different
@@ -129,7 +130,7 @@ export default function HostDashboardPage() {
                     <p className="text-[10px] text-gray-500">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
                     <p className="text-[10px] text-gray-500">Your real net if accepted: {formatNaira(b.total_price - b.host_commission_amount)}</p>
                     {b.guest_id_document_url && (
-                      <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+                      <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
                     )}
                     <HostBookingDecision bookingId={b.id} onDecided={() => setBookings((prev) => prev.filter((x) => x.id !== b.id))} />
                   </div>
@@ -145,7 +146,7 @@ export default function HostDashboardPage() {
                     <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
                     <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
                     {b.guest_id_document_url && (
-                      <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+                      <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
                     )}
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />

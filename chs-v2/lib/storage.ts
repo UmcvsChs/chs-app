@@ -9,6 +9,30 @@ import { compressImage } from "./imageCompression";
 // Sensitive documents now go to a genuinely private bucket, accessed
 // only through a real, signed, time-limited URL — never a permanent
 // public link.
+// Real, critical fix per a direct, confirmed client report: admin's
+// "view document" links were going nowhere — a real 403, verified
+// directly against a live, stored URL. The stored signed URL is
+// fragile by nature (a JWT secret rotation, or any change to how the
+// project signs URLs, silently breaks every document link ever
+// generated, with no way to tell without actually testing one). The
+// real, correct fix — already flagged as the right long-term pattern
+// when this was first built — is to never trust a stored URL long
+// term: extract the real file path from it, and generate a fresh,
+// live signed URL at the moment someone actually clicks to view it,
+// using their own real, authenticated session.
+export async function getFreshDocumentUrl(storedUrl: string): Promise<string | null> {
+  const match = storedUrl.match(/private-documents\/(.+?)(?:\?|$)/);
+  if (!match) return storedUrl;
+  const path = decodeURIComponent(match[1]);
+
+  const { data, error } = await supabase.storage.from("private-documents").createSignedUrl(path, 3600);
+  if (error || !data) {
+    console.error("Could not generate a fresh, real signed URL:", error?.message);
+    return null;
+  }
+  return data.signedUrl;
+}
+
 export async function uploadDocument(
   file: File,
   userId: string,

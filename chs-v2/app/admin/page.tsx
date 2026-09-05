@@ -16,6 +16,7 @@ import { Offer } from "@/types/offer";
 import { Artisan } from "@/types/artisan";
 import { Inspection } from "@/types/inspection";
 import GuidePrompt from "@/components/GuidePrompt";
+import DocumentViewLink from "@/components/DocumentViewLink";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentManager } from "@/components/EngageDocuments";
 
@@ -87,6 +88,19 @@ export default function AdminDashboard() {
     id_type: string | null; id_number: string | null; document_url: string | null;
   }[]>([]);
   const [rejectReasons, setRejectReasons] = useState<Record<string, string>>({});
+  const [propertySearchQuery, setPropertySearchQuery] = useState("");
+  const [propertySearchResults, setPropertySearchResults] = useState<{
+    id: string; reference_number: string; title: string; purpose: string; status: string; price: number;
+    location_area: string; location_state: string; owner_name: string; owner_phone: string; agent_name: string | null;
+  }[]>([]);
+  const [propertySearchLoading, setPropertySearchLoading] = useState(false);
+
+  async function handlePropertySearch() {
+    setPropertySearchLoading(true);
+    const { data } = await supabase.rpc("admin_search_properties", { p_query: propertySearchQuery.trim() });
+    setPropertySearchResults(data || []);
+    setPropertySearchLoading(false);
+  }
 
   useEffect(() => {
     supabase.rpc("get_pending_registrations_full").then(({ data }) => setPendingRegistrationsFull(data || []));
@@ -478,7 +492,7 @@ export default function AdminDashboard() {
     // table, not a growing queue, so it's left unlimited.
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
+      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -2134,9 +2148,7 @@ export default function AdminDashboard() {
                         <p className="text-xs text-chs-charcoal">
                           <span className="font-semibold">{p.role === "manager" ? "Reg. number" : "ID number"}:</span> {p.id_number || "—"}
                         </p>
-                        <a href={p.document_url} target="_blank" rel="noreferrer" className="text-[11px] text-chs-red underline font-semibold block mt-1">
-                          🔍 View the real, uploaded document — compare the name and number against what&apos;s above
-                        </a>
+                        <DocumentViewLink url={p.document_url} label="🔍 View the real, uploaded document — compare the name and number against what's above" />
                       </>
                     ) : (
                       <p className="text-xs font-bold text-chs-red mt-1">⚠️ No real document uploaded — nothing to verify. Do not approve blind.</p>
@@ -2200,6 +2212,19 @@ export default function AdminDashboard() {
                 <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
                 <p className="text-[11px] text-gray-500">Move-in: {app.move_in_date} {app.guarantor_consented ? "· ✓ Consent given" : "· ⚠️ No consent recorded"}</p>
 
+                {/* Real, direct fix for a genuine, confirmed gap: an
+                    application sitting here while the real owner
+                    decides was previously invisible to admin
+                    entirely — no way to trace it, see the property,
+                    or see who the owner even was. Now always visible
+                    with a clear, honest status, whether or not admin
+                    has any action to take right now. */}
+                {app.status === "awaiting_owner_decision" && (
+                  <p className="text-[10px] font-bold text-chs-amber-dark bg-chs-amber-light rounded-lg px-2 py-1.5 mt-2">
+                    ⏳ Sent to the real owner ({app.properties?.profiles?.full_name}) — awaiting their decision. Nothing for admin to do yet.
+                  </p>
+                )}
+
                 {app.status === "pending" && (
                   <button onClick={() => handleApplicationScreened(app.id)}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -2221,8 +2246,41 @@ export default function AdminDashboard() {
             ))
           ))}
 
-        {activeTab === "properties" &&
-          (pendingProperties.length === 0 ? (
+        {activeTab === "properties" && (
+          <div>
+            {/* Real, new search tool completing a direct, serious
+                client concern: two real properties shared the exact
+                same title, with no way to tell them apart or trace
+                their real owner. Every property now has its own real,
+                permanent reference number — search by that, by title,
+                or by the real owner's name/phone. */}
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={propertySearchQuery} onChange={(e) => setPropertySearchQuery(e.target.value)}
+                placeholder="Search by reference number, title, or real owner name/phone"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={handlePropertySearch} className="px-4 py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
+                {propertySearchLoading ? "..." : "Search"}
+              </button>
+            </div>
+            {propertySearchResults.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Real search results</p>
+                {propertySearchResults.map((p) => (
+                  <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{p.title}</p>
+                      <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{p.reference_number}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">{p.location_area}, {p.location_state} · {p.purpose} · {formatNaira(p.price)}</p>
+                    <p className="text-xs text-chs-charcoal mt-1">👤 Owner: {p.owner_name} — {p.owner_phone}</p>
+                    {p.agent_name && <p className="text-xs text-gray-500">Managed by: {p.agent_name}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Awaiting verification</p>
+            {pendingProperties.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No properties awaiting verification.</p>
           ) : (
             pendingProperties.map((prop) => (
@@ -2241,7 +2299,10 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))
-          ))}
+          )}
+          </div>
+        )}
+
 
         {activeTab === "disputes" &&
           (openDisputes.length === 0 ? (
@@ -2544,10 +2605,10 @@ export default function AdminDashboard() {
                   <p className="text-xs text-gray-500">{t.id_type} — {t.id_number}</p>
                   <div className="flex gap-3 mt-1">
                     {t.id_document_url && (
-                      <a href={t.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View real ID</a>
+                      <DocumentViewLink url={t.id_document_url} label="View real ID" />
                     )}
                     {t.selfie_url && (
-                      <a href={t.selfie_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View real selfie</a>
+                      <DocumentViewLink url={t.selfie_url} label="View real selfie" />
                     )}
                   </div>
                   <p className="text-[9px] text-gray-400 mt-1">Recorded {new Date(t.created_at).toLocaleDateString()}</p>
