@@ -27,15 +27,17 @@ export interface SearchFilters {
 }
 
 const EMPTY_FILTERS: SearchFilters = {
-  purpose: "rent", state: "", lga: "", area: "", landmark: "",
+  purpose: "", state: "", lga: "", area: "", landmark: "",
   minPrice: "", maxPrice: "", propertyType: "", minBedrooms: "",
 };
 
 const PURPOSES = [
+  { value: "", label: "Any" },
   { value: "rent", label: "To Rent" },
   { value: "sale", label: "To Buy" },
   { value: "lease", label: "To Lease" },
   { value: "hire", label: "To Hire" },
+  { value: "shortlet", label: "Shortlet / Hotel" },
 ];
 
 const BEDROOM_OPTIONS = ["Any", "1+", "2+", "3+", "4+"];
@@ -134,7 +136,7 @@ export default function PropertySearch({
         <div className="space-y-3 pb-3">
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">🏠 What are you looking for?</p>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {PURPOSES.map((p) => (
                 <button key={p.value} onClick={() => setFilters({ ...filters, purpose: p.value })}
                   className={`py-2 rounded-lg text-[10px] font-bold ${filters.purpose === p.value ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}>

@@ -347,9 +347,16 @@ export default function HomePageClient({ properties, platformStats }: { properti
 
       <main className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {sortedProperties.length === 0 ? (
-          <p className="col-span-full text-center text-sm text-gray-400 py-12">
-            {searchFilters ? "No properties match your search." : "No properties found for this filter yet."}
-          </p>
+          <div className="col-span-full text-center py-12">
+            <p className="text-sm font-semibold text-chs-charcoal mb-2">
+              {searchFilters ? "No properties match your real search." : "No properties found for this filter yet."}
+            </p>
+            {searchFilters && (
+              <button onClick={() => setSearchFilters(null)} className="text-sm font-semibold text-chs-red underline">
+                Clear my search filters
+              </button>
+            )}
+          </div>
         ) : (
           sortedProperties.map((property) => (
             <PropertyCard key={property.id} property={property} />
@@ -407,7 +414,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
       </footer>
 
       <div className="h-16" />
-      <BottomNav />
+      <BottomNav onSearchClick={() => setForceSearchOpen(true)} />
     </div>
   );
 }

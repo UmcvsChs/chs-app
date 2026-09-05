@@ -12,7 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 // exists; a few genuinely were only ever "coming soon" placeholders
 // even in the original app, and are kept that way here rather than
 // invented as something real.
-export default function BottomNav() {
+export default function BottomNav({ onSearchClick }: { onSearchClick?: () => void }) {
   const router = useRouter();
   const { session, signOut } = useAuth();
   const [showMore, setShowMore] = useState(false);
@@ -48,7 +48,7 @@ export default function BottomNav() {
           <span className="text-lg">🏠</span>
           <span className="text-[9px] font-semibold text-chs-charcoal">Home</span>
         </button>
-        <button onClick={() => { router.push("/"); }} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
+        <button onClick={() => { if (onSearchClick) { onSearchClick(); } else { router.push("/"); } }} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
           <span className="text-lg">🔍</span>
           <span className="text-[9px] text-gray-500">Search</span>
         </button>
