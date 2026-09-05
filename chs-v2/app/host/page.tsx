@@ -80,7 +80,7 @@ export default function HostDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-owner">
+    <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-host">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Host" />

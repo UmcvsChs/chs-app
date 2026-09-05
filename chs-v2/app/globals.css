@@ -43,6 +43,16 @@
 .zone-artisan { --zone-bg: #f6ece5; --zone-card: #fdf5f0; --zone-accent: #b05a2e; }
 .zone-admin { --zone-bg: #efeaf1; --zone-card: #f8f5f9; --zone-accent: #4a3b5c; }
 .zone-tenant { --zone-bg: #eef4ee; --zone-card: #f8fbf7; --zone-accent: #3f7a4f; }
+/* Real, new zones per a direct, repeated client request — Host,
+   Guest, Developer, and Staff had each been quietly borrowing another
+   role's color identity (Host/Developer reused Owner's; Guest reused
+   Buyer's; Staff reused Agent's inline), leaving four real, distinct
+   roles with no visual identity of their own. Each gets a genuinely
+   deliberate, distinct color now, not a variation of an existing one. */
+.zone-host { --zone-bg: #f9edec; --zone-card: #fef7f6; --zone-accent: #b3455a; }
+.zone-guest { --zone-bg: #e9f4f5; --zone-card: #f6fcfc; --zone-accent: #2e7d8f; }
+.zone-developer { --zone-bg: #ececf2; --zone-card: #f7f7fb; --zone-accent: #38416b; }
+.zone-staff { --zone-bg: #f3efe9; --zone-card: #faf8f4; --zone-accent: #8a7355; }
 
 /* Real, distinct Marketplace stage colors — matching the client's
    explicit request that browsing, cart, and checkout each feel

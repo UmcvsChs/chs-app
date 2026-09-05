@@ -235,6 +235,7 @@ export default function LoginPage() {
               placeholder="●●●●●●"
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
             />
+            <Link href="/forgot-pin" className="text-[11px] text-chs-red underline mt-1.5 inline-block">Forgot your PIN?</Link>
           </div>
 
           {error && (

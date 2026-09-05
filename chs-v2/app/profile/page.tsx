@@ -14,6 +14,11 @@ import { formatNaira } from "@/lib/format";
 // A real profile picture / avatar — genuinely useful as a means of
 // identification, especially for agents and other professionals where
 // a name alone can be ambiguous. Any registered person can upload one.
+const ROLE_DASHBOARD_PATHS: Record<string, string> = {
+  admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager",
+  tenant: "/tenant", buyer: "/", guest: "/guest", staff: "/staff", developer: "/developer",
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { session, profile, loading: authLoading, refreshProfile } = useAuth();
@@ -194,7 +199,28 @@ export default function ProfilePage() {
           </div>
 
           <p className="text-sm font-semibold text-chs-charcoal mb-1">{profile?.full_name}</p>
-          <p className="text-xs text-gray-400 mb-4 capitalize">{profile?.role}</p>
+          <p className="text-xs text-gray-400 mb-2 capitalize">{profile?.role}</p>
+
+          {/* Real, direct fix per a repeated client request: every
+              real role on this account, with a genuine, one-tap way
+              to switch dashboards — and a real, visible way to add
+              another role without ever leaving this page. */}
+          {profile && [profile.role, ...(profile.secondary_roles || [])].length > 1 && (
+            <div className="w-full mb-3">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">My real roles — tap to switch</p>
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {[profile.role, ...(profile.secondary_roles || [])].map((r) => (
+                  <Link key={r} href={ROLE_DASHBOARD_PATHS[r] || "/"}
+                    className="text-[10px] font-semibold px-2.5 py-1 rounded-full bg-chs-amber-light text-chs-charcoal capitalize">
+                    {r}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+          <Link href="/link-account" className="text-[11px] font-semibold text-chs-red underline mb-4 block">
+            + Add another role to my account
+          </Link>
 
           <label className="w-full">
             <input type="file" accept="image/*" onChange={handleFileChange} disabled={uploading} className="hidden" />

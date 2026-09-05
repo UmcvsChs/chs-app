@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import { useAuth } from "@/contexts/AuthContext";
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 const PROFESSIONS = [
@@ -29,6 +30,7 @@ type Step = "lookup" | "confirm" | "pin" | "role_details" | "success";
 // earlier work (lookup-account-for-linking, add-role-to-account), which
 // needed no changes at all — only this real frontend flow was missing.
 export default function LinkAccountPage() {
+  const { session, profile } = useAuth();
   const [step, setStep] = useState<Step>("lookup");
   const [phone, setPhone] = useState("");
   const [foundAccount, setFoundAccount] = useState<{ id: string; full_name: string; all_roles: string[] } | null>(null);
@@ -53,6 +55,22 @@ export default function LinkAccountPage() {
   const [regNumber, setRegNumber] = useState("");
   const [operatingStates, setOperatingStates] = useState("");
   const [certFile, setCertFile] = useState<File | null>(null);
+
+  // Real, direct fix per a repeated, direct client request: someone
+  // already logged in has already proven who they are — asking them
+  // to look themselves up by phone and re-enter their PIN, the way a
+  // logged-out visitor genuinely needs to, was real, unnecessary
+  // friction. If a real session already exists, skip straight to
+  // picking the new role, using their own, already-authenticated
+  // identity and access token.
+  useEffect(() => {
+    if (session && profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFoundAccount({ id: session.user.id, full_name: profile.full_name, all_roles: [profile.role, ...(profile.secondary_roles || [])] });
+      setAccessToken(session.access_token);
+      setStep("role_details");
+    }
+  }, [session, profile]);
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -162,15 +180,24 @@ export default function LinkAccountPage() {
   }
 
   if (step === "success") {
+    const roleToPath: Record<string, string> = {
+      owner: "/owner", host: "/host", tenant: "/tenant", agent: "/agent", manager: "/manager",
+    };
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
         <p className="text-lg font-semibold text-chs-charcoal mb-2">✓ Role added to your account</p>
         <p className="text-sm text-gray-500 mb-4">
           {newRole === "agent" || newRole === "manager"
             ? "CHS will review your credentials before this role is fully active."
+            : session
+            ? "Your real account now has this role — no need to log in again."
             : "You can now log in and select this role."}
         </p>
-        <Link href="/login" className="text-sm font-semibold text-chs-red">Go to login</Link>
+        {session ? (
+          <Link href={roleToPath[newRole] || "/"} className="text-sm font-semibold text-chs-red">Go to my new dashboard</Link>
+        ) : (
+          <Link href="/login" className="text-sm font-semibold text-chs-red">Go to login</Link>
+        )}
       </div>
     );
   }
@@ -183,7 +210,7 @@ export default function LinkAccountPage() {
             the entire app, exactly as reported. A real step-back
             action now exists at every stage, plus a genuine exit. */}
         <div className="flex justify-between items-center mb-4">
-          {step !== "lookup" ? (
+          {step !== "lookup" && !(session && step === "role_details") ? (
             <button
               type="button"
               onClick={() => {
@@ -197,9 +224,11 @@ export default function LinkAccountPage() {
               ← Back
             </button>
           ) : <span />}
-          <Link href="/login" className="text-xs text-gray-400">✕ Cancel</Link>
+          <Link href={session ? "/" : "/login"} className="text-xs text-gray-400">✕ Cancel</Link>
         </div>
-        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Link a new role to your account</h1>
+        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">
+          {session ? "Add a new role to your account" : "Link a new role to your account"}
+        </h1>
         <p className="text-sm text-gray-500 mb-6">
           Already have a CHS account? Add another role to it instead of creating a new one.
         </p>

@@ -27,7 +27,7 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
     { icon: "🏠", label: "My Shortlet Bookings", href: "/my-bookings" },
     { icon: "📝", label: "Property request", href: "/concierge" },
     { icon: "🗺️", label: "Area guide", href: null, note: "Coming soon — was a placeholder in the original app too" },
-    { icon: "❓", label: "Help & FAQs", href: null, note: "Coming soon — was a placeholder in the original app too" },
+    { icon: "❓", label: "Help & FAQs", href: "/faq" },
     { icon: "📞", label: "Contact us", href: "/contact" },
   ];
 
