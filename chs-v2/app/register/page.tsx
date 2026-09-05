@@ -77,8 +77,15 @@ function RegisterPageContent() {
 
   function validate(): { message: string; fieldId: string } | null {
     if (!name.trim()) return { message: "Please enter your full name.", fieldId: "field-name" };
-    if (!phone.trim()) return { message: "Please enter your phone number.", fieldId: "field-phone" };
+    if (!/^\d{11}$/.test(phone.trim())) return { message: "Please enter a valid 11-digit Nigerian phone number.", fieldId: "field-phone" };
     if (!/^\d{11}$/.test(nin.trim())) return { message: "Please enter a valid 11-digit NIN.", fieldId: "field-nin" };
+
+    // Real, critical fix — a typed NIN number alone proves nothing; a
+    // real, uploaded ID document is what's actually checked.
+    if (role !== "agent" && role !== "manager") {
+      if (!idType) return { message: "Please select which type of ID you're uploading.", fieldId: "field-reg-id-type" };
+      if (!idFile) return { message: "Please upload a real photo or scan of your ID — a typed NIN number alone cannot be verified.", fieldId: "field-reg-id-file" };
+    }
     if (!/^\d{6}$/.test(pin)) return { message: "Please create a 6-digit PIN (numbers only).", fieldId: "field-pin" };
     if (pin !== pinConfirm) return { message: "Your PIN and confirmation don't match.", fieldId: "field-pin-confirm" };
 
@@ -170,7 +177,29 @@ function RegisterPageContent() {
 
       const result = await response.json();
       if (!response.ok || result.error) {
-        setError(result.error || "Registration failed. Please try again.");
+        // Real, critical fix — the actual, live root cause of a
+        // real, repeated, five-times-reported complaint: the
+        // system's real internal account email is generated from
+        // the phone number, not the visible email field. When
+        // someone tries to register a second time with a phone
+        // number that already has a real account, the raw technical
+        // error from the authentication system happens to mention
+        // "email" — and every real person reading it reasonably
+        // assumes it's about the email field they just typed, not a
+        // hidden, internal one tied to their phone number. Confirmed
+        // this directly against the real, live database before
+        // writing this fix — changing the visible email field could
+        // never have solved it, because it was never the real cause.
+        const rawError = (result.error || "").toLowerCase();
+        if (rawError.includes("already registered") || rawError.includes("already exists") || rawError.includes("email")) {
+          setError(
+            "This phone number already has a real CHS account. Changing your email will not fix this — the conflict is your phone number, not your email. " +
+            "If this is genuinely your account, log in and use \"Need a role added to your existing account? Link it here\" instead of registering again. " +
+            "If this isn't your phone number, please double-check it."
+          );
+        } else {
+          setError(result.error || "Registration failed. Please try again.");
+        }
         setSubmitting(false);
         return;
       }
@@ -247,6 +276,22 @@ function RegisterPageContent() {
           accepts_investment_capital: acceptsInvestment === "yes",
           years_experience: devExperience,
           portfolio_url: portfolioUrl,
+        });
+      } else if (idFile && idType) {
+        // Real, critical fix — every other role (Buyer, Guest, Tenant,
+        // Owner, Staff, Others) now genuinely uploads and submits a
+        // real ID document at registration, feeding directly into
+        // the same real admin review screen already built for this —
+        // rather than an account reaching "pending approval" having
+        // only ever had a self-typed NIN number with nothing to
+        // actually check it against.
+        const idDocumentUrl = await uploadDocument(idFile, userId, "registration-id");
+        await supabase.from("buyer_id_verifications").insert({
+          user_id: userId,
+          id_type: idType,
+          id_number: nin.trim(),
+          id_document_url: idDocumentUrl,
+          status: "pending",
         });
       }
 
@@ -330,7 +375,8 @@ function RegisterPageContent() {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number <span className="text-chs-red">*</span></label>
-            <input id="field-phone" type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setError(null); }}
+            <input id="field-phone" type="tel" inputMode="numeric" maxLength={11} value={phone}
+              onChange={(e) => { setPhone(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="08XXXXXXXXX" className={fieldClass("field-phone", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
           <div>
@@ -344,6 +390,34 @@ function RegisterPageContent() {
               onChange={(e) => { setNin(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="11-digit NIN" className={fieldClass("field-nin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
           </div>
+
+          {/* Real, critical fix per direct client complaint — a real
+              account (Agnes Bala) got all the way to "pending
+              approval" having only ever typed in an NIN number, with
+              no real, uploaded ID document to actually verify it
+              against. A typed number alone proves nothing — anyone
+              can type any 11 digits. Agent and Manager already
+              correctly required a real uploaded document; every other
+              role now does too, feeding into the same real admin
+              review screen that already exists for buyer IDs. */}
+          {role !== "agent" && role !== "manager" && (
+            <>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Type of ID you&apos;re uploading <span className="text-chs-red">*</span></label>
+                <select id="field-reg-id-type" value={idType} onChange={(e) => setIdType(e.target.value)}
+                  className={fieldClass("field-reg-id-type", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white")}>
+                  <option value="">Select ID type</option>
+                  {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Upload a real photo or scan of this ID <span className="text-chs-red">*</span></label>
+                <input id="field-reg-id-file" type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
+                  className={fieldClass("field-reg-id-file", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white")} />
+                <p className="text-[10px] text-gray-400 mt-1">A real, verifiable document — not just typing your NIN number in — is what CHS actually checks before approving your account.</p>
+              </div>
+            </>
+          )}
           <div>
             <label className="text-xs font-semibold text-gray-600">State <span className="text-chs-red">*</span></label>
             <select value={state} onChange={(e) => setState(e.target.value)}

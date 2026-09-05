@@ -54,7 +54,7 @@ export default function OwnerDashboard() {
   const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
-  const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; guest_phone: string; guest_id_document_url: string | null; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; approved_vendor: string | null; approved_amount: number | null; properties: { title: string }[] | null; fault_quotations: { vendor_name: string; amount: number; artisans: { user_id: string; trade: string } | null }[] | null }[]>([]);
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
@@ -188,7 +188,7 @@ export default function OwnerDashboard() {
 
     supabase
       .from("shortlet_bookings")
-      .select("id, guest_full_name, check_in, check_out, status, properties!inner(title, owner_id)")
+      .select("id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, properties!inner(title, owner_id)")
       .eq("properties.owner_id", session.user.id)
       .in("status", ["confirmed", "active"])
       .then(({ data }) => setShortletBookings((data as unknown as typeof shortletBookings) || []));
@@ -1177,7 +1177,15 @@ export default function OwnerDashboard() {
           {shortletBookings.map((b) => (
             <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
               <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
-              <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.check_in} → {b.check_out}</p>
+              <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+              {/* Real fix found during a systematic audit of every
+                  document upload in the app — a guest's real ID was
+                  always being collected at booking, but no host or
+                  admin screen anywhere ever showed it, defeating the
+                  actual, stated purpose of collecting it at all. */}
+              {b.guest_id_document_url && (
+                <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+              )}
               <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
             </div>

@@ -78,11 +78,17 @@ export default function LinkAccountPage() {
     setError(null);
     setSubmitting(true);
 
-    // Real PIN re-verification — a genuine sign-in, not just a text box
-    // that looks like a check. This confirms whoever is here right now
-    // really does know this account's real credentials.
+    // Real, critical bug fix — confirmed directly against the real
+    // authentication pattern used everywhere else in the app: this
+    // was calling Supabase's native phone-based sign-in, but every
+    // real account on this platform is actually authenticated by a
+    // synthetic email derived from the phone number. Native phone
+    // auth was never set up, so this would fail for every single
+    // PIN, correct or not — exactly matching a real, repeated client
+    // complaint that no PIN ever worked here.
+    const syntheticEmail = "chsuser" + phone.replace(/\D/g, "") + "@chsplatform.app";
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
-      phone: phone.trim(),
+      email: syntheticEmail,
       password: pin,
     });
     setSubmitting(false);
@@ -171,6 +177,27 @@ export default function LinkAccountPage() {
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8">
       <div className="max-w-md mx-auto">
+        {/* Real, critical fix — confirmed directly: this page had no
+            real way out at all. Someone stuck here had to force-close
+            the entire app, exactly as reported. A real step-back
+            action now exists at every stage, plus a genuine exit. */}
+        <div className="flex justify-between items-center mb-4">
+          {step !== "lookup" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                if (step === "confirm") setStep("lookup");
+                else if (step === "pin") setStep("confirm");
+                else if (step === "role_details") setStep("pin");
+              }}
+              className="text-xs text-gray-400"
+            >
+              ← Back
+            </button>
+          ) : <span />}
+          <Link href="/login" className="text-xs text-gray-400">✕ Cancel</Link>
+        </div>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Link a new role to your account</h1>
         <p className="text-sm text-gray-500 mb-6">
           Already have a CHS account? Add another role to it instead of creating a new one.

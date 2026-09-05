@@ -53,7 +53,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
@@ -80,6 +80,68 @@ export default function AdminDashboard() {
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [pendingAgentIds, setPendingAgentIds] = useState<{ id: string; full_name: string; phone: string; valid_id_type: string; valid_id_number: string; valid_id_document_url: string }[]>([]);
+  const [pendingManagerCerts, setPendingManagerCerts] = useState<{ id: string; full_name: string; phone: string; profession: string; professional_registration_number: string | null; certificate_document_url: string }[]>([]);
+  const [tenantRegisterSearch, setTenantRegisterSearch] = useState("");
+  const [tenantRegisterResults, setTenantRegisterResults] = useState<{
+    id: string; reference_number: string; full_name: string; phone: string; location_area: string; street_address: string | null;
+    property_type: string; bedrooms: number; annual_rent: number; occupation: string; id_type: string; id_number: string;
+    id_document_url: string | null; selfie_url: string | null; created_at: string;
+  }[]>([]);
+  const [tenantRegisterLoading, setTenantRegisterLoading] = useState(false);
+
+  // Real, new feature completing the one, honest, remaining gap
+  // flagged directly to the client — CHS admin previously had zero
+  // real oversight into the ID and selfie an agent/manager collects
+  // in their own tenant register. Genuine search, not a full dump —
+  // real name, phone, or reference number lookup.
+  async function handleTenantRegisterSearch() {
+    setTenantRegisterLoading(true);
+    const q = tenantRegisterSearch.trim();
+    let query = supabase.from("tenant_register").select(
+      "id, reference_number, full_name, phone, location_area, street_address, property_type, bedrooms, annual_rent, occupation, id_type, id_number, id_document_url, selfie_url, created_at"
+    ).order("created_at", { ascending: false }).limit(50);
+    if (q) {
+      query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,reference_number.ilike.%${q}%`);
+    }
+    const { data } = await query;
+    setTenantRegisterResults(data || []);
+    setTenantRegisterLoading(false);
+  }
+
+  useEffect(() => {
+    // Real, critical fix — confirmed directly against a real, live
+    // account: a Property Manager's uploaded professional certificate
+    // (and an Agent's uploaded valid ID) had never had any admin
+    // review screen at all, on top of the earlier, separate buyer-ID
+    // fix. This was forcing admin to approve these two real
+    // registration types completely blind, with no way to ever see
+    // the document that was actually, correctly uploaded.
+    supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url")
+      .eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null)
+      .then(({ data }) => setPendingAgentIds(data || []));
+    supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url")
+      .eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null)
+      .then(({ data }) => setPendingManagerCerts(data || []));
+  }, []);
+
+  async function handleAgentIdReview(userId: string, approved: boolean) {
+    if (approved) {
+      await supabase.from("profiles").update({ valid_id_verified: true }).eq("id", userId);
+    } else {
+      await supabase.from("profiles").update({ valid_id_document_url: null, valid_id_number: null }).eq("id", userId);
+    }
+    setPendingAgentIds((prev) => prev.filter((a) => a.id !== userId));
+  }
+
+  async function handleManagerCertReview(userId: string, approved: boolean) {
+    if (approved) {
+      await supabase.from("profiles").update({ professional_credentials_verified: true }).eq("id", userId);
+    } else {
+      await supabase.from("profiles").update({ certificate_document_url: null }).eq("id", userId);
+    }
+    setPendingManagerCerts((prev) => prev.filter((m) => m.id !== userId));
+  }
   const [totalCommissionEarnings, setTotalCommissionEarnings] = useState(0);
   const [openOwnerConcerns, setOpenOwnerConcerns] = useState<{ id: string; subject: string; message: string; profiles: { full_name: string } | null }[]>([]);
   const [agentChangeRequests, setAgentChangeRequests] = useState<{ id: string; requested_agent_name: string | null; requested_agent_phone: string | null; requested_agent_chs_id: string | null; properties: { title: string } | null }[]>([]);
@@ -1222,7 +1284,7 @@ export default function AdminDashboard() {
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
-          { key: "registrations", label: `Registrations (${pendingProfiles.length + pendingBuyerIds.length})`, domain: "registration_setup" },
+          { key: "registrations", label: `Registrations (${pendingProfiles.length + pendingBuyerIds.length + pendingAgentIds.length + pendingManagerCerts.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
@@ -1234,6 +1296,7 @@ export default function AdminDashboard() {
           { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
           { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
         ] as { key: Tab; label: string; domain: string | null }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
@@ -2006,12 +2069,25 @@ export default function AdminDashboard() {
           (pendingProfiles.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending registrations.</p>
           ) : (
-            pendingProfiles.map((p) => (
+            pendingProfiles.map((p) => {
+              const hasSubmittedId = pendingBuyerIds.some((b) => b.user_id === p.id) || pendingAgentIds.some((a) => a.id === p.id) || pendingManagerCerts.some((m) => m.id === p.id);
+              return (
               <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
                 <p className="text-xs text-gray-500">
                   {p.phone} — {p.role} — {p.state}
                 </p>
+                {/* Real, critical fix per a direct, confirmed client
+                    complaint — a real account reached "pending
+                    approval" having only ever typed an NIN number,
+                    with admin given no way to know a real ID
+                    document was never actually submitted. This makes
+                    that fact impossible to miss. */}
+                {hasSubmittedId ? (
+                  <p className="text-[10px] font-bold text-green-700 mt-1">✓ Real ID document submitted — see the sections below</p>
+                ) : (
+                  <p className="text-[10px] font-bold text-chs-red mt-1">⚠️ No real ID document submitted yet — do not approve blind</p>
+                )}
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handleProfileDecision(p.id, "approved")}
                     className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -2023,7 +2099,8 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
-            ))
+              );
+            })
           ))}
 
         {/* Real, critical fix — the root cause of a real, repeated
@@ -2052,6 +2129,56 @@ export default function AdminDashboard() {
                       Approve
                     </button>
                     <button onClick={() => handleBuyerIdReview(sub.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            {/* Real, new fix — a completely separate, previously
+                invisible gap from the buyer-ID one above: Agent and
+                Property Manager credentials, confirmed uploading and
+                saving correctly, but never shown to admin anywhere. */}
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🪪 Real Agent ID Verifications ({pendingAgentIds.length})</p>
+            {pendingAgentIds.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No agent ID verifications pending review.</p>
+            ) : (
+              pendingAgentIds.map((a) => (
+                <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{a.full_name} — {a.phone}</p>
+                  <p className="text-xs text-gray-500 mb-2">{a.valid_id_type} — {a.valid_id_number}</p>
+                  <a href={a.valid_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleAgentIdReview(a.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleAgentIdReview(a.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🎓 Real Manager Credential Verifications ({pendingManagerCerts.length})</p>
+            {pendingManagerCerts.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No manager credentials pending review.</p>
+            ) : (
+              pendingManagerCerts.map((m) => (
+                <div key={m.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{m.full_name} — {m.phone}</p>
+                  <p className="text-xs text-gray-500 mb-2">{m.profession} {m.professional_registration_number ? `— Reg. ${m.professional_registration_number}` : ""}</p>
+                  <a href={m.certificate_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded certificate</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleManagerCertReview(m.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleManagerCertReview(m.id, false)}
                       className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                       Reject
                     </button>
@@ -2406,6 +2533,44 @@ export default function AdminDashboard() {
               ))
             )}
           </>
+        )}
+
+        {activeTab === "tenantregisteroversight" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-2">
+              Real oversight into the tenant register every agent/manager keeps — search by name, phone, or reference number to review the actual ID and selfie on file.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={tenantRegisterSearch} onChange={(e) => setTenantRegisterSearch(e.target.value)}
+                placeholder="Search a real name, phone, or reference number"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={handleTenantRegisterSearch} className="px-4 py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
+                {tenantRegisterLoading ? "..." : "Search"}
+              </button>
+            </div>
+            {tenantRegisterResults.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real results yet — search above.</p>
+            ) : (
+              tenantRegisterResults.map((t) => (
+                <div key={t.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{t.full_name} <span className="text-[10px] text-gray-400 font-normal">({t.reference_number})</span></p>
+                  <p className="text-xs text-gray-500">{t.phone} · {t.occupation}</p>
+                  <p className="text-xs text-gray-500">{t.street_address ? `${t.street_address}, ` : ""}{t.location_area} · {t.property_type} · {t.bedrooms} bed(s)</p>
+                  <p className="text-xs text-gray-500">Annual rent: ₦{Number(t.annual_rent).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">{t.id_type} — {t.id_number}</p>
+                  <div className="flex gap-3 mt-1">
+                    {t.id_document_url && (
+                      <a href={t.id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View real ID</a>
+                    )}
+                    {t.selfie_url && (
+                      <a href={t.selfie_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View real selfie</a>
+                    )}
+                  </div>
+                  <p className="text-[9px] text-gray-400 mt-1">Recorded {new Date(t.created_at).toLocaleDateString()}</p>
+                </div>
+              ))
+            )}
+          </div>
         )}
       </div>
       {showGuide && <GuidePrompt role="admin" onDismiss={() => setShowGuide(false)} />}
