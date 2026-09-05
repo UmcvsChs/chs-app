@@ -11,9 +11,10 @@ const PROFESSIONS = [
   "Estate Surveyor & Valuer", "Property Manager", "Quantity Surveyor",
   "Structural Engineer", "Facility Manager", "Real Estate Consultant", "Other professional",
 ];
-type NewRole = "owner" | "agent" | "manager" | "tenant";
+type NewRole = "owner" | "host" | "agent" | "manager" | "tenant";
 const ROLE_OPTIONS: { value: NewRole; label: string }[] = [
   { value: "owner", label: "Property Owner" },
+  { value: "host", label: "Host (Shortlet/Hotel/Hire)" },
   { value: "tenant", label: "Tenant" },
   { value: "agent", label: "Agent" },
   { value: "manager", label: "Property Manager" },

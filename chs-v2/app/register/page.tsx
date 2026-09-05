@@ -15,13 +15,14 @@ const PROFESSIONS = [
   "Structural Engineer", "Facility Manager", "Real Estate Consultant", "Other professional",
 ];
 
-type Role = "buyer" | "guest" | "tenant" | "owner" | "agent" | "manager" | "developer" | "staff" | "others";
+type Role = "buyer" | "guest" | "tenant" | "owner" | "agent" | "manager" | "developer" | "staff" | "others" | "host";
 
 const ROLE_OPTIONS: { value: Role; label: string; desc: string }[] = [
   { value: "buyer", label: "Buyer", desc: "Searching to purchase, rent, lease, or hire a property" },
   { value: "guest", label: "Guest", desc: "Booking a shortlet apartment or a hotel/lodge stay" },
   { value: "tenant", label: "Tenant", desc: "Already renting, or about to start renting, through CHS" },
-  { value: "owner", label: "Property Owner", desc: "Listing a property to sell, rent, lease, or hire out" },
+  { value: "owner", label: "Property Owner", desc: "Listing a property to sell, rent, or lease out long-term" },
+  { value: "host", label: "Host", desc: "Listing a property for a shortlet, hotel/event stay, or casual hire" },
   { value: "agent", label: "Agent", desc: "Marketing properties and earning referral commission" },
   { value: "manager", label: "Property Manager", desc: "Managing properties professionally on behalf of owners" },
   { value: "developer", label: "Commercial Developer", desc: "Sell estates, offer instalment/investment plans" },
@@ -332,11 +333,12 @@ function RegisterPageContent() {
     const roleToPath: Record<string, string> = {
       admin: "/admin",
       owner: "/owner",
+      host: "/host",
       agent: "/agent",
       manager: "/manager",
       tenant: "/tenant",
       buyer: "/",
-      guest: "/",
+      guest: "/guest",
       staff: "/staff",
       others: "/choose-category",
     };
