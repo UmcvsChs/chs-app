@@ -51,11 +51,27 @@ export default function HireBookingForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [pricing, setPricing] = useState<{ nights: number; base_amount: number; guest_commission_amount: number; real_total_guest_pays: number } | null>(null);
+  const [houseRulesUrl, setHouseRulesUrl] = useState<string | null>(null);
+  const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
 
   useEffect(() => {
     loadExistingBookings();
+    supabase.rpc("get_house_rules_for_property", { p_property_id: propertyId }).then(({ data }) => setHouseRulesUrl(data));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Real, complete fee transparency — same as the shortlet form, the
+  // exact, true amount the guest will actually pay, including CHS's
+  // real commission, fetched live rather than calculated locally so
+  // it's genuinely the same number the backend will charge.
+  useEffect(() => {
+    if (!startDate || !endDate || new Date(endDate) < new Date(startDate)) {
+      return;
+    }
+    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: startDate, p_check_out: endDate })
+      .then(({ data }) => setPricing(data));
+  }, [startDate, endDate, propertyId]);
 
   async function loadExistingBookings() {
     const { data } = await supabase
@@ -67,10 +83,10 @@ export default function HireBookingForm({
     setLoadingAvailability(false);
   }
 
+  const validDateRange = startDate && endDate && new Date(endDate) >= new Date(startDate);
   // Real, honest minimum — even a same-day event genuinely bills as
   // 1 real day, never zero.
   const days = startDate && endDate ? Math.max(daysBetween(startDate, endDate), startDate === endDate ? 1 : 0) : 0;
-  const totalPrice = days > 0 ? days * pricePerDay : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +96,14 @@ export default function HireBookingForm({
     }
     if (days <= 0) {
       setError("The end date must be on or after the start date.");
+      return;
+    }
+    if (!pricing) {
+      setError("Please wait for the real price to load before submitting.");
+      return;
+    }
+    if (houseRulesUrl && !rulesAcknowledged) {
+      setError("Please read and acknowledge the real house rules before requesting to book.");
       return;
     }
     if (!guestName.trim() || !guestPhone.trim() || !idFile) {
@@ -100,16 +124,15 @@ export default function HireBookingForm({
 
     const idDocumentUrl = await uploadDocument(idFile, session.user.id, "hire-guest-id");
 
-    const { data: bookingId, error: rpcError } = await supabase.rpc("book_shortlet_with_payment", {
+    const { data: bookingId, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
-      p_guest_id: session.user.id,
       p_check_in: startDate,
       p_check_out: endDate,
-      p_total_price: totalPrice,
       p_guests: attendees,
       p_guest_full_name: guestName.trim(),
       p_guest_phone: guestPhone.trim(),
       p_guest_id_document_url: idDocumentUrl,
+      p_house_rules_acknowledged: rulesAcknowledged,
     });
 
     if (rpcError || !bookingId) {
@@ -170,28 +193,52 @@ export default function HireBookingForm({
         </div>
       </div>
 
-      {days > 0 && (
+      {pricing && validDateRange && (
         <div className="border-t border-gray-200 pt-3">
-          <p className="text-xs font-bold text-chs-charcoal mb-1">Price breakdown</p>
+          <p className="text-xs font-bold text-chs-charcoal mb-1">Real price breakdown</p>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{formatNaira(pricePerDay)} × {days} day{days !== 1 ? "s" : ""}</span>
-            <span className="font-bold text-chs-charcoal">{formatNaira(totalPrice)}</span>
+            <span>{formatNaira(pricePerDay)} × {pricing.nights} day{pricing.nights !== 1 ? "s" : ""}</span>
+            <span>{formatNaira(pricing.base_amount)}</span>
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span>CHS service fee</span>
+            <span>{formatNaira(pricing.guest_commission_amount)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
+            <span>Real total you&apos;ll pay</span>
+            <span>{formatNaira(pricing.real_total_guest_pays)}</span>
           </div>
         </div>
       )}
 
-      {days > 0 && (
+      {pricing && validDateRange && (
         <div className="bg-chs-amber-light rounded-lg p-3">
-          <p className="text-xs font-bold text-chs-red">💳 CHS Wallet (recommended)</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">Instant · Held in escrow until your booking is confirmed</p>
+          <p className="text-xs font-bold text-chs-red">⏳ Request to book — not an instant charge</p>
+          <p className="text-[10px] text-gray-500 mt-0.5">
+            The real, full amount is held safely from your wallet the moment you request, but the host must genuinely
+            review and accept before it&apos;s confirmed. If they decline, you are automatically, fully refunded.
+          </p>
+        </div>
+      )}
+
+      {houseRulesUrl && (
+        <div className="border-t border-gray-200 pt-3">
+          <p className="text-xs font-bold text-chs-charcoal mb-1">House Rules &amp; Regulations</p>
+          <a href={houseRulesUrl} target="_blank" rel="noreferrer" className="text-[11px] text-chs-red underline block mb-2">
+            📄 Read the real house rules for this property
+          </a>
+          <label className="flex items-start gap-2 text-[11px] text-chs-charcoal">
+            <input type="checkbox" checked={rulesAcknowledged} onChange={(e) => setRulesAcknowledged(e.target.checked)} className="mt-0.5" />
+            <span>I have read and agree to comply with the real house rules above.</span>
+          </label>
         </div>
       )}
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
-      <button type="submit" disabled={submitting || loadingAvailability}
+      <button type="submit" disabled={submitting || loadingAvailability || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-        {submitting ? "Processing payment..." : "Confirm & pay — instant confirmation"}
+        {submitting ? "Sending your real request..." : "Request to book"}
       </button>
     </form>
   );

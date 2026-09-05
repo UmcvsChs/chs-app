@@ -9,6 +9,8 @@ import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
+import HostBookingDecision from "@/components/HostBookingDecision";
+import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 
 // Real, new dashboard completing a direct, thorough client decision:
 // Host is a genuine, separate role from Owner — a real, different
@@ -28,12 +30,15 @@ interface HostListing {
 
 interface HostBooking {
   id: string;
+  guest_id: string;
   guest_full_name: string;
   guest_phone: string;
   guest_id_document_url: string | null;
   check_in: string;
   check_out: string;
   status: string;
+  total_price: number;
+  host_commission_amount: number;
   properties: { title: string }[] | null;
 }
 
@@ -43,6 +48,8 @@ export default function HostDashboardPage() {
   const [listings, setListings] = useState<HostListing[]>([]);
   const [bookings, setBookings] = useState<HostBooking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [disputingBookingId, setDisputingBookingId] = useState<string | null>(null);
+  const [disputeSubmitted, setDisputeSubmitted] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -56,9 +63,9 @@ export default function HostDashboardPage() {
         .eq("owner_id", session.user.id)
         .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)"),
       supabase.from("shortlet_bookings")
-        .select("id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, properties!inner(title, owner_id)")
+        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, total_price, host_commission_amount, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
-        .in("status", ["confirmed", "active"]),
+        .in("status", ["pending_host_review", "confirmed", "active"]),
     ]).then(([listingsRes, bookingsRes]) => {
       setListings(listingsRes.data || []);
       setBookings((bookingsRes.data as unknown as HostBooking[]) || []);
@@ -108,18 +115,64 @@ export default function HostDashboardPage() {
 
         {bookings.length > 0 && (
           <>
-            <p className="text-xs font-bold text-chs-charcoal mt-4">📋 Real Guest Bookings</p>
-            {bookings.map((b) => (
-              <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-                <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
-                <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
-                {b.guest_id_document_url && (
-                  <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
-                )}
-                <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
-                <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
-              </div>
-            ))}
+            {/* Real, critical fix per direct, serious client
+                feedback: a booking request now genuinely requires the
+                host's own real decision before it's confirmed — not
+                an instant, unreviewable charge. */}
+            {bookings.filter((b) => b.status === "pending_host_review").length > 0 && (
+              <>
+                <p className="text-xs font-bold text-chs-red mt-4">🔔 Real Requests Awaiting Your Decision</p>
+                {bookings.filter((b) => b.status === "pending_host_review").map((b) => (
+                  <div key={b.id} className="bg-chs-amber-light rounded-xl border-2 border-chs-red p-3 mb-2">
+                    <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
+                    <p className="text-[10px] text-gray-500">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+                    <p className="text-[10px] text-gray-500">Your real net if accepted: {formatNaira(b.total_price - b.host_commission_amount)}</p>
+                    {b.guest_id_document_url && (
+                      <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+                    )}
+                    <HostBookingDecision bookingId={b.id} onDecided={() => setBookings((prev) => prev.filter((x) => x.id !== b.id))} />
+                  </div>
+                ))}
+              </>
+            )}
+
+            {bookings.filter((b) => b.status !== "pending_host_review").length > 0 && (
+              <>
+                <p className="text-xs font-bold text-chs-charcoal mt-4">📋 Real Guest Bookings</p>
+                {bookings.filter((b) => b.status !== "pending_host_review").map((b) => (
+                  <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+                    <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
+                    <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+                    {b.guest_id_document_url && (
+                      <a href={b.guest_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-1">View guest&apos;s uploaded ID</a>
+                    )}
+                    <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
+                    <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
+                    {/* Real, direct fix for a genuine, confirmed gap:
+                        a host had no real way to report an issue with
+                        a guest — the dispute form existed for Owner
+                        but was never wired into this new role. */}
+                    {disputeSubmitted === b.id ? (
+                      <p className="text-[10px] text-green-700 font-semibold mt-2">✓ Your real report has been submitted — CHS will review it.</p>
+                    ) : disputingBookingId === b.id ? (
+                      <div className="mt-2 bg-gray-50 rounded-lg p-2">
+                        <RaiseDisputeForm
+                          session={session!}
+                          shortletBookingId={b.id}
+                          againstUserId={b.guest_id}
+                          onSuccess={() => { setDisputeSubmitted(b.id); setDisputingBookingId(null); }}
+                          onCancel={() => setDisputingBookingId(null)}
+                        />
+                      </div>
+                    ) : (
+                      <button onClick={() => setDisputingBookingId(b.id)} className="text-[10px] text-chs-red underline mt-2">
+                        ⚠️ Report an issue with this guest
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
           </>
         )}
 

@@ -7,7 +7,8 @@ import CurrencyInput from "./CurrencyInput";
 
 interface RaiseDisputeFormProps {
   session: Session;
-  tenancyId: string | null;
+  tenancyId?: string | null;
+  shortletBookingId?: string | null;
   againstUserId: string | null;
   onSuccess: () => void;
   onCancel: () => void;
@@ -16,6 +17,7 @@ interface RaiseDisputeFormProps {
 export default function RaiseDisputeForm({
   session,
   tenancyId,
+  shortletBookingId,
   againstUserId,
   onSuccess,
   onCancel,
@@ -35,7 +37,8 @@ export default function RaiseDisputeForm({
     setSubmitting(true);
 
     const { error: insertError } = await supabase.from("disputes").insert({
-      tenancy_id: tenancyId,
+      tenancy_id: tenancyId || null,
+      shortlet_booking_id: shortletBookingId || null,
       raised_by: session.user.id,
       against: againstUserId,
       description: description.trim(),

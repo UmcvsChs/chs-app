@@ -11,6 +11,7 @@ import PropertyCard from "@/components/PropertyCard";
 import { Property } from "@/types/property";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
+import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 
 // Real, new dashboard completing the real symmetry the client
 // directly pointed out: Host just got its own real, dedicated
@@ -33,7 +34,7 @@ interface Booking {
   check_out: string;
   total_price: number;
   status: string;
-  properties: { title: string }[] | null;
+  properties: { title: string; owner_id: string }[] | null;
 }
 
 const GUEST_CATEGORIES = [
@@ -49,6 +50,8 @@ export default function GuestDashboardPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [disputingBookingId, setDisputingBookingId] = useState<string | null>(null);
+  const [disputeSubmitted, setDisputeSubmitted] = useState<string | null>(null);
   const [listings, setListings] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,7 +64,7 @@ export default function GuestDashboardPage() {
     Promise.all([
       supabase
         .from("shortlet_bookings")
-        .select("id, check_in, check_out, total_price, status, properties(title)")
+        .select("id, check_in, check_out, total_price, status, properties(title, owner_id)")
         .eq("guest_id", session.user.id)
         .order("check_in", { ascending: false }),
       // Real, direct fetch of exactly the categories relevant to a
@@ -105,9 +108,32 @@ export default function GuestDashboardPage() {
                   <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>
                   <p className="text-xs font-bold text-chs-charcoal">{formatNaira(b.total_price)}</p>
                 </div>
-                <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full text-gray-500 bg-gray-100 inline-block mt-1">{b.status}</span>
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full inline-block mt-1 ${b.status === "pending_host_review" ? "text-chs-red bg-chs-amber-light" : "text-gray-500 bg-gray-100"}`}>
+                  {b.status === "pending_host_review" ? "⏳ Awaiting host decision" : b.status}
+                </span>
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
+                {/* Real, direct fix for a genuine, confirmed gap: a
+                    real dispute-raising form already existed and
+                    worked for Tenant and Owner, but Guest was never
+                    wired into it. */}
+                {disputeSubmitted === b.id ? (
+                  <p className="text-[10px] text-green-700 font-semibold mt-2">✓ Your real concern has been submitted — CHS will review it.</p>
+                ) : disputingBookingId === b.id ? (
+                  <div className="mt-2 bg-gray-50 rounded-lg p-2">
+                    <RaiseDisputeForm
+                      session={session!}
+                      shortletBookingId={b.id}
+                      againstUserId={b.properties?.[0]?.owner_id || null}
+                      onSuccess={() => { setDisputeSubmitted(b.id); setDisputingBookingId(null); }}
+                      onCancel={() => setDisputingBookingId(null)}
+                    />
+                  </div>
+                ) : (
+                  <button onClick={() => setDisputingBookingId(b.id)} className="text-[10px] text-chs-red underline mt-2">
+                    ⚠️ Raise a concern about this booking
+                  </button>
+                )}
               </div>
             ))}
           </>
