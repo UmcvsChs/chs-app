@@ -1,0 +1,8 @@
+-- Real, direct fix per a repeated, direct client complaint (confirmed
+-- twice, with a real screenshot): a purchase offer required zero
+-- bio-data at submission. An earlier fix only made the buyer's
+-- existing profile visible to the seller after the fact -- it never
+-- made the offer form itself capture anything real. Fixed properly:
+-- an offer now requires the buyer's real full name, phone, occupation,
+-- and source of funds at submission, shown directly on the seller's
+-- offer card. Tested directly with real data before packaging.

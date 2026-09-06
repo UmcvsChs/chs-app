@@ -22,6 +22,10 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [amount, setAmount] = useState<number | "">("");
   const [note, setNote] = useState("");
+  const [buyerFullName, setBuyerFullName] = useState("");
+  const [buyerPhone, setBuyerPhone] = useState("");
+  const [buyerOccupation, setBuyerOccupation] = useState("");
+  const [buyerSourceOfFunds, setBuyerSourceOfFunds] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offerSuccess, setOfferSuccess] = useState(false);
@@ -254,6 +258,14 @@ export default function PropertyActions({ property }: { property: Property }) {
       setError("Please enter a valid offer amount.");
       return;
     }
+    if (!buyerFullName.trim() || !buyerPhone.trim()) {
+      setError("Please enter your real, full name and phone number — the seller needs to know who is making this offer.");
+      return;
+    }
+    if (!buyerOccupation.trim() || !buyerSourceOfFunds.trim()) {
+      setError("Please tell the seller your occupation and the real source of funds for this purchase.");
+      return;
+    }
     if (!identityVerified) {
       setError("Please complete identity verification before submitting a real offer.");
       return;
@@ -272,6 +284,10 @@ export default function PropertyActions({ property }: { property: Property }) {
       buyer_id: session.user.id,
       amount,
       note: note.trim() || null,
+      buyer_full_name: buyerFullName.trim(),
+      buyer_phone: buyerPhone.trim(),
+      buyer_occupation: buyerOccupation.trim(),
+      buyer_source_of_funds: buyerSourceOfFunds.trim(),
     });
 
     if (insertError) {
@@ -506,6 +522,29 @@ export default function PropertyActions({ property }: { property: Property }) {
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <IdentityVerificationGate session={session} onVerified={() => setIdentityVerified(true)} />
         <form onSubmit={handleSubmitOffer} className="space-y-3">
+          <p className="text-[10px] font-bold text-gray-400 uppercase">About you (shown to the seller)</p>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Your full name</label>
+            <input type="text" value={buyerFullName} onChange={(e) => setBuyerFullName(e.target.value)}
+              placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Your phone number</label>
+            <input type="tel" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)}
+              placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Your occupation</label>
+            <input type="text" value={buyerOccupation} onChange={(e) => setBuyerOccupation(e.target.value)}
+              placeholder="e.g. Business owner, Civil servant" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Source of funds for this purchase</label>
+            <input type="text" value={buyerSourceOfFunds} onChange={(e) => setBuyerSourceOfFunds(e.target.value)}
+              placeholder="e.g. Personal savings, Business proceeds, Loan" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+
+          <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">Your offer</p>
           <div>
             <label className="text-xs font-semibold text-gray-600">Your offer amount (₦)</label>
             <CurrencyInput value={amount} onChange={setAmount} placeholder="e.g. 42,000,000" />

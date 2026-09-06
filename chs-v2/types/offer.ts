@@ -13,4 +13,9 @@ export interface Offer {
   payment_status?: "unpaid" | "paid";
   chs_cleared: boolean;
   created_at: string;
+  buyer_full_name?: string | null;
+  buyer_phone?: string | null;
+  buyer_occupation?: string | null;
+  buyer_source_of_funds?: string | null;
+  buyer?: { full_name: string; phone: string; valid_id_verified: boolean; residential_address: string | null } | null;
 }

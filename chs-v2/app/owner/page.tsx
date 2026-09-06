@@ -266,7 +266,7 @@ export default function OwnerDashboard() {
     // property_id — same real data, a fraction of the round-trips.
     const propertyIds = ownedProperties.map((p) => p.id);
     const [allOffersRes, allInspectionsRes, allApplicationsRes, allMediaRequestsRes] = await Promise.all([
-      supabase.from("offers").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("offers").select("*, buyer:profiles!offers_buyer_id_fkey(full_name, phone, valid_id_verified, residential_address)").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("inspections").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*, tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone, valid_id_verified)").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("media_requests").select("*").in("property_id", propertyIds).eq("status", "pending").order("created_at", { ascending: false }),
@@ -926,9 +926,21 @@ export default function OwnerDashboard() {
                   <p className="text-xs font-bold text-chs-charcoal mb-1">Offers ({property.offers.length})</p>
                   {property.offers.map((offer) => (
                     <div key={offer.id} className="bg-gray-50 rounded-lg p-2.5 mb-2 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span className="font-semibold">{formatNaira(offer.amount)}</span>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-bold text-chs-charcoal">{offer.buyer_full_name || offer.buyer?.full_name || "Buyer"}</p>
+                          {offer.buyer?.valid_id_verified ? (
+                            <span className="text-[9px] font-bold text-green-700">✓ ID Verified</span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-chs-amber-dark">⚠ Not yet verified</span>
+                          )}
+                          <p className="text-[10px] text-gray-500">{offer.buyer_phone || offer.buyer?.phone}</p>
+                          {offer.buyer_occupation && <p className="text-[10px] text-gray-500">{offer.buyer_occupation} · {offer.buyer_source_of_funds}</p>}
+                        </div>
                         <span className="text-gray-400 capitalize">{offer.status}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1.5">
+                        <span className="font-semibold">{formatNaira(offer.amount)}</span>
                       </div>
                       {property.purpose === "sale" && offer.status === "pending" && (
                         <div className="bg-white rounded-md p-2 mt-1.5 space-y-1 border border-gray-100">

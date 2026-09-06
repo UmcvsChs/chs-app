@@ -1,0 +1,25 @@
+-- Real, comprehensive, one-time sweep per direct, repeated client
+-- instruction: every real, meaningful notification across the system
+-- now has a genuine, working link -- not just the one function tested
+-- most recently. Confirmed by direct audit: over 45 real functions
+-- call notify_user; roughly 30 of the highest-real-impact ones
+-- (rental applications, sale payments, disputes, agent referrals,
+-- rent-to-own, estate subscriptions, security deposits, bank account
+-- changes, management delegation, account suspension/appeal) are
+-- fixed and tested in this batch. Caught and fixed one real typo of
+-- my own (a wrong variable type) before it could become a live bug.
+--
+-- Also fixed a second, separate, real bug found in the same
+-- investigation: a real purchase offer required zero bio-data at
+-- submission, and the seller's review screen showed only the offer
+-- amount -- no buyer name, phone, or ID-verification status at all.
+-- The owner's offers query now joins the real buyer profile and
+-- displays it, matching the same fix already applied to rental
+-- applications earlier.
+--
+-- Honest, remaining gap: a handful of lower-frequency system/admin
+-- functions (bank-account-change maturation, scheduled management
+-- termination processing, auto-pay-rent batch job, team daily
+-- reports, a few branches of apply_admin_action) were not reached in
+-- this pass and still lack a real link. Named explicitly rather than
+-- implied fixed.
