@@ -1271,7 +1271,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen zone-admin bg-[var(--zone-bg)] pb-10">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
           <div className="flex items-center gap-2">

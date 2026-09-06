@@ -589,7 +589,7 @@ export default function OwnerDashboard() {
 
   return (
     <div className="min-h-screen zone-owner bg-[var(--zone-bg)] pb-10">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Owner Dashboard" />
         <div className="flex justify-between items-center mt-1">

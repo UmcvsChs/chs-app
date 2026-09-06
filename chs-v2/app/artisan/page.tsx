@@ -222,7 +222,7 @@ export default function ArtisanDashboard() {
 
   return (
     <div className="min-h-screen zone-artisan bg-[var(--zone-bg)] pb-10">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold capitalize">{artisan.trades?.join(", ")} {artisan.artisan_type === "chs_agent" ? "· CHS Agent" : "· Independent"}</h1>

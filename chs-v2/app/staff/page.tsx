@@ -106,7 +106,7 @@ export default function StaffPage() {
 
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-staff">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <RoleBadge label="Team Staff Dashboard" />
         <h1 className="font-serif text-lg font-bold mt-1">My Work</h1>

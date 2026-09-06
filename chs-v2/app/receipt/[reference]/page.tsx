@@ -116,10 +116,10 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
               <span className="font-semibold text-chs-charcoal">{payee.full_name}</span>
             </div>
           )}
-          {payer && (
+          {(payer || payee) && (
             <div className="flex justify-between border-b border-gray-100 pb-2">
               <span className="text-gray-500">Description</span>
-              <span className="font-semibold text-chs-charcoal text-right">{payer.description}</span>
+              <span className="font-semibold text-chs-charcoal text-right">{(payer || payee)!.description}</span>
             </div>
           )}
         </div>

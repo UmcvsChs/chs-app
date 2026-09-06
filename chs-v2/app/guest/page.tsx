@@ -92,7 +92,7 @@ export default function GuestDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-guest">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Guest" />
         <h1 className="font-serif text-lg font-bold mt-1">My Guest Dashboard</h1>

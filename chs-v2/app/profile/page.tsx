@@ -16,7 +16,7 @@ import { formatNaira } from "@/lib/format";
 // a name alone can be ambiguous. Any registered person can upload one.
 const ROLE_DASHBOARD_PATHS: Record<string, string> = {
   admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager",
-  tenant: "/tenant", buyer: "/", guest: "/guest", staff: "/staff", developer: "/developer",
+  tenant: "/tenant", buyer: "/my-offers", guest: "/guest", staff: "/staff", developer: "/developer",
 };
 
 export default function ProfilePage() {

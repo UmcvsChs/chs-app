@@ -52,7 +52,7 @@ export default function MyOffersPage() {
 
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-buyer">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Real Offers</h1>
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>

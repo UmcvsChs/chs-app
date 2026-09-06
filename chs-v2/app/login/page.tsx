@@ -154,7 +154,7 @@ export default function LoginPage() {
       agent: "/agent",
       manager: "/manager",
       tenant: "/tenant",
-      buyer: "/",
+      buyer: "/my-offers",
       guest: "/guest",
       developer: "/developer",
       staff: "/staff",

@@ -81,7 +81,7 @@ export default function HostDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-host">
-      <div className="bg-chs-charcoal text-white px-4 py-4">
+      <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Host" />
         <h1 className="font-serif text-lg font-bold mt-1">My Host Dashboard</h1>
