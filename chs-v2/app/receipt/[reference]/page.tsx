@@ -28,6 +28,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [entries, setEntries] = useState<ReceiptEntry[]>([]);
+  const [viewerIsPayee, setViewerIsPayee] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +44,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
         setError(rpcError.message);
       } else {
         setEntries(data?.entries || []);
+        setViewerIsPayee(!!data?.viewer_is_payee);
       }
       setLoading(false);
     });
@@ -68,13 +70,22 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
   const amount = payer?.amount || payee?.amount || 0;
   const date = payer?.created_at || payee?.created_at;
 
+  // Real, direct fix per a genuine, confirmed gap: this same document
+  // always labeled itself a "receipt," even for someone who had just
+  // been paid — an owner receiving real sale proceeds should see a
+  // genuine payment voucher / remittance advice, not a receipt for
+  // money moving into their own wallet. Server-verified via auth.uid(),
+  // not a client-side guess.
+  const isVoucher = viewerIsPayee;
+  const documentLabel = isVoucher ? "PAYMENT VOUCHER / REMITTANCE ADVICE" : "RECEIPT";
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:p-0">
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm p-8 print:shadow-none print:rounded-none">
         <div className="text-center mb-6 pb-6 border-b-2 border-chs-charcoal">
           <p className="font-serif text-2xl font-bold text-chs-charcoal">CHS</p>
           <p className="text-xs text-gray-500">Complete Housing Solutions</p>
-          <p className="text-xs font-bold text-green-700 mt-3">✓ REAL, VERIFIED RECEIPT</p>
+          <p className="text-xs font-bold text-green-700 mt-3">✓ REAL, VERIFIED {documentLabel}</p>
         </div>
 
         <div className="text-center mb-6">
@@ -95,13 +106,13 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
           )}
           {payer && (
             <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">From</span>
+              <span className="text-gray-500">{isVoucher ? "Originally paid by" : "From"}</span>
               <span className="font-semibold text-chs-charcoal">{payer.full_name}</span>
             </div>
           )}
           {payee && (
             <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">To</span>
+              <span className="text-gray-500">{isVoucher ? "Remitted to" : "To"}</span>
               <span className="font-semibold text-chs-charcoal">{payee.full_name}</span>
             </div>
           )}
@@ -114,7 +125,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
         </div>
 
         <p className="text-[10px] text-gray-400 text-center">
-          This is a real, system-generated receipt from CHS, verifiable at any time using the reference number above.
+          This is a real, system-generated {isVoucher ? "payment voucher" : "receipt"} from CHS, verifiable at any time using the reference number above.
         </p>
 
         <button
