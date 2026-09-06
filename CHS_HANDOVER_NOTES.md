@@ -66,6 +66,23 @@ A new agent should follow these, not reinvent them:
 - **Real, admin-reviewed buyer identity verification** (`backend-v2/96`–`98`) — previously self-certified the instant the form was filled in; now a genuine pending → admin-review → approved flow.
 - **Rent countdown and 90-day non-renewal notice** (`backend-v2/99`) — a real, live day-count on the tenant dashboard and a genuine notice mechanism, built after confirming the underlying database column had existed unused since early in the project.
 
+## New Since Last Handover Update (migrations 107–191)
+
+- **Agent/Manager business tools** (`145`–`149`, `154`–`158`, `175`) — a real team/staff system (invite, role labels, daily reports), tenant and property/owner registers, expense tracking, owner remittance, auto-generated digital receipts, an independent per-owner commission model, and multiple bank accounts.
+- **Host and Guest as real, separate roles** (`160`, `178`–`182`) — split from Owner/Buyer with their own dashboards. The entire shortlet/hire payment mechanism was rebuilt: real request-to-book (guest sees full cost including commission before committing), a genuine host accept/decline, automatic refund on decline, and admin-released host payout — previously, hosts had no way to ever get paid at all.
+- **Ratings, cancellation, and security deposits** (`183`–`186`) — real two-way ratings after a confirmed stay; a stated, server-enforced cancellation policy (100%/50%/0% by time-to-check-in); a flexible, host-toggled security deposit that auto-waives after a guest's 3rd real rating, resolved by admin (release or claim) rather than left to either party's word.
+- **Developer as a real, separate role** — previously registerable but with no login path and no dashboard at all; now built the same way as Host/Guest.
+- **Three real KYC bugs found and fixed**: no field existed to enter a non-NIN ID's actual number (the system silently substituted NIN regardless); admin's document review only checked a person's *primary* role, missing real credentials on a secondary role; and stored, pre-signed document URLs are structurally fragile, now replaced with a fresh signed URL generated live at the moment of viewing.
+- **Property reference numbers and admin search** (`187`, `188`) — every property now has a permanent `PROP-000001`-style reference, backfilled for all existing properties, with a real admin search by reference/title/owner. Also fixed: an application awaiting an owner's decision was previously invisible to admin's own query.
+- **Real PIN reset** (`189`) — phone + NIN verification; did not exist in any form before this.
+- **Real FAQ page** — written from CHS's own T&C and actual features, reachable from the previously-placeholder "Help & FAQs" menu entry.
+- **Add-a-role without logging out, plus a role switcher** — Profile page now shows every real role as a tappable pill and links straight to "Add another role," which skips the phone/PIN re-verification entirely for an already-authenticated session.
+- **Desktop splash screen fix and four new per-role color themes** (Host, Guest, Developer, Staff) — a real, deliberate 7-zone color system already existed; these four roles were quietly borrowing another role's colors and now have their own.
+- **Team/Staff subscription revenue model** (`190`, `191`) — free for 2 staff, real subscription from the 3rd, tiered by staff count, with exact multi-month discount math (6 months paid → 8 months access; 12 paid → 18 access).
+
+## Supabase Status (confirmed at time of writing)
+Every migration through `191_purchase_team_subscription_and_enforce_limit` is live in the real, production Supabase project — checked directly against Supabase's own migration history, not assumed from local files. No drift between the exportable `backend-v2/` folder and the live database. One real ERROR-level security advisory is outstanding (a `SECURITY DEFINER` view, `public.public_profiles`) and worth a follow-up look; the remaining advisories are standard hardening warnings, not active vulnerabilities.
+
 ## 6. Where to Find Things
 
 - **Every real feature, cross-referenced to its admin location:** `CHS_COMPLETE_FEATURE_CATALOG.pdf`, the segmented `.xlsx`, or in-app at `/admin/feature-catalog` (always current, same source data as the PDF).

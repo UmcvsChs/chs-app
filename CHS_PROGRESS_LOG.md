@@ -150,6 +150,58 @@ Following directly from the payment mechanism above, the client asked for real p
 - Researched the real, current legal requirements for a Nigerian property sale from genuine, cited sources (Lexology, PropertyPro, Diya Fatimilehin & Co, and others) rather than inventing a list: Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor's Consent, Tax Clearance Certificate, Sale Agreement, and — conditionally, only for a property with a real structure on it — Building Plan Approval.
 - Built a real requirement: an owner must upload soft copies of every required document when listing under Sale; CHS genuinely verifies each one; a buyer's payment is blocked entirely until every required document for that specific property is confirmed verified — tested by deliberately verifying 5 of 6 required documents and confirming payment still correctly failed, then verifying the 6th and confirming it succeeded.
 - Built a genuine escrow hold: a seller's real proceeds land in a wallet balance that is visible but not withdrawable, confirmed directly by testing that the real withdrawal function could not touch it. Funds only move to the seller's spendable balance once CHS explicitly confirms the real, physical legal documents have been transferred to the buyer — tested with a real, separate account genuinely lacking admin rights, confirming it could not release the funds itself.
+
+---
+
+## Agent & Manager Business Tools — A Real Mini-Office Inside CHS
+Built at the client's direct request so an agent or manager can run their own practice through the platform rather than alongside it:
+- **Real team/staff system** — an agent or manager can invite genuine, separate staff accounts, assign a role label, and see real daily activity reports submitted by each one.
+- **Real tenant register and property/owner register** — per-agent, searchable, with real ID documents attached, not a shared spreadsheet.
+- **Real expense/income tracking**, a **real remittance flow** paying collected rent on to the actual owner, and **real, auto-generated digital receipts** for completed transactions.
+- **Independent agent commission model** — a real, adjustable per-owner commission rate and a custom fee builder, replacing a single fixed platform rate.
+- **Multiple bank accounts** for agents/managers, with a real "active withdrawal account" selector.
+
+## Host and Guest as Real, Separate Roles — and the Complete Shortlet Rebuild
+Direct, serious client feedback revealed the entire prior shortlet payment mechanism was fundamentally broken — instant booking with no host review, commission calculated but never collected, and no way for a host to ever get paid. Rebuilt from the ground up:
+- **Host** and **Guest** split out as real, separate roles from Owner and Buyer, each with their own dedicated dashboard, built the same proven way as every other role — real data, not a placeholder.
+- **Real request-to-book flow**: a guest sees the true, full cost (rent plus their own commission share) before committing; a host must genuinely accept or decline; a decline triggers a real, automatic, full refund.
+- **Real host payout**, net of the host's own commission, released deliberately by admin — not automatically — the same CHS-mediated pattern used everywhere else in the app.
+- **Real two-way ratings** after a confirmed stay — the single biggest trust signal previously missing from this category.
+- **Real, stated cancellation policy**, enforced server-side: full refund 48+ hours before check-in, 50% within 48 hours, none after.
+- **A real, flexible security deposit**, per direct client specification: free for the host to switch on or off per listing, applied only to a genuinely first-time guest, and automatically waived once a guest has 3+ real ratings on file. Tested directly on both real outcomes — release back to the guest, and claim for the host with a required reason.
+- **Real house-rules attestation** — a guest must now actually see and check a box agreeing to a property's real house rules before a booking request can be submitted, closing a gap where the feature existed for hosts but was invisible to guests.
+- **Real dispute-filing**, extended to Guest and Host — a working form already existed for Tenant and Owner but had never been connected to these two newer roles.
+
+## Developer as a Real, Separate Role
+Confirmed and fixed a genuine gap: an account could register as a Commercial Developer but had no way to log back in under that role, and no dedicated dashboard existed at all. Built the same way as Host/Guest — real application status, real portfolio, real listings.
+
+## KYC & Registration — Three Real, Confirmed Bugs Found and Fixed
+- **Non-NIN ID types had nowhere to enter their own real number** — the system was silently saving a person's NIN as the "ID number" regardless of which document was actually chosen (Driver's Licence, Passport, Voter's Card). Fixed with a real, conditional number field per ID type.
+- **The admin KYC review screen only checked a person's primary role** to decide where to look for their documents — completely missing real credentials attached to a secondary role. Found and fixed against a real, in-house test case (an account that added Manager as a second role).
+- **Document links relying on a URL signed once and stored permanently** — a real, structural fragility (any future signing-key change silently breaks every stored link with no warning). Rebuilt so every document link now generates a fresh, live signed URL at the moment someone actually clicks to view it.
+
+## Property Traceability — A Real, Structural Fix
+Confirmed a serious, scale-relevant gap directly from a client-reported case: two real properties shared the exact same title with no way to tell them apart, and an application sitting with an owner for a decision was completely invisible to admin. Fixed both:
+- Every property now has a real, permanent reference number (`PROP-000001` style), backfilled for every property that already existed.
+- A real admin search tool — by reference number, title, or the real owner's name/phone — always shows the owner's identity directly.
+- Admin's application view now shows every real status, including "awaiting owner decision," instead of silently excluding it.
+
+## Account & Support Features
+- **Real PIN reset** — phone + NIN verification, since the platform has no email/SMS infrastructure; previously didn't exist at all, and even the platform owner didn't know the process.
+- **Real FAQ page**, written from CHS's own actual Terms & Conditions and features rather than copied from another platform.
+- **Add-a-role without logging out**, plus a real, one-tap role switcher on the Profile page — an already-authenticated session now skips straight to picking the new role.
+
+## Design
+- **Desktop splash screen fix** — reproduced directly with a real screenshot at desktop resolution before touching code. The real cause: a background image built for a phone's tall aspect ratio was being cropped into an unrecognizable dark sliver on a wide screen. Fixed with a real, deliberate desktop-specific treatment; mobile confirmed untouched.
+- **Distinct per-role color themes** — found that a real, deliberate 7-zone color system already existed, but four newer roles (Host, Guest, Developer, Staff) were quietly borrowing another role's colors instead of having their own. Added four new, genuinely distinct colors and verified all eleven side-by-side before shipping.
+
+## Revenue Model — Team/Staff Subscription
+Per direct client decision: free for up to 2 real staff, a real subscription required from the 3rd onward, tiered by staff count, with exact discount math — 6 months paid returns 8 real months of access, 12 months paid returns 18. Tested directly: blocked a real 3rd-staff addition pre-subscription, purchased a real 6-month plan and confirmed the exact charge and access period, then confirmed the 3rd addition succeeded afterward.
+
+## Research Delivered
+- Nigeria property legal-document requirements for a sale, confirming CHS's own T&C already matches real, standard practice, plus a recommendation on verification charging (flat fee, charged upfront).
+- Multi-platform deployment — confirmed the app is already genuinely installable on PC, Android, and iPhone today via each browser's native install feature, with no app-store submission required for this level of access.
+
 - Made Building Plan Approval a genuinely conditional requirement rather than either always-required (wrong for raw land) or optional everywhere (wrong for a house) — caught and fixed a real array-syntax bug in this logic through testing before it reached the client, then proved both real cases (a land listing correctly requiring 6 documents, a house correctly requiring 7) with real data.
 - Updated the seller's own button to read "Offer Accepted — Proceed to Payment," and the buyer's notification to point them directly back to the real payment screen, per direct client request.
 - Two further real constraint bugs caught during this same testing pass: a wallet transaction type that didn't yet allow the new escrow balance, and a repeated transaction-rollback pattern where combining a real update with a subsequent failing call in the same batch silently undid the update — both found and fixed by verifying actual database state after each step, not by trusting a query had succeeded.

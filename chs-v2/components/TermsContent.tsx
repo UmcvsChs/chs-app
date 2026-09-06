@@ -30,8 +30,11 @@ export default function TermsContent() {
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">
-        <p className="font-bold text-chs-charcoal mb-2">11. Shortlet bookings</p>
-        <p>A shortlet booking is paid instantly through your CHS Wallet and held in escrow — not released to the host until your check-in is confirmed. Genuine guest verification (name, phone, valid ID) is required before any booking is confirmed.</p>
+        <p className="font-bold text-chs-charcoal mb-2">11. Shortlet and hire bookings</p>
+        <p>Requesting a shortlet or hire booking holds the real, full amount (rent plus the guest&apos;s commission share) from your CHS Wallet in escrow — it is not released to the host until the host genuinely accepts your request. If the host declines, you are automatically and fully refunded. Genuine guest verification (name, phone, valid ID) is required before any request can be submitted.</p>
+        <p className="mt-2"><strong className="text-chs-charcoal">Cancellation policy:</strong> a guest may cancel a pending or confirmed booking at any time before check-in. A cancellation 48 or more hours before check-in receives a full refund; a cancellation within 48 hours of check-in receives a 50% refund; no refund is given on or after check-in.</p>
+        <p className="mt-2"><strong className="text-chs-charcoal">Security deposit:</strong> a host may choose to require a real, refundable security deposit on a listing. This deposit applies only to a genuinely first-time guest at that property and is automatically waived once a guest has 3 or more real ratings on CHS. A deposit is held separately and resolved by CHS after the stay — released back to the guest if no damage is reported, or paid to the host if genuine damage is confirmed.</p>
+        <p className="mt-2">A host and guest may each rate the other once, after a stay is confirmed complete.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">

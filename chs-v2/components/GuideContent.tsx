@@ -201,7 +201,35 @@ export default function GuideContent() {
       <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">18.4 Service charges</h3>
       <p>Bill every real occupied unit at once for a genuine service charge (security, common area maintenance) — this is entirely separate from rent, and vacant units are automatically skipped.</p>
 
-      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">19. Getting Help</h2>
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">19. Host and Guest (Shortlet &amp; Hire)</h2>
+      <p>Host and Guest are real, separate roles from Owner and Buyer, each with their own dashboard — add either one from Profile → Add another role, without needing to log out.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">19.1 Requesting a booking (Guest)</h3>
+      <p>Choose your dates on a Shortlet or Hire listing and you&apos;ll see the real, full price before committing — the nightly rate plus CHS&apos;s commission, and a refundable security deposit if the host requires one for first-time guests. If the property has real house rules on file, you&apos;ll need to read and check a box agreeing to them before you can request to book. Requesting a booking places the full amount on hold — it is not an instant confirmation. The host must genuinely accept before your stay is confirmed; if they decline, you are automatically and fully refunded.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">19.2 Accepting or declining a request (Host)</h3>
+      <p>From your Host dashboard, review each real booking request — including the guest&apos;s uploaded ID — and accept or decline with an optional note. Accepting confirms the stay; declining triggers an automatic, full refund to the guest.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">19.3 Getting paid (Host)</h3>
+      <p>Once a stay is complete, CHS releases your real net payout (the rent, minus your own commission) to your wallet. If you require a security deposit and it&apos;s genuinely needed, CHS resolves it directly with you after the stay — releasing it back to the guest, or paying it to you if real damage is confirmed.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">19.4 Cancelling a booking (Guest)</h3>
+      <p>You can cancel a pending or confirmed booking at any time before check-in. Cancelling 48 or more hours before check-in gets you a full refund; within 48 hours, a 50% refund; on or after check-in, no refund.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">19.5 Ratings and disputes</h3>
+      <p>After a confirmed stay, host and guest can each rate the other once. If something genuinely goes wrong, either side can raise a real dispute directly from their dashboard for CHS to review.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">20. Commercial Developer</h2>
+      <p>A Commercial Developer has a real, dedicated dashboard showing your application status (company details, CAC number, whether you offer instalment plans or accept investment capital, and your portfolio link) alongside every real property or development you&apos;ve listed.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">21. Agent &amp; Manager Business Tools</h2>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">21.1 Managing your own team</h3>
+      <p>Invite genuine, separate staff accounts to work under you, assign each a role label, and see their real daily activity reports. The first 2 staff members are free; adding a 3rd requires a real subscription, tiered by how many staff you have, with a discount for longer commitments (6 months paid returns 8 real months of access; 12 months paid returns 18).</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">21.2 Registers, expenses, and receipts</h3>
+      <p>A real tenant register and a real property/owner register, both searchable and with actual ID documents attached — plus expense/income tracking, a remittance flow for paying collected rent to the real owner, and auto-generated digital receipts for completed transactions.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">22. Account Security</h2>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">22.1 Resetting a forgotten PIN</h3>
+      <p>From the login screen, tap &quot;Forgot your PIN?&quot; and verify your identity using the real phone number and NIN you registered with — then set a brand new PIN immediately. No email or SMS code is used for this.</p>
+      <h3 className="text-sm font-bold text-chs-charcoal mt-3 mb-1">22.2 Closing your account</h3>
+      <p>From your Profile page, you can deactivate your account at any time. This genuinely hides your account and listings from CHS immediately — nothing is deleted, and simply logging back in reactivates it.</p>
+
+      <h2 className="font-serif text-lg font-bold text-chs-charcoal mt-5 mb-2">23. Getting Help</h2>
       <p>If something in the app doesn&apos;t behave the way this guide describes, or you&apos;re stuck on something not covered here, use &quot;Property request&quot; / &quot;Talk to an Agent&quot; to reach the CHS team directly, or Community Feedback to flag a general platform issue. For anything urgent involving an active transaction or payment, contact CHS support directly rather than waiting.</p>
       <p>This guide reflects the CHS platform as it stands today, including every feature described above. As new features are added, this guide should be updated alongside them — the same discipline applied to the platform&apos;s Terms &amp; Conditions.</p>
     </div>
