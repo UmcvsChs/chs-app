@@ -59,7 +59,10 @@ export default function SplashScreen() {
         }
         @media (min-aspect-ratio: 1/1) {
           .chs-splash-bg {
-            background-image: radial-gradient(circle at center, #2a2420 0%, #0d0c0c 70%);
+            background-image: url(/splash-glow-desktop.png);
+            background-size: 45vh auto;
+            background-position: center 4vh;
+            background-repeat: no-repeat;
           }
         }
       `}</style>
