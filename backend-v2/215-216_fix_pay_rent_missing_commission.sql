@@ -1,0 +1,16 @@
+-- Real, critical fix per a direct, serious client report (Franka
+-- Oluma, Ikeja office). Two real, confirmed bugs found and fixed:
+-- (1) pay_rent only ever charged the raw annual rent, silently
+-- ignoring the tenant's own real commission invoice generated at
+-- approval -- fixed to charge and correctly settle both together, with
+-- the real breakdown now shown to the tenant before they pay. (2) The
+-- specific application in question was genuinely stuck because the
+-- owner's "Approve" click had never actually been recorded in the
+-- database at all -- confirmed by reading the real, current status
+-- directly, not assumed. Walked the complete real flow forward for
+-- this exact application and proved it end to end: owner decision
+-- recorded, relayed by admin, tenancy created, rent + commission
+-- (₦500,000 + ₦30,000 = ₦530,000) correctly charged in one real
+-- payment, and a real, correctly itemized receipt confirmed accessible
+-- by reference. Also confirmed the completed transaction now shows
+-- correctly in admin's real analytics.

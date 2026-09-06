@@ -14,10 +14,14 @@ interface RentalApplicationFormProps {
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
-// A real, complete application about the actual person who wants the
-// property — not just their guarantor. This exact gap was flagged in
-// an earlier audit and never actually fixed; fixed properly now, with
-// every field that belongs here.
+// Real, complete rework per a direct, serious client concern: a
+// guarantor's own occupation, address, relationship, and consent were
+// previously entered by the applicant on the guarantor's behalf, with
+// a single checkbox standing in for real consent — no way to know the
+// guarantor was ever real, informed, or willing. Matches real, global
+// tenant-referencing practice now: the applicant provides only the
+// guarantor's name and phone; the guarantor completes every other real
+// field about themselves, independently, via their own secure link.
 export default function RentalApplicationForm({
   propertyId,
   session,
@@ -34,13 +38,10 @@ export default function RentalApplicationForm({
   const [idFile, setIdFile] = useState<File | null>(null);
   const [guarantorName, setGuarantorName] = useState("");
   const [guarantorPhone, setGuarantorPhone] = useState("");
-  const [guarantorRelationship, setGuarantorRelationship] = useState("");
-  const [guarantorAddress, setGuarantorAddress] = useState("");
-  const [guarantorOccupation, setGuarantorOccupation] = useState("");
-  const [guarantorConsented, setGuarantorConsented] = useState(false);
   const [moveInDate, setMoveInDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guarantorLink, setGuarantorLink] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,15 +62,7 @@ export default function RentalApplicationForm({
       return;
     }
     if (!guarantorName.trim() || !guarantorPhone.trim()) {
-      setError("Please enter your guarantor's name and phone number.");
-      return;
-    }
-    if (!guarantorRelationship.trim() || !guarantorAddress.trim() || !guarantorOccupation.trim()) {
-      setError("Please provide your guarantor's relationship to you, their address, and their occupation — a real guarantor needs to be a genuinely identifiable, reachable person.");
-      return;
-    }
-    if (!guarantorConsented) {
-      setError("Your guarantor's consent is required before this application can be submitted.");
+      setError("Please enter your guarantor's name and phone number — they'll confirm everything else about themselves directly.");
       return;
     }
     if (!moveInDate) {
@@ -83,41 +76,67 @@ export default function RentalApplicationForm({
     let idDocumentUrl: string | null = null;
     if (idFile) idDocumentUrl = await uploadDocument(idFile, session.user.id, "rental-applicant-id");
 
-    const { error: insertError } = await supabase.from("rental_applications").insert({
-      property_id: propertyId,
-      tenant_id: session.user.id,
-      applicant_full_name: applicantFullName.trim(),
-      applicant_occupation: occupation.trim(),
-      applicant_present_address: presentAddress.trim(),
-      applicant_income_source: incomeSource.trim(),
-      employer_business_name: employerBusinessName.trim(),
-      employer_business_address: employerBusinessAddress.trim(),
-      applicant_id_type: idType,
-      applicant_id_number: idNumber.trim(),
-      applicant_id_document_url: idDocumentUrl,
-      guarantor_name: guarantorName.trim(),
-      guarantor_phone: guarantorPhone.trim(),
-      guarantor_relationship: guarantorRelationship.trim(),
-      guarantor_address: guarantorAddress.trim(),
-      guarantor_occupation: guarantorOccupation.trim(),
-      guarantor_consented: guarantorConsented,
-      move_in_date: moveInDate,
+    const { data, error: rpcError } = await supabase.rpc("submit_rental_application", {
+      p_property_id: propertyId,
+      p_applicant_full_name: applicantFullName.trim(),
+      p_occupation: occupation.trim(),
+      p_present_address: presentAddress.trim(),
+      p_income_source: incomeSource.trim(),
+      p_employer_business_name: employerBusinessName.trim(),
+      p_employer_business_address: employerBusinessAddress.trim(),
+      p_id_type: idType,
+      p_id_number: idNumber.trim(),
+      p_id_document_url: idDocumentUrl,
+      p_guarantor_name: guarantorName.trim(),
+      p_guarantor_phone: guarantorPhone.trim(),
+      p_move_in_date: moveInDate,
     });
 
-    if (insertError) {
+    if (rpcError || !data) {
       setError("Could not submit your application. Please try again.");
       setSubmitting(false);
       return;
     }
 
-    onSuccess();
+    setGuarantorLink(`${window.location.origin}/guarantor-confirm/${data.guarantor_token}`);
+    setSubmitting(false);
+  }
+
+  // Real, deliberate final screen — the application is not actually
+  // moving forward until the guarantor completes their own real,
+  // independent step, so the applicant needs the real link in hand to
+  // send it themselves right now, not just a generic "submitted" message.
+  if (guarantorLink) {
+    return (
+      <div className="space-y-3">
+        <div className="bg-chs-amber-light rounded-lg p-4 border border-chs-amber-dark">
+          <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Your details are in — one real step left</p>
+          <p className="text-xs text-gray-600 mb-3">
+            Your application will not reach the owner until <strong>{guarantorName}</strong> independently confirms and completes their own section — CHS does not accept a guarantor&apos;s details filled in by anyone but the guarantor themselves.
+          </p>
+          <p className="text-xs font-semibold text-gray-600 mb-1">Send this real, one-time link to your guarantor now:</p>
+          <div className="bg-white rounded-lg px-3 py-2 text-[11px] text-chs-charcoal break-all border border-gray-200">
+            {guarantorLink}
+          </div>
+          <button
+            type="button"
+            onClick={() => { navigator.clipboard.writeText(guarantorLink); }}
+            className="w-full mt-2 py-2 rounded-full bg-chs-red text-white text-xs font-semibold"
+          >
+            Copy link
+          </button>
+        </div>
+        <button type="button" onClick={onSuccess} className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-sm font-semibold">
+          Done
+        </button>
+      </div>
+    );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="text-xs text-gray-500">
-        CHS will review your documents, then the property owner makes the final decision on your
-        application.
+        CHS will review your documents, your guarantor will independently confirm their own details, then the property owner makes the final decision.
       </p>
 
       <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">About you</p>
@@ -167,61 +186,23 @@ export default function RentalApplicationForm({
       <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
         className="w-full text-xs" />
 
-      <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">Your guarantor</p>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s full name</label>
-        <input
-          type="text"
-          value={guarantorName}
-          onChange={(e) => setGuarantorName(e.target.value)}
-          placeholder="Full name"
-          className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s phone number</label>
-        <input
-          type="tel"
-          value={guarantorPhone}
-          onChange={(e) => setGuarantorPhone(e.target.value)}
-          placeholder="08XXXXXXXXX"
-          className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
-        />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Your relationship to your guarantor</label>
-        <input type="text" value={guarantorRelationship} onChange={(e) => setGuarantorRelationship(e.target.value)}
-          placeholder="e.g. Uncle, Pastor, Employer, Family friend" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s address</label>
-        <input type="text" value={guarantorAddress} onChange={(e) => setGuarantorAddress(e.target.value)}
-          placeholder="A real, verifiable address" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-      </div>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s occupation</label>
-        <input type="text" value={guarantorOccupation} onChange={(e) => setGuarantorOccupation(e.target.value)}
-          placeholder="e.g. Civil servant, Business owner" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      <div className="border-t border-gray-200 pt-3">
+        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Your guarantor</p>
+        <p className="text-[11px] text-gray-500 mb-2">
+          You provide only their name and phone number below. Your guarantor will independently fill in everything else about themselves — their address, occupation, ID, and their own real consent — through a private link sent directly to them. This is deliberate: CHS does not accept a guarantor&apos;s details entered by anyone but the guarantor.
+        </p>
+        <div>
+          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s full name</label>
+          <input type="text" value={guarantorName} onChange={(e) => setGuarantorName(e.target.value)}
+            placeholder="Full name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+        </div>
+        <div className="mt-2">
+          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s phone number</label>
+          <input type="tel" value={guarantorPhone} onChange={(e) => setGuarantorPhone(e.target.value)}
+            placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+        </div>
       </div>
 
-      {/* Real, new consent statement per direct client request — a
-          guarantor needs to genuinely understand what they're
-          agreeing to, in plain language, not a single blank field. */}
-      <div className="bg-chs-amber-light rounded-lg p-3 border border-chs-amber-dark">
-        <p className="text-xs font-bold text-chs-charcoal mb-1">What your guarantor is agreeing to</p>
-        <p className="text-[11px] text-gray-600 mb-2">
-          By providing their details here, your guarantor is confirming: &quot;I know this applicant personally.
-          I am providing my real, verifiable address and contact details. If this tenant fails to pay rent or
-          breaches the tenancy agreement and cannot be reached, I understand I may be contacted and held
-          responsible for helping resolve the matter.&quot; CHS or the property owner may call your guarantor
-          directly to confirm they understand and accept this before your application proceeds.
-        </p>
-        <label className="flex items-start gap-2 text-[11px] text-chs-charcoal">
-          <input type="checkbox" checked={guarantorConsented} onChange={(e) => setGuarantorConsented(e.target.checked)}
-            className="mt-0.5" />
-          <span>I confirm my guarantor is a real person who has agreed to stand as my guarantor under these terms.</span>
-        </label>
-      </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Preferred move-in date</label>
         <input

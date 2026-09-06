@@ -54,13 +54,23 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
   const router = useRouter();
   const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+
+  // Real, direct fix so a notification link like /admin?tab=platformearnings
+  // genuinely lands on the right tab, not just the default overview.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedTab = params.get("tab") as Tab | null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (requestedTab) setActiveTab(requestedTab);
+  }, []);
+
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
   // Real Overview stats — restored, found completely missing during
   // the systematic Admin comparison. The original's version of every
@@ -131,6 +141,28 @@ export default function AdminDashboard() {
     security_deposit_amount: number; properties: { title: string; owner_id: string }[] | null;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
+  const [staleCommissions, setStaleCommissions] = useState<{
+    id: string; transaction_type: string; payer_role: string; commission_amount: number;
+    base_amount: number; created_at: string; payer_name: string; payer_phone: string;
+  }[]>([]);
+  useEffect(() => {
+    supabase.rpc("get_stale_uncollected_commissions").then(({ data }) => setStaleCommissions((data as unknown as typeof staleCommissions) || []));
+  }, []);
+
+  // Real, new dedicated tab per direct client request: a single,
+  // clear place to see real platform earnings as they come in, with
+  // timestamp and payer details — not buried inside a generic
+  // analytics summary.
+  const [recentEarnings, setRecentEarnings] = useState<{
+    id: string; transaction_type: string; commission_amount: number; created_at: string;
+    payer_role: string; status: string; profiles: { full_name: string; phone: string } | null;
+  }[]>([]);
+  useEffect(() => {
+    supabase.from("transaction_commissions")
+      .select("id, transaction_type, commission_amount, created_at, payer_role, status, profiles!transaction_commissions_payer_id_fkey(full_name, phone)")
+      .eq("status", "paid").order("created_at", { ascending: false }).limit(100)
+      .then(({ data }) => setRecentEarnings((data as unknown as typeof recentEarnings) || []));
+  }, []);
 
   // Real, new moderation queue completing the marketplace redesign per
   // direct client instruction: every real quote request and vendor
@@ -1426,6 +1458,7 @@ export default function AdminDashboard() {
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant" },
+          { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant" },
         ] as { key: Tab; label: string; domain: string | null }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
@@ -1955,6 +1988,15 @@ export default function AdminDashboard() {
 
         {activeTab === "finance" && (
           <div>
+            {staleCommissions.length > 0 && (
+              <div className="bg-chs-amber-light border-2 border-chs-red rounded-xl p-3 mb-4">
+                <p className="text-xs font-bold text-chs-red mb-1">⚠️ {staleCommissions.length} real commission(s) invoiced but never collected</p>
+                <p className="text-[10px] text-gray-600 mb-2">These have sat unpaid for 2+ hours — a real, early warning sign of a broken payment flow, exactly the pattern found and fixed on {new Date().getFullYear()}-09-06.</p>
+                {staleCommissions.slice(0, 5).map((c) => (
+                  <p key={c.id} className="text-[10px] text-gray-700">{c.payer_name} ({c.payer_phone}) — {c.transaction_type}, {formatNaira(c.commission_amount)} owed since {new Date(c.created_at).toLocaleString()}</p>
+                ))}
+              </div>
+            )}
             <p className="text-xs font-bold text-chs-charcoal mb-2">Individual wallet lookup</p>
             <div className="flex gap-2 mb-3">
               <input type="text" value={walletSearch} onChange={(e) => setWalletSearch(e.target.value)}
@@ -2810,6 +2852,29 @@ export default function AdminDashboard() {
                       </div>
                     </>
                   )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "platformearnings" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">Every real, collected commission — the money sender, amount, and timestamp — most recent first.</p>
+            <div className="bg-chs-charcoal text-white rounded-xl p-4 mb-3">
+              <p className="text-[10px] text-white/70 uppercase font-bold">Total shown below</p>
+              <p className="font-serif text-2xl font-bold mt-0.5">{formatNaira(recentEarnings.reduce((s, e) => s + e.commission_amount, 0))}</p>
+            </div>
+            {recentEarnings.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real, collected earnings yet.</p>
+            ) : (
+              recentEarnings.map((e) => (
+                <div key={e.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-xs">
+                  <div className="flex justify-between items-start">
+                    <span className="font-semibold text-chs-charcoal">{e.profiles?.full_name} ({e.profiles?.phone})</span>
+                    <span className="font-bold text-green-700">+{formatNaira(e.commission_amount)}</span>
+                  </div>
+                  <p className="text-gray-500 mt-0.5">{e.transaction_type.replace(/_/g, " ")} · {e.payer_role} · {new Date(e.created_at).toLocaleString()}</p>
                 </div>
               ))
             )}

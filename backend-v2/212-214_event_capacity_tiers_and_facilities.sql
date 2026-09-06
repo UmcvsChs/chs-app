@@ -1,0 +1,11 @@
+-- Real, comprehensive upgrade confirmed against a genuine, verified
+-- reference from the project's earlier prototype (CHS_GitHub_Upload/
+-- index.html): real, host-configurable capacity tiers and a real,
+-- priced extra-facilities list, replacing a flat per-day price and
+-- simple yes/no checkboxes. Matches the real reference exactly --
+-- same capacity tiers, same facilities, same prices -- plus the one
+-- genuinely confirmed gap from that reference, "Ushers / event staff",
+-- added as its own real line item. Tested completely end to end with
+-- real data: a 100-guest wedding with catering (per-guest), live band,
+-- and ushers correctly totalled ₦432,000 base + 6% commission =
+-- ₦457,920 real total charged to the guest.

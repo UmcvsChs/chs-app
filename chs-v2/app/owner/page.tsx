@@ -602,6 +602,12 @@ export default function OwnerDashboard() {
             <NotificationBell />
           </div>
           <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Recent Applications
+            </Link>
+            <Link href="/my-receipts" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Transaction History
+            </Link>
             <Link href="/market-demand" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Market Demand
             </Link>
@@ -1070,8 +1076,16 @@ export default function OwnerDashboard() {
                       <div className="pt-2 border-t border-gray-200">
                         <p className="text-gray-400 text-[10px] font-bold uppercase">Guarantor</p>
                         <p className="text-gray-700">{app.guarantor_name} — {app.guarantor_phone}</p>
-                        <p className="text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
-                        <p className="text-gray-500">{app.guarantor_address}</p>
+                        {app.status === "awaiting_guarantor_confirmation" ? (
+                          <p className="text-chs-amber-dark font-semibold mt-0.5">⏳ Awaiting the guarantor&apos;s own, independent confirmation — not yet completed by them directly.</p>
+                        ) : (
+                          <>
+                            <p className="text-green-700 font-semibold mt-0.5">✓ Independently confirmed by the guarantor themselves</p>
+                            <p className="text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
+                            <p className="text-gray-500">{app.guarantor_address}</p>
+                            <p className="text-gray-500">{app.guarantor_id_type} — {app.guarantor_id_number}</p>
+                          </>
+                        )}
                       </div>
 
                       <p className="text-gray-700 font-semibold">Wants to move in: {app.move_in_date}</p>

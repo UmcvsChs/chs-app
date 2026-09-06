@@ -41,6 +41,11 @@ interface HostBooking {
   status: string;
   total_price: number;
   host_commission_amount: number;
+  wants_music_band: boolean;
+  wants_caterer: boolean;
+  wants_ushers: boolean;
+  number_of_ushers: number | null;
+  additional_event_requests: string | null;
   properties: { title: string }[] | null;
 }
 
@@ -65,7 +70,7 @@ export default function HostDashboardPage() {
         .eq("owner_id", session.user.id)
         .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)"),
       supabase.from("shortlet_bookings")
-        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, total_price, host_commission_amount, properties!inner(title, owner_id)")
+        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
         .in("status", ["pending_host_review", "confirmed", "active"]),
     ]).then(([listingsRes, bookingsRes]) => {
@@ -129,6 +134,15 @@ export default function HostDashboardPage() {
                     <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
                     <p className="text-[10px] text-gray-500">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
                     <p className="text-[10px] text-gray-500">Your real net if accepted: {formatNaira(b.total_price - b.host_commission_amount)}</p>
+                    {(b.wants_music_band || b.wants_caterer || b.wants_ushers || b.additional_event_requests) && (
+                      <div className="bg-white/60 rounded-lg px-2 py-1.5 mt-1.5">
+                        <p className="text-[9px] font-bold text-chs-charcoal uppercase mb-0.5">🎉 Real event-day requests</p>
+                        {b.wants_music_band && <p className="text-[10px] text-gray-700">🎵 Music band / live entertainment</p>}
+                        {b.wants_caterer && <p className="text-[10px] text-gray-700">🍽️ Caterer</p>}
+                        {b.wants_ushers && <p className="text-[10px] text-gray-700">🙋 {b.number_of_ushers || "?"} usher(s)</p>}
+                        {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
+                      </div>
+                    )}
                     {b.guest_id_document_url && (
                       <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
                     )}
@@ -145,6 +159,15 @@ export default function HostDashboardPage() {
                   <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                     <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
                     <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+                    {(b.wants_music_band || b.wants_caterer || b.wants_ushers || b.additional_event_requests) && (
+                      <div className="bg-gray-50 rounded-lg px-2 py-1.5 mt-1.5">
+                        <p className="text-[9px] font-bold text-chs-charcoal uppercase mb-0.5">🎉 Real event-day requests</p>
+                        {b.wants_music_band && <p className="text-[10px] text-gray-700">🎵 Music band / live entertainment</p>}
+                        {b.wants_caterer && <p className="text-[10px] text-gray-700">🍽️ Caterer</p>}
+                        {b.wants_ushers && <p className="text-[10px] text-gray-700">🙋 {b.number_of_ushers || "?"} usher(s)</p>}
+                        {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
+                      </div>
+                    )}
                     {b.guest_id_document_url && (
                       <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
                     )}

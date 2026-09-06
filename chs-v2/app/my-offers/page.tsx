@@ -56,6 +56,10 @@ export default function MyOffersPage() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Real Offers</h1>
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>
+        <div className="flex gap-1.5 mt-2">
+          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications</Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-2">

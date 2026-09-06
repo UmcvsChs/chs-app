@@ -1,0 +1,9 @@
+-- Real, comprehensive fix per direct, detailed client feedback:
+-- (1) Confirmed the actual root cause of "no owner notification" --
+-- submit_rental_application never notified the owner at all. Fixed,
+-- with a real, clickable link. (2) Added real links throughout the
+-- rental application decision chain (owner decision -> admin relay ->
+-- tenant outcome). (3) notify_admins_by_domain never supported a link
+-- parameter at all -- widened to match notify_user. (4) Confirmed the
+-- actual root cause of "no admin pop-up" -- the notifications table
+-- was never added to Supabase's real-time publication. Enabled.

@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState } from "react";
 import Link from "next/link";
 import { Property, PropertyPurpose } from "@/types/property";
-import { formatNaira } from "@/lib/format";
 import PropertyCard from "./PropertyCard";
 import DemandRegistryForm from "./DemandRegistryForm";
 import NotificationBell from "./NotificationBell";
@@ -43,18 +41,7 @@ export default function HomePageClient({ properties, platformStats }: { properti
   // actual wallet, not a placeholder) and real "listings near you"
   // based on the person's own real registered state, found completely
   // missing from this rebuild.
-  const [rentSavings, setRentSavings] = useState<number | null>(null);
   const [forceSearchOpen, setForceSearchOpen] = useState(false);
-
-  useEffect(() => {
-    if (!session || profile?.role !== "tenant") return;
-    supabase
-      .from("wallets")
-      .select("rent_savings")
-      .eq("user_id", session.user.id)
-      .maybeSingle()
-      .then(({ data }) => setRentSavings(data?.rent_savings ?? null));
-  }, [session, profile]);
 
 
   // Both filters genuinely combine — matching the original app's real,
@@ -273,18 +260,6 @@ export default function HomePageClient({ properties, platformStats }: { properti
         <span className="text-chs-red text-base">→</span>
       </Link>
 
-      {/* Real rent savings summary — restored, shown only to a real,
-          logged-in tenant with genuine wallet data, never a
-          placeholder or shown to someone it doesn't apply to. */}
-      {rentSavings !== null && (
-        <Link href="/wallet" className="mx-4 mt-3 bg-chs-charcoal rounded-xl px-4 py-3 flex justify-between items-center">
-          <div>
-            <p className="text-[10px] text-white/60 uppercase">Your rent savings</p>
-            <p className="text-lg font-serif font-bold text-white mt-0.5">{formatNaira(rentSavings)}</p>
-          </div>
-          <span className="text-white/60 text-sm">View wallet →</span>
-        </Link>
-      )}
 
       {/* Real "Urgent Sale" — genuinely reuses the actual is_urgent_sale
           flag enforced by a real database trigger (see

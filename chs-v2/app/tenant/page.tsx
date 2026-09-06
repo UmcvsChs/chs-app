@@ -63,6 +63,7 @@ export default function TenantDashboard() {
   // should genuinely reflect that a subsequent-year renewal owes no
   // tenant commission, not leave the tenant to wonder or assume.
   const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
+  const [pendingTenantCommission, setPendingTenantCommission] = useState<Record<string, number>>({});
   const [payingRentId, setPayingRentId] = useState<string | null>(null);
   const [payRentMessage, setPayRentMessage] = useState<Record<string, string>>({});
   const [givingNoticeId, setGivingNoticeId] = useState<string | null>(null);
@@ -132,6 +133,20 @@ export default function TenantDashboard() {
         .select("tenancy_id")
         .in("tenancy_id", realTenancies.map((t) => t.id));
       setTenanciesWithPriorPayment(new Set((priorPayments || []).map((p) => p.tenancy_id)));
+
+      // Real, direct fix per a confirmed client report: the pay
+      // button never showed the real, actual total due — just the
+      // raw rent, silently leaving out the tenant's own real
+      // commission invoice generated at approval.
+      const { data: pendingCommissions } = await supabase
+        .from("transaction_commissions")
+        .select("tenancy_id, commission_amount")
+        .in("tenancy_id", realTenancies.map((t) => t.id))
+        .eq("payer_role", "tenant")
+        .neq("status", "paid");
+      const commissionMap: Record<string, number> = {};
+      (pendingCommissions || []).forEach((c) => { commissionMap[c.tenancy_id] = c.commission_amount; });
+      setPendingTenantCommission(commissionMap);
     }
     setInspections((inspectionsRes.data as unknown as InspectionWithProperty[]) || []);
     setServiceCharges((serviceChargesRes.data as typeof serviceCharges) || []);
@@ -161,13 +176,14 @@ export default function TenantDashboard() {
   async function handlePayRent(tenancyId: string) {
     setPayingRentId(tenancyId);
     setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "" }));
-    const { error } = await supabase.rpc("pay_rent", { p_tenancy_id: tenancyId });
+    const { data, error } = await supabase.rpc("pay_rent", { p_tenancy_id: tenancyId });
     setPayingRentId(null);
     if (error) {
-      setPayRentMessage((prev) => ({ ...prev, [tenancyId]: error.message }));
+      setPayRentMessage((prev) => ({ ...prev, [tenancyId]: error.message.includes("insufficient_balance") ? "Insufficient wallet balance for the real total due." : error.message }));
       return;
     }
-    setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "✓ Rent paid — lease renewed." }));
+    setPayRentMessage((prev) => ({ ...prev, [tenancyId]: `✓ Paid ${formatNaira(data.real_total_paid)} — lease renewed. Ref: ${data.reference}` }));
+    setPendingTenantCommission((prev) => { const next = { ...prev }; delete next[tenancyId]; return next; });
     loadData();
   }
 
@@ -254,6 +270,10 @@ export default function TenantDashboard() {
         <div className="flex justify-between items-end mt-1 gap-2">
           <h1 className="font-serif text-lg font-bold">My Rentals</h1>
           {session && <WalletQuickView userId={session.user.id} extra="rent_savings" />}
+        </div>
+        <div className="flex gap-1.5 mt-2">
+          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Applications</Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
         </div>
       </div>
 
@@ -375,10 +395,19 @@ export default function TenantDashboard() {
                   );
                 })()}
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(t.annual_rent)}/year</p>
+                {!!pendingTenantCommission[t.id] && (
+                  <div className="bg-white rounded-lg p-2 mt-1 text-[11px] text-gray-600">
+                    <div className="flex justify-between"><span>Rent</span><span>{formatNaira(t.annual_rent)}</span></div>
+                    <div className="flex justify-between"><span>Your real CHS commission</span><span>{formatNaira(pendingTenantCommission[t.id])}</span></div>
+                    <div className="flex justify-between font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
+                      <span>Real total due</span><span>{formatNaira(t.annual_rent + pendingTenantCommission[t.id])}</span>
+                    </div>
+                  </div>
+                )}
                 {payRentMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{payRentMessage[t.id]}</p>}
                 <button onClick={() => handlePayRent(t.id)} disabled={payingRentId === t.id}
                   className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                  {payingRentId === t.id ? "Processing..." : `Pay rent — ${formatNaira(t.annual_rent)}`}
+                  {payingRentId === t.id ? "Processing..." : `Pay — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
                 </button>
                 <div className="mt-1.5 bg-white rounded-lg p-2">
                   <label className="flex items-center gap-1.5">

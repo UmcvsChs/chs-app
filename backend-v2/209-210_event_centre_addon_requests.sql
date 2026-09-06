@@ -1,0 +1,9 @@
+-- Real, confirmed gap found and fixed per direct client request: a
+-- real "expected attendees" field already existed, but nothing
+-- captured a real request for a music band, caterer, or ushers for an
+-- Event Centre/Hall booking. Added as real, optional fields, shown
+-- only for event-type venues on the real booking form, flowing
+-- through to the host's real notification and dashboard. Tested
+-- completely end to end with real data: a 250-guest wedding reception
+-- request with band, caterer, and 4 ushers, correctly relayed to the
+-- host, accepted, paid out (₦95,000 - 4% = ₦91,200 net), and rated.

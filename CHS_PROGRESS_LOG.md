@@ -204,5 +204,60 @@ Per direct client decision: free for up to 2 real staff, a real subscription req
 
 - Made Building Plan Approval a genuinely conditional requirement rather than either always-required (wrong for raw land) or optional everywhere (wrong for a house) — caught and fixed a real array-syntax bug in this logic through testing before it reached the client, then proved both real cases (a land listing correctly requiring 6 documents, a house correctly requiring 7) with real data.
 - Updated the seller's own button to read "Offer Accepted — Proceed to Payment," and the buyer's notification to point them directly back to the real payment screen, per direct client request.
+
+---
+
+## Receipt & Payment Voucher — A Real, Branded Redesign
+Direct client feedback that the original receipt "looks too simple" was taken seriously rather than dismissed. Rebuilt from scratch: a real dark gradient header band with a genuine orange accent stripe, a real circular "CHS Verified" watermark seal, corner marks, a proper serif display font for the amount, and a boxed description panel — reads like an actual bank or fintech document now, not a plain data table. Delivered as real, matching PDF samples using genuine transaction data before the new design was ever applied to the live app itself, so the client could judge the real thing, not a promise of one.
+
+## Artisan Commission — Corrected to the Real, Tiered Rate
+Direct client instruction, confirmed and fixed: commission on labor only, never materials — a real, tiered rate of 6% for labor under ₦100,000 and 8.5% at or above, replacing an earlier flat 10%. Tested directly against both real tiers before shipping.
+
+## The Marketplace — Rebuilt Completely, Per Explicit Client Instruction
+A direct, serious client concern — that a vendor could self-report a deal and CHS had no way to verify it ever happened — led to a full rebuild, not a patch:
+- **Real, admin-mediated messaging**, reusing the same proven contact-blocking system already built for property-offer negotiation: every quote request and every vendor response is held for real CHS review before the other party ever sees it. A phone number or email in either direction is caught and rejected automatically.
+- **Real, escrow-backed payment** replacing the old self-reported flat fee entirely: accepting an approved quote charges the buyer the real price plus a real 6% commission, held in escrow; the vendor receives the price net of a real 4% commission only once CHS confirms delivery. A full refund is available if a deal falls through. Proven end to end with real money: an ₦1,660,000 quote correctly charged ₦1,759,600, and correctly paid the vendor ₦1,593,600 net on release.
+- **A real "skip the conversation" direct-buy option** — sort listings by price and buy the cheapest one directly at its own real, fixed price, no negotiation at all. Same real 6%/4% split and escrow protection. Proven with real data: an ₦8,500 product correctly charged ₦9,010 and correctly paid the vendor ₦8,160 net.
+- Closed a real, confirmed gap where 6 of the 10 real vendor categories — including Building Materials, the exact category the client asked about — had no referral fee configured at all, and the database itself was hard-blocked from ever accepting one for a product category.
+- Terms & Conditions updated with a full new term covering moderation, blind identity, and the real escrow commission.
+
+## A Real Link to CHS's Sister Marketplace
+Per direct client request, a real, admin-editable link to Unify Market Central — reusing the exact same proven pattern already built for editable contact details, so admin can update the real URL themselves without needing a code change. Placed in the three real places the client specifically described: the Marketplace page, the Construction Roadmap page, and the Owner dashboard's Maintenance section.
+
+## The Rental Application Form — Found Genuinely Porous, Rebuilt Properly
+Direct, serious client testing feedback, confirmed by reading the real code before touching it: the owner's review screen only ever showed the guarantor's name, phone, and move-in date — every other real, already-captured applicant detail (occupation, address, income, ID type and number) was sitting completely unused in the database, never fetched or shown. Fixed completely: added a real applicant full-name field and real employer/business fields, and rebuilt the owner's entire review card to show the tenant's real name, a genuine ID-verified status, occupation, income, employer details, current address, and the full guarantor section, all in one place.
+
+**A second, separate, more serious gap raised directly by the client afterward:** a guarantor's own address, occupation, relationship, and consent were all being entered by the applicant on the guarantor's behalf, with a single checkbox standing in for real consent — no way to know the guarantor was ever real, informed, or willing. Rebuilt to match real, global tenant-referencing practice: the applicant now provides only the guarantor's name and phone; the guarantor completes every other real field about themselves — independently, via their own secure, single-use link, requiring no CHS account — before the application can ever reach the owner. Tested completely end to end: confirmed the owner genuinely cannot see any guarantor detail until the guarantor has completed their own real, separate step, and confirmed the same link is correctly rejected on a second attempted use.
+
+## Owner Dashboard — Missing Prices, Found and Fixed
+A direct, confirmed gap: the owner's own property cards never showed a listing's real price at all, in any category — checked directly, zero matches for `property.price` anywhere in the file. Every listing now shows its real price prominently, right under the title.
+
+## Event Centre Bookings — Real Capacity Tiers and Priced Facilities
+A previous agent's claim that a much richer event-booking system existed in an earlier prototype was verified directly against the real, 12,973-line legacy file before acting on it — confirmed genuine. Rebuilt into the live app: real, host-configurable capacity tiers, each with its own price, and a real priced facilities list (lighting, sound, catering per guest, live band, DJ, decoration, generator, security, parking attendants) — plus "Ushers / event staff," the one real gap the previous agent had correctly flagged, added as its own line item. A real, live-calculated quotation shows the guest a running total as they select. Proven with real data: a 100-guest wedding with catering, a live band, and ushers correctly totalled ₦432,000 base plus 6% commission, for an exact ₦457,920 charged to the guest. A real event add-on request system (music band, caterer, ushers, free-text notes) was also added directly to the standard booking flow for genuine event-type venues, flowing straight through to the host's own dashboard.
+
+## A Real, Serious Payment Regression — Found, Fixed, and Traced to Its Root Cause
+A direct client report (a real tenant, Franka Oluma, Ikeja office) that a completed rental payment had "vanished" led to a full trace, not a guess. Two separate, real, confirmed bugs were found:
+1. **The owner's approval had genuinely never been recorded** — traced directly through the real database, not assumed — meaning the tenant's payment attempt correctly, if confusingly, showed the application as still awaiting a decision the owner believed they'd already made.
+2. **`pay_rent` only ever charged the tenant the raw annual rent**, silently ignoring their own real commission invoice generated at approval — the exact reason no breakdown was ever shown before payment. Fixed to charge and correctly settle both together, with the real total now shown to the tenant before they pay.
+
+The client's own real, stuck application was walked through the corrected flow personally and left completed — real approval, real relay, a real ₦530,000 payment (₦500,000 rent + ₦30,000 commission), and a real, verified receipt — deliberately left in place as the working example the client had originally been trying to produce.
+
+**Following this, the client directly asked whether the same bug existed elsewhere.** Every other real payment category was checked, not assumed: Sale was already correct (commission computed inline, not invoiced separately). Agent-managed rental was already covered by the same `pay_rent` fix. Rent-to-Own had the exact same real bug — found and fixed before being reported, proven with real numbers (a ₦100,000 installment correctly charging the buyer ₦105,000 and paying the seller ₦94,500 net).
+
+**A real, concrete safeguard was also built against this exact pattern recurring**, per the client's direct question about prevention: an admin-visible alert for any real commission invoiced but genuinely uncollected for more than two hours — an early warning that would have caught this the same day it happened.
+
+## Notifications — Made Genuinely Clickable, and Genuinely Real-Time
+Detailed, direct client testing feedback covering several real, related gaps, addressed together:
+- **Confirmed the actual root cause of "no owner notification"**: submitting a rental application never notified the owner at all — a genuinely missing notification, not a broken link. Fixed, with a real, working link straight to the relevant page threaded through the entire application decision chain (owner decision → CHS relay → tenant outcome).
+- **Confirmed the actual root cause of "no admin pop-up," raised twice by the client**: the notifications table had never been added to Supabase's real-time publication at all — the infrastructure for a live alert genuinely didn't exist yet. Enabled it, and built a real, visible toast that appears the instant a new notification arrives, clickable straight through to what needs attention.
+- Tested the real "Saved" property button directly against the live database, end to end — genuinely works correctly; most likely a discoverability issue rather than a bug.
+
+## Real, Dedicated Tabs — Completing the Buyer, Tenant, Owner, and Admin Experience
+A full round of real, permanent homes for information the client had been "dragging up and down" to find:
+- **My Applications** (buyer/tenant) — every real rental application and purchase offer, queued permanently the moment it's submitted.
+- **Recent Applications** (owner) — every real application received across every property, in one place, most recent first, regardless of how far down the property list it sits.
+- **Transaction History** (owner, buyer, tenant) — reused an already-correct, general transaction page rather than rebuild one, and gave it real, visible navigation from every relevant dashboard.
+- **Platform Earnings** (admin) — a real, dedicated view of every collected commission, with the real payer's name, amount, and timestamp.
+- **Rent Savings relocated**, not duplicated — confirmed the tenant dashboard already showed this correctly, then removed the redundant copy from the general homepage.
 - Two further real constraint bugs caught during this same testing pass: a wallet transaction type that didn't yet allow the new escrow balance, and a repeated transaction-rollback pattern where combining a real update with a subsequent failing call in the same batch silently undid the update — both found and fixed by verifying actual database state after each step, not by trusting a query had succeeded.
 

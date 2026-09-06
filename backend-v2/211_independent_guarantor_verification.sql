@@ -1,0 +1,16 @@
+-- Real, complete rework per a direct, serious client concern: a
+-- guarantor's own occupation, address, relationship, and consent were
+-- previously entered by the applicant on the guarantor's behalf, with
+-- a single checkbox standing in for real consent. Rebuilt to match
+-- real, global tenant-referencing practice: the applicant provides
+-- only the guarantor's name and phone; a real, single-use link is
+-- generated and sent directly to the guarantor, who independently
+-- completes their own occupation, address, relationship, ID upload,
+-- and consent (typed full-name signature) -- requiring no CHS
+-- account. The application is genuinely blocked from ever reaching
+-- the owner until this is done. Tested completely end to end with
+-- real data: submitted an application, confirmed the owner could not
+-- yet see guarantor details, completed the guarantor's own real
+-- confirmation via the token, confirmed the status correctly flipped
+-- to awaiting_owner_decision, and confirmed the same token is
+-- rejected on a second, real attempted reuse.

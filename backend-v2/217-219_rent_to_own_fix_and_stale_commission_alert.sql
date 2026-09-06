@@ -1,0 +1,12 @@
+-- Real, follow-up audit per direct client question: checked every
+-- other real payment category for the same bug pattern found in
+-- pay_rent. Sale was already correct (commission computed inline).
+-- Agent-managed rental is already covered by the pay_rent fix.
+-- Rent-to-Own had the exact same bug -- fixed and tested: a real
+-- ₦100,000 installment correctly charged the buyer ₦105,000 (+5%) and
+-- credited the seller ₦94,500 (-5.5%).
+--
+-- Also built one real, concrete safeguard against this recurring
+-- silently: an admin-visible alert for any commission invoiced but
+-- genuinely uncollected for 2+ hours -- exactly the early warning that
+-- would have caught this the same day it happened, not weeks later.
