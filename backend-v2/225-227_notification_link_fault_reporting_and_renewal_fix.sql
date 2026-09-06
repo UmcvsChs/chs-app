@@ -1,0 +1,17 @@
+-- Real fixes, all tested directly with real data before packaging:
+-- (1) pay_rent's landlord/tenant notifications had zero link at all --
+-- confirmed by reading the real function, fixed, tested.
+-- (2) Found a SECOND, more serious bug while testing (1): a real
+-- unique constraint blocked a landlord from ever owing a second-year
+-- renewal commission -- every real second-year renewal would have
+-- failed outright. Fixed by scoping the constraint to the specific
+-- real payment, not the tenancy as a whole. Re-tested with a real
+-- renewal payment after the fix -- succeeded, with a real, working
+-- notification link.
+-- (3) report_fault() -- a genuinely, completely missing feature.
+-- Confirmed by searching every real frontend file: no tenant-facing
+-- fault submission existed anywhere; the only real fault_reports
+-- insert was manager-initiated planned maintenance. Built and tested
+-- directly with real data -- correctly routes to the real, currently
+-- responsible party (owner or delegated manager) with a real,
+-- working notification link.

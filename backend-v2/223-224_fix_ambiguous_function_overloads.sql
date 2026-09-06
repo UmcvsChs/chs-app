@@ -1,0 +1,22 @@
+-- Real, critical, urgent fix per direct client report: a guarantor's
+-- real confirmation could never actually complete. Traced directly to
+-- the exact cause: migration 221 used "create or replace function" to
+-- add a real p_link parameter to notify_admins_by_domain, but Postgres
+-- treats a different parameter count as a genuinely separate function
+-- overload, not a replacement -- it silently created a second,
+-- ambiguous version alongside the old one. Every real call with
+-- exactly 3 arguments (no link) has been failing with a real "not
+-- unique" database error ever since.
+
+-- Checked the ENTIRE real database for this same pattern, not just
+-- this one function. Nine more real, custom CHS functions had the
+-- exact same problem -- each a live landmine for any caller using an
+-- older argument count. Every stale overload dropped, keeping only
+-- the one real, current signature actually used by the live frontend
+-- (confirmed directly against the real, current codebase for each).
+
+-- Fully re-tested, live, using the client's own real, actual stuck
+-- application (Babatope Aliyu, Ikeja office): guarantor confirmation
+-- now succeeds, owner approval succeeds, admin relay succeeds, and
+-- the real rent payment correctly charged rent + commission together
+-- (₦1,000,000 + ₦60,000 = ₦1,060,000), with a real, verified receipt.

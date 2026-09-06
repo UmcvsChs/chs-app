@@ -14,6 +14,7 @@ import WalletQuickView from "@/components/WalletQuickView";
 import { FormalNotice, NOTICE_TYPE_LABELS } from "@/types/formalNotice";
 import MessageThread from "@/components/MessageThread";
 import GuidePrompt from "@/components/GuidePrompt";
+import NotificationBell from "@/components/NotificationBell";
 
 interface ApplicationWithProperty {
   id: string;
@@ -92,6 +93,14 @@ export default function TenantDashboard() {
   const [loading, setLoading] = useState(true);
   const [showGuide, setShowGuide] = useState(false);
   const [disputingTenancy, setDisputingTenancy] = useState<TenancyWithProperty | null>(null);
+  const [faultTenancy, setFaultTenancy] = useState<TenancyWithProperty | null>(null);
+  const [faultCategory, setFaultCategory] = useState("plumbing");
+  const [faultUrgency, setFaultUrgency] = useState("medium");
+  const [faultLocation, setFaultLocation] = useState("");
+  const [faultDescription, setFaultDescription] = useState("");
+  const [faultSubmitting, setFaultSubmitting] = useState(false);
+  const [faultError, setFaultError] = useState<string | null>(null);
+  const [faultSubmitted, setFaultSubmitted] = useState(false);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
   const [notices, setNotices] = useState<FormalNotice[]>([]);
   const [expandedNoticeId, setExpandedNoticeId] = useState<string | null>(null);
@@ -268,7 +277,10 @@ export default function TenantDashboard() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Tenant Dashboard" />
         <div className="flex justify-between items-end mt-1 gap-2">
-          <h1 className="font-serif text-lg font-bold">My Rentals</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-lg font-bold">My Rentals</h1>
+            <NotificationBell />
+          </div>
           {session && <WalletQuickView userId={session.user.id} extra="rent_savings" />}
         </div>
         <div className="flex gap-1.5 mt-2">
@@ -439,9 +451,15 @@ export default function TenantDashboard() {
                 </span>
                 <button
                   onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
-                  className="block mt-2 text-[10px] font-semibold text-chs-red underline"
+                  className="block mt-2 w-full py-2 rounded-full bg-gray-100 text-chs-charcoal text-[11px] font-semibold text-center"
                 >
-                  Raise a dispute about this tenancy
+                  ⚠️ Raise a dispute about this tenancy
+                </button>
+                <button
+                  onClick={() => { setFaultTenancy(t); setFaultSubmitted(false); setFaultError(null); setFaultDescription(""); setFaultLocation(""); }}
+                  className="block mt-2 w-full py-2 rounded-full bg-chs-red text-white text-[11px] font-semibold text-center"
+                >
+                  🔧 Report a fault
                 </button>
                 <button
                   onClick={() => setMessagingTenancy(t)}
@@ -486,6 +504,64 @@ export default function TenantDashboard() {
                   onSuccess={() => setDisputeSubmitted(true)}
                   onCancel={() => setDisputingTenancy(null)}
                 />
+              </>
+            )}
+          </div>
+        )}
+
+        {faultTenancy && (
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
+            {faultSubmitted ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Real fault report sent</p>
+                <p className="text-xs text-gray-500 mb-3">Your landlord/manager has been notified directly and can now arrange a real quotation.</p>
+                <button onClick={() => setFaultTenancy(null)} className="text-xs font-semibold text-chs-red">Close</button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-chs-charcoal mb-3">Report a fault — {faultTenancy.properties?.title}</p>
+                <div className="space-y-2">
+                  <select value={faultCategory} onChange={(e) => setFaultCategory(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="plumbing">Plumbing</option>
+                    <option value="electrical">Electrical</option>
+                    <option value="structural">Structural</option>
+                    <option value="appliance">Appliance</option>
+                    <option value="pest">Pest</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <select value={faultUrgency} onChange={(e) => setFaultUrgency(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                    <option value="low">Low urgency</option>
+                    <option value="medium">Medium urgency</option>
+                    <option value="high">High urgency — needs quick attention</option>
+                    <option value="emergency">Emergency</option>
+                  </select>
+                  <input type="text" value={faultLocation} onChange={(e) => setFaultLocation(e.target.value)}
+                    placeholder="Where in the property? (e.g. Main bathroom)" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  <textarea value={faultDescription} onChange={(e) => setFaultDescription(e.target.value)} rows={3}
+                    placeholder="Describe the real fault" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  {faultError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{faultError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!faultLocation.trim() || !faultDescription.trim()) { setFaultError("Please fill in the location and description."); return; }
+                        setFaultSubmitting(true);
+                        setFaultError(null);
+                        const { error } = await supabase.rpc("report_fault", {
+                          p_tenancy_id: faultTenancy.id, p_category: faultCategory, p_urgency: faultUrgency,
+                          p_location: faultLocation.trim(), p_description: faultDescription.trim(),
+                        });
+                        setFaultSubmitting(false);
+                        if (error) { setFaultError(error.message); return; }
+                        setFaultSubmitted(true);
+                      }}
+                      disabled={faultSubmitting}
+                      className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                    >
+                      {faultSubmitting ? "Sending..." : "Send report"}
+                    </button>
+                    <button onClick={() => setFaultTenancy(null)} className="flex-1 py-2 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">Cancel</button>
+                  </div>
+                </div>
               </>
             )}
           </div>

@@ -48,7 +48,7 @@ export default function WalletQuickView({ userId, extra }: { userId: string; ext
         <p className="text-[9px] text-white/60 uppercase font-semibold">My Wallet</p>
         <p className="text-sm font-bold text-white">{formatNaira(wallet.main_balance)}</p>
       </div>
-      {extraLabel && extraValue > 0 && (
+      {extraLabel && (
         <div className="border-l border-white/20 pl-3">
           <p className="text-[9px] text-white/60 uppercase font-semibold">{extraLabel}</p>
           <p className="text-xs font-bold text-chs-amber">{formatNaira(extraValue)}</p>
