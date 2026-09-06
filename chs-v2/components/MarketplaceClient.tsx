@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
@@ -32,8 +32,44 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   const [error, setError] = useState<string | null>(null);
   const [submittedFor, setSubmittedFor] = useState<string | null>(null);
 
-  const filtered =
-    activeCategory === "all" ? products : products.filter((p) => p.category === activeCategory);
+  const [sortCheapest, setSortCheapest] = useState(false);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [boughtFor, setBoughtFor] = useState<string | null>(null);
+
+  // Real, new feature per direct client request: a genuine, admin-
+  // editable link to CHS's sister buying-and-selling platform, for
+  // procurement CHS's own marketplace doesn't yet cover (automobiles,
+  // consumables, and more) — still real, verified sellers, still
+  // under CHS's own jurisdiction.
+  const [sisterLink, setSisterLink] = useState<{ sister_marketplace_name: string; sister_marketplace_url: string } | null>(null);
+  useEffect(() => {
+    supabase.rpc("get_sister_marketplace_link").then(({ data }) => setSisterLink(data));
+  }, []);
+
+  const filtered = (
+    activeCategory === "all" ? products : products.filter((p) => p.category === activeCategory)
+  ).slice().sort((a, b) => (sortCheapest ? (a.price ?? Infinity) - (b.price ?? Infinity) : 0));
+
+  // Real, direct "skip the conversation" purchase — pays the
+  // product's own real, current price plus commission immediately, no
+  // negotiation, no messages to moderate, since nothing is being
+  // negotiated. The vendor only ever sees a real CHS reference number.
+  async function handleBuyNow(productId: string) {
+    if (!session) {
+      setError("Please log in first to buy directly.");
+      return;
+    }
+    setBuyingId(productId);
+    setError(null);
+    const { data, error: buyError } = await supabase.rpc("buy_product_direct", { p_product_id: productId });
+    setBuyingId(null);
+    if (buyError) {
+      setError(buyError.message.includes("insufficient_balance") ? "Insufficient wallet balance for this real purchase." : buyError.message);
+      return;
+    }
+    setBoughtFor(productId);
+    void data;
+  }
 
   async function handleRequestQuote(productId: string) {
     if (!propertyDetails.trim()) {
@@ -47,10 +83,9 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
     setError(null);
     setSubmitting(true);
 
-    const { error: insertError } = await supabase.from("service_quote_requests").insert({
-      product_id: productId,
-      requester_id: session.user.id,
-      property_details: propertyDetails.trim(),
+    const { error: insertError } = await supabase.rpc("submit_marketplace_quote_request", {
+      p_product_id: productId,
+      p_property_details: propertyDetails.trim(),
     });
 
     if (insertError) {
@@ -72,6 +107,11 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           <p className="text-xs text-white/70">Products and services for your property</p>
         </div>
         <div className="flex gap-1.5">
+          {session && (
+            <Link href="/my-quote-requests" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
+              My Requests
+            </Link>
+          )}
           <Link href="/become-vendor" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
             Sell here →
           </Link>
@@ -94,6 +134,27 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           </button>
         ))}
       </nav>
+
+      <div className="px-4 pt-2">
+        <button
+          onClick={() => setSortCheapest(!sortCheapest)}
+          className={`w-full py-2 rounded-full text-xs font-semibold ${sortCheapest ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}
+        >
+          {sortCheapest ? "✓ Showing cheapest first" : "💰 Show cheapest first — skip the back-and-forth"}
+        </button>
+      </div>
+
+      {sisterLink && (
+        <div className="px-4 pt-2">
+          <a href={sisterLink.sister_marketplace_url} target="_blank" rel="noopener noreferrer"
+            className="block bg-chs-charcoal rounded-xl px-4 py-3 text-white">
+            <p className="text-xs font-bold">🔗 Looking for something else? Try {sisterLink.sister_marketplace_name} →</p>
+            <p className="text-[10px] text-white/70 mt-0.5">
+              Our sister platform for automobiles, consumables, electronics, and more — real, verified sellers, still under CHS&apos;s own jurisdiction.
+            </p>
+          </a>
+        </div>
+      )}
 
       <div className="flex gap-2 px-4 pt-3">
         <button
@@ -148,14 +209,17 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                 {product.listing_type === "service" ? (
                   <>
                     {submittedFor === product.id ? (
-                      <p className="text-[10px] text-chs-red font-semibold mt-1.5">✓ Quote requested</p>
+                      <p className="text-[10px] text-chs-red font-semibold mt-1.5">✓ Sent to CHS for review — you&apos;ll be notified once approved and relayed to the vendor.</p>
                     ) : quoteFormFor === product.id ? (
                       <div className="mt-1.5 space-y-1">
+                        <p className="text-[9px] text-gray-400 bg-gray-50 rounded px-2 py-1.5 leading-relaxed">
+                          🛡️ This conversation is moderated and reviewed by CHS before it reaches the vendor. No phone numbers or emails, please — every real deal must stay on CHS from start to finish.
+                        </p>
                         <textarea
                           value={propertyDetails}
                           onChange={(e) => setPropertyDetails(e.target.value)}
                           rows={2}
-                          placeholder="Describe your property and needs"
+                          placeholder="Describe your property and needs — no phone numbers or emails"
                           className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[10px]"
                         />
                         {error && <p className="text-[9px] text-chs-red">{error}</p>}
@@ -177,12 +241,27 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                     )}
                   </>
                 ) : (
-                  <p className="text-sm font-bold text-chs-charcoal mt-1">
-                    {formatNaira(product.price!)}
-                    {product.price_unit ? (
-                      <span className="font-normal text-[10px] text-gray-500"> {product.price_unit}</span>
-                    ) : null}
-                  </p>
+                  <>
+                    <p className="text-sm font-bold text-chs-charcoal mt-1">
+                      {formatNaira(product.price!)}
+                      {product.price_unit ? (
+                        <span className="font-normal text-[10px] text-gray-500"> {product.price_unit}</span>
+                      ) : null}
+                    </p>
+                    {product.status !== "sold_out" && (
+                      boughtFor === product.id ? (
+                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.</p>
+                      ) : (
+                        <button
+                          onClick={() => handleBuyNow(product.id)}
+                          disabled={buyingId === product.id}
+                          className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50"
+                        >
+                          {buyingId === product.id ? "Processing..." : "🛒 Buy now (price + 6%)"}
+                        </button>
+                      )
+                    )}
+                  </>
                 )}
 
                 {product.status === "sold_out" && (

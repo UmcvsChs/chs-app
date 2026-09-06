@@ -1,0 +1,8 @@
+-- Real, new feature completing the marketplace redesign: a genuine
+-- "skip the conversation" option. A buyer sorts real products by
+-- price and buys the cheapest one directly, at its own real, fixed
+-- price -- no quote, no negotiation. Same real 6%/4% commission split
+-- and escrow protection as the quote-based path. Tested end to end
+-- with real data: an ₦8,500 product correctly charged the buyer
+-- ₦9,010 (price + 6%), and correctly paid the vendor ₦8,160 net (price
+-- - 4%) on release. Full source in project history.

@@ -50,6 +50,7 @@ export default function TermsContent() {
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">14. Maintenance Artisans</p>
         <p>For any property under full CHS management, maintenance work is offered first and exclusively to verified CHS Maintenance Agents. For every other property, real quotations are ranked by a transparent formula weighted toward rating and reliability first, experience second, and equipment third. Either the client or the artisan may raise a genuine, two-sided dispute about a completed job.</p>
+        <p className="mt-2"><strong className="text-chs-charcoal">Commission on labor only.</strong> CHS charges a real commission on an artisan&apos;s labor charge alone, never on materials — if the property owner or buyer procures materials through CHS, commission on that purchase is already collected separately. The real rate is 6% of the labor charge where it is below ₦100,000, and 8.5% where it is ₦100,000 or above.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">
@@ -139,6 +140,14 @@ export default function TermsContent() {
         <p>
           By registering as a tenant, you agree that CHS and/or your landlord may validly serve you any real legal document — including a court process, eviction notice, or quit notice — using the phone number, email address, or WhatsApp/social media contact you supplied at registration, if you become genuinely unreachable through normal means (e.g. your phone is switched off, your registered number is no longer active, or you cannot otherwise be reached after real, documented attempts). This does not replace your legal right to be heard; it exists solely so a landlord is not left without recourse when a tenant cannot be physically located — for example, if a property is abandoned or locked with rent unpaid and the tenant cannot be reached. Service through any of these real channels, once genuinely attempted and documented, is treated as valid notice for the purposes of this agreement.
         </p>
+      </div>
+
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">31. Marketplace — every deal stays on CHS, no exceptions</p>
+        <p>Every real marketplace conversation between a buyer and a vendor — a quote request and every response to it — is reviewed by CHS before it reaches the other party. A message containing a phone number, email address, or any other direct contact detail is blocked outright and never delivered; this applies equally to a buyer and a vendor. Neither party&apos;s real, personal identity is disclosed to the other — communication is identified only by a real CHS reference number. This exists for one reason: to keep every real deal, and the real protection that comes with it, genuinely on CHS from start to finish.</p>
+        <p className="mt-2"><strong className="text-chs-charcoal">Real, escrow-backed payment.</strong> Accepting a CHS-approved quote charges your wallet the real quoted price plus a real 6% buyer commission, held in escrow — never released to the vendor until CHS confirms the real deal is genuinely complete. The vendor then receives the real price, net of a real 4% vendor commission — 10% collected in total, from both sides. If a real deal does not go through, CHS can authorize a full, real refund directly from escrow.</p>
+        <p className="mt-2"><strong className="text-chs-charcoal">Direct purchase — skip the conversation.</strong> A real product can be sorted by price and bought directly, at its own real, listed price, with no quote or negotiation at all. The same real 6%/4% commission, escrow protection, and refund right apply, and the vendor sees only a real CHS reference number — never the buyer&apos;s identity.</p>
+        <p className="mt-2">Attempting to conclude a real marketplace deal outside CHS, or to exchange contact information to do so, is treated the same as circumventing any other real transaction on this platform — see term 2.</p>
       </div>
 
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">

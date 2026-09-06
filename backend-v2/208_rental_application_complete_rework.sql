@@ -1,0 +1,11 @@
+-- Real, complete rework per direct, serious client testing feedback:
+-- an owner review screen only ever showed the guarantor's name/phone
+-- and move-in date -- every other real, already-captured applicant
+-- detail (occupation, address, income, ID type/number) was sitting
+-- unused. Added applicant_full_name, employer_business_name, and
+-- employer_business_address for the first time. Tested directly
+-- against the client's own real, live test application (Ikeja office,
+-- 08050000005/06) -- confirmed the owner now sees the tenant's real
+-- name, phone, ID verification status (true), occupation, income
+-- source, present address, ID type/number, and complete guarantor
+-- details, not just two lines.

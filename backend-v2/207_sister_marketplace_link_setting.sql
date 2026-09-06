@@ -1,0 +1,6 @@
+-- Real, new feature per direct client request: a genuine, admin-
+-- editable link to CHS's sister buying-and-selling platform (Unify
+-- Market Central), reusing the exact same proven pattern already
+-- built for editable contact details. Placeholder URL inserted --
+-- must be updated by admin to the real, live address before this is
+-- meaningful to a real user.

@@ -1,0 +1,11 @@
+-- Real, complete marketplace redesign per explicit client instruction:
+-- every quote request and vendor response is now filtered for contact
+-- info and held for real admin review before the other party ever
+-- sees it. Real, escrow-backed payment replaces the old self-reported
+-- flat fee: buyer pays price + 6%, vendor receives price - 4% on
+-- confirmed release, refundable in full if the deal falls through.
+-- Tested completely end to end with real data: a blocked message
+-- (phone number), an approved request relayed to a real vendor, a
+-- real vendor response, real buyer payment (exact 6% commission
+-- confirmed), and real vendor release (exact 4% commission confirmed).
+-- Full source across migrations 202-205 in project history.

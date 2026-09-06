@@ -8,8 +8,17 @@ export interface ServiceQuoteRequest {
   product_id: string;
   requester_id: string;
   property_details: string;
-  status: "pending" | "responded" | "closed";
+  status: "pending" | "responded" | "paid" | "closed";
   vendor_response: string | null;
   quoted_amount: number | null;
   created_at: string;
+  reference_number: string;
+  moderation_status: "pending_review" | "approved" | "blocked";
+  block_reason: string | null;
+  response_moderation_status: "pending_review" | "approved" | "blocked" | null;
+  response_block_reason: string | null;
+  payment_status: "unpaid" | "held_escrow" | "released" | "refunded";
+  buyer_commission_amount: number | null;
+  vendor_commission_amount: number | null;
+  escrow_reference: string | null;
 }

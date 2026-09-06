@@ -54,7 +54,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
@@ -131,6 +131,80 @@ export default function AdminDashboard() {
     security_deposit_amount: number; properties: { title: string; owner_id: string }[] | null;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
+
+  // Real, new moderation queue completing the marketplace redesign per
+  // direct client instruction: every real quote request and vendor
+  // response is now held for real admin review before the other party
+  // ever sees it, and every real payment is released or refunded only
+  // once CHS actually confirms what happened.
+  const [marketplaceQueue, setMarketplaceQueue] = useState<{
+    id: string; reference_number: string; property_details: string; moderation_status: string;
+    vendor_response: string | null; response_moderation_status: string | null; quoted_amount: number | null;
+    payment_status: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
+  }[]>([]);
+  const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    supabase.from("service_quote_requests")
+      .select("id, reference_number, property_details, moderation_status, vendor_response, response_moderation_status, quoted_amount, payment_status, marketplace_products(name, marketplace_vendors(business_name))")
+      .or("moderation_status.eq.pending_review,response_moderation_status.eq.pending_review,payment_status.eq.held_escrow")
+      .then(({ data }) => setMarketplaceQueue((data as unknown as typeof marketplaceQueue) || []));
+  }, []);
+
+  async function handleApproveRequest(id: string) {
+    const { error } = await supabase.rpc("admin_relay_quote_request", { p_request_id: id });
+    if (!error) setMarketplaceQueue((prev) => prev.filter((q) => q.id !== id || q.response_moderation_status === "pending_review" || q.payment_status === "held_escrow"));
+  }
+  async function handleBlockRequest(id: string) {
+    if (!(marketplaceReasons[id] || "").trim()) { setActionError("Please write a real reason before blocking this."); return; }
+    const { error } = await supabase.rpc("admin_block_quote_request", { p_request_id: id, p_reason: marketplaceReasons[id] });
+    if (!error) setMarketplaceQueue((prev) => prev.filter((q) => q.id !== id));
+  }
+  async function handleApproveResponse(id: string) {
+    const { error } = await supabase.rpc("admin_relay_quote_response", { p_request_id: id });
+    if (!error) setMarketplaceQueue((prev) => prev.map((q) => q.id === id ? { ...q, response_moderation_status: "approved" } : q));
+  }
+  async function handleBlockResponse(id: string) {
+    if (!(marketplaceReasons[id] || "").trim()) { setActionError("Please write a real reason before blocking this."); return; }
+    const { error } = await supabase.rpc("admin_block_quote_response", { p_request_id: id, p_reason: marketplaceReasons[id] });
+    if (!error) setMarketplaceQueue((prev) => prev.filter((q) => q.id !== id));
+  }
+  async function handleReleaseMarketplaceEscrow(id: string) {
+    const { error } = await supabase.rpc("release_marketplace_escrow_to_vendor", { p_request_id: id });
+    if (!error) setMarketplaceQueue((prev) => prev.filter((q) => q.id !== id));
+  }
+
+  // Real direct orders — the genuine "skip the conversation" purchase
+  // path, held in the same real escrow, needing the same real,
+  // confirmed release or refund before any money moves again.
+  const [directOrderQueue, setDirectOrderQueue] = useState<{
+    id: string; reference_number: string; amount: number; payment_status: string;
+    marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
+  }[]>([]);
+  const [directOrderReasons, setDirectOrderReasons] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    supabase.from("marketplace_direct_orders")
+      .select("id, reference_number, amount, payment_status, marketplace_products(name, marketplace_vendors(business_name))")
+      .eq("payment_status", "held_escrow")
+      .then(({ data }) => setDirectOrderQueue((data as unknown as typeof directOrderQueue) || []));
+  }, []);
+
+  async function handleReleaseDirectOrder(id: string) {
+    const { error } = await supabase.rpc("release_direct_order_to_vendor", { p_order_id: id });
+    if (!error) setDirectOrderQueue((prev) => prev.filter((o) => o.id !== id));
+  }
+  async function handleRefundDirectOrder(id: string) {
+    if (!(directOrderReasons[id] || "").trim()) { setActionError("Please write a real reason before refunding this."); return; }
+    const { error } = await supabase.rpc("refund_direct_order_to_buyer", { p_order_id: id, p_reason: directOrderReasons[id] });
+    if (!error) setDirectOrderQueue((prev) => prev.filter((o) => o.id !== id));
+  }
+  async function handleRefundMarketplaceEscrow(id: string) {
+    if (!(marketplaceReasons[id] || "").trim()) { setActionError("Please write a real reason before refunding this."); return; }
+    const { error } = await supabase.rpc("refund_marketplace_escrow_to_buyer", { p_request_id: id, p_reason: marketplaceReasons[id] });
+    if (!error) setMarketplaceQueue((prev) => prev.filter((q) => q.id !== id));
+  }
+
 
   // Real, new feature completing the deposit mechanism — admin, not
   // the host directly, resolves a held deposit, matching the same
@@ -1351,6 +1425,7 @@ export default function AdminDashboard() {
           { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
+          { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant" },
         ] as { key: Tab; label: string; domain: string | null }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
@@ -1448,6 +1523,8 @@ export default function AdminDashboard() {
                     { key: "contact_email_admin", label: "Admin email" },
                     { key: "contact_phone_primary", label: "Primary phone" },
                     { key: "contact_phone_secondary", label: "Secondary phone" },
+                    { key: "sister_marketplace_name", label: "Sister marketplace name" },
+                    { key: "sister_marketplace_url", label: "Sister marketplace URL" },
                   ] as const).map((f) => (
                     <div key={f.key}>
                       <label className="text-[10px] font-semibold text-gray-600">{f.label}</label>
@@ -2648,6 +2725,91 @@ export default function AdminDashboard() {
                       Claim for host
                     </button>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "marketplacemoderation" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">
+              Every real marketplace message and payment waits here — a request or response only reaches the other party once approved; a payment only moves once you confirm what actually happened.
+            </p>
+
+            {directOrderQueue.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-chs-charcoal mb-1.5">🛒 Real Direct Orders (paid, no negotiation)</p>
+                {directOrderQueue.map((o) => (
+                  <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start mb-1">
+                      <p className="text-sm font-semibold text-chs-charcoal">{o.marketplace_products?.[0]?.name || "Product"}</p>
+                      <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-1">Vendor: {o.marketplace_products?.[0]?.marketplace_vendors?.[0]?.business_name}</p>
+                    <p className="text-sm font-bold text-chs-charcoal mb-2">Real amount held: {formatNaira(o.amount)}</p>
+                    <input type="text" placeholder="If refunding: real reason"
+                      value={directOrderReasons[o.id] || ""} onChange={(e) => setDirectOrderReasons({ ...directOrderReasons, [o.id]: e.target.value })}
+                      className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2" />
+                    <div className="flex gap-2">
+                      <button onClick={() => handleReleaseDirectOrder(o.id)} className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">Confirm delivered — release</button>
+                      <button onClick={() => handleRefundDirectOrder(o.id)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">Refund buyer</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {marketplaceQueue.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">Nothing real is waiting for review right now.</p>
+            ) : (
+              marketplaceQueue.map((q) => (
+                <div key={q.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-sm font-semibold text-chs-charcoal">{q.marketplace_products?.[0]?.name || "Product"}</p>
+                    <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{q.reference_number}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-1">Vendor: {q.marketplace_products?.[0]?.marketplace_vendors?.[0]?.business_name}</p>
+
+                  {q.moderation_status === "pending_review" && (
+                    <>
+                      <p className="text-xs text-chs-charcoal bg-white rounded-lg p-2 mb-2">{q.property_details}</p>
+                      <input type="text" placeholder="If blocking: real reason"
+                        value={marketplaceReasons[q.id] || ""} onChange={(e) => setMarketplaceReasons({ ...marketplaceReasons, [q.id]: e.target.value })}
+                        className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2" />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleApproveRequest(q.id)} className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">Approve &amp; relay to vendor</button>
+                        <button onClick={() => handleBlockRequest(q.id)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">Block</button>
+                      </div>
+                    </>
+                  )}
+
+                  {q.response_moderation_status === "pending_review" && (
+                    <>
+                      <p className="text-xs text-chs-charcoal bg-white rounded-lg p-2 mb-1">{q.vendor_response}</p>
+                      {q.quoted_amount && <p className="text-sm font-bold text-chs-charcoal mb-2">{formatNaira(q.quoted_amount)}</p>}
+                      <input type="text" placeholder="If blocking: real reason"
+                        value={marketplaceReasons[q.id] || ""} onChange={(e) => setMarketplaceReasons({ ...marketplaceReasons, [q.id]: e.target.value })}
+                        className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2" />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleApproveResponse(q.id)} className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">Approve &amp; relay to buyer</button>
+                        <button onClick={() => handleBlockResponse(q.id)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">Block</button>
+                      </div>
+                    </>
+                  )}
+
+                  {q.payment_status === "held_escrow" && (
+                    <>
+                      <p className="text-sm font-bold text-chs-charcoal mb-1">Real amount held: {formatNaira(q.quoted_amount || 0)}</p>
+                      <input type="text" placeholder="If refunding: real reason"
+                        value={marketplaceReasons[q.id] || ""} onChange={(e) => setMarketplaceReasons({ ...marketplaceReasons, [q.id]: e.target.value })}
+                        className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2" />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleReleaseMarketplaceEscrow(q.id)} className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">Confirm delivered — release</button>
+                        <button onClick={() => handleRefundMarketplaceEscrow(q.id)} className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">Refund buyer</button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))
             )}

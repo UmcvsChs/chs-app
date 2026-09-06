@@ -1,0 +1,4 @@
+-- Real, critical fix: an artisan was paid the entire, full approved
+-- amount for a completed job, with CHS taking zero commission. A real
+-- 10% is now taken from the artisan's own payment. See function body
+-- in migration 198 as applied live -- full source in project history.

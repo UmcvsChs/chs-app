@@ -80,63 +80,101 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
   const documentLabel = isVoucher ? "PAYMENT VOUCHER / REMITTANCE ADVICE" : "RECEIPT";
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4 print:bg-white print:p-0">
-      <div className="max-w-md mx-auto bg-white rounded-xl shadow-sm p-8 print:shadow-none print:rounded-none">
-        <div className="text-center mb-6 pb-6 border-b-2 border-chs-charcoal">
-          <p className="font-serif text-2xl font-bold text-chs-charcoal">CHS</p>
-          <p className="text-xs text-gray-500">Complete Housing Solutions</p>
-          <p className="text-xs font-bold text-green-700 mt-3">✓ REAL, VERIFIED {documentLabel}</p>
-        </div>
+    <div className="min-h-screen bg-[#e5e2dc] py-10 px-4 print:bg-white print:p-0 font-sans">
+      <style>{`
+        @media print { .no-print { display: none !important; } }
+        .receipt-seal {
+          position: absolute; top: 108px; right: 24px; width: 84px; height: 84px;
+          border: 2px solid rgba(30,27,22,0.09); border-radius: 50%;
+          display: flex; align-items: center; justify-content: center; transform: rotate(-16deg);
+        }
+        .receipt-seal::before { content: ""; position: absolute; inset: 6px; border: 1px dashed rgba(30,27,22,0.09); border-radius: 50%; }
+        .receipt-divider { height: 1px; background: repeating-linear-gradient(90deg, #e3ddd2 0, #e3ddd2 4px, transparent 4px, transparent 8px); }
+        .receipt-corner { position: absolute; width: 14px; height: 14px; border-color: #e8622f; opacity: 0.5; }
+      `}</style>
 
-        <div className="text-center mb-6">
-          <p className="text-xs text-gray-400 uppercase">Amount</p>
-          <p className="text-3xl font-bold text-chs-charcoal">{formatNaira(amount)}</p>
-        </div>
+      <div className="max-w-md mx-auto bg-[#fffdfb] rounded print:rounded-none shadow-[0_8px_30px_rgba(30,27,22,0.15)] print:shadow-none relative overflow-hidden">
+        <div className="receipt-corner top-2 left-2 border-t-2 border-l-2 no-print" />
+        <div className="receipt-corner top-2 right-2 border-t-2 border-r-2 no-print" />
 
-        <div className="space-y-3 text-sm mb-6">
-          <div className="flex justify-between border-b border-gray-100 pb-2">
-            <span className="text-gray-500">Reference</span>
-            <span className="font-semibold text-chs-charcoal">{reference}</span>
+        {/* Header band — real, deliberate branding per direct client
+            request: a plain data table didn't read as a genuine,
+            professional financial document. */}
+        <div className="bg-gradient-to-br from-chs-charcoal to-[#2a251d] px-8 pt-7 pb-5 text-white relative">
+          <div className="absolute left-0 right-0 -bottom-px h-1 bg-gradient-to-r from-chs-red via-chs-amber to-chs-red" />
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="font-serif text-[22px] font-extrabold tracking-wide">CH<span className="text-chs-red">S</span></p>
+              <p className="text-[10.5px] text-[#b8b2a6] mt-0.5">Complete Housing Solutions</p>
+            </div>
+            <span className="text-[9px] font-bold tracking-wider bg-chs-red/20 text-[#ffb388] border border-chs-red/40 rounded-full px-2.5 py-1.5 whitespace-nowrap">
+              {documentLabel}
+            </span>
           </div>
-          {date && (
-            <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">Date</span>
-              <span className="font-semibold text-chs-charcoal">{new Date(date).toLocaleString()}</span>
+        </div>
+
+        <div className="px-8 pt-7 pb-6 relative">
+          <div className="receipt-seal">
+            <p className="text-[8px] font-extrabold uppercase tracking-wide text-center leading-relaxed" style={{ color: "rgba(30,27,22,0.16)" }}>CHS<br />Verified<br />★</p>
+          </div>
+
+          <div className="text-center mb-6">
+            <p className="text-[10px] text-[#9a9184] uppercase tracking-[2px] font-semibold">Amount</p>
+            <p className="font-serif text-[32px] font-extrabold text-chs-charcoal mt-1">{formatNaira(amount)}</p>
+            <span className="inline-flex items-center gap-1 bg-[#eaf5ec] text-[#2c7a3d] text-[10.5px] font-bold px-3 py-1.5 rounded-full mt-2">
+              ✓ Verified &amp; Confirmed
+            </span>
+          </div>
+
+          <div className="receipt-divider my-5" />
+
+          <div className="text-[13.5px]">
+            <div className="flex justify-between items-start gap-5 py-2.5 border-b border-[#f1ede6]">
+              <span className="text-[#8f8776] font-medium whitespace-nowrap">Reference</span>
+              <span className="font-bold text-chs-charcoal text-right font-mono text-[12.5px] tracking-wide">{reference}</span>
             </div>
-          )}
-          {payer && (
-            <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">{isVoucher ? "Originally paid by" : "From"}</span>
-              <span className="font-semibold text-chs-charcoal">{payer.full_name}</span>
-            </div>
-          )}
-          {payee && (
-            <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">{isVoucher ? "Remitted to" : "To"}</span>
-              <span className="font-semibold text-chs-charcoal">{payee.full_name}</span>
-            </div>
-          )}
+            {date && (
+              <div className="flex justify-between items-start gap-5 py-2.5 border-b border-[#f1ede6]">
+                <span className="text-[#8f8776] font-medium whitespace-nowrap">Date</span>
+                <span className="font-bold text-chs-charcoal text-right">{new Date(date).toLocaleString()}</span>
+              </div>
+            )}
+            {payer && (
+              <div className="flex justify-between items-start gap-5 py-2.5 border-b border-[#f1ede6]">
+                <span className="text-[#8f8776] font-medium whitespace-nowrap">{isVoucher ? "Originally paid by" : "From"}</span>
+                <span className="font-bold text-chs-charcoal text-right">{payer.full_name}</span>
+              </div>
+            )}
+            {payee && (
+              <div className="flex justify-between items-start gap-5 py-2.5">
+                <span className="text-[#8f8776] font-medium whitespace-nowrap">{isVoucher ? "Remitted to" : "To"}</span>
+                <span className="font-bold text-chs-charcoal text-right">{payee.full_name}</span>
+              </div>
+            )}
+          </div>
+
           {(payer || payee) && (
-            <div className="flex justify-between border-b border-gray-100 pb-2">
-              <span className="text-gray-500">Description</span>
-              <span className="font-semibold text-chs-charcoal text-right">{(payer || payee)!.description}</span>
+            <div className="bg-[#fbf8f3] border border-[#f0ebe1] rounded-lg px-3.5 py-3 mt-4 text-[12.5px] text-[#55503f] leading-relaxed">
+              <span className="block text-[9.5px] font-bold uppercase tracking-wide text-[#a89a7a] mb-1">Description</span>
+              {(payer || payee)!.description}
             </div>
           )}
         </div>
 
-        <p className="text-[10px] text-gray-400 text-center">
-          This is a real, system-generated {isVoucher ? "payment voucher" : "receipt"} from CHS, verifiable at any time using the reference number above.
-        </p>
-
-        <button
-          onClick={() => window.print()}
-          className="w-full mt-6 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold print:hidden"
-        >
-          🖨️ Print / Save as PDF
-        </button>
-        <Link href="/" className="block text-center text-xs text-gray-400 mt-3 print:hidden">
-          Back to homepage
-        </Link>
+        <div className="bg-[#f7f4ee] border-t border-[#ece6d8] px-8 pt-4 pb-5 text-center">
+          <p className="text-[10.5px] text-[#6b6455] leading-relaxed mb-3.5">
+            This is a real, system-generated {isVoucher ? "payment voucher" : "receipt"} from <span className="font-bold text-chs-charcoal">CHS — Complete Housing Solutions</span>, verifiable at any time using the reference number above.
+          </p>
+          <button
+            onClick={() => window.print()}
+            className="w-full py-3 rounded-full bg-chs-red text-white text-[13.5px] font-bold shadow-[0_4px_14px_rgba(232,98,47,0.35)] no-print"
+          >
+            🖨️ Print / Save as PDF
+          </button>
+          <Link href="/" className="block text-center text-xs text-gray-400 mt-3 no-print">
+            Back to homepage
+          </Link>
+        </div>
       </div>
     </div>
   );

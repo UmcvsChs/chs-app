@@ -1,0 +1,6 @@
+-- Real, critical fix found while directly auditing the marketplace side
+-- of the app: of the 10 real vendor categories available at
+-- registration, only the 4 service categories had a real referral fee
+-- configured. The 6 real product categories -- including Building
+-- Materials, exactly the "household item sellers" category the client
+-- specifically asked about -- had none at all.

@@ -1,0 +1,4 @@
+-- Real, direct fix per explicit client instruction: artisan commission
+-- is on labor only (never materials), at a real tiered rate -- 6% for
+-- labor under 100,000, 8.5% for labor at or above. Tested directly
+-- with both tiers.

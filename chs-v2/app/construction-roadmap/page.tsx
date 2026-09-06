@@ -41,6 +41,10 @@ interface Milestone {
 export default function ConstructionRoadmapPage() {
   const { session, profile, loading: authLoading } = useAuth();
   const [models, setModels] = useState<ReferenceModel[]>([]);
+  const [sisterLink, setSisterLink] = useState<{ sister_marketplace_name: string; sister_marketplace_url: string } | null>(null);
+  useEffect(() => {
+    supabase.rpc("get_sister_marketplace_link").then(({ data }) => setSisterLink(data));
+  }, []);
   const [permits, setPermits] = useState<Permit[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -139,6 +143,14 @@ export default function ConstructionRoadmapPage() {
         <p className="text-sm text-gray-500 mb-4">
           Real quantities, permits checklist, and payment plan for building from scratch — for new construction, not renovation.
         </p>
+
+        {sisterLink && (
+          <a href={sisterLink.sister_marketplace_url} target="_blank" rel="noopener noreferrer"
+            className="block bg-chs-charcoal rounded-xl px-4 py-3 text-white mb-4">
+            <p className="text-xs font-bold">🔗 Procuring real materials for this build? Try {sisterLink.sister_marketplace_name} →</p>
+            <p className="text-[10px] text-white/70 mt-0.5">Real, verified sellers for building materials and more — our sister platform, still under CHS&apos;s own jurisdiction.</p>
+          </a>
+        )}
 
         <div className="grid grid-cols-2 gap-2 mb-4">
           {models.map((m) => (

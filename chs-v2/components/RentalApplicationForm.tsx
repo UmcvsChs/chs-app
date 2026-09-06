@@ -23,9 +23,12 @@ export default function RentalApplicationForm({
   session,
   onSuccess,
 }: RentalApplicationFormProps) {
+  const [applicantFullName, setApplicantFullName] = useState("");
   const [occupation, setOccupation] = useState("");
   const [presentAddress, setPresentAddress] = useState("");
   const [incomeSource, setIncomeSource] = useState("");
+  const [employerBusinessName, setEmployerBusinessName] = useState("");
+  const [employerBusinessAddress, setEmployerBusinessAddress] = useState("");
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [idFile, setIdFile] = useState<File | null>(null);
@@ -41,8 +44,16 @@ export default function RentalApplicationForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!applicantFullName.trim()) {
+      setError("Please enter your real, full name — this is what the owner will see you as.");
+      return;
+    }
     if (!occupation.trim() || !presentAddress.trim() || !incomeSource.trim()) {
       setError("Please tell us about yourself — your occupation, present address, and source of income.");
+      return;
+    }
+    if (!employerBusinessName.trim() || !employerBusinessAddress.trim()) {
+      setError("Please tell us where you work or the real location of your business — this helps the owner genuinely verify who you are.");
       return;
     }
     if (!idType || !idNumber.trim()) {
@@ -75,9 +86,12 @@ export default function RentalApplicationForm({
     const { error: insertError } = await supabase.from("rental_applications").insert({
       property_id: propertyId,
       tenant_id: session.user.id,
+      applicant_full_name: applicantFullName.trim(),
       applicant_occupation: occupation.trim(),
       applicant_present_address: presentAddress.trim(),
       applicant_income_source: incomeSource.trim(),
+      employer_business_name: employerBusinessName.trim(),
+      employer_business_address: employerBusinessAddress.trim(),
       applicant_id_type: idType,
       applicant_id_number: idNumber.trim(),
       applicant_id_document_url: idDocumentUrl,
@@ -108,6 +122,11 @@ export default function RentalApplicationForm({
 
       <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">About you</p>
       <div>
+        <label className="text-xs font-semibold text-gray-600">Your full name (as on your ID)</label>
+        <input type="text" value={applicantFullName} onChange={(e) => setApplicantFullName(e.target.value)}
+          placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
         <label className="text-xs font-semibold text-gray-600">Occupation</label>
         <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)}
           placeholder="e.g. Civil servant, Trader, Student" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
@@ -116,6 +135,16 @@ export default function RentalApplicationForm({
         <label className="text-xs font-semibold text-gray-600">Present address</label>
         <input type="text" value={presentAddress} onChange={(e) => setPresentAddress(e.target.value)}
           placeholder="Where you currently live" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Employer / business name</label>
+        <input type="text" value={employerBusinessName} onChange={(e) => setEmployerBusinessName(e.target.value)}
+          placeholder="Who you work for, or your business name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Employer / business address</label>
+        <input type="text" value={employerBusinessAddress} onChange={(e) => setEmployerBusinessAddress(e.target.value)}
+          placeholder="A real, verifiable work or business address" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Source of income</label>

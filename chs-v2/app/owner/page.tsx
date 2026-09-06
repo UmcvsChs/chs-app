@@ -57,6 +57,10 @@ export default function OwnerDashboard() {
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
   const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; guest_phone: string; guest_id_document_url: string | null; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; approved_vendor: string | null; approved_amount: number | null; properties: { title: string }[] | null; fault_quotations: { vendor_name: string; amount: number; artisans: { user_id: string; trade: string } | null }[] | null }[]>([]);
+  const [sisterLink, setSisterLink] = useState<{ sister_marketplace_name: string; sister_marketplace_url: string } | null>(null);
+  useEffect(() => {
+    supabase.rpc("get_sister_marketplace_link").then(({ data }) => setSisterLink(data));
+  }, []);
   const [rentToOwnRequests, setRentToOwnRequests] = useState<{ id: string; total_price: number; monthly_amount: number; properties: { title: string }[] | null }[]>([]);
   const [approvingRtoId, setApprovingRtoId] = useState<string | null>(null);
   const [sellerOfferNotes, setSellerOfferNotes] = useState<Record<string, string>>({});
@@ -264,7 +268,7 @@ export default function OwnerDashboard() {
     const [allOffersRes, allInspectionsRes, allApplicationsRes, allMediaRequestsRes] = await Promise.all([
       supabase.from("offers").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("inspections").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
-      supabase.from("rental_applications").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("rental_applications").select("*, tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone, valid_id_verified)").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("media_requests").select("*").in("property_id", propertyIds).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
 
@@ -770,6 +774,8 @@ export default function OwnerDashboard() {
                 </span>
               </div>
 
+              <p className="text-base font-bold text-chs-charcoal mb-2">{formatNaira(property.price)}</p>
+
               <Link href={`/edit-listing/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
                 Edit listing
               </Link>
@@ -1031,12 +1037,47 @@ export default function OwnerDashboard() {
                     Rental applications ({property.rentalApplications.length})
                   </p>
                   {property.rentalApplications.map((app) => (
-                    <div key={app.id} className="bg-gray-50 rounded-lg p-2.5 mb-2 text-xs">
-                      <p>Guarantor: {app.guarantor_name} — {app.guarantor_phone}</p>
-                      <p className="text-gray-500">Move-in: {app.move_in_date}</p>
-                      <p className="text-gray-400 capitalize mt-1">Status: {app.status.replace(/_/g, " ")}</p>
+                    <div key={app.id} className="bg-gray-50 rounded-lg p-3 mb-2 text-xs space-y-2">
+                      <div className="pb-2 border-b border-gray-200">
+                        <div className="flex justify-between items-start">
+                          <p className="font-bold text-chs-charcoal text-sm">{app.applicant_full_name || app.tenant?.full_name || "Applicant"}</p>
+                          {app.tenant?.valid_id_verified ? (
+                            <span className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">✓ ID Verified</span>
+                          ) : (
+                            <span className="text-[9px] font-bold text-chs-amber-dark bg-chs-amber-light px-2 py-0.5 rounded-full whitespace-nowrap">⚠ Not yet verified</span>
+                          )}
+                        </div>
+                        <p className="text-gray-500 mt-0.5">{app.tenant?.phone}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase">Occupation &amp; income</p>
+                        <p className="text-gray-700">{app.applicant_occupation} — {app.applicant_income_source}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase">Where they work / their business</p>
+                        <p className="text-gray-700">{app.employer_business_name}</p>
+                        <p className="text-gray-500">{app.employer_business_address}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase">Current address</p>
+                        <p className="text-gray-700">{app.applicant_present_address}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase">Means of identification</p>
+                        <p className="text-gray-700">{app.applicant_id_type} — {app.applicant_id_number}</p>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200">
+                        <p className="text-gray-400 text-[10px] font-bold uppercase">Guarantor</p>
+                        <p className="text-gray-700">{app.guarantor_name} — {app.guarantor_phone}</p>
+                        <p className="text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
+                        <p className="text-gray-500">{app.guarantor_address}</p>
+                      </div>
+
+                      <p className="text-gray-700 font-semibold">Wants to move in: {app.move_in_date}</p>
+                      <p className="text-gray-400 capitalize">Status: {app.status.replace(/_/g, " ")}</p>
                       {app.status === "awaiting_owner_decision" && (
-                        <div className="mt-2">
+                        <div className="mt-1">
                           <p className="text-[10px] text-gray-400 mb-1.5">Your decision is relayed to the applicant by CHS.</p>
                           <div className="flex gap-2">
                             <button onClick={() => handleApplicationDecision(app.id, "approved")}
@@ -1258,6 +1299,12 @@ export default function OwnerDashboard() {
       {faultReports.length > 0 && (
         <div className="px-4 pb-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">🔧 Maintenance Requests</p>
+          {sisterLink && (
+            <a href={sisterLink.sister_marketplace_url} target="_blank" rel="noopener noreferrer"
+              className="block bg-chs-charcoal rounded-lg px-3 py-2 text-white mb-2">
+              <p className="text-[11px] font-bold">🔗 Sourcing materials yourself? Try {sisterLink.sister_marketplace_name} →</p>
+            </a>
+          )}
           {faultReports.map((f) => (
             <div key={f.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
               <p className="text-xs font-semibold text-chs-charcoal">{f.properties?.[0]?.title || "Property"} — {f.category}</p>
