@@ -266,7 +266,7 @@ export default function OwnerDashboard() {
     // property_id — same real data, a fraction of the round-trips.
     const propertyIds = ownedProperties.map((p) => p.id);
     const [allOffersRes, allInspectionsRes, allApplicationsRes, allMediaRequestsRes] = await Promise.all([
-      supabase.from("offers").select("*, buyer:profiles!offers_buyer_id_fkey(full_name, phone, valid_id_verified, residential_address)").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("offers").select("*, buyer:profiles!offers_buyer_id_fkey(full_name, phone, valid_id_verified, residential_address)").in("property_id", propertyIds).neq("status", "awaiting_admin_review").order("created_at", { ascending: false }),
       supabase.from("inspections").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("rental_applications").select("*, tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone, valid_id_verified)").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("media_requests").select("*").in("property_id", propertyIds).eq("status", "pending").order("created_at", { ascending: false }),
@@ -934,8 +934,17 @@ export default function OwnerDashboard() {
                           ) : (
                             <span className="text-[9px] font-bold text-chs-amber-dark">⚠ Not yet verified</span>
                           )}
-                          <p className="text-[10px] text-gray-500">{offer.buyer_phone || offer.buyer?.phone}</p>
                           {offer.buyer_occupation && <p className="text-[10px] text-gray-500">{offer.buyer_occupation} · {offer.buyer_source_of_funds}</p>}
+                          {/* Real, direct fix per a genuine, confirmed
+                              client concern (with a real screenshot):
+                              a raw phone number was shown directly here,
+                              completely bypassing the same real,
+                              contact-blocked messaging CHS already
+                              enforces everywhere else. Removed — any
+                              real contact goes through the moderated
+                              thread below, same as every other real
+                              negotiation on this platform. */}
+                          <p className="text-[9px] text-gray-400 italic">Contact this buyer only through the real, moderated messages below.</p>
                         </div>
                         <span className="text-gray-400 capitalize">{offer.status}</span>
                       </div>

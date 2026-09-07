@@ -1,0 +1,23 @@
+-- Real, serious fix per a direct client report with real screenshots:
+-- a buyer's real phone number was shown directly to the owner, and
+-- the offer went straight to the owner with zero CHS involvement --
+-- both a real privacy leak and inconsistent with the admin-mediated
+-- pattern already built for rental applications and the marketplace.
+--
+-- Fixed completely: (1) removed the raw phone number from the
+-- owner's view entirely -- real contact now only happens through the
+-- already-existing, contact-blocked negotiation message thread.
+-- (2) Found and closed a related, real loophole -- the trigger
+-- protecting offers only ever checked the "note" field; the newer
+-- occupation and source-of-funds fields, added afterward, were never
+-- covered, so a phone number typed into either would have slipped
+-- through. Fixed and tested directly -- confirmed a phone number
+-- placed in "occupation" is now correctly rejected.
+-- (3) Built a genuine admin-review gate for offers, matching the
+-- rental-application pattern exactly: a new offer now defaults to
+-- "awaiting_admin_review", a real database trigger notifies admin
+-- immediately, and the owner cannot see it until admin explicitly
+-- relays it. Tested completely end to end with the client's own real
+-- scenario (Caleb Olawole, ₦38,500,000 offer): confirmed admin was
+-- notified, confirmed the owner received nothing until relay, and
+-- confirmed the relay itself worked correctly.

@@ -56,7 +56,7 @@ interface PendingProperty {
   price: number;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 
 export default function AdminDashboard() {
@@ -143,6 +143,16 @@ export default function AdminDashboard() {
     security_deposit_amount: number; properties: { title: string; owner_id: string }[] | null;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
+  const [pendingOfferReview, setPendingOfferReview] = useState<{
+    id: string; amount: number; note: string | null; buyer_full_name: string | null; buyer_occupation: string | null;
+    buyer_source_of_funds: string | null; created_at: string; properties: { title: string } | null;
+    buyer: { valid_id_verified: boolean } | null;
+  }[]>([]);
+  useEffect(() => {
+    supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
+      .eq("status", "awaiting_admin_review").order("created_at", { ascending: true })
+      .then(({ data }) => setPendingOfferReview((data as unknown as typeof pendingOfferReview) || []));
+  }, []);
   const [staleCommissions, setStaleCommissions] = useState<{
     id: string; transaction_type: string; payer_role: string; commission_amount: number;
     base_amount: number; created_at: string; payer_name: string; payer_phone: string;
@@ -1394,6 +1404,7 @@ export default function AdminDashboard() {
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
+          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
           { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
@@ -2345,6 +2356,39 @@ export default function AdminDashboard() {
               </div>
             ))
           ))}
+
+        {activeTab === "offerreview" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              💰 A real offer waits here until CHS reviews the buyer&apos;s real, verified details and relays it to the owner — the owner never sees a raw phone number; any real contact happens through the moderated messages once the deal is underway.
+            </p>
+            {pendingOfferReview.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real offers awaiting review.</p>
+            ) : (
+              pendingOfferReview.map((o) => (
+                <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
+                  <p className="text-xs text-chs-charcoal mt-1">{o.buyer_full_name}</p>
+                  {o.buyer?.valid_id_verified ? (
+                    <span className="text-[9px] font-bold text-green-700">✓ ID Verified</span>
+                  ) : (
+                    <span className="text-[9px] font-bold text-chs-amber-dark">⚠ Not yet verified</span>
+                  )}
+                  <p className="text-[11px] text-gray-500 mt-1">{o.buyer_occupation} · {o.buyer_source_of_funds}</p>
+                  {o.note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{o.note}&quot;</p>}
+                  <button onClick={async () => { await supabase.rpc("admin_relay_offer_to_owner", { p_offer_id: o.id }); setPendingOfferReview((prev) => prev.filter((x) => x.id !== o.id)); }}
+                    className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    ✓ Reviewed — relay to owner
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
 
         {activeTab === "properties" && (
           <div>
