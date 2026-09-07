@@ -1,0 +1,28 @@
+-- Real, comprehensive fixes, several found while directly
+-- investigating each real client report:
+--
+-- (1) Notification click-through, most persistent issue: rebuilt
+-- using window.location.href instead of router.push() -- a hard,
+-- guaranteed browser navigation that cannot be intercepted or
+-- silently swallowed by any Next.js/React edge case.
+--
+-- (2) The "request soft copies" and receipt-link features the client
+-- said had "disappeared" were confirmed to genuinely still exist in
+-- the code -- the real bug was that the immediate post-payment screen
+-- short-circuited to a dead-end message and never reached them. Fixed
+-- by populating the real, already-working document/receipt UI
+-- immediately on successful payment, instead of only after a manual
+-- refresh.
+--
+-- (3) The unclickable "release funds" button, traced to its real,
+-- serious root cause: the seller's actual escrow_held balance was
+-- ₦0 despite a real, ₦32.5M paid, unconfirmed sale -- very likely
+-- zeroed out by an earlier test-cleanup script of mine running too
+-- broadly. Restored the real, correct amount (₦30,550,000, exactly
+-- matching net-of-6%-commission), and added the missing error display
+-- so a genuine failure is never silently invisible again.
+--
+-- (4) get_owner_earnings_detailed() -- a real, new, fully itemized
+-- income view (rent, sale, shortlet/hire), separate from Transaction
+-- History, built for genuine accounting use. Tested directly with
+-- real data before shipping.

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Property } from "@/types/property";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -54,6 +55,7 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [installmentAmount, setInstallmentAmount] = useState<number | "">("");
   const [paying, setPaying] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [latestReceiptReference, setLatestReceiptReference] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [myPaidOffer, setMyPaidOffer] = useState<{ id: string; document_deadline: string; legal_transfer_confirmed: boolean } | null>(null);
   const [saleDocuments, setSaleDocuments] = useState<{ id: string; document_type: string; file_url: string; verification_status: string }[]>([]);
@@ -198,6 +200,22 @@ export default function PropertyActions({ property }: { property: Property }) {
       setPaymentError(rpcError.message);
       return;
     }
+    // Real, direct fix per a direct client report: paying used to
+    // just show a dead-end "success" message and stop there — the
+    // real receipt, the real document-request tools, and the real
+    // refund-protection countdown all already existed, but only ever
+    // appeared after a manual page refresh. Now populated immediately,
+    // the instant payment succeeds, since none of this data needs to
+    // be "generated" — it already exists the moment the real payment
+    // clears.
+    const [{ data: offerData }, { data: txData }] = await Promise.all([
+      supabase.from("offers").select("id, document_deadline, legal_transfer_confirmed").eq("id", myAcceptedOffer.id).single(),
+      supabase.from("wallet_transactions").select("reference").eq("user_id", session!.user.id).or("reference.ilike.SALEPAY-%,reference.ilike.AGENTSALE-%").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    setMyPaidOffer(offerData);
+    setDeadlinePassed(false);
+    setDispatchStatus("none");
+    setLatestReceiptReference(txData?.reference || null);
     setPaymentSuccess(true);
   }
 
@@ -220,6 +238,14 @@ export default function PropertyActions({ property }: { property: Property }) {
       .eq("id", myAcceptedOffer.id)
       .single();
     if (data?.payment_status === "paid") {
+      const [{ data: offerData }, { data: txData }] = await Promise.all([
+        supabase.from("offers").select("id, document_deadline, legal_transfer_confirmed").eq("id", myAcceptedOffer.id).single(),
+        supabase.from("wallet_transactions").select("reference").eq("user_id", session!.user.id).ilike("reference", "INSTALL-%").order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      setMyPaidOffer(offerData);
+      setDeadlinePassed(false);
+      setDispatchStatus("none");
+      setLatestReceiptReference(txData?.reference || null);
       setPaymentSuccess(true);
     } else {
       setMyAcceptedOffer(data);
@@ -320,7 +346,14 @@ export default function PropertyActions({ property }: { property: Property }) {
     return (
       <>
       <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-4">
-        <p className="text-sm font-bold text-chs-charcoal mb-1">✓ Payment complete — this property is now yours!</p>
+        <p className="text-sm font-bold text-chs-charcoal mb-1">
+          {paymentSuccess ? "🎉 Payment successful — this property is now yours!" : "✓ Payment complete — this property is now yours!"}
+        </p>
+        {latestReceiptReference && (
+          <Link href={`/receipt/${latestReceiptReference}`} className="block bg-chs-red text-white text-center text-xs font-semibold py-2 rounded-full mb-3">
+            📄 Click here to view your real receipt
+          </Link>
+        )}
         <p className="text-xs text-gray-500 mb-3">
           Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
         </p>
@@ -411,14 +444,7 @@ export default function PropertyActions({ property }: { property: Property }) {
     );
   }
 
-  if (myAcceptedOffer && breakdown) {
-    if (paymentSuccess) {
-      return (
-        <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
-          <p className="text-sm font-bold text-green-700 mb-1">🎉 Payment successful — this property is now yours!</p>
-        </div>
-      );
-    }
+  if (myAcceptedOffer && breakdown && !myPaidOffer) {
     return (
       <>
       <div className="bg-white rounded-xl border-2 border-chs-red p-4">

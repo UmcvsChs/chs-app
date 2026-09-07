@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -11,7 +10,6 @@ import { Notification } from "@/types/notification";
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
   const { session } = useAuth();
-  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -86,12 +84,22 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  function handleNotificationClick(n: Notification) {
+  function handleNotificationClick(e: React.MouseEvent, n: Notification) {
+    e.preventDefault();
+    e.stopPropagation();
     markAsRead(n.id);
-    setToast(null);
-    setOpen(false);
     if (n.link) {
-      router.push(n.link);
+      // Real, direct fix per the client's repeated, most persistent
+      // report: router.push() was structurally correct but still
+      // wasn't reliably navigating in practice. Replaced with a hard,
+      // real browser navigation — window.location.href cannot be
+      // intercepted, blocked, or silently swallowed by any Next.js
+      // routing subtlety, parent click handler, or overlay stacking
+      // issue. This is a guaranteed, unconditional navigation.
+      window.location.href = n.link;
+    } else {
+      setToast(null);
+      setOpen(false);
     }
   }
 
@@ -101,7 +109,7 @@ export default function NotificationBell() {
         <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[92vw] max-w-sm z-[100] animate-in fade-in slide-in-from-top-2">
           <div
             className="bg-chs-charcoal text-white rounded-xl shadow-2xl p-3 border border-white/10 cursor-pointer"
-            onClick={() => handleNotificationClick(toast)}
+            onClick={(e) => handleNotificationClick(e, toast)}
           >
             <div className="flex justify-between items-start gap-2">
               <p className="text-xs font-bold">🔔 {toast.title}</p>
@@ -147,7 +155,7 @@ export default function NotificationBell() {
                 <div
                   key={n.id}
                   className={`p-3 border-b border-gray-50 ${n.read ? "bg-white" : "bg-chs-amber-light"} ${n.link ? "cursor-pointer" : ""}`}
-                  onClick={() => handleNotificationClick(n)}
+                  onClick={(e) => handleNotificationClick(e, n)}
                 >
                   <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>

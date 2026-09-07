@@ -1575,6 +1575,7 @@ export default function AdminDashboard() {
             {pendingLegalTransfers.length > 0 && (
               <div className="col-span-2 bg-chs-amber-light border-2 border-chs-amber-dark rounded-xl p-4">
                 <p className="text-xs font-bold text-chs-amber-dark mb-2">🔒 Real funds held in escrow — confirm legal transfer to release</p>
+                {actionError && <p className="text-xs text-chs-red bg-white rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
                 {pendingLegalTransfers.map((offer) => (
                   <div key={offer.id} className="bg-white rounded-lg p-2.5 mb-2 last:mb-0">
                     <div className="flex justify-between text-xs mb-1.5">
@@ -2187,6 +2188,7 @@ export default function AdminDashboard() {
             )}
 
             <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🔒 Real Held Funds — Confirm Legal Transfer ({pendingLegalTransfers.length})</p>
+            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
             {pendingLegalTransfers.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No sales awaiting legal transfer confirmation.</p>
             ) : (

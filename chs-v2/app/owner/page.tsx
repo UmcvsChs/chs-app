@@ -602,6 +602,9 @@ export default function OwnerDashboard() {
             <NotificationBell />
           </div>
           <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Link href="/my-earnings" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              My Earnings
+            </Link>
             <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Recent Applications
             </Link>
