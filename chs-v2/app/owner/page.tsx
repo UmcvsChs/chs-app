@@ -605,6 +605,9 @@ export default function OwnerDashboard() {
             <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Recent Applications
             </Link>
+            <Link href="/owner-quotations" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              Recent Property Quotation
+            </Link>
             <Link href="/my-receipts" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Transaction History
             </Link>
@@ -708,6 +711,11 @@ export default function OwnerDashboard() {
             <span className="text-base">💬</span>
             <span className="text-[8px] text-white font-semibold leading-tight">Direct Line<br />to CHS</span>
           </button>
+          <Link href="/owner-messages"
+            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center bg-white/15">
+            <span className="text-base">📨</span>
+            <span className="text-[8px] text-white font-semibold leading-tight">Message<br />History</span>
+          </Link>
           <button onClick={() => { setShowEarningsLedger(!showEarningsLedger); setShowConcernForm(false); setShowMessageThread(false); }}
             className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showEarningsLedger ? "bg-chs-red" : "bg-white/15"}`}>
             <span className="text-base">📊</span>

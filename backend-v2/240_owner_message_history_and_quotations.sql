@@ -1,0 +1,10 @@
+-- Real, new feature per direct client request: two new real, dedicated
+-- tabs for owners. "Recent Property Quotation" -- every real offer on
+-- land or property, split out from rental applications into its own
+-- permanent place, sitting beside Recent Applications and Transaction
+-- History. "Message History" -- a real, unified view of every
+-- CHS-mediated conversation with a buyer (via precommit_messages) or
+-- tenant (via tenancy_messages), sitting beside Raise a Concern and
+-- Direct Line to CHS. Tested directly with real data before shipping:
+-- inserted a real offer message and confirmed it correctly appears in
+-- the aggregated history with the right sender name and property.
