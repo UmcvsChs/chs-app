@@ -6,6 +6,9 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import RoleBadge from "@/components/RoleBadge";
+import WalletQuickView from "@/components/WalletQuickView";
+import NotificationBell from "@/components/NotificationBell";
 
 // Real, new page — a direct, honest answer to a direct client
 // question: no, a Buyer genuinely had no dedicated interface beyond
@@ -54,7 +57,14 @@ export default function MyOffersPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10 zone-buyer">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Real Offers</h1>
+        <RoleBadge label="Buyer Dashboard" />
+        <div className="flex justify-between items-end mt-1 gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-lg font-bold">My Real Offers</h1>
+            <NotificationBell />
+          </div>
+          {session && <WalletQuickView userId={session.user.id} />}
+        </div>
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>
         <div className="flex gap-1.5 mt-2">
           <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications</Link>

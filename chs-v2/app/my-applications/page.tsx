@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import WalletQuickView from "@/components/WalletQuickView";
+import NotificationBell from "@/components/NotificationBell";
 
 // Real, new page completing a direct, serious client concern: an
 // applied-for property used to leave no trace anywhere the applicant
@@ -73,7 +75,13 @@ export default function MyApplicationsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Applications</h1>
+        <div className="flex justify-between items-end mt-1 gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="font-serif text-lg font-bold">My Applications</h1>
+            <NotificationBell />
+          </div>
+          {session && <WalletQuickView userId={session.user.id} />}
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-4">

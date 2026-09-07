@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import NotificationBell from "@/components/NotificationBell";
 
 // Real, new dedicated tab completing a direct client request: an
 // owner previously had to hunt through every single property card to
@@ -65,7 +66,10 @@ export default function OwnerApplicationsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] zone-owner pb-10">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/owner" className="text-xs text-white/70">← Back to Owner Dashboard</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">Recent Applications</h1>
+        <div className="flex justify-between items-center mt-1">
+          <h1 className="font-serif text-lg font-bold">Recent Applications</h1>
+          <NotificationBell />
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-4">

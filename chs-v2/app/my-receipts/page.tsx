@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
+import NotificationBell from "@/components/NotificationBell";
 
 // Real, new page completing item #14 — rather than wiring a "View
 // Receipt" link into every individual confirmation screen across the
@@ -54,7 +55,10 @@ export default function MyReceiptsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
-        <RoleBadge label="My Receipts" />
+        <div className="flex justify-between items-start">
+          <RoleBadge label="My Receipts" />
+          <NotificationBell />
+        </div>
         <h1 className="font-serif text-lg font-bold mt-1">My Real Receipts</h1>
       </div>
 

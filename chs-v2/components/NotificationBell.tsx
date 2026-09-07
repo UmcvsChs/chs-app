@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -11,6 +11,7 @@ import { Notification } from "@/types/notification";
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
   const { session } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -85,25 +86,30 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  function handleNotificationClick(n: Notification) {
+    markAsRead(n.id);
+    setToast(null);
+    setOpen(false);
+    if (n.link) {
+      router.push(n.link);
+    }
+  }
+
   return (
     <div className="relative">
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 w-[92vw] max-w-sm z-[100] animate-in fade-in slide-in-from-top-2">
-          {(() => {
-            const toastContent = (
-              <div className="bg-chs-charcoal text-white rounded-xl shadow-2xl p-3 border border-white/10" onClick={() => setToast(null)}>
-                <div className="flex justify-between items-start gap-2">
-                  <p className="text-xs font-bold">🔔 {toast.title}</p>
-                  <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast(null); }} className="text-white/50 text-xs shrink-0">✕</button>
-                </div>
-                <p className="text-[11px] text-white/70 mt-1">{toast.body}</p>
-                {toast.link && <p className="text-[10px] text-chs-red font-semibold mt-1.5">Tap to view →</p>}
-              </div>
-            );
-            return toast.link ? (
-              <Link href={toast.link} onClick={() => { markAsRead(toast.id); setToast(null); }}>{toastContent}</Link>
-            ) : toastContent;
-          })()}
+          <div
+            className="bg-chs-charcoal text-white rounded-xl shadow-2xl p-3 border border-white/10 cursor-pointer"
+            onClick={() => handleNotificationClick(toast)}
+          >
+            <div className="flex justify-between items-start gap-2">
+              <p className="text-xs font-bold">🔔 {toast.title}</p>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast(null); }} className="text-white/50 text-xs shrink-0">✕</button>
+            </div>
+            <p className="text-[11px] text-white/70 mt-1">{toast.body}</p>
+            {toast.link && <p className="text-[10px] text-chs-red font-semibold mt-1.5">Tap to view →</p>}
+          </div>
         </div>
       )}
 
@@ -137,25 +143,18 @@ export default function NotificationBell() {
             ) : notifications.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-6">No notifications yet.</p>
             ) : (
-              notifications.map((n) => {
-                const content = (
-                  <div
-                    className={`p-3 border-b border-gray-50 ${n.read ? "bg-white" : "bg-chs-amber-light"}`}
-                    onClick={() => !n.read && markAsRead(n.id)}
-                  >
-                    <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>
-                    <p className="text-[9px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
-                  </div>
-                );
-                return n.link ? (
-                  <Link key={n.id} href={n.link} onClick={() => setOpen(false)}>
-                    {content}
-                  </Link>
-                ) : (
-                  <div key={n.id}>{content}</div>
-                );
-              })
+              notifications.map((n) => (
+                <div
+                  key={n.id}
+                  className={`p-3 border-b border-gray-50 ${n.read ? "bg-white" : "bg-chs-amber-light"} ${n.link ? "cursor-pointer" : ""}`}
+                  onClick={() => handleNotificationClick(n)}
+                >
+                  <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>
+                  <p className="text-[9px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                  {n.link && <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>}
+                </div>
+              ))
             )}
           </div>
         </>

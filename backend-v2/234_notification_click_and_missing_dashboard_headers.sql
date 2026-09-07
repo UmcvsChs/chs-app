@@ -1,0 +1,17 @@
+-- No real database changes this round -- this was a frontend-only
+-- fix. Documented here for the real, continuous record:
+--
+-- (1) Real, confirmed root cause found for "notifications are
+-- clickable now but go nowhere": the click handler relied on a
+-- Next.js Link wrapping a div with its own onClick, which is a real,
+-- fragile pattern. Rebuilt using an explicit, direct
+-- router.push(n.link) call instead -- deterministic, not dependent on
+-- DOM/event nesting structure.
+--
+-- (2) Real, confirmed gap: /my-offers -- the actual Buyer role's
+-- real landing page after login -- never had the RoleBadge, wallet
+-- balance, or notification bell every other real dashboard has. Found
+-- by directly checking the real client screenshot against the real
+-- code, not assumed. Also found and fixed the identical gap on four
+-- more pages built in the same rushed round: /my-applications,
+-- /my-receipts, /owner-applications, /my-quote-requests.

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import NotificationBell from "@/components/NotificationBell";
 
 // Real, new page completing a genuine, confirmed gap found while
 // building the real, admin-mediated marketplace: a buyer had no real
@@ -95,7 +96,10 @@ export default function MyQuoteRequestsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] zone-buyer pb-10">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/marketplace" className="text-xs text-white/70">← Back to Marketplace</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Real Quote Requests</h1>
+        <div className="flex justify-between items-center mt-1">
+          <h1 className="font-serif text-lg font-bold">My Real Quote Requests</h1>
+          <NotificationBell />
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-3">
