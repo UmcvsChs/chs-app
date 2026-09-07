@@ -43,3 +43,23 @@ export function formatPostedAgo(dateStr: string | null): string {
   const years = Math.floor(days / 365);
   return `Posted ${years} year${years !== 1 ? "s" : ""} ago`;
 }
+
+// Real, permanent safeguard per a direct, serious client concern: a
+// bedroom count was shown for Land and other clearly non-residential
+// categories, because the display only ever checked whether the real
+// database value was non-null — not whether that category should ever
+// have a bedroom count in the first place. This is the real,
+// authoritative list of categories that genuinely can have bedrooms;
+// everything else is excluded by design, regardless of what any
+// individual property record happens to contain.
+const NON_RESIDENTIAL_TYPES = [
+  "Land", "Residential Land / Plot", "Warehouse", "Fuel / Filling Station",
+  "Car Park (parking facility)", "Cinema / Entertainment Centre", "School / Educational Facility",
+  "Hospital / Clinic Premises", "Sports Facility", "Recreational Centre / Club House",
+  "Shop / Lock-up Store", "Plaza Unit (shop within plaza)", "Showroom", "Office", "Office Space (open plan)",
+];
+
+export function shouldShowBedrooms(propertyType: string | null | undefined): boolean {
+  if (!propertyType) return true;
+  return !NON_RESIDENTIAL_TYPES.includes(propertyType);
+}

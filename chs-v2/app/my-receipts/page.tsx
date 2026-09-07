@@ -23,7 +23,7 @@ interface RealTransaction {
 
 export default function MyReceiptsPage() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [transactions, setTransactions] = useState<RealTransaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,10 +51,23 @@ export default function MyReceiptsPage() {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
 
+  // Real, direct fix per a confirmed client report: this used
+  // router.back(), a genuine, real browser-history navigation — which
+  // depends entirely on whatever page happened to precede this one in
+  // the actual browser history, and can easily land on an unrelated
+  // property page from earlier browsing rather than the real
+  // dashboard the person actually came from. Replaced with the same
+  // real, explicit role-to-dashboard mapping used at login.
+  const roleToPath: Record<string, string> = {
+    admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager",
+    tenant: "/tenant", buyer: "/my-offers", guest: "/guest", developer: "/developer", staff: "/staff",
+  };
+  const backHref = roleToPath[profile?.role || ""] || "/";
+
   return (
     <div className="min-h-screen bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
+        <Link href={backHref} className="text-xs text-white/70">← Back to Dashboard</Link>
         <div className="flex justify-between items-start">
           <RoleBadge label="My Receipts" />
           <NotificationBell />

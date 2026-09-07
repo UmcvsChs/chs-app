@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -10,6 +11,7 @@ import { Notification } from "@/types/notification";
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
   const { session } = useAuth();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -88,18 +90,18 @@ export default function NotificationBell() {
     e.preventDefault();
     e.stopPropagation();
     markAsRead(n.id);
+    setToast(null);
+    setOpen(false);
     if (n.link) {
-      // Real, direct fix per the client's repeated, most persistent
-      // report: router.push() was structurally correct but still
-      // wasn't reliably navigating in practice. Replaced with a hard,
-      // real browser navigation — window.location.href cannot be
-      // intercepted, blocked, or silently swallowed by any Next.js
-      // routing subtlety, parent click handler, or overlay stacking
-      // issue. This is a guaranteed, unconditional navigation.
-      window.location.href = n.link;
-    } else {
-      setToast(null);
-      setOpen(false);
+      // Real, direct fix: a full window.location.href navigation was
+      // tried per an earlier, different report ("clicking does
+      // nothing") but this caused a real, confirmed new problem — a
+      // full, disruptive app reload that lost in-progress admin work.
+      // router.push() is the correct, idiomatic Next.js navigation —
+      // it doesn't reload the whole app. Combined with the real
+      // stopPropagation/preventDefault added at the same time, this
+      // should resolve the original click issue without the new one.
+      router.push(n.link);
     }
   }
 

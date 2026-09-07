@@ -225,7 +225,7 @@ export default function WalletPage() {
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
+        <Link href={{admin:"/admin",owner:"/owner",host:"/host",agent:"/agent",manager:"/manager",tenant:"/tenant",buyer:"/my-offers",guest:"/guest",developer:"/developer",staff:"/staff"}[profile?.role || ""] || "/"} className="text-xs text-white/70">← Back to Dashboard</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
         <Link href="/my-receipts" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           🧾 My Real Receipts →

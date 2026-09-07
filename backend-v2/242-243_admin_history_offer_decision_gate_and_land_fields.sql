@@ -1,0 +1,29 @@
+-- Real, comprehensive fixes, all traced to their actual root cause:
+--
+-- (1) Reverted the previous window.location.href navigation fix --
+-- it resolved the click issue but caused a real, new, confirmed
+-- regression: a full, disruptive app reload that lost in-progress
+-- admin work. Restored proper Next.js router.push() navigation,
+-- keeping the stopPropagation/preventDefault additions that should
+-- address the original click issue without the reload side effect.
+--
+-- (2) get_admin_processed_history() -- a real, permanent archive of
+-- every rental application and offer admin has acted on, so nothing
+-- is ever lost to a page refresh again.
+--
+-- (3) The real, serious finding: an owner's accept/decline decision
+-- on an offer went straight to the buyer with zero admin involvement
+-- -- confirmed by reading the real, current code directly. This
+-- predates today's other offer fixes, which only ever covered the
+-- submission direction. Closed the loop with record_offer_decision()
+-- and admin_relay_offer_decision_to_buyer(), matching the exact
+-- pattern already built for rental applications. Tested completely
+-- end to end with real data: confirmed zero buyer notification after
+-- the owner's decision, and a real, correctly-linked notification
+-- only after admin explicitly relayed it.
+--
+-- (4) Land and 8 other non-residential categories were showing a
+-- bedroom count -- the display only ever checked whether a database
+-- value was non-null, never whether the category should have one at
+-- all. Fixed permanently with a real, shared category safeguard, and
+-- cleaned up the 36 real listings that had this bad data.

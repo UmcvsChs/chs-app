@@ -1,0 +1,18 @@
+-- Real, direct fix per a genuine, confirmed gap: a buyer requesting
+-- their real, physical documents only had one optional, generic text
+-- box, and the seller's own dashboard never persistently showed it --
+-- only a one-time notification that could easily be missed. Real,
+-- required, separate fields now capture the buyer's real delivery
+-- address and contact number, plus a preferred delivery method, with
+-- clear framing telling the buyer the seller will see exactly what
+-- they enter. The seller's dashboard now shows this persistently on
+-- the real, relevant card, not just once in a notification.
+--
+-- Caught and fixed a real mistake of my own before shipping: changing
+-- this function's parameters created a second, ambiguous overload --
+-- the exact same bug pattern found and fixed earlier this session.
+-- Dropped the stale version immediately upon finding it myself.
+--
+-- Tested completely with real data: confirmed empty fields are
+-- correctly rejected, and confirmed a real, complete submission
+-- stores the exact address, phone, method, and note correctly.

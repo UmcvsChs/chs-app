@@ -64,6 +64,10 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [dispatchStatus, setDispatchStatus] = useState<"none" | "requested" | "dispatched">("none");
   const [requestingDispatch, setRequestingDispatch] = useState(false);
   const [deliveryNote, setDeliveryNote] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryPhone, setDeliveryPhone] = useState("");
+  const [preferredMethod, setPreferredMethod] = useState("courier");
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
   const [confirmingDocuments, setConfirmingDocuments] = useState(false);
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
@@ -152,10 +156,25 @@ export default function PropertyActions({ property }: { property: Property }) {
 
   async function handleRequestDispatch() {
     if (!myPaidOffer) return;
+    setDispatchError(null);
+    if (!deliveryAddress.trim() || !deliveryPhone.trim()) {
+      setDispatchError("Please provide a real delivery address and a real contact phone number.");
+      return;
+    }
     setRequestingDispatch(true);
-    const { error } = await supabase.rpc("request_document_dispatch", { p_offer_id: myPaidOffer.id, p_delivery_note: deliveryNote.trim() || null });
+    const { error } = await supabase.rpc("request_document_dispatch", {
+      p_offer_id: myPaidOffer.id,
+      p_delivery_address: deliveryAddress.trim(),
+      p_delivery_phone: deliveryPhone.trim(),
+      p_preferred_method: preferredMethod,
+      p_delivery_note: deliveryNote.trim() || null,
+    });
     setRequestingDispatch(false);
-    if (!error) setDispatchStatus("requested");
+    if (error) {
+      setDispatchError(error.message);
+      return;
+    }
+    setDispatchStatus("requested");
   }
 
   async function handleConfirmDocumentsReceived() {
@@ -381,15 +400,33 @@ export default function PropertyActions({ property }: { property: Property }) {
           </div>
         )}
         {dispatchStatus === "none" && (
-          <>
-            <textarea placeholder="Optional — your delivery address for the hard copies, and when you'd like to receive them"
+          <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-2">
+            <p className="text-xs font-bold text-chs-charcoal mb-1">📮 Tell the seller how to get your real hard copies to you</p>
+            <p className="text-[10px] text-gray-500 mb-2">The seller will see exactly what you enter here, so they know precisely how and where to send your real documents.</p>
+            <label className="text-[10px] font-semibold text-gray-600">Your real delivery address</label>
+            <input type="text" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)}
+              placeholder="Where should the documents be delivered?" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+            <label className="text-[10px] font-semibold text-gray-600">Your real contact phone number</label>
+            <input type="tel" value={deliveryPhone} onChange={(e) => setDeliveryPhone(e.target.value)}
+              placeholder="A real number the seller/courier can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+            <label className="text-[10px] font-semibold text-gray-600">Preferred delivery method</label>
+            <select value={preferredMethod} onChange={(e) => setPreferredMethod(e.target.value)}
+              className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
+              <option value="courier">Courier / dispatch rider</option>
+              <option value="post">Postal service</option>
+              <option value="hand_delivery">Hand delivery — I&apos;ll meet the seller</option>
+              <option value="pickup">I&apos;ll pick it up myself</option>
+            </select>
+            <label className="text-[10px] font-semibold text-gray-600">Anything else the seller should know (optional)</label>
+            <textarea placeholder="e.g. best time to deliver, a landmark near your address"
               value={deliveryNote} onChange={(e) => setDeliveryNote(e.target.value)}
-              rows={2} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+              rows={2} className="w-full mt-1 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+            {dispatchError && <p className="text-[10px] text-chs-red bg-white rounded-lg px-2 py-1.5 mt-1.5">{dispatchError}</p>}
             <button onClick={handleRequestDispatch} disabled={requestingDispatch}
-              className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold mb-2 disabled:opacity-50">
-              {requestingDispatch ? "Sending request..." : "Request soft copies of my documents"}
+              className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold mt-2 disabled:opacity-50">
+              {requestingDispatch ? "Sending request..." : "Request my real documents"}
             </button>
-          </>
+          </div>
         )}
         {dispatchStatus === "requested" && (
           <p className="text-xs bg-chs-amber-light text-chs-amber-dark rounded-lg p-2.5 mb-2">⏳ Waiting on the seller to dispatch your real documents.</p>

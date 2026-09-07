@@ -18,7 +18,7 @@ interface Negotiation {
 
 export default function SavedPropertiesPage() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [negotiations, setNegotiations] = useState<Negotiation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +62,7 @@ export default function SavedPropertiesPage() {
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-20">
       <div className="bg-chs-charcoal text-white px-4 py-4">
-        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
+        <Link href={{admin:"/admin",owner:"/owner",host:"/host",agent:"/agent",manager:"/manager",tenant:"/tenant",buyer:"/my-offers",guest:"/guest",developer:"/developer",staff:"/staff"}[profile?.role || ""] || "/"} className="text-xs text-white/70">← Back to Dashboard</Link>
         <h1 className="font-serif text-lg font-bold mt-1">❤️ Saved Properties</h1>
       </div>
 

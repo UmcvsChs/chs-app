@@ -153,6 +153,15 @@ export default function AdminDashboard() {
       .eq("status", "awaiting_admin_review").order("created_at", { ascending: true })
       .then(({ data }) => setPendingOfferReview((data as unknown as typeof pendingOfferReview) || []));
   }, []);
+  const [pendingOfferDecisions, setPendingOfferDecisions] = useState<{
+    id: string; amount: number; owner_decision: string | null; seller_response_note: string | null;
+    buyer_full_name: string | null; owner_decision_at: string; properties: { title: string } | null;
+  }[]>([]);
+  useEffect(() => {
+    supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, owner_decision_at, properties(title)")
+      .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true })
+      .then(({ data }) => setPendingOfferDecisions((data as unknown as typeof pendingOfferDecisions) || []));
+  }, []);
   const [staleCommissions, setStaleCommissions] = useState<{
     id: string; transaction_type: string; payer_role: string; commission_amount: number;
     base_amount: number; created_at: string; payer_name: string; payer_phone: string;
@@ -1404,7 +1413,7 @@ export default function AdminDashboard() {
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
-          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length})`, domain: "owner_buyer_tenant" },
+          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
           { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
@@ -2388,6 +2397,28 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               ))
+            )}
+
+            {pendingOfferDecisions.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Real Owner Decisions — Ready to Relay to Buyer</p>
+                {pendingOfferDecisions.map((o) => (
+                  <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.owner_decision_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
+                    <p className="text-xs text-chs-charcoal mt-1">Buyer: {o.buyer_full_name}</p>
+                    <p className="text-xs font-bold mt-1">{o.owner_decision === "accepted" ? "✅ Owner accepted" : "❌ Owner declined"}</p>
+                    {o.seller_response_note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{o.seller_response_note}&quot;</p>}
+                    <button onClick={async () => { await supabase.rpc("admin_relay_offer_decision_to_buyer", { p_offer_id: o.id }); setPendingOfferDecisions((prev) => prev.filter((x) => x.id !== o.id)); }}
+                      className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      ✓ Reviewed — relay to buyer
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

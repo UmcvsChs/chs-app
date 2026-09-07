@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Property } from "@/types/property";
-import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
+import { formatNaira, purposeLabel, formatPostedAgo, shouldShowBedrooms } from "@/lib/format";
 import SaveButton from "./SaveButton";
 
 export default function PropertyCard({ property }: { property: Property }) {
@@ -83,9 +83,9 @@ export default function PropertyCard({ property }: { property: Property }) {
           )}
         </p>
 
-        {(property.bedrooms || property.bathrooms) && (
+        {((property.bedrooms && shouldShowBedrooms(property.property_type)) || property.bathrooms) && (
           <div className="flex gap-3 mt-2 text-xs text-gray-500">
-            {property.bedrooms ? <span>{property.bedrooms} beds</span> : null}
+            {property.bedrooms && shouldShowBedrooms(property.property_type) ? <span>{property.bedrooms} beds</span> : null}
             {property.bathrooms ? <span>{property.bathrooms} baths</span> : null}
           </div>
         )}

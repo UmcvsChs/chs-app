@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
-import { formatNaira, purposeLabel, formatPostedAgo } from "@/lib/format";
+import { formatNaira, purposeLabel, formatPostedAgo, shouldShowBedrooms } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
 import InterestButton from "@/components/InterestButton";
 import CurrencyReference from "@/components/CurrencyReference";
@@ -55,7 +55,7 @@ export async function generateMetadata({
     return { title: "Property Not Found — CHS", robots: { index: false } };
   }
 
-  const bedroomText = property.bedrooms ? `${property.bedrooms}-Bedroom ` : "";
+  const bedroomText = property.bedrooms && shouldShowBedrooms(property.property_type) ? `${property.bedrooms}-Bedroom ` : "";
   const purposeText = purposeLabel(property.purpose);
   const locationText = [property.location_area, property.location_lga, property.location_state].filter(Boolean).join(", ");
   const title = `${bedroomText}${property.property_type} for ${purposeText} in ${locationText} — ₦${property.price.toLocaleString()} | CHS`;
@@ -348,7 +348,7 @@ export default async function PropertyDetailPage({
         )}
 
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {property.bedrooms !== null && (
+          {property.bedrooms !== null && shouldShowBedrooms(property.property_type) && (
             <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Bedrooms</p>
               <p className="text-sm font-semibold text-chs-charcoal">{property.bedrooms}</p>

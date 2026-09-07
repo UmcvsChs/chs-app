@@ -97,7 +97,7 @@ export default function OwnerDashboard() {
   }
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
-  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string }[] }[]>([]);
+  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string; delivery_address: string | null; delivery_phone: string | null; preferred_method: string | null; delivery_note: string | null }[] }[]>([]);
   const [dispatchMethod, setDispatchMethod] = useState<Record<string, string>>({});
   const [dispatchTracking, setDispatchTracking] = useState<Record<string, string>>({});
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
@@ -221,7 +221,7 @@ export default function OwnerDashboard() {
     // real documents as sent.
     supabase
       .from("offers")
-      .select("id, amount, properties!inner(title, owner_id), document_dispatch_requests(id, status)")
+      .select("id, amount, properties!inner(title, owner_id), document_dispatch_requests(id, status, delivery_address, delivery_phone, preferred_method, delivery_note)")
       .eq("properties.owner_id", session.user.id)
       .eq("payment_status", "paid")
       .eq("legal_transfer_confirmed", false)
@@ -484,56 +484,22 @@ export default function OwnerDashboard() {
       setActionError("Please state a real reason for declining — this protects both you and the buyer if it's ever disputed, and helps them understand what it would take to reach a deal.");
       return;
     }
-    const { data: offer, error } = await supabase.from("offers").update({ status, seller_response_note: sellerNote }).eq("id", offerId).select("*, properties(title)").single();
+    // Real, direct fix per a genuine, confirmed client concern: this
+    // used to update the offer directly and notify the buyer
+    // immediately, with zero real admin involvement — exactly the gap
+    // already closed for rental applications, now closed here too.
+    // The owner's real decision is recorded, but only reaches the
+    // buyer once CHS has reviewed and relayed it.
+    const { error } = await supabase.rpc("record_offer_decision", {
+      p_offer_id: offerId,
+      p_decision: status === "accepted" ? "accepted" : "rejected",
+      p_seller_note: sellerNote,
+    });
     if (error) {
       setActionError(error.message.includes("phone number") || error.message.includes("email")
         ? error.message
-        : "Could not update this offer. Please try again.");
+        : "Could not record this decision. Please try again.");
       return;
-    }
-    // A real notification for the actual buyer — this is exactly the
-    // gap the client specifically flagged: someone acting on something
-    // with no way to ever tell the other real person it happened.
-    // This fixed, system-generated text is always safe to deliver
-    // directly — it's the seller's own free-text note, if they wrote
-    // one, that carries the real risk of taking a live negotiation
-    // off-platform, so that part alone routes through real CHS
-    // moderation instead of straight to the buyer.
-    if (offer) {
-      await supabase.rpc("notify_user", {
-        p_user_id: offer.buyer_id,
-        p_title: status === "accepted" ? "Your offer was accepted! Proceed to payment" : "Your offer was declined",
-        p_body: status === "accepted"
-          ? "The owner has accepted your offer. Return to the property page to see your real total due and complete payment."
-          : "The owner has declined your offer on this property.",
-        p_link: `/property/${offer.property_id}`,
-      });
-
-      if (sellerNote) {
-        await supabase.rpc("send_precommit_message", { p_offer_id: offerId, p_text: sellerNote });
-      }
-
-      // The exact real nudge restored from the original app — a
-      // genuine, real-world source of stale listings is an owner who
-      // simply forgets to mark a property unavailable once a deal
-      // closes. Nudging right at the moment the deal starts moving
-      // forward, not waiting until it's fully done, since that's the
-      // actual point the owner is genuinely thinking about it.
-      // Real fix per direct client testing: this used to ask the
-      // owner to manually remember to mark a listing sold — stale
-      // advice from before payment itself automatically updated the
-      // property's real status. Replaced with an accurate message
-      // reflecting what genuinely happens now, with no manual step
-      // left for the owner to forget.
-      if (status === "accepted") {
-        const propertyTitle = (offer as unknown as { properties?: { title: string } }).properties?.title || "This property";
-        await supabase.rpc("notify_user", {
-          p_user_id: session!.user.id,
-          p_title: "✓ Offer accepted",
-          p_body: `${propertyTitle} — you've accepted an offer of ${formatNaira(offer.amount)}. Once the buyer completes payment, CHS automatically marks this listing sold and removes it from search — no action needed from you.`,
-          p_link: `/property/${offer.property_id}`,
-        });
-      }
     }
     loadData();
   }
@@ -1298,6 +1264,15 @@ export default function OwnerDashboard() {
                 )}
                 {dispatchReq?.status === "requested" && (
                   <p className="text-[10px] bg-chs-amber-light text-chs-amber-dark rounded-full px-2 py-1 mb-2 inline-block">⏳ Buyer has requested your real documents</p>
+                )}
+                {dispatchReq && (dispatchReq.delivery_address || dispatchReq.delivery_phone) && (
+                  <div className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2">
+                    <p className="text-[10px] font-bold text-chs-charcoal uppercase mb-1">📮 Real buyer delivery instructions</p>
+                    {dispatchReq.delivery_address && <p className="text-[11px] text-gray-600">Address: {dispatchReq.delivery_address}</p>}
+                    {dispatchReq.delivery_phone && <p className="text-[11px] text-gray-600">Contact: {dispatchReq.delivery_phone}</p>}
+                    {dispatchReq.preferred_method && <p className="text-[11px] text-gray-600 capitalize">Preferred method: {dispatchReq.preferred_method.replace(/_/g, " ")}</p>}
+                    {dispatchReq.delivery_note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{dispatchReq.delivery_note}&quot;</p>}
+                  </div>
                 )}
                 {dispatchReq?.status === "dispatched" ? (
                   <p className="text-[10px] bg-green-50 text-green-700 rounded-full px-2 py-1 inline-block">📦 Marked dispatched — waiting on buyer to confirm receipt</p>
