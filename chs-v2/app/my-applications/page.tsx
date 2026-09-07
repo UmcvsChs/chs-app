@@ -56,6 +56,7 @@ export default function MyApplicationsPage() {
   function statusLabel(status: string) {
     const labels: Record<string, string> = {
       awaiting_guarantor_confirmation: "⏳ Awaiting your guarantor",
+      awaiting_admin_review: "⏳ With CHS for review",
       awaiting_owner_decision: "⏳ With CHS for review",
       owner_decided_pending_relay: "⏳ Owner decided — CHS relaying",
       approved: "✓ Approved",

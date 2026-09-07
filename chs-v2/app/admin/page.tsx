@@ -31,10 +31,12 @@ interface DeveloperApplication {
   years_experience: string;
   portfolio_url: string | null;
   status: string;
+  created_at: string;
 }
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import RoleBadge from "@/components/RoleBadge";
+import NotificationBell from "@/components/NotificationBell";
 import { formatNaira } from "@/lib/format";
 
 interface PendingProfile {
@@ -89,7 +91,7 @@ export default function AdminDashboard() {
   // distinct financial safety checkpoint between an owner accepting a
   // sale offer and money actually moving to escrow.
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
-  const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingAgentIds, setPendingAgentIds] = useState<{ id: string; full_name: string; phone: string; valid_id_type: string; valid_id_number: string; valid_id_document_url: string }[]>([]);
   const [pendingManagerCerts, setPendingManagerCerts] = useState<{ id: string; full_name: string; phone: string; profession: string; professional_registration_number: string | null; certificate_document_url: string }[]>([]);
@@ -172,13 +174,13 @@ export default function AdminDashboard() {
   const [marketplaceQueue, setMarketplaceQueue] = useState<{
     id: string; reference_number: string; property_details: string; moderation_status: string;
     vendor_response: string | null; response_moderation_status: string | null; quoted_amount: number | null;
-    payment_status: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
+    payment_status: string; created_at: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
   }[]>([]);
   const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
     supabase.from("service_quote_requests")
-      .select("id, reference_number, property_details, moderation_status, vendor_response, response_moderation_status, quoted_amount, payment_status, marketplace_products(name, marketplace_vendors(business_name))")
+      .select("id, reference_number, property_details, moderation_status, vendor_response, response_moderation_status, quoted_amount, payment_status, created_at, marketplace_products(name, marketplace_vendors(business_name))")
       .or("moderation_status.eq.pending_review,response_moderation_status.eq.pending_review,payment_status.eq.held_escrow")
       .then(({ data }) => setMarketplaceQueue((data as unknown as typeof marketplaceQueue) || []));
   }, []);
@@ -310,35 +312,7 @@ export default function AdminDashboard() {
   const [suspendResult, setSuspendResult] = useState<string | null>(null);
   const [suspending, setSuspending] = useState(false);
   const [pendingAppeals, setPendingAppeals] = useState<{ id: string; message: string; profiles: { full_name: string; phone: string } | null }[]>([]);
-  const [adminNotifications, setAdminNotifications] = useState<{ id: string; title: string; body: string; read: boolean; created_at: string }[]>([]);
-  const [showNotifBell, setShowNotifBell] = useState(false);
-  const unreadNotifCount = adminNotifications.filter((n) => !n.read).length;
 
-  useEffect(() => {
-    if (!session) return;
-    supabase.from("notifications").select("id, title, body, read, created_at").eq("user_id", session.user.id)
-      .order("created_at", { ascending: false }).limit(30)
-      .then(({ data }) => setAdminNotifications(data || []));
-
-    // Real-time — a genuine, live update the moment a new
-    // notification lands, matching a WhatsApp-style badge rather than
-    // only refreshing when the page is manually reloaded.
-    const channel = supabase
-      .channel("admin-notifications")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${session.user.id}` },
-        (payload) => setAdminNotifications((prev) => [payload.new as typeof adminNotifications[0], ...prev]))
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
-  async function handleOpenNotifBell() {
-    setShowNotifBell(!showNotifBell);
-    if (!showNotifBell && unreadNotifCount > 0) {
-      await supabase.from("notifications").update({ read: true }).eq("user_id", session?.user.id).eq("read", false);
-      setAdminNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    }
-  }
   const [showContactSettings, setShowContactSettings] = useState(false);
   const [contactSettingsValues, setContactSettingsValues] = useState<Record<string, string> | null>(null);
   const [savingContactSettings, setSavingContactSettings] = useState(false);
@@ -541,7 +515,7 @@ export default function AdminDashboard() {
   const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
-  const [agentReferrals, setAgentReferrals] = useState<{ id: string; masked_reference: string; stage: string; chs_commission: number | null; agent_share_pct: number | null; split_50_50: boolean; agent_payout: number | null }[]>([]);
+  const [agentReferrals, setAgentReferrals] = useState<{ id: string; masked_reference: string; stage: string; chs_commission: number | null; agent_share_pct: number | null; split_50_50: boolean; agent_payout: number | null; created_at: string }[]>([]);
   const [completingReferralId, setCompletingReferralId] = useState<string | null>(null);
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
   const [loading, setLoading] = useState(true);
@@ -598,7 +572,7 @@ export default function AdminDashboard() {
     // table, not a growing queue, so it's left unlimited.
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
+      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -638,7 +612,7 @@ export default function AdminDashboard() {
 
     const { data: livenessData } = await supabase
       .from("liveness_submissions")
-      .select("id, user_id, captured_photo_url, profiles(full_name)")
+      .select("id, user_id, captured_photo_url, created_at, profiles(full_name)")
       .eq("status", "pending_review")
       .order("created_at", { ascending: true });
     setPendingLiveness((livenessData as unknown as typeof pendingLiveness) || []);
@@ -802,7 +776,7 @@ export default function AdminDashboard() {
     // commission had zero admin UI at all before this.
     supabase
       .from("agent_referrals")
-      .select("id, masked_reference, stage, chs_commission, agent_share_pct, split_50_50, agent_payout")
+      .select("id, masked_reference, stage, chs_commission, agent_share_pct, split_50_50, agent_payout, created_at")
       .neq("stage", "completed")
       .neq("stage", "lost")
       .then(({ data }) => setAgentReferrals(data || []));
@@ -1381,37 +1355,12 @@ export default function AdminDashboard() {
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
           <div className="flex items-center gap-2">
-            {/* Real, new feature per direct client request: a genuine,
-                live notification bell — no more relying on admin to
-                remember to check for pending items. */}
-            <button onClick={handleOpenNotifBell} className="relative bg-white/15 p-2 rounded-full">
-              🔔
-              {unreadNotifCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-chs-red text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
-                </span>
-              )}
-            </button>
+            <NotificationBell />
             <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
               Log out
             </button>
           </div>
         </div>
-        {showNotifBell && (
-          <div className="bg-white rounded-xl mt-2 p-3 max-h-72 overflow-y-auto">
-            {adminNotifications.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No notifications yet.</p>
-            ) : (
-              adminNotifications.map((n) => (
-                <div key={n.id} className={`p-2 rounded-lg mb-1.5 ${n.read ? "bg-gray-50" : "bg-chs-amber-light"}`}>
-                  <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
-                  <p className="text-[10px] text-gray-500">{n.body}</p>
-                  <p className="text-[9px] text-gray-400 mt-0.5">{new Date(n.created_at).toLocaleString()}</p>
-                </div>
-              ))
-            )}
-          </div>
-        )}
         <h1 className="font-serif text-lg font-bold mt-1">Admin</h1>
         <RoleBadge label="CHS Admin Dashboard" />
         <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
@@ -2157,7 +2106,10 @@ export default function AdminDashboard() {
             ) : (
               pendingSaleApprovals.map((offer) => (
                 <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(offer.created_at).toLocaleString()}</span>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">Accepted offer: {formatNaira(offer.amount)}</p>
                   {offer.note && <p className="text-xs text-gray-400 mt-1">{offer.note}</p>}
                   <button onClick={() => handleClearSale(offer.id)}
@@ -2180,7 +2132,10 @@ export default function AdminDashboard() {
             ) : (
               pendingLiveness.map((sub) => (
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-2">{sub.profiles?.full_name || "User"}</p>
+                  <div className="flex justify-between items-start mb-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{sub.profiles?.full_name || "User"}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(sub.created_at).toLocaleString()}</span>
+                  </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sub.captured_photo_url} alt="Liveness capture" className="w-full rounded-lg mb-2" />
                   <div className="flex gap-2">
@@ -2254,7 +2209,10 @@ export default function AdminDashboard() {
             ) : (
               pendingRegistrationsFull.map((p) => (
                 <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(p.created_at).toLocaleString()}</span>
+                  </div>
                   <p className="text-xs text-gray-500">{p.phone} — {p.role} — {p.state}</p>
 
                   <div className="border-t border-gray-200 mt-2 pt-2">
@@ -2310,26 +2268,43 @@ export default function AdminDashboard() {
           ) : (
             pendingApplications.map((app) => (
               <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title || "Property"}</p>
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title || "Property"}</p>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(app.created_at).toLocaleString()}</span>
+                </div>
                 <p className="text-[10px] text-gray-500 mb-2">
                   {app.properties?.street_address ? `${app.properties.street_address}, ` : ""}{app.properties?.location_area}
                   {" — Owner: "}{app.properties?.profiles?.full_name} ({app.properties?.profiles?.phone})
                 </p>
 
                 <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">Applicant</p>
-                <p className="text-xs text-chs-charcoal">{app.tenant?.full_name} — {app.tenant?.phone}</p>
+                <p className="text-xs text-chs-charcoal">{app.applicant_full_name || app.tenant?.full_name || "Applicant"} — {app.tenant?.phone}</p>
                 <p className="text-[11px] text-gray-500">{app.applicant_occupation} · {app.applicant_present_address}</p>
                 <p className="text-[11px] text-gray-500">Income: {app.applicant_income_source}</p>
                 <p className="text-[11px] text-gray-500">{app.applicant_id_type} — {app.applicant_id_number}</p>
                 {app.applicant_id_document_url && (
-                  <a href={app.applicant_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View applicant ID</a>
+                  <a href={app.applicant_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View applicant&apos;s real, uploaded ID</a>
                 )}
 
                 <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">Guarantor</p>
-                <p className="text-xs text-chs-charcoal">{app.guarantor_name} — {app.guarantor_phone}</p>
-                <p className="text-[11px] text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
-                <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
-                <p className="text-[11px] text-gray-500">Move-in: {app.move_in_date} {app.guarantor_consented ? "· ✓ Consent given" : "· ⚠️ No consent recorded"}</p>
+                {app.guarantor_confirmed_at ? (
+                  <>
+                    <p className="text-xs text-chs-charcoal">{app.guarantor_name} — {app.guarantor_phone}</p>
+                    <p className="text-[11px] text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
+                    <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
+                    <p className="text-[11px] text-gray-500">{app.guarantor_id_type} — {app.guarantor_id_number}</p>
+                    {app.guarantor_id_document_url && (
+                      <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View guarantor&apos;s real, uploaded ID</a>
+                    )}
+                    <p className="text-[11px] text-green-700 font-semibold mt-1">✓ Independently confirmed by the guarantor themselves</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-chs-charcoal">{app.guarantor_name} — {app.guarantor_phone}</p>
+                    <p className="text-[11px] text-chs-amber-dark font-semibold mt-1">⏳ Awaiting the guarantor&apos;s own, independent confirmation</p>
+                  </>
+                )}
+                <p className="text-[11px] text-gray-500 mt-1">Move-in: {app.move_in_date} {app.guarantor_consented ? "· ✓ Consent given" : "· ⚠️ No consent recorded"}</p>
 
                 {/* Real, direct fix for a genuine, confirmed gap: an
                     application sitting here while the real owner
@@ -2348,6 +2323,12 @@ export default function AdminDashboard() {
                   <button onClick={() => handleApplicationScreened(app.id)}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     Documents cleared — send to owner
+                  </button>
+                )}
+                {app.status === "awaiting_admin_review" && (
+                  <button onClick={async () => { await supabase.rpc("admin_relay_application_to_owner", { p_application_id: app.id }); loadData(); }}
+                    className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    ✓ Reviewed — relay to owner for a decision
                   </button>
                 )}
                 {app.status === "owner_decided_pending_relay" && (
@@ -2429,7 +2410,10 @@ export default function AdminDashboard() {
           ) : (
             openDisputes.map((d) => (
               <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-sm text-chs-charcoal">{d.description}</p>
+                <div className="flex justify-between items-start">
+                  <p className="text-sm text-chs-charcoal">{d.description}</p>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(d.created_at).toLocaleString()}</span>
+                </div>
                 {d.amount_in_dispute !== null && (
                   <p className="text-xs font-semibold text-chs-charcoal mt-1">
                     Amount in dispute: {formatNaira(d.amount_in_dispute)}
@@ -2459,7 +2443,10 @@ export default function AdminDashboard() {
           ) : (
             pendingFeedback.map((f) => (
               <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-sm text-chs-charcoal">{f.note}</p>
+                <div className="flex justify-between items-start">
+                  <p className="text-sm text-chs-charcoal">{f.note}</p>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(f.created_at).toLocaleString()}</span>
+                </div>
                 <p className="text-xs text-gray-400 mt-1">— {f.relation}</p>
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handleFeedbackModeration(f.id, "approved")}
@@ -2497,7 +2484,10 @@ export default function AdminDashboard() {
           ) : (
             pendingVendors.map((v) => (
               <div key={v.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(v.created_at).toLocaleString()}</span>
+                </div>
                 <p className="text-xs text-gray-500">{v.category} — {v.location_state}</p>
                 {v.cac_number && <p className="text-xs text-gray-500">CAC: {v.cac_number}</p>}
                 <div className="flex gap-2 mt-2">
@@ -2524,7 +2514,10 @@ export default function AdminDashboard() {
                 <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-semibold text-chs-charcoal">{r.masked_reference}</p>
-                    <span className="text-[9px] font-bold uppercase text-gray-400">{r.stage}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</span>
+                      <span className="text-[9px] font-bold uppercase text-gray-400">{r.stage}</span>
+                    </div>
                   </div>
                   <p className="text-[10px] text-gray-500 mt-1">
                     Commission {formatNaira(r.chs_commission || 0)} · {r.split_50_50 ? "50/50 co-broker split" : `${r.agent_share_pct}% agent share`}
@@ -2593,7 +2586,7 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{f.description}</p>
-                    <p className="text-[10px] text-gray-400 mt-1 capitalize">Status: {f.status.replace(/_/g, " ")}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 capitalize">Status: {f.status.replace(/_/g, " ")} · {new Date(f.created_at).toLocaleString()}</p>
                     <button
                       onClick={() => handleSendFaultForApproval(f)}
                       className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
@@ -2614,7 +2607,10 @@ export default function AdminDashboard() {
             ) : (
               pendingArtisans.map((a) => (
                 <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(a.created_at).toLocaleString()}</span>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">{a.years_experience} years experience · {a.equipment_tier.replace(/_/g, " ")} equipment</p>
                   <p className="text-xs text-gray-500">{a.base_lga ? `${a.base_lga}, ` : ""}{a.base_state} · {a.willing_to_travel_interstate ? "Willing to travel" : "Local jobs only"}</p>
                   <p className="text-xs text-gray-500 capitalize">{a.artisan_type === "chs_agent" ? "CHS Maintenance Agent" : "Independent"}</p>
@@ -2674,7 +2670,10 @@ export default function AdminDashboard() {
             ) : (
               developerApplications.map((d) => (
                 <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(d.created_at).toLocaleString()}</span>
+                  </div>
                   <p className="text-xs text-gray-500 mt-1">CAC: {d.cac_number} · {d.years_experience}</p>
                   {d.current_projects && <p className="text-xs text-gray-500">{d.current_projects}</p>}
                   <p className="text-xs text-gray-500">
@@ -2809,7 +2808,10 @@ export default function AdminDashboard() {
                 <div key={q.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start mb-1">
                     <p className="text-sm font-semibold text-chs-charcoal">{q.marketplace_products?.[0]?.name || "Product"}</p>
-                    <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{q.reference_number}</span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{q.reference_number}</span>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(q.created_at).toLocaleString()}</span>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">Vendor: {q.marketplace_products?.[0]?.marketplace_vendors?.[0]?.business_name}</p>
 
@@ -2945,7 +2947,10 @@ function EngageRequestCard({
 
   return (
     <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-      <p className="text-sm font-semibold text-chs-charcoal">{request.service_type}</p>
+      <div className="flex justify-between items-start">
+        <p className="text-sm font-semibold text-chs-charcoal">{request.service_type}</p>
+        <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(request.created_at).toLocaleString()}</span>
+      </div>
       <p className="text-xs text-gray-500 mt-1">{request.location}</p>
       <p className="text-xs text-gray-600 mt-1">{request.description}</p>
       {request.budget && <p className="text-xs text-gray-500 mt-1">Budget: {request.budget}</p>}

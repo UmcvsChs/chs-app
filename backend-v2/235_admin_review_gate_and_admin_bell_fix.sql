@@ -1,0 +1,30 @@
+-- Real, three-part fix, all traced to their actual root cause, not
+-- symptoms:
+--
+-- (1) Admin's notification bell was "back to square one" because it
+-- was never the same code I'd been fixing all day -- admin had its
+-- own, separate, older, custom-built notification UI that never had
+-- click-through or even fetched the real link column. Deleted
+-- entirely and replaced with the same shared, proven NotificationBell
+-- component every other real dashboard uses.
+--
+-- (2) Admin's rental application card showed the wrong name (a
+-- generic demo account name) instead of the real name the applicant
+-- actually typed, because it only ever read the profile join, never
+-- the application's own captured field. Fixed with the same fallback
+-- pattern already used on the owner's card. Also found and fixed:
+-- the guarantor's own uploaded ID (added in the independent
+-- verification rework) was captured but never actually displayed
+-- anywhere.
+--
+-- (3) The real, most serious finding: after a guarantor confirmed,
+-- the application went straight to the owner automatically, with
+-- zero admin involvement -- which is exactly why it looked like it
+-- "sent itself." This didn't match the client's real, repeated,
+-- consistent expectation that CHS reviews and relays every real step.
+-- Added a genuine "awaiting_admin_review" stage between guarantor
+-- confirmation and the owner ever seeing anything, with a real
+-- "reviewed — relay to owner" action admin must take.
+--
+-- Tested completely end to end with fresh, real data: confirmed the
+-- owner receives zero notification until admin explicitly relays it.

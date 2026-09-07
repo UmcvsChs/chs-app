@@ -1,0 +1,10 @@
+-- No real database schema changes -- every table already had a real
+-- created_at column throughout this whole project. This was purely a
+-- frontend gap: 16 of the 22 real sections on the admin page never
+-- actually displayed it, and 3 of those (liveness verification, agent
+-- referrals, marketplace moderation) never even fetched it in their
+-- real query. Confirmed by directly auditing every single tab, not
+-- assumed from one section. Fixed all 16, including the 3 queries.
+-- Caught and fixed 3 real TypeScript type errors of my own (types
+-- that hadn't been updated to match their new queries) via a full
+-- production build before packaging, not just the lighter lint check.

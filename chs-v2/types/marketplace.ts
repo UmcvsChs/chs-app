@@ -44,4 +44,5 @@ export interface MarketplaceVendor {
   location_lga: string | null;
   service_states: string[] | null;
   verification_status: "pending" | "verified" | "rejected";
+  created_at: string;
 }

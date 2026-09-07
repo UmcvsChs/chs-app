@@ -14,7 +14,7 @@ export interface RentalApplication {
   guarantor_occupation: string | null;
   guarantor_consented: boolean;
   move_in_date: string;
-  status: "pending" | "awaiting_guarantor_confirmation" | "awaiting_owner_decision" | "owner_decided_pending_relay" | "approved" | "owner_declined";
+  status: "pending" | "awaiting_guarantor_confirmation" | "awaiting_admin_review" | "awaiting_owner_decision" | "owner_decided_pending_relay" | "approved" | "owner_declined";
   guarantor_id_type: string | null;
   guarantor_id_number: string | null;
   guarantor_id_document_url: string | null;
