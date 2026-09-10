@@ -56,7 +56,9 @@ interface PendingProperty {
   price: number;
   primary_document_type: string | null;
   acquisition_method: string | null;
+  owner_id: string;
   property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[];
+  profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
 type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
@@ -595,7 +597,7 @@ export default function AdminDashboard() {
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
-      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, property_sale_documents(id, document_type, file_url, verification_status)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -2470,6 +2472,25 @@ export default function AdminDashboard() {
               <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
                 <p className="text-xs text-gray-500">{prop.location_area} — {prop.purpose}</p>
+                {/* Real, direct fix per a genuine, confirmed client
+                    concern: the same real bio-data rigor already
+                    built for a buyer making an offer was never
+                    carried across to the seller/owner side here,
+                    despite an explicit earlier request to apply it
+                    "across the board". The owner's real identity and
+                    ID-verification status now shows directly. */}
+                <div className="bg-white rounded-lg p-2 mt-2">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase">Listed by</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-chs-charcoal font-semibold">{prop.profiles?.[0]?.full_name || "Owner"} — {prop.profiles?.[0]?.phone}</p>
+                    {prop.profiles?.[0]?.valid_id_verified ? (
+                      <span className="text-[9px] font-bold text-green-700 whitespace-nowrap">✓ ID Verified</span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-chs-amber-dark whitespace-nowrap">⚠ Not yet verified</span>
+                    )}
+                  </div>
+                  {prop.profiles?.[0]?.valid_id_type && <p className="text-[10px] text-gray-500 mt-0.5">{prop.profiles[0].valid_id_type} — {prop.profiles[0].valid_id_number}</p>}
+                </div>
                 {prop.primary_document_type && <p className="text-[10px] text-gray-500 mt-1">Claimed ownership document: {prop.primary_document_type} · Acquired via: {prop.acquisition_method}</p>}
                 {/* Real, direct fix per a genuine, serious client
                     concern: this card previously showed only the
@@ -2502,9 +2523,13 @@ export default function AdminDashboard() {
                 )}
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handlePropertyVerification(prop.id, "verified")}
-                    disabled={prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0)}
+                    disabled={prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0 || !prop.profiles?.[0]?.valid_id_verified)}
                     className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
-                    {prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0) ? "Verify documents first" : "Verify"}
+                    {prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0)
+                      ? "Verify documents first"
+                      : prop.purpose === "sale" && !prop.profiles?.[0]?.valid_id_verified
+                        ? "Owner's ID not verified"
+                        : "Verify"}
                   </button>
                   <button onClick={() => handlePropertyVerification(prop.id, "rejected")}
                     className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">

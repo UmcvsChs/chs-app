@@ -1,0 +1,12 @@
+-- Fix Tracker item 5, real and tested. No schema change -- the real
+-- profile fields already existed (valid_id_verified, valid_id_type,
+-- valid_id_number); they were simply never joined into the admin
+-- listing-approval query. Confirmed the real gap directly: the card
+-- fixed in item 4 showed real documents but zero owner identity --
+-- no name, phone, or ID-verified status, mirroring the exact gap
+-- that used to exist on the buyer side. Now shows the owner's real
+-- identity on the same card, and extends the same real, hard block
+-- from item 4: a Sale listing cannot be verified if the owner's own
+-- ID isn't verified. Tested directly with a real demo account
+-- temporarily set to unverified, confirmed the block condition, then
+-- restored.
