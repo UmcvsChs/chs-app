@@ -1,0 +1,8 @@
+-- Real, fresh, well-funded round-2 demo accounts per direct client
+-- request (original accounts exhausted/mixed up from extensive
+-- testing). Five new real accounts, phone range 0812..., PIN 123456:
+-- an Owner (Land, House, Office, Warehouse listings), a Host (Chalet,
+-- Hotel, Event Centre listings, the Event Centre with real capacity
+-- tiers and facilities already seeded), and three fully-funded
+-- spending accounts (Buyer, Tenant, Guest) at a real ₦100,000,000
+-- each. All listings pre-verified so they're immediately usable.

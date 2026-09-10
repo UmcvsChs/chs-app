@@ -36,23 +36,23 @@
    headings) but layers in its own real, deliberate tint so a Buyer's
    view, an Agent's view, and an Artisan's view are each immediately,
    visibly distinct. */
-.zone-buyer { --zone-bg: #eef3f6; --zone-card: #f7fafb; --zone-accent: #4a6883; }
+.zone-buyer { --zone-bg: #eef3f6; --zone-card: #f7fafb; --zone-accent: #101820; }
 .zone-owner { --zone-bg: #fbf3e9; --zone-card: #fffaf3; --zone-accent: #a8480f; }
-.zone-agent { --zone-bg: #f7f2e3; --zone-card: #fdfaf0; --zone-accent: #c9a84c; }
-.zone-manager { --zone-bg: #e8f1ef; --zone-card: #f4faf9; --zone-accent: #2f6e63; }
-.zone-artisan { --zone-bg: #f6ece5; --zone-card: #fdf5f0; --zone-accent: #b05a2e; }
-.zone-admin { --zone-bg: #efeaf1; --zone-card: #f8f5f9; --zone-accent: #4a3b5c; }
-.zone-tenant { --zone-bg: #eef4ee; --zone-card: #f8fbf7; --zone-accent: #3f7a4f; }
+.zone-agent { --zone-bg: #f7f2e3; --zone-card: #fdfaf0; --zone-accent: #b8860b; }
+.zone-manager { --zone-bg: #e8f1ef; --zone-card: #f4faf9; --zone-accent: #1d3329; }
+.zone-artisan { --zone-bg: #f6ece5; --zone-card: #fdf5f0; --zone-accent: #a0522d; }
+.zone-admin { --zone-bg: #efeaf1; --zone-card: #f8f5f9; --zone-accent: #322e2b; }
+.zone-tenant { --zone-bg: #eef4ee; --zone-card: #f8fbf7; --zone-accent: #14251e; }
 /* Real, new zones per a direct, repeated client request — Host,
    Guest, Developer, and Staff had each been quietly borrowing another
    role's color identity (Host/Developer reused Owner's; Guest reused
    Buyer's; Staff reused Agent's inline), leaving four real, distinct
    roles with no visual identity of their own. Each gets a genuinely
    deliberate, distinct color now, not a variation of an existing one. */
-.zone-host { --zone-bg: #f9edec; --zone-card: #fef7f6; --zone-accent: #b3455a; }
-.zone-guest { --zone-bg: #e9f4f5; --zone-card: #f6fcfc; --zone-accent: #2e7d8f; }
-.zone-developer { --zone-bg: #ececf2; --zone-card: #f7f7fb; --zone-accent: #38416b; }
-.zone-staff { --zone-bg: #f3efe9; --zone-card: #faf8f4; --zone-accent: #8a7355; }
+.zone-host { --zone-bg: #f9edec; --zone-card: #fef7f6; --zone-accent: #8b2635; }
+.zone-guest { --zone-bg: #e9f4f5; --zone-card: #f6fcfc; --zone-accent: #22323d; }
+.zone-developer { --zone-bg: #ececf2; --zone-card: #f7f7fb; --zone-accent: #101820; }
+.zone-staff { --zone-bg: #f3efe9; --zone-card: #faf8f4; --zone-accent: #211a17; }
 
 /* Real, distinct Marketplace stage colors — matching the client's
    explicit request that browsing, cart, and checkout each feel
