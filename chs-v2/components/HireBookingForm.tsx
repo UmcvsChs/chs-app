@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
+import InfoTip from "./InfoTip";
 import { ShortletBooking } from "@/types/shortletBooking";
 import { formatNaira } from "@/lib/format";
 import { uploadDocument } from "@/lib/storage";
@@ -394,7 +395,7 @@ export default function HireBookingForm({
           </div>
           {pricing.security_deposit_required && (
             <div className="flex justify-between text-xs text-gray-500">
-              <span>Refundable security deposit</span>
+              <span>Refundable security deposit <InfoTip text="A real, extra amount held by CHS alongside your booking, genuinely returned to you after checkout — unless the host reports real damage, in which case CHS reviews and decides how much is fairly returned." /></span>
               <span>{formatNaira(pricing.security_deposit_amount)}</span>
             </div>
           )}

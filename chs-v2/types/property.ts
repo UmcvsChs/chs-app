@@ -20,6 +20,7 @@ export interface Property {
   description: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  reference_number?: string | null;
   toilets?: number | null;
   total_rooms?: number | null;
   other_facilities?: string[] | null;

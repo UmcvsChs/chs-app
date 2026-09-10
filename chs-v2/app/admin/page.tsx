@@ -63,7 +63,7 @@ interface PendingProperty {
 
 type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
-interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; }
+interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -484,6 +484,21 @@ export default function AdminDashboard() {
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
+  const [conditionReports, setConditionReports] = useState<{
+    id: string; reference: string; report_type: string; status: string; affidavit_url: string | null;
+    affidavit_reference: string | null; submitted_at: string; tenancies: { tenant_id: string; landlord_id: string; properties: { title: string }[] | null } | null;
+  }[]>([]);
+  useEffect(() => {
+    // Real, direct fix per Fix Tracker item 10: the real move-out
+    // affidavit upload already existed for tenants, but admin had
+    // genuinely no way to see any of it. Every real move-out report
+    // with an affidavit attached now surfaces here directly.
+    supabase.from("condition_reports")
+      .select("id, reference, report_type, status, affidavit_url, affidavit_reference, submitted_at, tenancies(tenant_id, landlord_id, properties(title))")
+      .not("affidavit_url", "is", null)
+      .order("submitted_at", { ascending: false }).limit(50)
+      .then(({ data }) => setConditionReports((data as unknown as typeof conditionReports) || []));
+  }, []);
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
@@ -546,6 +561,7 @@ export default function AdminDashboard() {
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [propertyRejectReasons, setPropertyRejectReasons] = useState<Record<string, string>>({});
 
   // A real access check for a real admin — the actual protection is the
   // database's own row-level security, but this stops a non-admin from
@@ -878,7 +894,7 @@ export default function AdminDashboard() {
       // they've ever listed and every real document tied to each one,
       // regardless of whether the property is still pending, already
       // sold, or was rejected — a permanent, real, searchable record.
-      supabase.from("properties").select("id, title, verification_status, status, property_sale_documents(id, document_type, file_url, verification_status)").eq("owner_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("properties").select("id, title, verification_status, status, property_sale_documents(id, document_type, file_url, verification_status), property_house_rules(document_url)").eq("owner_id", user.id).order("created_at", { ascending: false }),
     ]);
 
     setTraceData({
@@ -973,10 +989,21 @@ export default function AdminDashboard() {
 
   async function handlePropertyVerification(propertyId: string, status: "verified" | "rejected") {
     setActionError(null);
+    // Real, direct fix per Fix Tracker item 7: the real underlying
+    // system for a rejection reason already existed — notify_user
+    // genuinely reads and includes it — but admin had no real way to
+    // type one in, so every rejection silently fell back to a generic
+    // message. A real reason is now required before rejecting.
+    if (status === "rejected" && !propertyRejectReasons[propertyId]?.trim()) {
+      setActionError("Please provide a real, genuine reason before rejecting — the owner will see exactly what you write.");
+      return;
+    }
     const { error } = await supabase.rpc("request_admin_action", {
       p_action_type: "verify_property",
       p_target_id: propertyId,
-      p_proposed_changes: { verification_status: status },
+      p_proposed_changes: status === "rejected"
+        ? { verification_status: status, rejection_reason: propertyRejectReasons[propertyId].trim() }
+        : { verification_status: status },
     });
     if (error) {
       setActionError(error.message);
@@ -2143,6 +2170,11 @@ export default function AdminDashboard() {
                               </a>
                             ))
                           )}
+                          {p.property_house_rules?.[0]?.document_url && (
+                            <a href={p.property_house_rules[0].document_url} target="_blank" rel="noreferrer" className="block text-[9px] text-chs-red underline mt-0.5">
+                              📋 House rules document
+                            </a>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -2552,6 +2584,10 @@ export default function AdminDashboard() {
                 {(docs.length === 0 || unverifiedCount > 0) && (
                   <p className="text-[10px] text-chs-red font-semibold mt-1.5">⚠️ Real documents above are not yet fully verified — verify each one before approving this listing.</p>
                 )}
+                <input type="text" value={propertyRejectReasons[prop.id] || ""} onChange={(e) => setPropertyRejectReasons({ ...propertyRejectReasons, [prop.id]: e.target.value })}
+                  placeholder="If rejecting: a real, genuine reason — the owner will see this exact text"
+                  className="w-full mt-2 px-2.5 py-2 rounded-lg border border-gray-200 text-[11px]" />
+                {actionError && <p className="text-[10px] text-chs-red bg-white rounded-lg px-2 py-1.5 mt-1.5">{actionError}</p>}
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handlePropertyVerification(prop.id, "verified")}
                     disabled={prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0 || !prop.profiles?.[0]?.valid_id_verified)}
@@ -2575,8 +2611,9 @@ export default function AdminDashboard() {
         )}
 
 
-        {activeTab === "disputes" &&
-          (openDisputes.length === 0 ? (
+        {activeTab === "disputes" && (
+          <div>
+            {openDisputes.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No open disputes.</p>
           ) : (
             openDisputes.map((d) => (
@@ -2606,7 +2643,27 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))
-          ))}
+          )}
+
+            {conditionReports.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-bold text-chs-charcoal mb-2">📜 Real Move-Out Court Affidavits ({conditionReports.length})</p>
+                {conditionReports.map((r) => (
+                  <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{r.tenancies?.properties?.[0]?.title || "Property"}</p>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 capitalize">{r.report_type.replace(/_/g, " ")} · {r.status} · Ref: {r.reference}</p>
+                    <a href={r.affidavit_url!} target="_blank" rel="noreferrer" className="block text-[10px] text-chs-red underline mt-1">
+                      📄 View real court affidavit ({r.affidavit_reference})
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === "feedback" &&
           (pendingFeedback.length === 0 ? (

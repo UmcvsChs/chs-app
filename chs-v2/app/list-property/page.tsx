@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto, uploadDocument } from "@/lib/storage";
 import CurrencyInput from "@/components/CurrencyInput";
 import { shouldShowBedrooms } from "@/lib/format";
+import InfoTip from "@/components/InfoTip";
 
 import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
@@ -352,7 +353,7 @@ export default function ListPropertyPage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600">Purpose</label>
+            <label className="text-xs font-semibold text-gray-600">Purpose <InfoTip text="Sale: full ownership transfers to a buyer. Rent/Lease: real, ongoing occupancy under a tenancy. Rent to Own: a buyer pays in real installments toward eventual full ownership. Short-let: real, short daily/nightly bookings, like a hotel or Airbnb." /></label>
             <div className="grid grid-cols-4 gap-1.5 mt-1">
               {PURPOSE_OPTIONS.map((opt) => (
                 <button key={opt.value} type="button" onClick={() => { setPurpose(opt.value); setHireCategory(opt.value === "shortlet" ? "shortlet" : ""); }}

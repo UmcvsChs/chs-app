@@ -751,7 +751,12 @@ export default function OwnerDashboard() {
           {properties.map((property) => (
             <div key={property.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
               <div className="flex justify-between items-start mb-2">
-                <h2 className="font-semibold text-sm text-chs-charcoal">{property.title}</h2>
+                <div>
+                  <h2 className="font-semibold text-sm text-chs-charcoal">{property.title}</h2>
+                  {property.reference_number && (
+                    <p className="text-[10px] text-gray-400 font-mono mt-0.5">Ref: {property.reference_number}</p>
+                  )}
+                </div>
                 <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
                   {purposeLabel(property.purpose)}
                 </span>

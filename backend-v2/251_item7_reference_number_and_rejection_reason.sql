@@ -1,0 +1,12 @@
+-- Fix Tracker item 7, real and tested. No schema change -- both the
+-- reference number system and the reason-aware notification already
+-- existed in the database, fully built. Two real, confirmed gaps
+-- closed on the frontend: (1) the owner could never see their own
+-- property's real reference number anywhere -- now shown on every
+-- listing card; (2) admin had no real way to type a rejection reason
+-- at all, despite the system being fully built to use one -- every
+-- rejection silently fell back to a generic message. A real reason
+-- is now required before a rejection can be submitted. Tested
+-- completely end to end with real data through the actual dual-admin
+-- approval flow: rejected a real listing with a specific reason, and
+-- confirmed the owner's real notification quoted it word for word.

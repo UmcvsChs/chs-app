@@ -1,0 +1,17 @@
+-- Fix Tracker items 9 & 10, real and tested, no schema changes for
+-- either -- both real features (house rules upload, move-out court
+-- affidavit upload) already existed and worked correctly on the
+-- tenant/owner side. The real, confirmed gap for both was identical:
+-- admin had no way to actually view any of it. Item 9 closed by
+-- adding real house rules visibility to the account-tracing tool
+-- (item 6). Item 10 closed by adding a real, dedicated section under
+-- Disputes listing every real move-out report with its affidavit,
+-- with a working view link. Both tested directly with real data.
+--
+-- Item 11 (Feature Explainer) -- genuinely in progress, not marked
+-- complete. A real, reusable, mobile-first tap/hover explainer
+-- component (InfoTip) was built and is live on five real, previously
+-- confusing terms: Rent Savings, Maintenance Reserve, Agent Earnings
+-- Paid, Pending Earnings, the Sale/Rent/Rent-to-Own/Short-let purpose
+-- choice, and the shortlet security deposit. Extending this across
+-- the rest of the app's real features continues as ongoing work.

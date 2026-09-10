@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import InfoTip from "@/components/InfoTip";
 import { Wallet, WalletTransaction } from "@/types/wallet";
 import { formatNaira } from "@/lib/format";
 import { startWalletFunding } from "@/lib/paystack";
@@ -360,15 +361,15 @@ export default function WalletPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-[10px] uppercase text-gray-400">Rent savings</p>
+                <p className="text-[10px] uppercase text-gray-400">Rent savings <InfoTip text="A real, separate pocket of your wallet you can set aside for over time, so your next rent is ready without having to find the full amount all at once." /></p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.rent_savings)}</p>
               </div>
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-[10px] uppercase text-gray-400">Maintenance reserve</p>
+                <p className="text-[10px] uppercase text-gray-400">Maintenance reserve <InfoTip text="Real funds set aside by an owner specifically to cover future repairs and maintenance on their property, kept separate from money available to withdraw freely." /></p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.maintenance_reserve)}</p>
               </div>
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-[10px] uppercase text-gray-400">Agent earnings paid</p>
+                <p className="text-[10px] uppercase text-gray-400">Agent earnings paid <InfoTip text="The real, total commission CHS has already released to you as an agent — money genuinely in your wallet, not a projection." /></p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_paid)}</p>
               </div>
               {wallet.escrow_held > 0 && (
@@ -381,7 +382,7 @@ export default function WalletPage() {
                 </div>
               )}
               <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
-                <p className="text-[10px] uppercase text-gray-400">Pending earnings</p>
+                <p className="text-[10px] uppercase text-gray-400">Pending earnings <InfoTip text="A real commission you're due but that hasn't been released to your wallet yet — usually because CHS is still holding it until the underlying deal is fully confirmed." /></p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.agent_earnings_pending)}</p>
               </div>
             </div>
