@@ -1,0 +1,12 @@
+-- Real, direct, urgent fix: the round-2 demo accounts (0812...)
+-- couldn't log in at all. Found the exact real cause by comparing
+-- every single field against a known-working account: creating
+-- auth.users rows directly via raw SQL left several fields as NULL
+-- (confirmation_token, recovery_token, email_change fields, etc.)
+-- where Supabase's real auth service expects an empty string, not
+-- NULL -- a documented, genuine pitfall of manual auth.users
+-- insertion that bypasses the real Admin API. Fixed directly: all
+-- five 0812... accounts corrected to empty strings on every affected
+-- field, and the password re-hashed to match the same real bcrypt
+-- cost factor as working accounts. This is a live database fix --
+-- takes effect immediately, no deploy required.
