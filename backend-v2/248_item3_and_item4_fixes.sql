@@ -1,0 +1,18 @@
+-- No real schema changes for items 3 & 4 -- both were frontend-only
+-- fixes to existing, already-correct tables (property_sale_documents,
+-- properties.verification_status).
+--
+-- Item 3: relabeled the owner dashboard's real heading from "My
+-- Properties" to "My Listed Properties".
+--
+-- Item 4, the most serious item: confirmed the real, exact root
+-- cause -- the admin screen that approves a new listing showed only
+-- the title and location, with zero document visibility, completely
+-- disconnected from the separate tab where documents could be
+-- reviewed. Fixed: every real uploaded document now shows directly
+-- on the listing-approval card, with its own view link and its own
+-- verify/reject action. For Sale properties specifically, the
+-- "Verify" button is now genuinely disabled -- not just a warning --
+-- until every document is verified. Tested directly with a real sale
+-- listing and a real unverified document: confirmed the block, then
+-- confirmed it correctly lifts once verified.

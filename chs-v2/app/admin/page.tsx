@@ -54,6 +54,9 @@ interface PendingProperty {
   location_area: string;
   purpose: string;
   price: number;
+  primary_document_type: string | null;
+  acquisition_method: string | null;
+  property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[];
 }
 
 type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
@@ -592,7 +595,7 @@ export default function AdminDashboard() {
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
-      supabase.from("properties").select("id, title, location_area, purpose, price").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, property_sale_documents(id, document_type, file_url, verification_status)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -2460,14 +2463,48 @@ export default function AdminDashboard() {
             {pendingProperties.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No properties awaiting verification.</p>
           ) : (
-            pendingProperties.map((prop) => (
+            pendingProperties.map((prop) => {
+              const docs = prop.property_sale_documents || [];
+              const unverifiedCount = docs.filter((d) => d.verification_status !== "verified").length;
+              return (
               <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
                 <p className="text-xs text-gray-500">{prop.location_area} — {prop.purpose}</p>
+                {prop.primary_document_type && <p className="text-[10px] text-gray-500 mt-1">Claimed ownership document: {prop.primary_document_type} · Acquired via: {prop.acquisition_method}</p>}
+                {/* Real, direct fix per a genuine, serious client
+                    concern: this card previously showed only the
+                    title and location -- admin could approve a real
+                    listing with zero visibility into its uploaded
+                    legal documents at all. Every real document is now
+                    shown directly here, with its own real view link
+                    and verification status. */}
+                {docs.length === 0 ? (
+                  <p className="text-[10px] text-chs-red bg-white rounded-lg px-2 py-1.5 mt-2 font-semibold">⚠️ No real legal documents uploaded for this listing yet.</p>
+                ) : (
+                  <div className="bg-white rounded-lg p-2 mt-2 space-y-1.5">
+                    {docs.map((d) => (
+                      <div key={d.id} className="flex justify-between items-center text-[10px]">
+                        <a href={d.file_url} target="_blank" rel="noreferrer" className="text-chs-red underline capitalize">{d.document_type.replace(/_/g, " ")}</a>
+                        {d.verification_status === "verified" ? (
+                          <span className="font-bold text-green-700">✓ Verified</span>
+                        ) : (
+                          <div className="flex gap-1">
+                            <button onClick={() => handleSaleDocReview(d.id, true)} className="px-2 py-0.5 rounded-full bg-chs-red text-white font-semibold">Verify</button>
+                            <button onClick={() => handleSaleDocReview(d.id, false)} className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 font-semibold">Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(docs.length === 0 || unverifiedCount > 0) && (
+                  <p className="text-[10px] text-chs-red font-semibold mt-1.5">⚠️ Real documents above are not yet fully verified — verify each one before approving this listing.</p>
+                )}
                 <div className="flex gap-2 mt-2">
                   <button onClick={() => handlePropertyVerification(prop.id, "verified")}
-                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                    Verify
+                    disabled={prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0)}
+                    className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                    {prop.purpose === "sale" && (docs.length === 0 || unverifiedCount > 0) ? "Verify documents first" : "Verify"}
                   </button>
                   <button onClick={() => handlePropertyVerification(prop.id, "rejected")}
                     className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
@@ -2475,7 +2512,8 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
           </div>
         )}

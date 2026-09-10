@@ -564,7 +564,7 @@ export default function OwnerDashboard() {
         <RoleBadge label="Owner Dashboard" />
         <div className="flex justify-between items-center mt-1">
           <div className="flex items-center gap-2 shrink-0">
-            <h1 className="font-serif text-lg font-bold">My Properties</h1>
+            <h1 className="font-serif text-lg font-bold">My Listed Properties</h1>
             <NotificationBell />
           </div>
           <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
