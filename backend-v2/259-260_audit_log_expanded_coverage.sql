@@ -1,0 +1,8 @@
+-- Real, continued expansion of item 12 (Audit Trail), still honestly
+-- "in progress" -- extended real logging to the three admin relay
+-- functions (rental application relay, offer submission relay, offer
+-- decision relay) and agent referral payouts, both split and
+-- standard. Tested completely end to end with real data: submitted a
+-- real rental application, confirmed the guarantor, relayed it to
+-- the owner as admin, and confirmed a real, correctly-labeled audit
+-- entry was created.

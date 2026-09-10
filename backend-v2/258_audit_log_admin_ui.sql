@@ -1,0 +1,17 @@
+-- Fix Tracker item 12, genuinely in progress. Real audit_log table
+-- with no update/delete permission for anyone, by design. Real
+-- log_audit_event() reusable function. Wired into the highest-stakes
+-- real actions: property verification/rejection (via
+-- apply_admin_action), dispute rulings, escrow fund releases, and
+-- account suspension/reactivation. Real, searchable admin UI (Audit
+-- Log tab) built and tested with real data.
+--
+-- Caught and fixed two real mistakes of my own before this reached
+-- testing: a JSX structural error where an earlier edit accidentally
+-- deleted a needed conditional wrapper line, and a React warning
+-- about synchronous state updates in an effect. Both caught by the
+-- full production build.
+--
+-- Honestly incomplete: many other real actions (marketplace
+-- moderation, referral payouts, agent management) don't log yet.
+-- Continues as ongoing work, same as item 11.

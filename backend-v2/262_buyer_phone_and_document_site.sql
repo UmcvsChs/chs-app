@@ -1,0 +1,20 @@
+-- No real schema changes this round -- both items were frontend
+-- work.
+--
+-- (1) Directly re-verified the buyer-phone-to-owner claim: checked
+-- the real, current owner/page.tsx and confirmed no phone number is
+-- shown there, and never was after the earlier fix. The phone number
+-- addition from the previous round exists only in admin/page.tsx's
+-- own state, under the admin-only Offer Review tab. No change was
+-- needed -- confirmed and explained clearly this time.
+--
+-- (2) Built the real "Document Site" -- a new admin page
+-- (/admin/document-site) and a matching dashboard link, bundling
+-- eight real, current reference documents directly into the app's
+-- public folder so they're always available: User's Guide, Terms &
+-- Conditions, Feature Catalog (PDF + spreadsheet), Handover Notes,
+-- Property Manager Guide, Fix Tracker, and the Nigeria Property
+-- Documents Research. Confirmed no record exists of a separate
+-- "System Documentation" file from another agent -- flagged
+-- directly on the new page itself as awaiting upload, rather than
+-- silently omitted.

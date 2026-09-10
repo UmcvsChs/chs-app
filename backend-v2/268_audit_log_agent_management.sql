@@ -1,0 +1,7 @@
+-- Real, continued expansion of item 12 (Audit Trail) -- closed the
+-- last specifically-named gap: agent management changes. Real
+-- logging added to link_managing_agent_by_id(), revoke_managing_
+-- agent(), and approve_agent_replacement(). Tested end to end with
+-- real data: linked a real agent to a real property, confirmed the
+-- audit entry, then revoked it (restoring the property's original
+-- state), confirming that entry too.

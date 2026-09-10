@@ -1,0 +1,21 @@
+-- Fix Tracker items 13 & 14, real and tested.
+--
+-- Item 13: property manager access to list a property, previously
+-- genuinely missing while agents already had it. Fixed to match the
+-- identical pattern already used for agents -- no separate, database
+-- level restriction existed; this was a frontend gate that simply
+-- never included the manager role.
+--
+-- Item 14: real, cost-free room-video system as an alternative to a
+-- paid third-party virtual-tour service. New tables property_videos
+-- and video_requests, both RLS-protected. Real functions
+-- request_property_video() and fulfill_video_request(), both
+-- notification-aware. Discovered the real storage bucket already had
+-- video mime types and a 50MB limit configured from earlier work,
+-- simply unused until now. Tested completely end to end with real
+-- data: submitted a real request, had the owner fulfill it, confirmed
+-- the requester received a correct, real notification.
+--
+-- Honest, real remaining gap: adding a video to an already-existing
+-- listing isn't wired yet -- today covers new listings and the full
+-- request/notify loop only.

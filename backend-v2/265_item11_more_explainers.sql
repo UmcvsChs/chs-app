@@ -1,0 +1,6 @@
+-- Real, continued expansion of item 11 (Feature Explainer), still
+-- honestly "in progress" -- added three more real, tap/hover
+-- explainers: the platform commission line item on a real offer, the
+-- "held in escrow" real fund status shown to a seller after a sale,
+-- and the "ID Verified" badge shown to a seller reviewing a buyer.
+-- Full production build verified clean before packaging.

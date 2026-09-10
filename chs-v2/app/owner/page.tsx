@@ -23,6 +23,7 @@ import IssueNoticeForm from "@/components/IssueNoticeForm";
 import RequestTermination from "@/components/RequestTermination";
 import HouseRulesUpload from "@/components/HouseRulesUpload";
 import NotificationBell from "@/components/NotificationBell";
+import InfoTip from "@/components/InfoTip";
 import WalletQuickView from "@/components/WalletQuickView";
 import RoleBadge from "@/components/RoleBadge";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
@@ -51,6 +52,10 @@ export default function OwnerDashboard() {
   const router = useRouter();
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
+  const [pendingVideoRequests, setPendingVideoRequests] = useState<{
+    id: string; room_label: string; note: string | null; created_at: string;
+    properties: { title: string }[] | null; profiles: { full_name: string }[] | null;
+  }[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
   const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
   const [rentCollected, setRentCollected] = useState(0);
@@ -249,6 +254,11 @@ export default function OwnerDashboard() {
       .select("*")
       .eq("owner_id", session.user.id)
       .order("created_at", { ascending: false });
+
+    supabase.from("video_requests").select("id, room_label, note, created_at, properties(title), profiles!video_requests_requested_by_fkey(full_name)")
+      .in("property_id", (await supabase.from("properties").select("id").eq("owner_id", session.user.id)).data?.map((p) => p.id) || [])
+      .eq("status", "pending").order("created_at", { ascending: false })
+      .then(({ data }) => setPendingVideoRequests((data as unknown as typeof pendingVideoRequests) || []));
 
     if (!ownedProperties) {
       setProperties([]);
@@ -742,6 +752,22 @@ export default function OwnerDashboard() {
         <p className="text-xs text-chs-red bg-chs-amber-light mx-4 mt-3 rounded-lg px-3 py-2">{actionError}</p>
       )}
 
+      {pendingVideoRequests.length > 0 && (
+        <div className="mx-4 mt-3 bg-chs-amber-light rounded-xl p-3">
+          <p className="text-xs font-bold text-chs-amber-dark mb-2">🎥 Real video requests ({pendingVideoRequests.length})</p>
+          {pendingVideoRequests.map((r) => (
+            <div key={r.id} className="bg-white rounded-lg p-2 mb-1.5 text-xs">
+              <p className="font-semibold text-chs-charcoal">{r.properties?.[0]?.title} — {r.room_label}</p>
+              <p className="text-[10px] text-gray-500">Requested by {r.profiles?.[0]?.full_name}{r.note ? `: "${r.note}"` : ""}</p>
+              <button onClick={async () => { await supabase.rpc("fulfill_video_request", { p_request_id: r.id }); setPendingVideoRequests((prev) => prev.filter((x) => x.id !== r.id)); }}
+                className="text-[10px] text-chs-red font-semibold underline mt-1">
+                Mark as fulfilled once you&apos;ve added the video
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {properties.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-12 px-4">
           You don&apos;t have any properties listed yet.
@@ -912,7 +938,7 @@ export default function OwnerDashboard() {
                         <div>
                           <p className="font-bold text-chs-charcoal">{offer.buyer_full_name || offer.buyer?.full_name || "Buyer"}</p>
                           {offer.buyer?.valid_id_verified ? (
-                            <span className="text-[9px] font-bold text-green-700">✓ ID Verified</span>
+                            <span className="text-[9px] font-bold text-green-700">✓ ID Verified<InfoTip text="CHS has checked this buyer's real government ID against their account — a genuine identity check, not just a claim they typed in themselves." /></span>
                           ) : (
                             <span className="text-[9px] font-bold text-chs-amber-dark">⚠ Not yet verified</span>
                           )}
@@ -1263,7 +1289,7 @@ export default function OwnerDashboard() {
             return (
               <div key={offer.id} className="bg-white rounded-xl border-2 border-chs-red p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
-                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — real proceeds held pending document transfer.</p>
+                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — real proceeds held pending document transfer.<InfoTip text="CHS holds your real sale proceeds safely until the buyer confirms they've genuinely received all legal documents — this protects you both, and releases to your main wallet the moment that's confirmed." /></p>
                 {!dispatchReq && (
                   <p className="text-[10px] text-gray-400 mb-2">Waiting on the buyer to request their documents, or you can send them proactively below.</p>
                 )}

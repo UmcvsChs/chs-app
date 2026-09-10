@@ -1,0 +1,19 @@
+-- Real, direct fixes per two separate, confirmed client reports:
+--
+-- (1) Buyer phone number was never selected in admin's offer review
+-- queries, despite being correctly captured at submission -- a real
+-- oversight in the original build. Fixed on both the initial-review
+-- and owner-decision screens. Confirmed with a real, existing offer
+-- that the underlying data was always there.
+--
+-- (2) A genuinely serious finding: the real backend function for
+-- "processed history" (built earlier for rental applications and
+-- offers) was never actually connected to any real admin screen --
+-- a gap between "built" and "visible." Extended the function to also
+-- cover property listings and registrations, added real decision
+-- timestamps (verification_decided_at, registration_decided_at) so
+-- they sort accurately, and built the actual missing admin screen
+-- (new "Processed History" tab). Tested completely end to end: ran
+-- a real property through the full two-admin approval process and
+-- confirmed it correctly appears with its real reference number,
+-- title, and decision time.

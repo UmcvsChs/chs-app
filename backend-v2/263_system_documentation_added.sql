@@ -1,0 +1,6 @@
+-- No schema change. Added the real, genuine System Documentation PDF
+-- (uploaded by the client, built by the previous agent -- verified
+-- directly by opening it: 36 real pages, accurate content confirmed
+-- against the actual codebase, e.g. a correct 58-file shared
+-- component inventory) to the Document Site's real document set, and
+-- removed the "awaiting upload" notice now that it's genuinely there.

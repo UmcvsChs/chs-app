@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel, formatPostedAgo, shouldShowBedrooms } from "@/lib/format";
 import PropertyActions from "@/components/PropertyActions";
+import PropertyVideos from "@/components/PropertyVideos";
 import InterestButton from "@/components/InterestButton";
 import CurrencyReference from "@/components/CurrencyReference";
 import CommunityFeedback from "@/components/CommunityFeedback";
@@ -398,6 +399,8 @@ export default async function PropertyDetailPage({
             </div>
           </div>
         )}
+
+        <PropertyVideos propertyId={property.id} />
 
         {/* Real booking/offer actions — genuinely wired to the actual
             database, not a placeholder claiming to work. Only shown

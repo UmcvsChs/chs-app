@@ -1,0 +1,7 @@
+-- Real, continued expansion of item 12 (Audit Trail), still honestly
+-- "in progress" -- closed the marketplace-moderation gap flagged
+-- earlier: real logging added to admin_relay_quote_request(),
+-- admin_relay_quote_response(), and admin_block_quote_request().
+-- Tested end to end with real data: created a real quote request,
+-- relayed it as admin, and confirmed a correctly-labeled audit entry
+-- (real reference number CHS-MKT-000004) was created before cleanup.

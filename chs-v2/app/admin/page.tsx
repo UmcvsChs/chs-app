@@ -61,7 +61,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -150,21 +150,21 @@ export default function AdminDashboard() {
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
   const [pendingOfferReview, setPendingOfferReview] = useState<{
-    id: string; amount: number; note: string | null; buyer_full_name: string | null; buyer_occupation: string | null;
+    id: string; amount: number; note: string | null; buyer_full_name: string | null; buyer_phone: string | null; buyer_occupation: string | null;
     buyer_source_of_funds: string | null; created_at: string; properties: { title: string } | null;
     buyer: { valid_id_verified: boolean } | null;
   }[]>([]);
   useEffect(() => {
-    supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
+    supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
       .eq("status", "awaiting_admin_review").order("created_at", { ascending: true })
       .then(({ data }) => setPendingOfferReview((data as unknown as typeof pendingOfferReview) || []));
   }, []);
   const [pendingOfferDecisions, setPendingOfferDecisions] = useState<{
     id: string; amount: number; owner_decision: string | null; seller_response_note: string | null;
-    buyer_full_name: string | null; owner_decision_at: string; properties: { title: string } | null;
+    buyer_full_name: string | null; buyer_phone: string | null; owner_decision_at: string; properties: { title: string } | null;
   }[]>([]);
   useEffect(() => {
-    supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, owner_decision_at, properties(title)")
+    supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)")
       .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true })
       .then(({ data }) => setPendingOfferDecisions((data as unknown as typeof pendingOfferDecisions) || []));
   }, []);
@@ -527,6 +527,49 @@ export default function AdminDashboard() {
     engageRequests: { reference: string; service_type: string; status: string }[];
     properties: TraceProperty[];
   } | null>(null);
+  const [auditLog, setAuditLog] = useState<{
+    id: string; actor_role: string | null; action: string; target_table: string; target_label: string | null; details: Record<string, unknown> | null; created_at: string;
+    profiles: { full_name: string; phone: string }[] | null;
+  }[]>([]);
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [processedHistory, setProcessedHistory] = useState<{
+    item_type: string; id: string; status: string; person_name: string; property_title: string; acted_at: string;
+  }[]>([]);
+  const [processedHistoryLoading, setProcessedHistoryLoading] = useState(false);
+  const [processedHistoryFilter, setProcessedHistoryFilter] = useState<"all" | "rental_application" | "offer" | "property_listing" | "registration">("all");
+
+  async function loadProcessedHistory() {
+    setProcessedHistoryLoading(true);
+    const { data } = await supabase.rpc("get_admin_processed_history");
+    setProcessedHistory((data as unknown as typeof processedHistory) || []);
+    setProcessedHistoryLoading(false);
+  }
+
+  async function loadAuditLog(search?: string) {
+    setAuditLoading(true);
+    let query = supabase.from("audit_log")
+      .select("id, actor_role, action, target_table, target_label, details, created_at, profiles(full_name, phone)")
+      .order("created_at", { ascending: false }).limit(100);
+    if (search && search.trim()) {
+      query = query.or(`action.ilike.%${search.trim()}%,target_label.ilike.%${search.trim()}%`);
+    }
+    const { data } = await query;
+    setAuditLog((data as unknown as typeof auditLog) || []);
+    setAuditLoading(false);
+  }
+
+  useEffect(() => {
+    if (activeTab === "auditlog" && auditLog.length === 0 && !auditLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadAuditLog();
+    }
+    if (activeTab === "processedhistory" && processedHistory.length === 0 && !processedHistoryLoading) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadProcessedHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // Real resolved-history view — closes a related gap: once a
   // sub-admin action is approved/rejected, it previously vanished
@@ -1451,6 +1494,8 @@ export default function AdminDashboard() {
           { key: "analytics", label: "📊 Analytics", domain: null },
           { key: "finance", label: "Finance", domain: "finance" },
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
+          { key: "auditlog", label: "📋 Audit Log", domain: "super_admin_only" },
+          { key: "processedhistory", label: "🗄️ Processed History", domain: "owner_buyer_tenant" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
@@ -1859,6 +1904,14 @@ export default function AdminDashboard() {
               </div>
               <span className="text-chs-red text-lg">→</span>
             </Link>
+            <Link href="/admin/document-site"
+              className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold text-chs-charcoal">📁 Document Site</p>
+                <p className="text-[10px] text-gray-400">Every real, current reference document — user&apos;s guide, terms, handover notes, and more</p>
+              </div>
+              <span className="text-chs-red text-lg">→</span>
+            </Link>
             {profile?.is_super_admin && (
               <div className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2">
                 <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
@@ -2185,6 +2238,84 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {activeTab === "auditlog" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📋 A real, permanent record of every significant action across the platform — who did what, to which record, and when. Nothing here can be edited or deleted, by anyone, ever.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <input type="text" value={auditSearch} onChange={(e) => setAuditSearch(e.target.value)}
+                placeholder="Search by action or target — e.g. 'verify_property', 'suspend'"
+                className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={() => loadAuditLog(auditSearch)} className="px-4 py-2 rounded-lg bg-chs-charcoal text-white text-xs font-semibold">
+                Search
+              </button>
+            </div>
+            {auditLoading ? (
+              <p className="text-center text-sm text-gray-400 py-8">Loading...</p>
+            ) : auditLog.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real audit entries yet — click Search to load, or refine your search.</p>
+            ) : (
+              auditLog.map((entry) => (
+                <div key={entry.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-xs font-bold text-chs-charcoal">{entry.action.replace(/_/g, " ")}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(entry.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    By {entry.profiles?.[0]?.full_name || "System"} ({entry.actor_role || "system"}) — {entry.profiles?.[0]?.phone}
+                  </p>
+                  {entry.target_label && <p className="text-[11px] text-gray-600 mt-1">{entry.target_label}</p>}
+                  {entry.details && (
+                    <pre className="text-[9px] text-gray-400 bg-white rounded-lg p-2 mt-1.5 overflow-x-auto whitespace-pre-wrap break-words">
+                      {JSON.stringify(entry.details, null, 1)}
+                    </pre>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "processedhistory" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🗄️ Every real rental application, offer, property listing, and registration CHS has ever decided on — nothing here disappears once approved or rejected, exactly like an old message in a real inbox.
+            </p>
+            <div className="flex gap-1.5 mb-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {(["all", "rental_application", "offer", "property_listing", "registration"] as const).map((f) => (
+                <button key={f} onClick={() => setProcessedHistoryFilter(f)}
+                  className={`shrink-0 text-[10px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap ${processedHistoryFilter === f ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"}`}>
+                  {f === "all" ? "All" : f === "rental_application" ? "Applications" : f === "offer" ? "Offers" : f === "property_listing" ? "Listings" : "Registrations"}
+                </button>
+              ))}
+            </div>
+            {processedHistoryLoading ? (
+              <p className="text-center text-sm text-gray-400 py-8">Loading...</p>
+            ) : (
+              (() => {
+                const filtered = processedHistoryFilter === "all" ? processedHistory : processedHistory.filter((h) => h.item_type === processedHistoryFilter);
+                return filtered.length === 0 ? (
+                  <p className="text-center text-sm text-gray-400 py-8">No real processed items yet.</p>
+                ) : (
+                  filtered.map((h) => (
+                    <div key={h.item_type + h.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                      <div className="flex justify-between items-start">
+                        <p className="text-xs font-bold text-chs-charcoal capitalize">{h.item_type.replace(/_/g, " ")}</p>
+                        <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(h.acted_at).toLocaleString()}</span>
+                      </div>
+                      <p className="text-sm text-chs-charcoal mt-1">{h.person_name} — {h.property_title}</p>
+                      <p className={`text-[10px] font-semibold mt-0.5 capitalize ${h.status.includes("reject") || h.status.includes("declin") ? "text-chs-red" : "text-green-700"}`}>
+                        {h.status.replace(/_/g, " ")}
+                      </p>
+                    </div>
+                  ))
+                );
+              })()
+            )}
+          </div>
+        )}
+
         {activeTab === "saleapprovals" && (
           <div>
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
@@ -2451,7 +2582,7 @@ export default function AdminDashboard() {
                     <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleString()}</span>
                   </div>
                   <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
-                  <p className="text-xs text-chs-charcoal mt-1">{o.buyer_full_name}</p>
+                  <p className="text-xs text-chs-charcoal mt-1">{o.buyer_full_name} — {o.buyer_phone}</p>
                   {o.buyer?.valid_id_verified ? (
                     <span className="text-[9px] font-bold text-green-700">✓ ID Verified</span>
                   ) : (
@@ -2477,7 +2608,7 @@ export default function AdminDashboard() {
                       <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.owner_decision_at).toLocaleString()}</span>
                     </div>
                     <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
-                    <p className="text-xs text-chs-charcoal mt-1">Buyer: {o.buyer_full_name}</p>
+                    <p className="text-xs text-chs-charcoal mt-1">Buyer: {o.buyer_full_name} — {o.buyer_phone}</p>
                     <p className="text-xs font-bold mt-1">{o.owner_decision === "accepted" ? "✅ Owner accepted" : "❌ Owner declined"}</p>
                     {o.seller_response_note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{o.seller_response_note}&quot;</p>}
                     <button onClick={async () => { await supabase.rpc("admin_relay_offer_decision_to_buyer", { p_offer_id: o.id }); setPendingOfferDecisions((prev) => prev.filter((x) => x.id !== o.id)); }}

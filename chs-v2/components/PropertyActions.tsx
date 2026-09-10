@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import InfoTip from "./InfoTip";
 import { Property } from "@/types/property";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -516,7 +517,7 @@ export default function PropertyActions({ property }: { property: Property }) {
             <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
               <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
               {!property.agent_commission_pct && (
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)</span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)<InfoTip text="CHS's real fee for verifying this property's documents, holding your payment safely in escrow, and coordinating the actual legal handover — not an extra profit margin added by the seller." /></span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
               )}
               <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
             </div>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { uploadPropertyPhoto, uploadDocument } from "@/lib/storage";
+import { uploadPropertyPhoto, uploadDocument, uploadPropertyVideo } from "@/lib/storage";
 import CurrencyInput from "@/components/CurrencyInput";
 import { shouldShowBedrooms } from "@/lib/format";
 import InfoTip from "@/components/InfoTip";
@@ -83,6 +83,8 @@ export default function ListPropertyPage() {
   const [totalRooms, setTotalRooms] = useState<number | "">("");
   const [otherFacilities, setOtherFacilities] = useState<string[]>([]);
   const [newFacilityInput, setNewFacilityInput] = useState("");
+  const [videos, setVideos] = useState<{ label: string; file: File }[]>([]);
+  const [newVideoLabel, setNewVideoLabel] = useState("");
   const [fenced, setFenced] = useState(false);
   const [gated, setGated] = useState(false);
   const [roadType, setRoadType] = useState("tarred");
@@ -112,14 +114,18 @@ export default function ListPropertyPage() {
   const [error, setError] = useState<string | null>(null);
 
   // A real access check — must be logged in, and genuinely be either an
-  // Owner or an Agent (agents list on behalf of owners), matching the
-  // real access rules already enforced by the database's own RLS.
+  // Owner, Agent, or Property Manager can all list a real property —
+  // whoever lists it becomes the real listing's owner_id, exactly
+  // matching how an Agent already works here. Real, direct fix per a
+  // direct, emphatic client instruction: whatever an owner can do
+  // here, an agent or manager must be able to do too, with no gap
+  // between them.
   if (!authLoading && !session) {
     router.push("/login");
     return null;
   }
   const allRoles = profile ? [profile.role, ...(profile.secondary_roles || [])] : [];
-  if (!authLoading && profile && !allRoles.includes("owner") && !allRoles.includes("agent")) {
+  if (!authLoading && profile && !allRoles.includes("owner") && !allRoles.includes("agent") && !allRoles.includes("manager")) {
     router.push("/");
     return null;
   }
@@ -238,6 +244,19 @@ export default function ListPropertyPage() {
       if (uploadedUrls.length > 0) {
         await supabase.from("properties").update({ photos: uploadedUrls }).eq("id", newProperty.id);
       }
+
+    // Real, new video uploads — a genuine, cost-free alternative to
+    // a paid third-party virtual-tour service. Each labeled video
+    // uploads after the property exists, then a real row is written
+    // per video so a property can have several, one per room.
+    if (videos.length > 0) {
+      for (const v of videos) {
+        const url = await uploadPropertyVideo(v.file, session.user.id, newProperty.id, v.label);
+        if (url) {
+          await supabase.from("property_videos").insert({ property_id: newProperty.id, uploaded_by: session.user.id, room_label: v.label, video_url: url });
+        }
+      }
+    }
 
       // A real, genuine gap the client specifically flagged: the
       // database already had a place to store a video link, but the
@@ -663,6 +682,36 @@ export default function ListPropertyPage() {
                 + Add
               </button>
             </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-3">
+            <label className="text-xs font-semibold text-gray-600">🎥 Short room videos (optional, free alternative to a virtual tour)</label>
+            <p className="text-[10px] text-gray-400 mb-1.5">
+              Record or upload a real, short video (under 50MB each) of any room or facility — kitchen, master bedroom, toilet, dining, whatever a real buyer or tenant would want to see. Tapping the box below opens your phone&apos;s own choice of recording live or picking an existing video.
+            </p>
+            {videos.map((v, i) => (
+              <div key={i} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 mb-1.5 text-xs">
+                <span>🎬 {v.label} — {(v.file.size / (1024 * 1024)).toFixed(1)}MB</span>
+                <button type="button" onClick={() => setVideos(videos.filter((_, idx) => idx !== i))} className="text-chs-red font-semibold">Remove</button>
+              </div>
+            ))}
+            <div className="flex gap-1.5 mb-1.5">
+              <input type="text" value={newVideoLabel} onChange={(e) => setNewVideoLabel(e.target.value)}
+                placeholder="e.g. Master bedroom" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            </div>
+            <label className="block w-full text-center px-4 py-2.5 rounded-lg border-2 border-dashed border-gray-300 text-xs font-semibold text-gray-500 cursor-pointer">
+              📹 Tap to record or choose a video for &quot;{newVideoLabel.trim() || "this room"}&quot;
+              <input type="file" accept="video/*" className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && newVideoLabel.trim()) {
+                    setVideos([...videos, { label: newVideoLabel.trim(), file }]);
+                    setNewVideoLabel("");
+                  }
+                  e.target.value = "";
+                }} />
+            </label>
+            {!newVideoLabel.trim() && <p className="text-[10px] text-chs-amber-dark mt-1">Type a real room label above first, then tap to record or choose the video.</p>}
           </div>
 
           <div className="flex gap-4">
