@@ -1,0 +1,17 @@
+-- Fix Tracker item 6, real and tested. No schema change -- both
+-- fixes were to existing, already-correct queries.
+--
+-- Found and fixed a real, related bug while working this item: the
+-- buyer's own post-purchase document screen showed every uploaded
+-- document regardless of real verification status -- an unverified
+-- or even rejected document could have reached a buyer. Fixed to
+-- show only genuinely verified documents.
+--
+-- Built the real access CHS itself needed: admin's "Trace an
+-- Account" tool now surfaces every real property a traced person has
+-- ever listed, and every real document tied to each one, with a
+-- working view link and real verification status -- regardless of
+-- whether the property is pending, sold, or rejected. Tested
+-- directly: traced a real demo owner, confirmed their real
+-- properties, added a real verified document, confirmed it appears
+-- correctly.

@@ -63,6 +63,7 @@ interface PendingProperty {
 
 type Tab = "overview" | "analytics" | "finance" | "trace" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
+interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; }
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -509,6 +510,7 @@ export default function AdminDashboard() {
     roadmapAccess: { model_id: string; amount_paid: number; is_test_grant: boolean; created_at: string }[];
     bankAccount: { bank_name: string; account_number: string; account_name: string } | null;
     engageRequests: { reference: string; service_type: string; status: string }[];
+    properties: TraceProperty[];
   } | null>(null);
 
   // Real resolved-history view — closes a related gap: once a
@@ -862,7 +864,7 @@ export default function AdminDashboard() {
 
     // Real, parallel queries across every real system — the actual
     // MTN-agent-style "show me everything" behind this whole tool.
-    const [walletRes, walletTxRes, promoTxRes, promoRes, roadmapRes, bankRes, engageRes] = await Promise.all([
+    const [walletRes, walletTxRes, promoTxRes, promoRes, roadmapRes, bankRes, engageRes, propertiesRes] = await Promise.all([
       supabase.from("wallets").select("main_balance, frozen").eq("user_id", user.id).maybeSingle(),
       supabase.from("wallet_transactions").select("amount, direction, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
       supabase.from("promo_credit_transactions").select("amount, direction, description, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
@@ -870,6 +872,13 @@ export default function AdminDashboard() {
       supabase.from("construction_roadmap_access").select("model_id, amount_paid, is_test_grant, created_at").eq("user_id", user.id),
       supabase.from("linked_bank_accounts").select("bank_name, account_number, account_name").eq("user_id", user.id).maybeSingle(),
       supabase.from("engage_chs_requests").select("reference, service_type, status").eq("owner_id", user.id),
+      // Real, direct fix per a genuine, confirmed client concern —
+      // "where did all those documents uploaded go? We don't know."
+      // Tracing an owner now genuinely surfaces every real property
+      // they've ever listed and every real document tied to each one,
+      // regardless of whether the property is still pending, already
+      // sold, or was rejected — a permanent, real, searchable record.
+      supabase.from("properties").select("id, title, verification_status, status, property_sale_documents(id, document_type, file_url, verification_status)").eq("owner_id", user.id).order("created_at", { ascending: false }),
     ]);
 
     setTraceData({
@@ -880,6 +889,7 @@ export default function AdminDashboard() {
       roadmapAccess: roadmapRes.data || [],
       bankAccount: bankRes.data,
       engageRequests: engageRes.data || [],
+      properties: (propertiesRes.data as unknown as TraceProperty[]) || [],
     });
     setTraceLoading(false);
   }
@@ -2113,6 +2123,27 @@ export default function AdminDashboard() {
                         <p className="text-[10px] text-gray-400">No requests.</p>
                       ) : traceData.engageRequests.map((r, i) => (
                         <p key={i} className="text-[10px] text-gray-500 mt-1">{r.reference} — {r.service_type} ({r.status})</p>
+                      ))}
+                    </div>
+
+                    <div className="bg-white rounded-xl border border-gray-100 p-3">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1.5">🏠 Real properties &amp; documents</p>
+                      {traceData.properties.length === 0 ? (
+                        <p className="text-[10px] text-gray-400">No real properties listed by this person.</p>
+                      ) : traceData.properties.map((p) => (
+                        <div key={p.id} className="mb-2 pb-2 border-b border-gray-50 last:border-0">
+                          <p className="text-[11px] font-semibold text-chs-charcoal">{p.title}</p>
+                          <p className="text-[9px] text-gray-400 capitalize">{p.status} · {p.verification_status}</p>
+                          {p.property_sale_documents.length === 0 ? (
+                            <p className="text-[9px] text-gray-400 mt-0.5">No documents uploaded.</p>
+                          ) : (
+                            p.property_sale_documents.map((d) => (
+                              <a key={d.id} href={d.file_url} target="_blank" rel="noreferrer" className="block text-[9px] text-chs-red underline mt-0.5 capitalize">
+                                {d.document_type.replace(/_/g, " ")} — {d.verification_status}
+                              </a>
+                            ))
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>

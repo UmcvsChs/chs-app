@@ -145,7 +145,7 @@ export default function PropertyActions({ property }: { property: Property }) {
         if (data) {
           setDeadlinePassed(new Date(data.document_deadline).getTime() < Date.now());
           supabase.from("property_sale_documents").select("id, document_type, file_url, verification_status")
-            .eq("property_id", property.id)
+            .eq("property_id", property.id).eq("verification_status", "verified")
             .then(({ data: docs }) => setSaleDocuments(docs || []));
           supabase.from("document_dispatch_requests").select("status").eq("offer_id", data.id).maybeSingle().then(({ data: dispatch }) => {
             setDispatchStatus((dispatch?.status as "requested" | "dispatched") || "none");
