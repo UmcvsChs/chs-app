@@ -20,6 +20,9 @@ export interface Property {
   description: string | null;
   bedrooms: number | null;
   bathrooms: number | null;
+  toilets?: number | null;
+  total_rooms?: number | null;
+  other_facilities?: string[] | null;
   floor_area_sqm: number | null;
   fenced: boolean | null;
   gated: boolean | null;

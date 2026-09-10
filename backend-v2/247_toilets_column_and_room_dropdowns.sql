@@ -1,0 +1,10 @@
+-- Fix Tracker items 1 & 2, real and tested. Real, separate toilets
+-- column added (previously only bathrooms existed, conflating the
+-- two). Real dropdowns built for bedrooms (1-5), bathrooms (0-5),
+-- toilets (0-6), and a new total_rooms field (1-10) -- replacing
+-- plain number inputs. The already-existing but unused
+-- other_facilities jsonb column wired into a genuinely repeatable
+-- "Others" UI, and displayed as real tags on the property page.
+-- Tested directly: a real listing with 3 bedrooms, 3 toilets, 6 total
+-- rooms, plus "Visitor's toilet" and "BQ" as real Other Facilities
+-- entries -- matching the exact scenario raised.

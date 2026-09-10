@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto, uploadDocument } from "@/lib/storage";
 import CurrencyInput from "@/components/CurrencyInput";
+import { shouldShowBedrooms } from "@/lib/format";
 
 import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
@@ -77,6 +78,10 @@ export default function ListPropertyPage() {
   const [description, setDescription] = useState("");
   const [bedrooms, setBedrooms] = useState<number | "">("");
   const [bathrooms, setBathrooms] = useState<number | "">("");
+  const [toilets, setToilets] = useState<number | "">("");
+  const [totalRooms, setTotalRooms] = useState<number | "">("");
+  const [otherFacilities, setOtherFacilities] = useState<string[]>([]);
+  const [newFacilityInput, setNewFacilityInput] = useState("");
   const [fenced, setFenced] = useState(false);
   const [gated, setGated] = useState(false);
   const [roadType, setRoadType] = useState("tarred");
@@ -196,6 +201,9 @@ export default function ListPropertyPage() {
         description: description.trim() || null,
         bedrooms: bedrooms || null,
         bathrooms: bathrooms || null,
+        toilets: toilets || null,
+        total_rooms: totalRooms || null,
+        other_facilities: otherFacilities.length > 0 ? otherFacilities : null,
         fenced,
         gated,
         road_type: roadType,
@@ -598,16 +606,61 @@ export default function ListPropertyPage() {
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-semibold text-gray-600">Bedrooms</label>
-              <input type="number" min={0} value={bedrooms}
-                onChange={(e) => setBedrooms(e.target.value === "" ? "" : parseInt(e.target.value))}
-                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <label className="text-xs font-semibold text-gray-600">Total rooms</label>
+              <select value={totalRooms} onChange={(e) => setTotalRooms(e.target.value === "" ? "" : parseInt(e.target.value))}
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                <option value="">Select</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <option key={n} value={n}>{n} room{n !== 1 ? "s" : ""}</option>)}
+              </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-600">Bathrooms</label>
-              <input type="number" min={0} value={bathrooms}
-                onChange={(e) => setBathrooms(e.target.value === "" ? "" : parseInt(e.target.value))}
-                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            {shouldShowBedrooms(propertyType) && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Bedrooms</label>
+                <select value={bedrooms} onChange={(e) => setBedrooms(e.target.value === "" ? "" : parseInt(e.target.value))}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select</option>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} bedroom{n !== 1 ? "s" : ""}</option>)}
+                </select>
+              </div>
+            )}
+            {shouldShowBedrooms(propertyType) && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Bathrooms</label>
+                <select value={bathrooms} onChange={(e) => setBathrooms(e.target.value === "" ? "" : parseInt(e.target.value))}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select</option>
+                  {[0, 1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} bathroom{n !== 1 ? "s" : ""}</option>)}
+                </select>
+              </div>
+            )}
+            {shouldShowBedrooms(propertyType) && (
+              <div>
+                <label className="text-xs font-semibold text-gray-600">Toilets</label>
+                <select value={toilets} onChange={(e) => setToilets(e.target.value === "" ? "" : parseInt(e.target.value))}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
+                  <option value="">Select</option>
+                  {[0, 1, 2, 3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} toilet{n !== 1 ? "s" : ""}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-gray-200 pt-3">
+            <label className="text-xs font-semibold text-gray-600">Other facilities (optional)</label>
+            <p className="text-[10px] text-gray-400 mb-1.5">Anything not covered above — e.g. &quot;Visitor&apos;s toilet&quot;, &quot;Visitor&apos;s bedroom&quot;, &quot;BQ&quot;. Add as many as you genuinely need.</p>
+            {otherFacilities.map((f, i) => (
+              <div key={i} className="flex justify-between items-center bg-gray-50 rounded-lg px-3 py-2 mb-1.5 text-xs">
+                <span>{f}</span>
+                <button type="button" onClick={() => setOtherFacilities(otherFacilities.filter((_, idx) => idx !== i))} className="text-chs-red font-semibold">Remove</button>
+              </div>
+            ))}
+            <div className="flex gap-1.5">
+              <input type="text" value={newFacilityInput} onChange={(e) => setNewFacilityInput(e.target.value)}
+                placeholder="e.g. Visitor's toilet" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <button type="button" onClick={() => { if (newFacilityInput.trim()) { setOtherFacilities([...otherFacilities, newFacilityInput.trim()]); setNewFacilityInput(""); } }}
+                className="px-4 py-2 rounded-lg bg-chs-charcoal text-white text-xs font-semibold">
+                + Add
+              </button>
             </div>
           </div>
 

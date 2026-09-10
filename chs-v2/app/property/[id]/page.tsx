@@ -360,6 +360,18 @@ export default async function PropertyDetailPage({
               <p className="text-sm font-semibold text-chs-charcoal">{property.bathrooms}</p>
             </div>
           )}
+          {property.toilets !== null && property.toilets !== undefined && (
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
+              <p className="text-[10px] uppercase text-gray-400">Toilets</p>
+              <p className="text-sm font-semibold text-chs-charcoal">{property.toilets}</p>
+            </div>
+          )}
+          {property.total_rooms !== null && property.total_rooms !== undefined && (
+            <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
+              <p className="text-[10px] uppercase text-gray-400">Total rooms</p>
+              <p className="text-sm font-semibold text-chs-charcoal">{property.total_rooms}</p>
+            </div>
+          )}
           {property.road_type && (
             <div className="bg-[var(--zone-card)] rounded-xl p-3 border border-gray-100">
               <p className="text-[10px] uppercase text-gray-400">Road</p>
@@ -375,6 +387,17 @@ export default async function PropertyDetailPage({
             </div>
           )}
         </div>
+
+        {property.other_facilities && property.other_facilities.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-2">Other real facilities</p>
+            <div className="flex flex-wrap gap-1.5">
+              {property.other_facilities.map((f: string, i: number) => (
+                <span key={i} className="bg-[var(--zone-card)] border border-gray-100 rounded-full px-3 py-1 text-xs text-chs-charcoal">{f}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Real booking/offer actions — genuinely wired to the actual
             database, not a placeholder claiming to work. Only shown
