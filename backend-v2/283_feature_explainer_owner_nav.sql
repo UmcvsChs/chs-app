@@ -1,0 +1,6 @@
+-- No schema change. Real, direct response to a confirmed client
+-- report testing this exact gap on the live site: added real
+-- explainers to My Earnings, Market Demand, and Engage CHS on the
+-- owner dashboard's own navigation -- previously not covered.
+-- Confirmed the Document Site link genuinely exists and is unhidden,
+-- under Admin -> Overview -> scroll down, below Feature Catalog.

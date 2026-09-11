@@ -1,0 +1,12 @@
+-- No schema change. Completes the "across board" Feature Explainer
+-- pass: Host, Guest, Developer, Vendor, Artisan, and Staff dashboards
+-- now fully covered, matching Owner/Buyer/Tenant/Agent/Manager from
+-- the prior round -- every real user-facing dashboard in the app.
+--
+-- Admin's tab content (not the tab buttons themselves, which need a
+-- separate restructuring, still not started) now opens with a real,
+-- plain-language explanation on every tab that lacked one:
+-- Applications, Disputes, Feedback, Vendors, Artisans, Inspections,
+-- Developers. Each change individually lint-verified before moving
+-- to the next; two real apostrophe-escaping errors caught and fixed
+-- along the way.

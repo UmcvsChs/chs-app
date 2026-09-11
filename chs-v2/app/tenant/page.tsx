@@ -285,8 +285,8 @@ export default function TenantDashboard() {
           {session && <WalletQuickView userId={session.user.id} extra="rent_savings" />}
         </div>
         <div className="flex gap-1.5 mt-2">
-          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Applications</Link>
-          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
+          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Applications<InfoTip text="Every real rental application you've ever submitted, with a real, live status for each." /></Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions<InfoTip text="Every real payment you've made through CHS, with a downloadable receipt for each." /></Link>
         </div>
       </div>
 
@@ -457,13 +457,13 @@ export default function TenantDashboard() {
                   onClick={() => { setDisputingTenancy(t); setDisputeSubmitted(false); }}
                   className="block mt-2 w-full py-2 rounded-full bg-gray-100 text-chs-charcoal text-[11px] font-semibold text-center"
                 >
-                  ⚠️ Raise a dispute about this tenancy
+                  ⚠️ Raise a dispute about this tenancy<InfoTip text="A real, formal disagreement with your landlord — CHS staff review real evidence from both sides and issue a genuine, binding ruling." />
                 </button>
                 <button
                   onClick={() => { setFaultTenancy(t); setFaultSubmitted(false); setFaultError(null); setFaultDescription(""); setFaultLocation(""); }}
                   className="block mt-2 w-full py-2 rounded-full bg-chs-red text-white text-[11px] font-semibold text-center"
                 >
-                  🔧 Report a fault
+                  🔧 Report a fault<InfoTip text="Something genuinely broken or needing repair — CHS routes this straight to your real landlord or their property manager, whichever one actually handles maintenance for this unit." />
                 </button>
                 <button
                   onClick={() => setMessagingTenancy(t)}

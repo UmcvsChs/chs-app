@@ -1,0 +1,13 @@
+-- No schema change. Real, direct response to explicit client
+-- instruction: "do it across board -- every category, every
+-- dashboard, every interface." Moved the Feature Explainer from
+-- covering individual terms to comprehensively covering entire
+-- dashboards: Owner (in full), Buyer (in full), Tenant (in full),
+-- Agent (in full), Property Manager (in full). 30+ real terms now
+-- covered by whole dashboard, not isolated words.
+--
+-- Honestly not yet covered: Host, Guest, Developer, Vendor, Artisan,
+-- Staff dashboards, and Admin's own tab navigation -- the latter
+-- needs a structural change (tab labels are plain text, not
+-- directly-displayable content) rather than a simple addition.
+-- Identified and planned, not yet built.

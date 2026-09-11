@@ -2438,8 +2438,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "applications" &&
-          (pendingApplications.length === 0 ? (
+        {activeTab === "applications" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📋 Real rental applications, already confirmed by a real guarantor, waiting on CHS&apos;s own review before the owner ever sees them.
+            </p>
+            {pendingApplications.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending rental applications.</p>
           ) : (
             pendingApplications.map((app) => (
@@ -2520,7 +2524,9 @@ export default function AdminDashboard() {
                 )}
               </div>
             ))
-          ))}
+          )}
+          </div>
+        )}
 
         {activeTab === "offerreview" && (
           <div>
@@ -2699,6 +2705,9 @@ export default function AdminDashboard() {
 
         {activeTab === "disputes" && (
           <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              ⚖️ A real, formal disagreement raised by a tenant or owner — CHS reviews the real evidence from both sides and rules in one party&apos;s favor.
+            </p>
             {openDisputes.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No open disputes.</p>
           ) : (
@@ -2751,8 +2760,12 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "feedback" &&
-          (pendingFeedback.length === 0 ? (
+        {activeTab === "feedback" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              💬 General suggestions or complaints about CHS itself — not tied to one specific transaction or deal.
+            </p>
+            {pendingFeedback.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending community feedback.</p>
           ) : (
             pendingFeedback.map((f) => (
@@ -2774,7 +2787,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))
-          ))}
+          )}
+          </div>
+        )}
 
         {activeTab === "engage" &&
           (pendingEngage.length === 0 ? (
@@ -2792,8 +2807,12 @@ export default function AdminDashboard() {
             ))
           ))}
 
-        {activeTab === "vendors" &&
-          (pendingVendors.length === 0 ? (
+        {activeTab === "vendors" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🏪 Real marketplace sellers waiting on verification before their products can go live for buyers to see.
+            </p>
+            {pendingVendors.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending vendor registrations.</p>
           ) : (
             pendingVendors.map((v) => (
@@ -2816,7 +2835,9 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))
-          ))}
+          )}
+          </div>
+        )}
 
         {activeTab === "referrals" && (
           <>
@@ -2883,6 +2904,9 @@ export default function AdminDashboard() {
 
         {activeTab === "artisans" && (
           <>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🔧 Real tradespeople (plumbers, electricians, and similar) waiting on verification before they can quote on real maintenance jobs.
+            </p>
             {pendingArtisans.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No pending artisan registrations.</p>
             ) : (
@@ -2922,6 +2946,9 @@ export default function AdminDashboard() {
 
         {activeTab === "inspections" && (
           <>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🔍 Real, upcoming physical property visits a buyer or tenant has booked before deciding — a genuine safety and coordination checkpoint, not just a calendar entry.
+            </p>
             {upcomingInspections.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No upcoming inspections booked.</p>
             ) : (
@@ -2946,6 +2973,9 @@ export default function AdminDashboard() {
 
         {activeTab === "developers" && (
           <>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🏗️ Real commercial developers requesting a verified partnership with CHS — a bigger step than a normal owner registration, so it&apos;s reviewed separately.
+            </p>
             {developerApplications.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No pending developer applications.</p>
             ) : (

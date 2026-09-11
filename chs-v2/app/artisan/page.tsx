@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Artisan, ArtisanRating, ArtisanJobDispute } from "@/types/artisan";
 import GuidePrompt from "@/components/GuidePrompt";
+import InfoTip from "@/components/InfoTip";
 
 interface OpenFault {
   id: string;
@@ -225,7 +226,7 @@ export default function ArtisanDashboard() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold capitalize">{artisan.trades?.join(", ")} {artisan.artisan_type === "chs_agent" ? "· CHS Agent" : "· Independent"}</h1>
+          <h1 className="font-serif text-lg font-bold capitalize">{artisan.trades?.join(", ")} {artisan.artisan_type === "chs_agent" ? "· CHS Agent" : "· Independent"}<InfoTip text="'CHS Agent' means you were brought on directly through CHS's own vetting. 'Independent' means you registered yourself — both are real, verified artisans, this just shows how you joined." /></h1>
           <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${artisan.verification_status === "verified" ? "bg-chs-red" : "bg-white/15"}`}>
             {artisan.verification_status === "verified" ? "✓ Verified" : "Pending review"}
           </span>
@@ -238,7 +239,7 @@ export default function ArtisanDashboard() {
       <div className="px-4 py-4">
         {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{actionError}</p>}
 
-        <p className="text-xs font-bold text-chs-charcoal mb-2">Open jobs you can quote for ({openFaults.length})</p>
+        <p className="text-xs font-bold text-chs-charcoal mb-2">Open jobs you can quote for ({openFaults.length})<InfoTip text="Real maintenance jobs matching your trade and location — submit a real price and CHS relays it to the property owner or manager for a decision." /></p>
         {openFaults.length === 0 ? (
           <p className="text-sm text-gray-400 mb-4">No open jobs matching your trade right now.</p>
         ) : (

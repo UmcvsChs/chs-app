@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { AgentReferral } from "@/types/agentReferral";
 import { formatNaira } from "@/lib/format";
 import GuidePrompt from "@/components/GuidePrompt";
+import InfoTip from "@/components/InfoTip";
 import MessageThread from "@/components/MessageThread";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import WalletQuickView from "@/components/WalletQuickView";
@@ -409,15 +410,15 @@ export default function AgentDashboard() {
             daily activity reports. */}
 
         <Link href="/agent/tenant-register" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          📋 My Tenant Register →
+          📋 My Tenant Register →<InfoTip text="A real, permanent list of every tenant you've personally placed or manage, separate from CHS's own property records — your own real client book." />
         </Link>
 
         <Link href="/agent/property-register" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          🏠 My Properties &amp; Owners Register →
+          🏠 My Properties &amp; Owners Register →<InfoTip text="Every real property you manage on behalf of an owner, and the real owner contact tied to each one — your working reference, not a public listing." />
         </Link>
 
         <Link href="/expenses" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          💵 My Expenses & Income →
+          💵 My Expenses & Income →<InfoTip text="A real, simple ledger for tracking your own genuine business costs against what you've earned — for your own records, not shared with CHS or anyone else." />
         </Link>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4">

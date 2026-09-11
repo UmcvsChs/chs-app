@@ -579,22 +579,22 @@ export default function OwnerDashboard() {
           </div>
           <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Link href="/my-earnings" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              My Earnings
+              My Earnings<InfoTip text="Real income only — every real naira you've earned from rent, sales, or bookings, itemized by who paid and when. This is different from Transaction History, which also shows what you've paid out." />
             </Link>
             <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Recent Applications
+              Recent Applications<InfoTip text="Every real rental application submitted for your properties — approve or decline, and see where each one stands with CHS's review." />
             </Link>
             <Link href="/owner-quotations" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Recent Property Quotation
+              Recent Property Quotation<InfoTip text="Every real purchase offer made on your for-sale properties — separate from rental applications, since these are people offering to buy, not rent." />
             </Link>
             <Link href="/my-receipts" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Transaction History
+              Transaction History<InfoTip text="Every real payment that's moved through your account — both money you've received and any you've paid out, like commissions or subscriptions." />
             </Link>
             <Link href="/market-demand" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Market Demand
+              Market Demand<InfoTip text="Real, genuine insight into what buyers and tenants are actually searching for in your area — helps you price and describe your listing to match real demand, not guesswork." />
             </Link>
             <Link href="/engage-chs" className="shrink-0 whitespace-nowrap relative bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Engage CHS
+              Engage CHS<InfoTip text="A real, direct line to CHS's own professional services — request a document, a legal check, or hands-on help with something specific, separate from your normal buyer/tenant messages." />
               {engageUnreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-chs-red text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {engageUnreadCount}
@@ -681,22 +681,26 @@ export default function OwnerDashboard() {
         <p className="text-[9px] text-white/50 uppercase font-semibold mt-4 mb-1.5">Quick Actions</p>
         <div className="grid grid-cols-4 gap-1.5">
           <button onClick={() => { setShowConcernForm(!showConcernForm); setShowMessageThread(false); setShowEarningsLedger(false); }}
-            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showConcernForm ? "bg-chs-red" : "bg-white/15"}`}>
+            className={`relative flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showConcernForm ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="absolute top-1 right-1"><InfoTip text="A real complaint or concern about how CHS itself is handling something — separate from a message to a buyer or tenant. CHS staff read and respond to this directly." /></span>
             <span className="text-base">⚠️</span>
             <span className="text-[8px] text-white font-semibold leading-tight">Raise a<br />Concern</span>
           </button>
           <button onClick={() => { setShowMessageThread(!showMessageThread); setShowConcernForm(false); setShowEarningsLedger(false); }}
-            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showMessageThread ? "bg-chs-red" : "bg-white/15"}`}>
+            className={`relative flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showMessageThread ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="absolute top-1 right-1"><InfoTip text="A real, direct chat with CHS support staff — for anything general, not tied to one specific buyer, tenant, or transaction." /></span>
             <span className="text-base">💬</span>
             <span className="text-[8px] text-white font-semibold leading-tight">Direct Line<br />to CHS</span>
           </button>
           <Link href="/owner-messages"
-            className="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center bg-white/15">
+            className="relative flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center bg-white/15">
+            <span className="absolute top-1 right-1"><InfoTip text="Every real, past conversation you've had with a buyer or tenant through CHS, all in one place, so you never have to hunt through individual properties to find an old message." /></span>
             <span className="text-base">📨</span>
             <span className="text-[8px] text-white font-semibold leading-tight">Message<br />History</span>
           </Link>
           <button onClick={() => { setShowEarningsLedger(!showEarningsLedger); setShowConcernForm(false); setShowMessageThread(false); }}
-            className={`flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showEarningsLedger ? "bg-chs-red" : "bg-white/15"}`}>
+            className={`relative flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl text-center ${showEarningsLedger ? "bg-chs-red" : "bg-white/15"}`}>
+            <span className="absolute top-1 right-1"><InfoTip text="A quick, real snapshot of your income right here on this page — for the full, itemized breakdown, use the My Earnings link above instead." /></span>
             <span className="text-base">📊</span>
             <span className="text-[8px] text-white font-semibold leading-tight">Earnings<br />History</span>
           </button>
