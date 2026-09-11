@@ -1,0 +1,14 @@
+-- No schema change. Critical frontend fix following direct client
+-- testing: InfoTip.tsx's real bug reproduced exactly as reported --
+-- clicking flashed the explanation open for under a second before
+-- it immediately closed. Root cause: the component opened on
+-- onMouseEnter AND toggled on click; on desktop the mouse is already
+-- hovering the button before a click lands, so hover had already set
+-- it open, and the click's own toggle closed it right back down --
+-- on every single click, not intermittently. Fixed by removing hover
+-- entirely, making this purely click/tap driven on desktop and
+-- mobile alike. One shared component, confirmed used in 21 real
+-- files, so this single fix resolves it everywhere it's been added.
+-- A real typo of my own (a stray '#' instead of '//' in a comment,
+-- which would have been a genuine syntax error) was caught by the
+-- lint check before it ever reached a build, let alone the client.
