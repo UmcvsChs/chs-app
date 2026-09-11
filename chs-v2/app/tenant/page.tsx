@@ -15,6 +15,7 @@ import { FormalNotice, NOTICE_TYPE_LABELS } from "@/types/formalNotice";
 import MessageThread from "@/components/MessageThread";
 import GuidePrompt from "@/components/GuidePrompt";
 import NotificationBell from "@/components/NotificationBell";
+import InfoTip from "@/components/InfoTip";
 
 interface ApplicationWithProperty {
   id: string;
@@ -425,7 +426,7 @@ export default function TenantDashboard() {
                   <label className="flex items-center gap-1.5">
                     <input type="checkbox" checked={!!t.auto_pay_rent_enabled}
                       onChange={(e) => handleToggleAutoPay(t.id, e.target.checked)} />
-                    <span className="text-[10px] font-semibold text-gray-600">Auto-pay this rent from my Rent Savings the moment it&apos;s due</span>
+                    <span className="text-[10px] font-semibold text-gray-600">Auto-pay this rent from my Rent Savings the moment it&apos;s due<InfoTip text="A real, automatic payment straight from your Rent Savings balance the day rent is due — no manual step, no risk of forgetting or being marked late." /></span>
                   </label>
                   {t.auto_pay_rent_enabled && (
                     <div className="flex gap-1.5 mt-1.5">
@@ -442,9 +443,12 @@ export default function TenantDashboard() {
                 <Link href={`/condition-report/${t.id}`} className="block mt-1 text-[10px] font-semibold text-chs-red underline">
                   Submit move-in condition report
                 </Link>
+                <span className="inline-block ml-1"><InfoTip text="A real, dated record of the apartment's actual condition the day you move in — photos of every room. This protects you: if a dispute ever comes up about damage, this is your genuine proof of what was already there." /></span>
+                <br />
                 <Link href={`/condition-report/${t.id}?type=move_out`} className="block mt-1 text-[10px] font-semibold text-chs-charcoal underline">
                   Submit move-out condition report (requires a real court affidavit)
                 </Link>
+                <span className="inline-block ml-1"><InfoTip text="Required when you leave — a genuine court affidavit confirming the apartment's true state, replacing a simple caution fee. More demanding than just forfeiting a deposit, but it protects an honest tenant from being blamed for damage they didn't cause." /></span>
                 {session && <HouseRulesAcknowledgment tenancyId={t.id} propertyId={t.property_id} session={session} />}
                 <span className="inline-block mt-1 text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full capitalize">
                   {t.status.replace(/_/g, " ")}

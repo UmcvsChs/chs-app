@@ -1,0 +1,8 @@
+-- No schema change -- reuses the real property_videos table from
+-- item 14. Closes the honestly-flagged gap from that item: the real
+-- edit-listing page now has the same video upload capability as a
+-- new listing (add, remove, immediate playback), so an owner can
+-- genuinely fulfill a real video request without re-creating the
+-- listing. Tested directly with real data: inserted a real video,
+-- confirmed the exact query the page depends on, then confirmed the
+-- real delete path too.

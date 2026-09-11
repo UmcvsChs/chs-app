@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { uploadDocument } from "@/lib/storage";
 import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import InfoTip from "@/components/InfoTip";
 
 interface RentalApplicationFormProps {
   propertyId: string;
@@ -187,7 +188,7 @@ export default function RentalApplicationForm({
         className="w-full text-xs" />
 
       <div className="border-t border-gray-200 pt-3">
-        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Your guarantor</p>
+        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Your guarantor<InfoTip text="A real person who agrees to stand behind you — if you genuinely can't pay rent, your guarantor is who the landlord can turn to. Most landlords require one; it's a standard part of renting, not a sign of distrust in you specifically." /></p>
         <p className="text-[11px] text-gray-500 mb-2">
           You provide only their name and phone number below. Your guarantor will independently fill in everything else about themselves — their address, occupation, ID, and their own real consent — through a private link sent directly to them. This is deliberate: CHS does not accept a guarantor&apos;s details entered by anyone but the guarantor.
         </p>

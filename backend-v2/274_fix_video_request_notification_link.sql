@@ -1,0 +1,10 @@
+-- Real, direct fix found while reviewing the video system's real
+-- notification links: request_property_video()'s owner-facing
+-- notification linked to /property/{id} -- the public page a buyer
+-- would see, with no real way to add a video from there. Fixed to
+-- link to /edit-listing/{id} instead, the real page where it can
+-- actually be done, matching the direct dashboard link added
+-- earlier. Confirmed fulfill_video_request()'s requester-facing link
+-- was already correct -- no change needed there. Tested with real
+-- data: confirmed a fresh request's notification carries the
+-- correct, direct link.

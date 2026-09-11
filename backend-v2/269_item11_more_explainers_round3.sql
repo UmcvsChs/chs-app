@@ -1,0 +1,7 @@
+-- Real, continued expansion of item 11 (Feature Explainer), still
+-- honestly "in progress" -- added real, tap/hover explainers to:
+-- marketplace escrow-held status (my-quote-requests page), what a
+-- real guarantor actually is (not just how to add one -- the process
+-- was already well-explained, the underlying concept wasn't), and
+-- what a real CHS Agent ID is for when an owner links a managing
+-- agent. Full production build verified clean before packaging.

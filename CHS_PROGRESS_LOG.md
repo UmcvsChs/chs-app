@@ -6,6 +6,29 @@
 
 ---
 
+## September 10, 2026 — Migrations 223–274: extensive real client testing round, admin mediation completed, Audit Trail and Feature Explainer started, real room-video system built
+
+The largest single batch of the engagement, driven by an extensive, real client testing session that surfaced genuine bugs across nearly every part of the app. Full detail in `CHS_HANDOVER_NOTES.md` under "New Since Last Handover Update (migrations 223–274)" — summarized here in the order it actually happened:
+
+1. Notification click-through fixed for real, after two earlier attempts each solved one problem and caused another (`Link`-wrapping a div was fragile; `window.location.href` fixed the click but caused a full, disruptive reload). Final, correct fix: `router.push()` with explicit `stopPropagation`/`preventDefault`.
+2. Admin mediation gap closed for rental applications and offers, both directions — a buyer's offer and an owner's decision on it both used to bypass CHS review entirely. Real `awaiting_admin_review` / `owner_decided_pending_relay` statuses now gate both.
+3. Buyer bio-data (name, phone, occupation, source of funds) made required at offer submission, visible to admin, deliberately kept off the owner's screen — contact stays mediated through the message thread.
+4. The single most serious gap found this round: admin could approve a new listing with zero visibility into its uploaded legal documents. Fixed with real document review directly on the approval card, and a genuine hard block (not just a warning) for Sale properties until every document — and the owner's own ID — is verified.
+5. Land and other non-residential categories fixed to never show a bedroom count, regardless of bad underlying data; 36 real listings cleaned.
+6. Real room/bedroom/toilet dropdowns and a genuinely repeatable "Others" facility field, replacing plain number inputs.
+7. "Processed History" admin tab built — the real backend function for this existed from an earlier round but was never connected to any actual screen; extended to cover property listings and registrations too.
+8. Audit Trail started (`audit_log` table, `log_audit_event()`), wired into every high-stakes real action found so far — property decisions, dispute rulings, fund release, account suspension, all admin relay functions, referral payouts, marketplace moderation, agent management. Genuinely ongoing, not finished.
+9. Feature Explainer started (`InfoTip` component), live on 16+ real terms across buyer, owner, and tenant screens. Genuinely ongoing.
+10. Property manager listing access fixed — managers genuinely could not list a property; agents already could. Matched to the identical pattern.
+11. Real room-video system built (`property_videos`, `video_requests`) as a cost-free alternative to a paid virtual-tour service, on both new and existing listings, with a real "request a specific video" flow for an unsatisfied buyer/tenant. Found and fixed three further real gaps purely by exercising the feature end to end after building it — a request tracking page, a direct action link for the owner, and a wrong notification link.
+12. Document Site built (`/admin/document-site`) — every current reference document bundled directly into the app.
+13. Round 2 demo accounts created (`0812...`, PIN `123456`), then a real login bug found and fixed: raw `auth.users` SQL insertion had left several fields `NULL` where Supabase's real auth service expects an empty string — a documented pitfall of bypassing the Admin API.
+14. Per-role zone colors upgraded to match the saturation of the client's own reference palette.
+
+Several real mistakes were made and caught this round — a JSX edit that deleted a needed line, a wrong TypeScript type for a Postgres array-returning join, a garbled shell heredoc that skipped a zip entirely — every one of them found by actually testing (full build, real database queries, re-opening a packaged zip to check its real contents) rather than by writing careful code the first time. See the "note on process" at the end of the corresponding Handover Notes section.
+
+---
+
 ## Migrations 46–49 — Promotion, Concierge, Urgent Sale, Performance
 - Built the credit-based geo-tiered listing promotion system (real per-location, per-size daily cost; toggle on/off; relative ranking against the same real local market).
 - Built Concierge ("Talk to an Agent") — free-text or voice property requests routed to admin.

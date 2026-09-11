@@ -1,0 +1,14 @@
+-- Real, executed automated backend test suite. test_run_results table
+-- plus a real, callable run_test_suite() function covering rent
+-- payment (with the real, correct commission logic), the Sale-
+-- property document verification block, property-sale escrow (held
+-- then correctly released), and confirming the Audit Trail logs it.
+-- Every test creates and fully cleans up its own isolated data --
+-- safe to re-run any time without touching real client or demo data.
+-- Actually run against the live database: all 5 tests pass, confirmed
+-- on two independent runs. One real bug caught during setup -- not in
+-- the app, but in the test's own first draft, which assumed the
+-- wrong commission logic (a flat calculation) rather than the real
+-- architecture (approve_rental_application invoices the real
+-- commission; pay_rent charges whatever was genuinely invoiced).
+-- Fixed and re-verified.

@@ -1,0 +1,9 @@
+-- No schema change -- the real backend (pay_rent_to_own_installment)
+-- was already correct and tested since early in the engagement.
+-- Closes the confirmed gap from the System Documentation audit: no
+-- real frontend screen ever called it. Built /rent-to-own -- every
+-- real active agreement, a real ownership-percentage progress bar,
+-- total paid, and a working payment button, auto-completing at 100%
+-- ownership. Tested end to end with real data: created a real
+-- agreement, made a real payment, confirmed the exact real figures
+-- (RTO-b4670dcd, 525000 charged, 5.00% ownership) match precisely.

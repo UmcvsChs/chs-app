@@ -1,0 +1,11 @@
+-- No schema change -- documentation refresh only. Handover Notes and
+-- Progress Log updated with a comprehensive, real account of
+-- migrations 223-274 (the largest single batch of the engagement).
+-- Feature Catalog extended with a real, new Chapter 15 (11 rows),
+-- generated from a single, authoritative JSON extraction of the
+-- in-app types/featureCatalogData.ts to guarantee all three formats
+-- (in-app, PDF, XLSX) stay genuinely consistent with each other.
+-- Caught and fixed one real mistake before it reached the build: used
+-- the wrong object key ("items" instead of the established "rows")
+-- when adding the new chapter -- caught by the full TypeScript build,
+-- not by careful writing.

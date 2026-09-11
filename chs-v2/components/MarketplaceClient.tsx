@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import { formatNaira } from "@/lib/format";
+import InfoTip from "./InfoTip";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
@@ -236,7 +237,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                         onClick={() => { setQuoteFormFor(product.id); setError(null); }}
                         className="mt-1.5 w-full py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold"
                       >
-                        Request a quote
+                        Request a quote<InfoTip text="This item's real price depends on your specific job — describe what you need, and the vendor sends back a real, genuine price through CHS before any payment happens." />
                       </button>
                     )}
                   </>
@@ -250,7 +251,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                     </p>
                     {product.status !== "sold_out" && (
                       boughtFor === product.id ? (
-                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.</p>
+                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.<InfoTip text="CHS holds your real payment safely until you confirm the item has genuinely arrived — the vendor is only paid once you're satisfied." /></p>
                       ) : (
                         <button
                           onClick={() => handleBuyNow(product.id)}

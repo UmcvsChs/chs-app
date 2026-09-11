@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import NotificationBell from "@/components/NotificationBell";
+import InfoTip from "@/components/InfoTip";
 
 // Real, new page completing a genuine, confirmed gap found while
 // building the real, admin-mediated marketplace: a buyer had no real
@@ -115,7 +116,7 @@ export default function MyQuoteRequestsPage() {
                   <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                 </div>
                 <p className="text-sm font-bold text-chs-charcoal">{formatNaira(o.amount + o.buyer_commission_amount)}</p>
-                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Paid — held in escrow, pending confirmed delivery.</p>}
+                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Paid — held in escrow, pending confirmed delivery.<InfoTip text="CHS holds your real payment safely and does not release a single naira to the vendor until you confirm you've genuinely received what you paid for." /></p>}
                 {o.payment_status === "released" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Deal complete — funds released to the vendor.</p>}
                 {o.payment_status === "refunded" && <p className="text-[10px] text-gray-500 font-semibold mt-1">↩ Refunded in full to your wallet.</p>}
               </div>

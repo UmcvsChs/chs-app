@@ -1,0 +1,7 @@
+-- Real, continued expansion of item 11 (Feature Explainer), still
+-- honestly "in progress" -- added three more real, tap/hover
+-- explainers in the marketplace: the real escrow-held status after
+-- a direct purchase, the "Buy now" fixed-price option, and "Request
+-- a quote" for custom-priced work -- clarifying the real distinction
+-- between the two purchase paths. Full production build verified
+-- clean before packaging.

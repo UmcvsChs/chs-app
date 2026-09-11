@@ -71,7 +71,9 @@ export default function PropertyVideos({ propertyId }: { propertyId: string }) {
 
       {session && (
         requestSuccess ? (
-          <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">✓ Your real request has been sent to the owner.</p>
+          <p className="text-xs text-green-700 bg-green-50 rounded-lg px-3 py-2">
+            ✓ Your real request has been sent to the owner. Track it anytime on <a href="/my-applications" className="underline font-semibold">My Applications</a>.
+          </p>
         ) : showRequestForm ? (
           <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
             <label className="text-xs font-semibold text-gray-600">Which real room or facility?</label>

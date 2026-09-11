@@ -1,0 +1,8 @@
+-- Real cleanup, no schema change to real data -- the old
+-- referral_fee_settings and referral_fees_owed tables and their real
+-- historical rows are deliberately preserved. Removed the dead admin
+-- UI built against them (editable fee rows, owed-fees list, and every
+-- now-unused function/state/component) -- genuine risk of a future
+-- developer mistaking dead functionality for live. The real, still-
+-- active Agent Referrals section in the same tab was carefully
+-- preserved and re-verified intact.

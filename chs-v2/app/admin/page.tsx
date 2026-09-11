@@ -33,7 +33,7 @@ interface DeveloperApplication {
   status: string;
   created_at: string;
 }
-import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
+
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import RoleBadge from "@/components/RoleBadge";
 import NotificationBell from "@/components/NotificationBell";
@@ -597,8 +597,6 @@ export default function AdminDashboard() {
   const [assignRole, setAssignRole] = useState("customer_care");
   const [assigning, setAssigning] = useState(false);
   const [assignMessage, setAssignMessage] = useState<string | null>(null);
-  const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
-  const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
   const [agentReferrals, setAgentReferrals] = useState<{ id: string; masked_reference: string; stage: string; chs_commission: number | null; agent_share_pct: number | null; split_50_50: boolean; agent_payout: number | null; created_at: string }[]>([]);
   const [completingReferralId, setCompletingReferralId] = useState<string | null>(null);
   const [unroutedFaults, setUnroutedFaults] = useState<(FaultReport & { tenancies: { management_delegated: boolean; landlord_id: string; manager_id: string | null } | null })[]>([]);
@@ -655,7 +653,7 @@ export default function AdminDashboard() {
     // behind a flood of new ones — the wrong items to hide from an
     // admin queue. referral_fee_settings is a small, bounded config
     // table, not a growing queue, so it's left unlimited.
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
@@ -663,8 +661,6 @@ export default function AdminDashboard() {
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
-      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: true }).limit(200),
       supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
@@ -850,8 +846,6 @@ export default function AdminDashboard() {
     setPendingFeedback(feedbackRes.data || []);
     setPendingEngage(engageRes.data || []);
     setPendingVendors(vendorsRes.data || []);
-    setFeeSettings(feeSettingsRes.data || []);
-    setOwedFees(owedFeesRes.data || []);
     setUnroutedFaults((faultsRes.data as typeof unroutedFaults) || []);
     setPendingArtisans(artisansRes.data || []);
     setUpcomingInspections((inspectionsRes.data as typeof upcomingInspections) || []);
@@ -1188,19 +1182,6 @@ export default function AdminDashboard() {
   // The actual point of building this admin-adjustable rather than
   // hardcoded — a real fee change takes effect immediately, for every
   // future deal, without needing a new code deployment at all.
-  async function handleUpdateFee(category: string, newAmount: number) {
-    setActionError(null);
-    const { error } = await supabase
-      .from("referral_fee_settings")
-      .update({ flat_fee_amount: newAmount, updated_at: new Date().toISOString() })
-      .eq("category", category);
-    if (error) {
-      setActionError("Could not update this fee. Please try again.");
-      return;
-    }
-    loadData();
-  }
-
   async function handleCompleteAgentReferral(referralId: string) {
     setActionError(null);
     setCompletingReferralId(referralId);
@@ -1208,32 +1189,6 @@ export default function AdminDashboard() {
     setCompletingReferralId(null);
     if (error) {
       setActionError(error.message);
-      return;
-    }
-    loadData();
-  }
-
-  async function handleUpdateOwedFeeStatus(feeId: string, status: "invoiced" | "paid") {
-    setActionError(null);
-    if (status === "paid") {
-      // A real financial disbursement — routes through the same
-      // high-stakes queue as everything else that moves real money.
-      const { error } = await supabase.rpc("request_admin_action", {
-        p_action_type: "mark_referral_paid",
-        p_target_id: feeId,
-        p_proposed_changes: {},
-      });
-      if (error) {
-        setActionError(error.message);
-        return;
-      }
-      loadData();
-      return;
-    }
-    // "Invoiced" is routine status tracking, not a real money movement.
-    const { error } = await supabase.from("referral_fees_owed").update({ status }).eq("id", feeId);
-    if (error) {
-      setActionError("Could not update this. Please try again.");
       return;
     }
     loadData();
@@ -1506,7 +1461,7 @@ export default function AdminDashboard() {
           { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
           { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only" },
           { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations" },
+          { key: "referrals", label: `Agent Referrals (${agentReferrals.length})`, domain: "agent_relations" },
           { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor" },
           { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
@@ -2890,39 +2845,6 @@ export default function AdminDashboard() {
                 </div>
               ))
             )}
-
-            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">Fee per category (editable)</p>
-            {feeSettings.map((fee) => (
-              <FeeSettingRow key={fee.category} fee={fee} onUpdate={handleUpdateFee} />
-            ))}
-
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">
-              Referral fees ({owedFees.length})
-            </p>
-            {owedFees.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No referral fees recorded yet.</p>
-            ) : (
-              owedFees.map((f) => (
-                <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 flex justify-between items-center">
-                  <div>
-                    <p className="text-sm font-semibold text-chs-charcoal">{formatNaira(f.amount)}</p>
-                    <span className="text-[10px] font-bold uppercase text-gray-400">{f.status}</span>
-                  </div>
-                  {f.status === "owed" && (
-                    <button onClick={() => handleUpdateOwedFeeStatus(f.id, "invoiced")}
-                      className="py-1.5 px-3 rounded-full bg-chs-amber-light text-chs-amber-dark text-[10px] font-semibold">
-                      Mark invoiced
-                    </button>
-                  )}
-                  {f.status === "invoiced" && (
-                    <button onClick={() => handleUpdateOwedFeeStatus(f.id, "paid")}
-                      className="py-1.5 px-3 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Mark paid
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
           </>
         )}
 
@@ -3247,42 +3169,6 @@ export default function AdminDashboard() {
   );
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  security_services: "Security Services",
-  cleaning_services: "Cleaning Services",
-  fumigation_pest_control: "Fumigation & Pest Control",
-  facilities_maintenance: "Facilities Maintenance",
-};
-
-function FeeSettingRow({
-  fee,
-  onUpdate,
-}: {
-  fee: ReferralFeeSetting;
-  onUpdate: (category: string, newAmount: number) => void;
-}) {
-  const [amount, setAmount] = useState(fee.flat_fee_amount);
-
-  return (
-    <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 flex items-center justify-between gap-2">
-      <p className="text-xs font-semibold text-chs-charcoal">{CATEGORY_LABELS[fee.category] || fee.category}</p>
-      <div className="flex gap-1.5 items-center">
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(parseInt(e.target.value) || 0)}
-          className="w-24 px-2 py-1.5 rounded-lg border border-gray-200 text-xs"
-        />
-        <button
-          onClick={() => onUpdate(fee.category, amount)}
-          className="py-1.5 px-3 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold"
-        >
-          Save
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // Restored from the original app's real, three-way workflow — Accept,
 // Reject (requires a real written reason), and Request more info

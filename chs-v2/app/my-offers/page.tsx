@@ -68,6 +68,7 @@ export default function MyOffersPage() {
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>
         <div className="flex gap-1.5 mt-2">
           <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications</Link>
+          <Link href="/rent-to-own" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">Rent to Own</Link>
           <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
         </div>
       </div>

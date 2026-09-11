@@ -1,0 +1,6 @@
+-- Real, continued expansion of item 11 (Feature Explainer), still
+-- honestly "in progress" -- three more real, tap/hover explainers,
+-- this round covering tenant-facing screens for the first time: real
+-- rent auto-pay, and the real, meaningful difference between a
+-- move-in and a move-out condition report. Sixteen real terms now
+-- covered across buyer, owner, and tenant screens.

@@ -53,7 +53,7 @@ export default function OwnerDashboard() {
   const { session, profile, testModeRole, loading: authLoading } = useAuth();
   const [properties, setProperties] = useState<PropertyWithActivity[]>([]);
   const [pendingVideoRequests, setPendingVideoRequests] = useState<{
-    id: string; room_label: string; note: string | null; created_at: string;
+    id: string; room_label: string; note: string | null; created_at: string; property_id: string;
     properties: { title: string }[] | null; profiles: { full_name: string }[] | null;
   }[]>([]);
   const [tenancies, setTenancies] = useState<TenancyBasic[]>([]);
@@ -255,7 +255,7 @@ export default function OwnerDashboard() {
       .eq("owner_id", session.user.id)
       .order("created_at", { ascending: false });
 
-    supabase.from("video_requests").select("id, room_label, note, created_at, properties(title), profiles!video_requests_requested_by_fkey(full_name)")
+    supabase.from("video_requests").select("id, room_label, note, created_at, property_id, properties(title), profiles!video_requests_requested_by_fkey(full_name)")
       .in("property_id", (await supabase.from("properties").select("id").eq("owner_id", session.user.id)).data?.map((p) => p.id) || [])
       .eq("status", "pending").order("created_at", { ascending: false })
       .then(({ data }) => setPendingVideoRequests((data as unknown as typeof pendingVideoRequests) || []));
@@ -759,6 +759,9 @@ export default function OwnerDashboard() {
             <div key={r.id} className="bg-white rounded-lg p-2 mb-1.5 text-xs">
               <p className="font-semibold text-chs-charcoal">{r.properties?.[0]?.title} — {r.room_label}</p>
               <p className="text-[10px] text-gray-500">Requested by {r.profiles?.[0]?.full_name}{r.note ? `: "${r.note}"` : ""}</p>
+              <Link href={`/edit-listing/${r.property_id}`} className="inline-block text-[10px] bg-chs-charcoal text-white font-semibold px-2.5 py-1 rounded-full mt-1.5 mr-1.5">
+                Add this real video now
+              </Link>
               <button onClick={async () => { await supabase.rpc("fulfill_video_request", { p_request_id: r.id }); setPendingVideoRequests((prev) => prev.filter((x) => x.id !== r.id)); }}
                 className="text-[10px] text-chs-red font-semibold underline mt-1">
                 Mark as fulfilled once you&apos;ve added the video
@@ -881,6 +884,7 @@ export default function OwnerDashboard() {
                   )}
                   {linkingAgentPropertyId === property.id && !property.managing_agent_id && (
                     <div className="mt-2 bg-[var(--zone-card)] rounded-lg p-2.5">
+                      <p className="text-[9px] font-semibold text-gray-500 mb-1">CHS Agent ID<InfoTip text="A real, unique ID every registered CHS agent has on their own profile — ask your agent to show you theirs. This is how CHS confirms you're genuinely linking a real, verified agent, not just anyone." /></p>
                       <input type="text" placeholder="Agent's real CHS ID, e.g. CHS-AGT-12345" value={postListingAgentId}
                         onChange={(e) => setPostListingAgentId(e.target.value)}
                         className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />

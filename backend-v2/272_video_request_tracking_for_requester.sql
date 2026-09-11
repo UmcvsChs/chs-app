@@ -1,0 +1,8 @@
+-- No schema change -- reuses the real video_requests table from item
+-- 14. Closes a related gap found while reviewing that feature: the
+-- buyer/tenant who made a real video request had no way to check
+-- back on it afterward, only a one-time "sent" confirmation. Real
+-- video requests now show permanently on My Applications with a real
+-- status (waiting on the owner / fulfilled). Tested completely end
+-- to end with real data: submitted a real request, confirmed pending
+-- status, had the owner fulfill it, confirmed the status updated.

@@ -1,0 +1,8 @@
+-- No schema change -- reuses real property_id already on
+-- video_requests. Closes a real usability gap found while reviewing
+-- the owner's pending-video-requests view: it showed the room and
+-- property name but no actual way to act on it -- the owner had to
+-- find the right listing themselves. Now includes a direct, real
+-- link straight to that exact property's edit page. Tested with real
+-- data: confirmed the request correctly carries the real property ID
+-- needed for the link to resolve correctly.

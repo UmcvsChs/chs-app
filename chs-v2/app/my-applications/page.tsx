@@ -24,24 +24,36 @@ interface Offer {
   id: string; status: string; amount: number; payment_status: string; created_at: string;
   properties: { title: string; location_area: string }[] | null;
 }
+interface VideoRequest {
+  id: string; room_label: string; status: string; created_at: string;
+  properties: { title: string; location_area: string }[] | null;
+}
 
 export default function MyApplicationsPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [rentalApps, setRentalApps] = useState<RentalApp[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [videoRequests, setVideoRequests] = useState<VideoRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   async function loadAll() {
     if (!session) return;
-    const [rentalRes, offerRes] = await Promise.all([
+    const [rentalRes, offerRes, videoRes] = await Promise.all([
       supabase.from("rental_applications").select("id, status, created_at, properties(title, location_area)")
         .eq("tenant_id", session.user.id).order("created_at", { ascending: false }),
       supabase.from("offers").select("id, status, amount, payment_status, created_at, properties(title, location_area)")
         .eq("buyer_id", session.user.id).order("created_at", { ascending: false }),
+      // Real, direct fix closing a genuine gap: a buyer/tenant who
+      // requested a specific room video previously had no way to
+      // check back on it — only a one-time "sent" message with
+      // nothing to refer to afterward.
+      supabase.from("video_requests").select("id, room_label, status, created_at, properties(title, location_area)")
+        .eq("requested_by", session.user.id).order("created_at", { ascending: false }),
     ]);
     setRentalApps((rentalRes.data as unknown as RentalApp[]) || []);
     setOffers((offerRes.data as unknown as Offer[]) || []);
+    setVideoRequests((videoRes.data as unknown as VideoRequest[]) || []);
     setLoading(false);
   }
 
@@ -117,6 +129,23 @@ export default function MyApplicationsPage() {
                     Proceed to payment
                   </Link>
                 )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs font-bold text-chs-charcoal mb-1.5">🎥 Real Video Requests</p>
+          {videoRequests.length === 0 ? (
+            <p className="text-xs text-gray-400">No real video requests yet.</p>
+          ) : (
+            videoRequests.map((v) => (
+              <div key={v.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+                <p className="text-sm font-semibold text-chs-charcoal">{v.properties?.[0]?.title || "Property"} — {v.room_label}</p>
+                <p className="text-[10px] text-gray-400">{v.properties?.[0]?.location_area} · {new Date(v.created_at).toLocaleDateString()}</p>
+                <p className={`text-xs font-semibold mt-0.5 ${v.status === "fulfilled" ? "text-green-700" : "text-chs-amber-dark"}`}>
+                  {v.status === "fulfilled" ? "✓ Video added — go take a look" : "⏳ Waiting on the owner"}
+                </p>
               </div>
             ))
           )}
