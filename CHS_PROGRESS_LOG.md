@@ -6,6 +6,17 @@
 
 ---
 
+## September 12, 2026 — Two real mobile UX bugs from live device testing (screenshots supplied)
+
+Both confirmed precisely against the client's own screenshots before fixing, not guessed at.
+
+- **Explainer popup clipped off-screen on mobile.** `InfoTip.tsx` centered its popup on its trigger using a fixed CSS transform (`left-1/2 -translate-x-1/2`), which doesn't know where the trigger actually sits on a real screen — for a trigger near the left edge (confirmed: "Raise a Concern" tile, owner dashboard), half the 208px popup was pushed off-screen, cutting the explanation text off. PC was unaffected only because the wider viewport happened to leave enough margin. Rebuilt: the popup now measures the trigger's real position on open (`getBoundingClientRect`) and clamps itself within the viewport with a safe margin, using `position: fixed` so it also can't be clipped by any parent's `overflow: hidden`. Not CSS-only fixable — needed real position measurement.
+- **Header nav forced into an invisible horizontal scroll.** Confirmed in the client's own screenshots across four scroll positions: "Hi, Demo" → "Demo, Wallet, My Pro..." → "...operties, Artisan" → "...s, Artisan, Log out" — Logout was only reachable by scrolling sideways, while the branding block ("CHS / Complete Housing Solutions / Visit the Marketplace", stacked across 3 lines) took up disproportionate space for what it says. `components/HomePageClient.tsx` header rebuilt: branding compressed onto one compact line; every nav link (Wallet, role-specific links, Artisan, Admin, Logout) now sits in a `flex-wrap` row that grows to as many lines as needed instead of scrolling, so everything is visible on a static screen with no scroll gesture required.
+
+Both changes are frontend-only, no migration. Could not render an actual screenshot to visually confirm the fix in this environment (browser-rendering tooling blocked by network restrictions here) — verified via direct code/logic review and a clean syntax check instead; please confirm visually on a real device before considering this closed.
+
+---
+
 ## September 10, 2026 (later same day) — Reconciliation after two parallel work sessions collided
 
 An earlier session this same day had independently pushed a consolidated fix package for the same client-supplied 15-item testing list (migrations numbered 246–248 in that session's own count). That work happened in parallel with, and without visibility into, the "Migrations 223–274" session documented immediately below — both sessions solved several of the same real problems independently, with different code and different migration numbers reused at the same numbers. This entry reconciles the two rather than silently picking one.

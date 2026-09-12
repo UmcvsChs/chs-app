@@ -96,18 +96,26 @@ export default function HomePageClient({ properties, platformStats }: { properti
 
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)]">
-      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start gap-2 overflow-hidden">
-        <div className="shrink-0">
-          <h1 className="font-serif text-xl font-bold">CHS</h1>
-          <p className="text-xs text-white/70">Complete Housing Solutions</p>
-          <Link href="/marketplace" className="text-[10px] text-white/60 underline mt-1 inline-block">
-            Visit the Marketplace →
-          </Link>
-        </div>
-        <div className="text-xs flex items-center gap-2 overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <ThemeToggle />
-          {loading ? null : session && profile ? (
-            <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+      {/* Real, direct client report from live mobile testing: the old
+          header forced every nav link (Wallet, role links, Artisan,
+          Logout) onto one horizontally-scrolling line, so Logout was
+          only reachable by scrolling sideways — "the only app where
+          you have to scroll to find the header." Redesigned: branding
+          compressed onto a single compact line, and every link now
+          sits in a wrapping row that grows to 2+ lines on narrow
+          screens instead of scrolling, so everything is visible on a
+          static screen. */}
+      <header className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-3">
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-baseline gap-1.5 min-w-0">
+            <h1 className="font-serif text-lg font-bold shrink-0">CHS</h1>
+            <Link href="/marketplace" className="text-[10px] text-white/60 underline truncate">
+              Visit the Marketplace →
+            </Link>
+          </div>
+          {!loading && session && profile && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <ThemeToggle />
               <NotificationBell />
               <Link href="/profile" className="w-7 h-7 rounded-full bg-white/15 overflow-hidden flex items-center justify-center shrink-0">
                 {profile.avatar_url ? (
@@ -117,73 +125,78 @@ export default function HomePageClient({ properties, platformStats }: { properti
                   <span className="text-[10px] font-bold text-white">{profile.full_name.charAt(0).toUpperCase()}</span>
                 )}
               </Link>
-              <span className="text-white/80">Hi, {profile.gender === "male" ? "Mr. " : profile.gender === "female" ? "Miss " : ""}{profile.full_name.split(" ")[0]}</span>
-              <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                Wallet
-              </Link>
-              {/* Real, direct fix for a genuine, confirmed gap: every
-                  other role gets a real, prominent header link to
-                  their own interface — Buyer and Guest never did,
-                  leaving them with nothing to click beyond Wallet and
-                  Logout, exactly as reported. */}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("buyer") && (
-                <Link href="/my-offers" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  My Offers
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("guest") && (
-                <Link href="/my-bookings" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  My Bookings
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
-                <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  My Referrals
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("tenant") && (
-                <Link href="/tenant" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  My Rentals
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
-                <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  Agent
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("owner") && (
-                <Link href="/owner" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  My Properties
-                </Link>
-              )}
-              {[profile.role, ...(profile.secondary_roles || [])].includes("manager") && (
-                <Link href="/manager" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  Manager
-                </Link>
-              )}
-              <Link href="/artisan" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                Artisan
-              </Link>
-              {profile.role === "admin" && (
-                <Link href="/admin" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                  Admin
-                </Link>
-              )}
-              <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                Log out
-              </button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Link href="/login" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
-                Log in
-              </Link>
-              <Link href="/register" className="bg-chs-red px-3 py-1.5 rounded-full font-semibold">
-                Sign up
-              </Link>
             </div>
           )}
         </div>
+
+        {loading ? null : session && profile ? (
+          <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
+            <span className="text-white/80 mr-0.5">Hi, {profile.gender === "male" ? "Mr. " : profile.gender === "female" ? "Miss " : ""}{profile.full_name.split(" ")[0]}</span>
+            <Link href="/wallet" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+              Wallet
+            </Link>
+            {/* Real, direct fix for a genuine, confirmed gap: every
+                other role gets a real, prominent header link to
+                their own interface — Buyer and Guest never did,
+                leaving them with nothing to click beyond Wallet and
+                Logout, exactly as reported. */}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("buyer") && (
+              <Link href="/my-offers" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                My Offers
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("guest") && (
+              <Link href="/my-bookings" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                My Bookings
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
+              <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                My Referrals
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("tenant") && (
+              <Link href="/tenant" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                My Rentals
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("agent") && (
+              <Link href="/agent" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Agent
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("owner") && (
+              <Link href="/owner" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                My Properties
+              </Link>
+            )}
+            {[profile.role, ...(profile.secondary_roles || [])].includes("manager") && (
+              <Link href="/manager" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Manager
+              </Link>
+            )}
+            <Link href="/artisan" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+              Artisan
+            </Link>
+            {profile.role === "admin" && (
+              <Link href="/admin" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+                Admin
+              </Link>
+            )}
+            <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+              Log out
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 mt-2">
+            <Link href="/login" className="bg-white/15 px-3 py-1.5 rounded-full font-semibold">
+              Log in
+            </Link>
+            <Link href="/register" className="bg-chs-red px-3 py-1.5 rounded-full font-semibold">
+              Sign up
+            </Link>
+          </div>
+        )}
       </header>
 
       <DiasporaMode active={diasporaActive} onToggle={setDiasporaActive} />
