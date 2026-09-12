@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
-import InfoTip from "@/components/InfoTip";
 import PropertyCard from "@/components/PropertyCard";
 import { Property } from "@/types/property";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
@@ -164,7 +163,7 @@ export default function GuestDashboardPage() {
         )}
 
         <Link href="/wallet" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal text-center mt-4">
-          💰 My Real Wallet →<InfoTip text="Your real, spendable balance for booking shortlets, hotels, and events — fund it, withdraw it, or check your history here." />
+          💰 My Real Wallet →
         </Link>
       </div>
     </div>

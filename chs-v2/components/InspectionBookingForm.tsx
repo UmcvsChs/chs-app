@@ -10,6 +10,7 @@ interface InspectionBookingFormProps {
   propertyId: string;
   propertyLocation: string;
   session: Session;
+  hasRoomVideos: boolean;
   onSuccess: () => void;
 }
 
@@ -46,6 +47,7 @@ export default function InspectionBookingForm({
   propertyId,
   propertyLocation,
   session,
+  hasRoomVideos,
   onSuccess,
 }: InspectionBookingFormProps) {
   const [date, setDate] = useState("");
@@ -56,6 +58,9 @@ export default function InspectionBookingForm({
   const [timeline, setTimeline] = useState("ready_now");
   const [fundsReady, setFundsReady] = useState(true);
   const [decisionMaker, setDecisionMaker] = useState(true);
+  // Real, direct client request: acknowledge the free room-video
+  // alternative before booking a paid physical visit, when it exists.
+  const [videosAcknowledged, setVideosAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +84,10 @@ export default function InspectionBookingForm({
     }
     if (!hasEnoughNotice(date, time24)) {
       setError("Please choose a time at least 12 hours from now, so CHS and the owner have time to confirm.");
+      return;
+    }
+    if (hasRoomVideos && !videosAcknowledged) {
+      setError("Please confirm you've seen the real room videos before booking a paid physical visit.");
       return;
     }
 
@@ -128,6 +137,19 @@ export default function InspectionBookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
+      {hasRoomVideos && (
+        <div className="bg-chs-charcoal rounded-lg px-3 py-2.5">
+          <p className="text-xs font-bold text-white">🎥 Real room videos are available for this property</p>
+          <p className="text-[11px] text-white/70 mt-0.5">
+            Scroll up to watch them — a free way to see the place before booking a paid physical visit.
+          </p>
+          <label className="flex items-start gap-2 mt-2 text-[11px] text-white/90">
+            <input type="checkbox" checked={videosAcknowledged} onChange={(e) => setVideosAcknowledged(e.target.checked)} className="mt-0.5" />
+            I&apos;ve seen the room videos and still want to book a physical visit — I understand and agree to pay my share of the transport/logistics cost shown below.
+          </label>
+        </div>
+      )}
+
       <div className="bg-chs-amber-light rounded-lg px-3 py-2.5">
         <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport fee — calculated by distance</p>
         <p className="text-xs text-chs-amber-dark">
@@ -217,7 +239,7 @@ export default function InspectionBookingForm({
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || (hasRoomVideos && !videosAcknowledged)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
       >
         {submitting ? "Booking..." : "Book inspection"}

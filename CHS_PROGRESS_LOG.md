@@ -6,6 +6,20 @@
 
 ---
 
+## September 10, 2026 (later same day) — Reconciliation after two parallel work sessions collided
+
+An earlier session this same day had independently pushed a consolidated fix package for the same client-supplied 15-item testing list (migrations numbered 246–248 in that session's own count). That work happened in parallel with, and without visibility into, the "Migrations 223–274" session documented immediately below — both sessions solved several of the same real problems independently, with different code and different migration numbers reused at the same numbers. This entry reconciles the two rather than silently picking one.
+
+Studied the full current state directly against the live database before touching anything, rather than trusting either session's own account. Found:
+
+- **Real bug, confirmed and fixed:** the newer session's upload form correctly switched to a `toilets` column (replacing `bathrooms`) for new listings, and the property detail page was correctly updated to show both — but `components/PropertyCard.tsx` (the compact search/browse card) was never updated, so every new listing's search card was silently showing no bathroom/toilet count at all. Fixed: card now checks both fields.
+- **Duplicated effort, not a bug:** the earlier session's Virtual Inspection System (a guided photo-tour viewer, `app/virtual-inspection/[id]`) was superseded entirely by this session's real room-video system (`property_videos`, `video_requests`) — a different, reasonable approach to the same goal. The photo-tour code no longer exists in this codebase. The "free alternative exists, are you sure you want a paid physical visit?" consent gate that sat on top of the old photo-tour system did not carry over to the new video system — not currently re-built, flagged here as a known gap rather than re-implemented blind.
+- **Merged rather than duplicated:** the earlier session's `InfoTooltip` component and its `lib/featureGlossary.ts` (196 entries, generated directly from CHS's own real feature catalog) were superseded by this session's own `InfoTip.tsx`, built independently and wired to 16 terms by hand. Rather than leave ~180 terms unauthored a second time, `InfoTip.tsx` was extended to optionally accept a `term` key that looks up `lib/featureGlossary.ts` (re-added), fully backward-compatible with all 18 existing hand-written call sites, which are untouched.
+- `room_dimensions` (jsonb) from the earlier session's migration is live in the database but referenced nowhere in current code — confirmed dead weight, not harmful, left as-is pending a decision on whether the photo-tour dimension feature is worth rebuilding against the new video system.
+- **Rebuilt, not left as a gap:** the "free alternative exists, are you sure?" consent gate, now pointed at the real room-video system instead of the retired photo tour. `PropertyActions.tsx` checks `property_videos` for a real row count per property; when any exist, `InspectionBookingForm.tsx` shows a banner and requires an explicit checkbox acknowledgment before a paid physical inspection can be booked — same enforcement pattern as before (submit button disabled AND a server-side-equivalent check in the submit handler itself, not just a UI suggestion).
+
+---
+
 ## September 10, 2026 — Migrations 223–274: extensive real client testing round, admin mediation completed, Audit Trail and Feature Explainer started, real room-video system built
 
 The largest single batch of the engagement, driven by an extensive, real client testing session that surfaced genuine bugs across nearly every part of the app. Full detail in `CHS_HANDOVER_NOTES.md` under "New Since Last Handover Update (migrations 223–274)" — summarized here in the order it actually happened:

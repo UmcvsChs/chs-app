@@ -9,7 +9,6 @@ import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
-import InfoTip from "@/components/InfoTip";
 
 // Real, new page — a direct, honest answer to a direct client
 // question: no, a Buyer genuinely had no dedicated interface beyond
@@ -68,9 +67,8 @@ export default function MyOffersPage() {
         </div>
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>
         <div className="flex gap-1.5 mt-2">
-          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications<InfoTip text="Every real rental application and purchase offer you've ever made, in one place, with a real, live status for each." /></Link>
-          <Link href="/rent-to-own" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">Rent to Own<InfoTip text="A real path to full ownership over time — see your active agreements and how much of the property you genuinely own so far." /></Link>
-          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions<InfoTip text="Every real payment you've made through CHS, with a downloadable receipt for each." /></Link>
+          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications</Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
         </div>
       </div>
 

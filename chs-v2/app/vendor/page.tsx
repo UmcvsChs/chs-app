@@ -8,7 +8,6 @@ import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto } from "@/lib/storage";
 import { MarketplaceVendor, MarketplaceProduct, ListingType } from "@/types/marketplace";
 import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
-import InfoTip from "@/components/InfoTip";
 import { BUILDING_MATERIALS_CATALOG, MATERIAL_SECTIONS } from "@/types/buildingMaterials";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import GuidePrompt from "@/components/GuidePrompt";
@@ -314,7 +313,7 @@ export default function VendorDashboard() {
 
         {directOrders.length > 0 && (
           <div className="mb-4">
-            <p className="text-xs font-bold text-chs-charcoal mb-1.5">🛒 Real Direct Orders (no negotiation)<InfoTip text="A real buyer paid your listed price immediately — no back-and-forth quote request. Funds are held safely until you confirm delivery." /></p>
+            <p className="text-xs font-bold text-chs-charcoal mb-1.5">🛒 Real Direct Orders (no negotiation)</p>
             {directOrders.map((o) => (
               <div key={o.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-xs">
                 <div className="flex justify-between items-start">
@@ -444,7 +443,7 @@ export default function VendorDashboard() {
 
       {!SERVICE_CATEGORIES.includes(vendor.category) && (
         <div className="px-4 pb-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">My Bundles ({bundles.length})<InfoTip text="A real group of your individual products sold together at one combined price — genuinely useful for encouraging a buyer to purchase more at once." /></p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">My Bundles ({bundles.length})</p>
           <p className="text-[10px] text-gray-400 mb-2">
             Bundles sit alongside your individual listings, not instead of them — buyers comparing prices on a specific item still see your individual listing for it.
           </p>

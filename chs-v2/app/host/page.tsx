@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
-import InfoTip from "@/components/InfoTip";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import HostBookingDecision from "@/components/HostBookingDecision";
@@ -118,7 +117,7 @@ export default function HostDashboardPage() {
         )}
 
         <Link href="/list-property" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal text-center">
-          + List a new shortlet or hire property →<InfoTip text="A real, separate listing for short stays or casual hire — chalets, hotel rooms, event centres — priced per night or per booking, not per year like a normal rental." />
+          + List a new shortlet or hire property →
         </Link>
 
         {bookings.length > 0 && (
@@ -204,7 +203,7 @@ export default function HostDashboardPage() {
         )}
 
         <Link href="/wallet" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal text-center mt-4">
-          💰 My Real Wallet &amp; Earnings →<InfoTip text="Every real naira you've earned from bookings, plus your real, spendable balance — see it, withdraw it, or fund it here." />
+          💰 My Real Wallet &amp; Earnings →
         </Link>
       </div>
     </div>

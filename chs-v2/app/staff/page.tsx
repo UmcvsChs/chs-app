@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
-import InfoTip from "@/components/InfoTip";
 
 // Real, new page per direct client request — a genuine, separate
 // login for an agent/manager's real staff (office staff, field
@@ -115,7 +114,7 @@ export default function StaffPage() {
 
       <div className="px-4 py-4 space-y-4">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">Your real team role(s)<InfoTip text="What you're genuinely authorized to do on this team — set by whoever added you, not something you can change yourself." /></p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">Your real team role(s)</p>
           {memberships.map((m) => (
             <p key={m.id} className="text-xs text-gray-600">
               <span className="font-semibold">{m.role_label}</span> under {m.parent?.full_name}
@@ -124,7 +123,7 @@ export default function StaffPage() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">📝 Submit today&apos;s real daily report<InfoTip text="A real, brief record of what you actually did today — your team lead genuinely reviews these, so this isn't just for show." /></p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">📝 Submit today&apos;s real daily report</p>
           <textarea rows={3} placeholder="What did you genuinely do today? (e.g. property visits, inspections, tenant follow-ups)"
             value={activities} onChange={(e) => setActivities(e.target.value)}
             className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs mb-2" />

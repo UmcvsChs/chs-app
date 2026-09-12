@@ -9,7 +9,6 @@ import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
 import RoleBadge from "@/components/RoleBadge";
-import InfoTip from "@/components/InfoTip";
 import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
 import GuidePrompt from "@/components/GuidePrompt";
@@ -236,17 +235,17 @@ export default function ManagerDashboard() {
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">Property Manager</h1>
           <Link href="/manager/estates" className="text-[10px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">
-            🏘️ My Estates<InfoTip text="A real gated community or compound with multiple units under your management — track every real unit, resident, and service charge from one place." />
+            🏘️ My Estates
           </Link>
         </div>
         <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
-          📋 My Tenant Register →<InfoTip text="A real, permanent list of every tenant you personally manage — your own working client book." />
+          📋 My Tenant Register →
         </Link>
         <Link href="/agent/property-register" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
-          🏠 My Properties &amp; Owners Register →<InfoTip text="Every real property you manage on behalf of an owner, and the real owner contact for each one." />
+          🏠 My Properties &amp; Owners Register →
         </Link>
         <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
-          💵 My Expenses & Income →<InfoTip text="A real, simple ledger for your own business costs against what you've earned — for your own records only." />
+          💵 My Expenses & Income →
         </Link>
 
         {/* Real summary stats — restored, found missing during the

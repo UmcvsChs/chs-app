@@ -83,10 +83,17 @@ export default function PropertyCard({ property }: { property: Property }) {
           )}
         </p>
 
-        {((property.bedrooms && shouldShowBedrooms(property.property_type)) || property.bathrooms) && (
+        {/* Real bug fix: new listings now save "toilets" instead of
+            "bathrooms" (see app/list-property/page.tsx), but this
+            card was never updated to check it — every new listing's
+            search card was silently showing no bathroom/toilet count
+            at all, even though the full property detail page already
+            handles both fields correctly. */}
+        {((property.bedrooms && shouldShowBedrooms(property.property_type)) || property.bathrooms || property.toilets) && (
           <div className="flex gap-3 mt-2 text-xs text-gray-500">
             {property.bedrooms && shouldShowBedrooms(property.property_type) ? <span>{property.bedrooms} beds</span> : null}
             {property.bathrooms ? <span>{property.bathrooms} baths</span> : null}
+            {property.toilets ? <span>{property.toilets} toilets</span> : null}
           </div>
         )}
 

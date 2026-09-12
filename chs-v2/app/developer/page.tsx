@@ -7,7 +7,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
-import InfoTip from "@/components/InfoTip";
 
 // Real, new dashboard completing a real, confirmed gap: a real
 // account could register as a Developer, but there was no way to log
@@ -95,7 +94,7 @@ export default function DeveloperDashboardPage() {
         )}
 
         <Link href="/list-property" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal text-center">
-          + List a new real estate/development →<InfoTip text="A real, larger-scale project — an estate, an office complex, a real development with multiple real units — distinct from a single property listing." />
+          + List a new real estate/development →
         </Link>
 
         <p className="text-xs font-bold text-chs-charcoal mt-4">🏗️ My Real Listings ({properties.length})</p>
@@ -115,7 +114,7 @@ export default function DeveloperDashboardPage() {
         )}
 
         <Link href="/wallet" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal text-center mt-4">
-          💰 My Real Wallet →<InfoTip text="Your real, spendable balance and earnings from real completed sales — fund it, withdraw it, or check your history here." />
+          💰 My Real Wallet →
         </Link>
       </div>
     </div>

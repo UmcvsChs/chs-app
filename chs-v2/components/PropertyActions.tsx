@@ -73,6 +73,20 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [documentsConfirmed, setDocumentsConfirmed] = useState(false);
   const [refundError, setRefundError] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState(false);
+  // Real, direct client request (rebuilt after the prior photo-tour-
+  // based version of this gate was superseded by the real room-video
+  // system): if the owner has uploaded at least one real room video,
+  // a requester must see and acknowledge that free alternative before
+  // booking a paid physical inspection.
+  const [hasRoomVideos, setHasRoomVideos] = useState(false);
+
+  useEffect(() => {
+    supabase
+      .from("property_videos")
+      .select("id", { count: "exact", head: true })
+      .eq("property_id", property.id)
+      .then(({ count }) => setHasRoomVideos(!!count && count > 0));
+  }, [property.id]);
 
   useEffect(() => {
     if (!session || property.purpose !== "sale") return;
@@ -642,6 +656,7 @@ export default function PropertyActions({ property }: { property: Property }) {
           propertyId={property.id}
           propertyLocation={`${property.location_area || ""} ${property.location_lga || ""} ${property.location_state || ""}`}
           session={session}
+          hasRoomVideos={hasRoomVideos}
           onSuccess={() => setInspectionSuccess(true)}
         />
       </div>
