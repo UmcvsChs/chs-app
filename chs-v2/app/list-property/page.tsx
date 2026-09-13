@@ -37,7 +37,7 @@ const PHOTO_SLOTS = [
 const PURPOSE_OPTIONS = [
   { value: "sale", label: "For Sale" },
   { value: "rent", label: "For Rent" },
-  { value: "rent_to_own", label: "Rent to Own / Mortgage" },
+  { value: "rent_to_own", label: "Mortgage (Rent to Own)" },
   { value: "lease", label: "For Lease" },
   { value: "hire", label: "For Hire" },
   { value: "shortlet", label: "Shortlet" },
@@ -144,6 +144,17 @@ export default function ListPropertyPage() {
     if (purpose === "sale" && !ownershipDeclared) {
       return "Please confirm the ownership declaration before submitting a sale listing.";
     }
+    // Restored per direct client request ("it will not be optional —
+    // you have to upload"): this validation existed in an earlier
+    // session but was lost when this form was independently rebuilt
+    // to add the toilets/room dropdowns. Re-applied here against the
+    // CURRENT, real mechanisms — the labeled photo checklist and the
+    // real per-room video array (property_videos) — not the older,
+    // now-secondary single video field below.
+    for (const slot of PHOTO_SLOTS) {
+      if (!labeledPhotos[slot.key]) return `Please upload a photo for "${slot.label}" — every item in the Virtual Inspection Checklist is required.`;
+    }
+    if (videos.length === 0) return "Please upload at least one real room video (see 'Short room videos' below) — this is now required for every listing.";
     return null;
   }
 
@@ -372,7 +383,7 @@ export default function ListPropertyPage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600">Purpose <InfoTip text="Sale: full ownership transfers to a buyer. Rent/Lease: real, ongoing occupancy under a tenancy. Rent to Own: a buyer pays in real installments toward eventual full ownership. Short-let: real, short daily/nightly bookings, like a hotel or Airbnb." /></label>
+            <label className="text-xs font-semibold text-gray-600">Purpose <InfoTip text="Sale: full ownership transfers to a buyer. Rent/Lease: real, ongoing occupancy under a tenancy. Mortgage (Rent to Own): a buyer pays in real installments toward eventual full ownership. Short-let: real, short daily/nightly bookings, like a hotel or Airbnb." /></label>
             <div className="grid grid-cols-4 gap-1.5 mt-1">
               {PURPOSE_OPTIONS.map((opt) => (
                 <button key={opt.value} type="button" onClick={() => { setPurpose(opt.value); setHireCategory(opt.value === "shortlet" ? "shortlet" : ""); }}
@@ -685,7 +696,7 @@ export default function ListPropertyPage() {
           </div>
 
           <div className="border-t border-gray-200 pt-3">
-            <label className="text-xs font-semibold text-gray-600">🎥 Short room videos (optional, free alternative to a virtual tour)</label>
+            <label className="text-xs font-semibold text-gray-600">🎥 Short room videos <span className="text-chs-red">*</span> (at least one required)</label>
             <p className="text-[10px] text-gray-400 mb-1.5">
               Record or upload a real, short video (under 50MB each) of any room or facility — kitchen, master bedroom, toilet, dining, whatever a real buyer or tenant would want to see. Tapping the box below opens your phone&apos;s own choice of recording live or picking an existing video.
             </p>
@@ -744,14 +755,18 @@ export default function ListPropertyPage() {
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-600">Photos</label>
+            <label className="text-xs font-semibold text-gray-600">
+              Virtual Inspection Checklist <span className="text-chs-red">*</span>
+            </label>
             <p className="text-[10px] text-gray-400 mb-1.5">
-              Specific, labeled photos genuinely reduce wasted inspection trips — buyers arrive already knowing what to expect.
+              These photos are how a tenant or buyer &quot;inspects&quot; the property without visiting — all of them are required.
             </p>
             <div className="grid grid-cols-2 gap-2 mb-2">
               {PHOTO_SLOTS.map((slot) => (
-                <div key={slot.key}>
-                  <label className="text-[10px] text-gray-500">{slot.label}</label>
+                <div key={slot.key} className={labeledPhotos[slot.key] ? "" : "bg-red-50 rounded-lg p-1.5"}>
+                  <label className="text-[10px] text-gray-500">
+                    {slot.label} <span className="text-chs-red">*</span>
+                  </label>
                   <input type="file" accept="image/*"
                     onChange={(e) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: e.target.files?.[0] || null })}
                     className="w-full mt-0.5 text-[10px]" />

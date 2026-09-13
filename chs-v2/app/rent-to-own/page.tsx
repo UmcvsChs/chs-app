@@ -1,128 +1,223 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import RoleBadge from "@/components/RoleBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
-import NotificationBell from "@/components/NotificationBell";
-import InfoTip from "@/components/InfoTip";
+import WalletQuickView from "@/components/WalletQuickView";
 
-// Real, new page closing a confirmed, long-standing gap: the backend
-// (pay_rent_to_own_installment) has been correct and tested since
-// migration 91/94, but no real screen anywhere in the app ever called
-// it — a genuine, working payment path with no door to reach it.
-interface Agreement {
+// Real, new page — the backend for Rent-to-Own installment payments
+// (pay_rent_to_own_installment) was already live, correct, and tested
+// directly against the database with real numbers, but no frontend
+// screen ever called it. A buyer with an active agreement had no way
+// to actually pay. This is that missing screen, built to match the
+// exact real pattern already proven on the Tenant dashboard's rent
+// payment card (real pre-payment total shown, real error handling for
+// insufficient_balance, real receipt reference shown after payment).
+
+interface RtoAgreement {
   id: string;
+  property_id: string;
   total_price: number;
   monthly_amount: number;
   portion_pct: number;
   total_paid: number;
   ownership_pct: number;
-  status: string;
-  started_at: string;
-  properties: { title: string; location_area: string }[] | null;
+  status: "requested" | "active" | "completed" | "defaulted" | "cancelled" | "declined";
+  started_at: string | null;
+  completed_at: string | null;
+  properties: { title: string; location_area: string; street_address: string | null } | null;
+  seller: { full_name: string } | null;
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  requested: "Waiting for the owner's approval",
+  active: "Active",
+  completed: "Completed — you own this property",
+  defaulted: "Defaulted",
+  cancelled: "Cancelled",
+  declined: "Declined by the owner",
+};
 
 export default function RentToOwnPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
-  const [agreements, setAgreements] = useState<Agreement[]>([]);
+  const [agreements, setAgreements] = useState<RtoAgreement[]>([]);
+  const [buyerCommissionPct, setBuyerCommissionPct] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [payingId, setPayingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [lastReceipt, setLastReceipt] = useState<string | null>(null);
+  const [payMessage, setPayMessage] = useState<Record<string, string>>({});
 
-  async function loadAgreements() {
+  async function loadData() {
     if (!session) return;
-    const { data } = await supabase.from("rent_to_own_agreements")
-      .select("id, total_price, monthly_amount, portion_pct, total_paid, ownership_pct, status, started_at, properties(title, location_area)")
-      .eq("buyer_id", session.user.id)
-      .order("started_at", { ascending: false });
-    setAgreements((data as unknown as Agreement[]) || []);
+    setLoading(true);
+
+    const [agreementsRes, settingRes] = await Promise.all([
+      supabase
+        .from("rent_to_own_agreements")
+        .select(
+          "id, property_id, total_price, monthly_amount, portion_pct, total_paid, ownership_pct, status, started_at, completed_at, properties(title, location_area, street_address), seller:seller_id(full_name)"
+        )
+        .eq("buyer_id", session.user.id),
+      supabase.from("platform_settings").select("value").eq("key", "rent_to_own_buyer_commission_pct").maybeSingle(),
+    ]);
+
+    setAgreements((agreementsRes.data as unknown as RtoAgreement[]) || []);
+    setBuyerCommissionPct(settingRes.data ? Number(settingRes.data.value) : 0);
     setLoading(false);
   }
 
   useEffect(() => {
     if (authLoading) return;
-    if (!session) { router.push("/login"); return; }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAgreements();
+    if (!session) {
+      router.push("/login");
+      return;
+    }
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session]);
 
-  async function handlePay(agreementId: string) {
-    setError(null);
+  async function handlePayInstallment(agreementId: string) {
     setPayingId(agreementId);
-    const { data, error: rpcError } = await supabase.rpc("pay_rent_to_own_installment", { p_agreement_id: agreementId });
+    setPayMessage((prev) => ({ ...prev, [agreementId]: "" }));
+    const { data, error } = await supabase.rpc("pay_rent_to_own_installment", { p_agreement_id: agreementId });
     setPayingId(null);
-    if (rpcError) {
-      setError(rpcError.message === "insufficient_balance"
-        ? "Your real wallet balance is insufficient for this real installment. Please fund your wallet first."
-        : rpcError.message);
+    if (error) {
+      setPayMessage((prev) => ({
+        ...prev,
+        [agreementId]: error.message.includes("insufficient_balance")
+          ? "Insufficient wallet balance for this installment's real total. Fund your wallet and try again."
+          : error.message,
+      }));
       return;
     }
-    setLastReceipt(data?.reference || null);
-    loadAgreements();
+    setPayMessage((prev) => ({
+      ...prev,
+      [agreementId]: `✓ Paid ${formatNaira(data.real_total_paid)} (installment ${formatNaira(data.installment)} + your real ${formatNaira(data.buyer_commission)} commission). Ref: ${data.reference}`,
+    }));
+    loadData();
   }
 
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
 
+  const active = agreements.filter((a) => a.status === "active");
+  const other = agreements.filter((a) => a.status !== "active");
+
   return (
-    <div className="min-h-screen bg-[var(--zone-bg)] zone-buyer pb-10">
+    <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
-        <Link href="/my-offers" className="text-xs text-white/70">← Back</Link>
-        <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold">Rent to Own <InfoTip text="A real path to full ownership over time — each installment you pay genuinely increases your real ownership percentage, until the property is completely yours." /></h1>
-          <NotificationBell />
+        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <RoleBadge label="Mortgage (Rent to Own)" />
+        <div className="flex justify-between items-end mt-1 gap-2">
+          <h1 className="font-serif text-lg font-bold">My Mortgage (Rent to Own)</h1>
+          {session && <WalletQuickView userId={session.user.id} />}
+        </div>
+        <div className="flex gap-1.5 mt-2">
+          <Link href="/my-offers" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Offers</Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
         </div>
       </div>
 
-      <div className="px-4 py-4">
-        {lastReceipt && (
-          <Link href={`/receipt/${lastReceipt}`} className="block bg-green-50 border border-green-200 rounded-xl px-3 py-2.5 mb-3 text-xs text-green-700 font-semibold">
-            ✓ Payment successful — tap here to view your real receipt
-          </Link>
-        )}
-        {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2.5 mb-3">{error}</p>}
-
+      <div className="px-4 py-4 space-y-5">
         {agreements.length === 0 ? (
-          <p className="text-center text-sm text-gray-400 py-8">No real Rent-to-Own agreements yet.</p>
+          <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
+            <p className="text-sm text-gray-500">No Mortgage (Rent to Own) agreements yet.</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Browse properties listed as Mortgage (Rent to Own) and request one from the property page.
+            </p>
+          </div>
         ) : (
-          agreements.map((a) => (
-            <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
-              <p className="text-sm font-semibold text-chs-charcoal">{a.properties?.[0]?.title || "Property"}</p>
-              <p className="text-[11px] text-gray-400">{a.properties?.[0]?.location_area}</p>
+          <>
+            {active.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-chs-charcoal mb-2">Active agreement{active.length > 1 ? "s" : ""}</p>
+                {active.map((a) => {
+                  const buyerCommission = Math.round((a.monthly_amount * buyerCommissionPct) / 100);
+                  const realTotalDue = a.monthly_amount + buyerCommission;
+                  const remaining = Math.max(0, a.total_price - a.total_paid);
+                  return (
+                    <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-3">
+                      <p className="text-sm font-semibold text-chs-charcoal">{a.properties?.title}</p>
+                      <p className="text-xs font-semibold text-gray-600">📍 {a.properties?.street_address || "No street address on file"}</p>
+                      <p className="text-xs text-gray-500">{a.properties?.location_area}</p>
+                      <p className="text-xs text-gray-500 mt-1">Seller: {a.seller?.full_name || "—"}</p>
 
-              <div className="mt-3">
-                <div className="flex justify-between text-[11px] text-gray-500 mb-1">
-                  <span>Real ownership so far</span>
-                  <span className="font-semibold text-chs-charcoal">{a.ownership_pct.toFixed(1)}%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div className="bg-chs-red h-2 rounded-full" style={{ width: `${Math.min(100, a.ownership_pct)}%` }} />
-                </div>
+                      <div className="bg-white rounded-lg p-2.5 mt-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[11px] text-gray-500">Ownership so far</span>
+                          <span className="text-xs font-bold text-chs-charcoal">{a.ownership_pct.toFixed(2)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                          <div
+                            className="bg-chs-red h-1.5 rounded-full"
+                            style={{ width: `${Math.min(100, a.ownership_pct)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-2 text-[11px] text-gray-600">
+                          <span>Paid so far</span>
+                          <span>{formatNaira(a.total_paid)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-gray-600">
+                          <span>Remaining toward full price</span>
+                          <span>{formatNaira(remaining)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] text-gray-600">
+                          <span>Total property price</span>
+                          <span>{formatNaira(a.total_price)}</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-2.5 mt-2 text-[11px] text-gray-600">
+                        <div className="flex justify-between"><span>Monthly installment</span><span>{formatNaira(a.monthly_amount)}</span></div>
+                        <div className="flex justify-between"><span>Your real CHS commission ({buyerCommissionPct}%)</span><span>{formatNaira(buyerCommission)}</span></div>
+                        <div className="flex justify-between font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
+                          <span>Real total due now</span><span>{formatNaira(realTotalDue)}</span>
+                        </div>
+                      </div>
+
+                      {payMessage[a.id] && <p className="text-[10px] text-gray-600 mt-1.5">{payMessage[a.id]}</p>}
+
+                      <button
+                        onClick={() => handlePayInstallment(a.id)}
+                        disabled={payingId === a.id}
+                        className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                      >
+                        {payingId === a.id ? "Processing..." : `Pay this month's installment — ${formatNaira(realTotalDue)}`}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
+            )}
 
-              <div className="bg-[var(--zone-card)] rounded-lg p-2.5 mt-3 space-y-1">
-                <div className="flex justify-between text-[11px]"><span className="text-gray-500">Real total price</span><span className="font-semibold">{formatNaira(a.total_price)}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-gray-500">Real amount paid so far</span><span className="font-semibold">{formatNaira(a.total_paid)}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-gray-500">Real monthly installment</span><span className="font-semibold">{formatNaira(a.monthly_amount)}</span></div>
+            {other.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-chs-charcoal mb-2">Other agreements</p>
+                {other.map((a) => (
+                  <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{a.properties?.title}</p>
+                    <p className="text-xs text-gray-500">{a.properties?.location_area}</p>
+                    <span
+                      className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-1 rounded-full ${
+                        a.status === "completed"
+                          ? "text-white bg-chs-red"
+                          : a.status === "declined" || a.status === "cancelled" || a.status === "defaulted"
+                          ? "text-gray-500 bg-gray-100"
+                          : "text-chs-amber-dark bg-chs-amber-light"
+                      }`}
+                    >
+                      {STATUS_LABELS[a.status] || a.status}
+                    </span>
+                  </div>
+                ))}
               </div>
-
-              {a.status === "completed" ? (
-                <p className="text-center text-xs font-bold text-green-700 bg-green-50 rounded-full py-2 mt-3">🎉 Fully owned — this agreement is complete</p>
-              ) : (
-                <button onClick={() => handlePay(a.id)} disabled={payingId === a.id}
-                  className="w-full mt-3 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-                  {payingId === a.id ? "Processing..." : `Pay real installment — ${formatNaira(a.monthly_amount)}`}
-                </button>
-              )}
-            </div>
-          ))
+            )}
+          </>
         )}
       </div>
     </div>

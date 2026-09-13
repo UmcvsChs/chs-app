@@ -73,6 +73,12 @@ export default function MyOffersPage() {
       </div>
 
       <div className="px-4 py-4 space-y-2">
+        {/* Restored: lost during a prior reconciliation pass between
+            two parallel work sessions. */}
+        <Link href="/rent-to-own" className="block bg-chs-amber-light rounded-xl p-3 mb-1">
+          <p className="text-xs font-bold text-chs-amber-dark">🏠 Have a Mortgage (Rent to Own) agreement instead?</p>
+          <p className="text-[11px] text-gray-600 mt-0.5">Those are tracked separately — tap here to view it and pay your monthly installment.</p>
+        </Link>
         {offers.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-xs text-gray-400 mb-3">You haven&apos;t made any real offers yet.</p>

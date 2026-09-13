@@ -785,11 +785,30 @@ export default function OwnerDashboard() {
                   {property.reference_number && (
                     <p className="text-[10px] text-gray-400 font-mono mt-0.5">Ref: {property.reference_number}</p>
                   )}
+                  {/* Restored/completed: admin already had a real way
+                      to write a rejection reason (propertyRejectReasons
+                      in app/admin/page.tsx), but the owner never had
+                      any way to see their listing's status or that
+                      reason — a half-built feature, now completed. */}
+                  <span className={`inline-block mt-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                    property.verification_status === "verified" ? "bg-green-100 text-green-700"
+                    : property.verification_status === "rejected" ? "bg-gray-200 text-gray-600"
+                    : "bg-chs-amber-light text-chs-amber-dark"
+                  }`}>
+                    {property.verification_status === "verified" ? "Live" : property.verification_status === "rejected" ? "Rejected" : "Awaiting verification"}
+                  </span>
                 </div>
                 <span className="text-[10px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
                   {purposeLabel(property.purpose)}
                 </span>
               </div>
+
+              {property.verification_status === "rejected" && property.rejection_reason && (
+                <div className="bg-gray-50 rounded-lg p-2 mb-2">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase">Reason for rejection</p>
+                  <p className="text-[11px] text-chs-charcoal">{property.rejection_reason}</p>
+                </div>
+              )}
 
               <p className="text-base font-bold text-chs-charcoal mb-2">{formatNaira(property.price)}</p>
 
@@ -1336,7 +1355,7 @@ export default function OwnerDashboard() {
 
       {rentToOwnRequests.length > 0 && (
         <div className="px-4 pb-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Rent-to-Own Requests</p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Mortgage (Rent to Own) Requests</p>
           {rentToOwnRequests.map((r) => (
             <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
               <p className="text-xs font-semibold text-chs-charcoal">{r.properties?.[0]?.title || "Property"}</p>

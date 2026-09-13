@@ -24,6 +24,7 @@ export interface Property {
   toilets?: number | null;
   total_rooms?: number | null;
   other_facilities?: string[] | null;
+  rejection_reason?: string | null;
   floor_area_sqm: number | null;
   fenced: boolean | null;
   gated: boolean | null;

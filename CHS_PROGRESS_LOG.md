@@ -6,6 +6,47 @@
 
 ---
 
+## September 12, 2026 (continued further still) — Revenue streams document corrected; mobile splash-reload investigated
+
+- **Client-supplied "Complete Revenue Streams" reference document was the actual source of the shortlet nomenclature confusion — not the live app.** The PDF described shortlet/hotel/event commission tiers as based on how far in advance a booking is made ("Short-notice," "Long-notice"). Already confirmed earlier this session that the real database function and `TermsContent.tsx` have always calculated and described these tiers correctly, by real stay duration. Regenerated the full document with the correct framing, plus updated its now-stale Rent-to-Own percentages (was still showing 5%/5.5%) to the current 5.5%/4.5%. Two formatting bugs caught and fixed in the process: a text-overlap issue from a too-narrow table column, and the ₦ symbol rendering as a black box in the PDF (font encoding issue — replaced with "NGN" text).
+- **`components/TermsContent.tsx` also updated** with the same Mortgage rename and corrected percentages — this had gone stale the moment the live percentages were changed earlier and was caught while investigating the shortlet complaint.
+- **Mobile splash-screen-on-back/refresh bug — investigated, not resolved.** Ruled out the service worker (minimal, passes every request straight to network) and any widespread explicit reload calls. `SplashScreen.tsx` is correctly mounted once in the root layout, so it reappearing specifically suggests mobile is genuinely triggering full page reloads where desktop uses client-side navigation — but confirming why needs live mobile device debugging (Chrome remote inspect, watching the Network tab during a real back/refresh), which isn't possible from this sandbox. Logged honestly as investigated-but-unresolved with two candidate hypotheses (bfcache incompatibility, PWA standalone-mode back-gesture handling) rather than guessed at with an unverified fix.
+
+---
+
+## September 12, 2026 (continued further) — Homepage header cleanup, Mortgage renaming, buyer-landing-page investigation
+
+- **Wallet and Artisan removed from the unconditional homepage header.** Both were showing to every single logged-in user regardless of role. Wallet removed entirely — it's already available inside each dashboard via `WalletQuickView`. Artisan needed a real fix, not just a role check: artisan status is tracked in a separate `artisans` table, not on `profiles.role` like every other role link here — a naive role-array check would have hidden the link from real artisans too. Added a genuine check against the `artisans` table instead.
+- **Mortgage renaming.** Display label changed to "Mortgage (Rent to Own)" (leading with Mortgage, per client's explicit preference) across 8 files, starting from the single source-of-truth `purposeLabel()` function. The underlying database value `rent_to_own` was deliberately left unchanged — renaming that would be a much larger, riskier migration than what was asked for (the visible label). Some lower-traffic static content (FAQ/Guide/Terms, feature catalog data) still uses the old name — queued, not urgent.
+- **Buyer landing page — investigated, could not reproduce.** Checked all three real sign-in paths (main login form, biometric login, registration) — all three already correctly map `buyer → /my-offers`, with comments explicitly describing this as an intentional fix from an earlier session. Test buyer accounts' `role` field is also correctly `"buyer"`. Could not find or reproduce the reported bug in the current code. Flagged back to the client for retesting rather than guessing at a fix for something that appears to already work.
+
+---
+
+## September 12, 2026 (continued) — Mortgage commission fix, and a critical self-audit that caught silently-dropped features
+
+- **Mortgage/RTO commission corrected.** `rent_to_own_buyer_commission_pct` = 5.5, `rent_to_own_seller_commission_pct` = 4.5 (was 5/5.5 — wrong, and summed to 10.5%, not the intended 10%). `pay_rent_to_own_installment()` reads these dynamically at payment time — zero code changes needed, took effect immediately.
+
+- **Critical self-audit, done out of caution while making the commission fix.** While checking the Rent-to-Own payment function, discovered that the entire `app/rent-to-own` payment screen — plus its two discoverability links (homepage nav, My Offers cross-link) — had been silently absent from every "complete project" zip delivered since the reconciliation session, despite being built and confirmed working earlier in this engagement. Also found, in the same pass: the mandatory Virtual Inspection checklist+video validation on the upload form had been lost when that form was independently rebuilt (to add toilets/room dropdowns) in a separate session, reverting it to fully optional again — the opposite of the client's explicit "not optional" requirement. And separately: admin's own, independently-built rejection-reason capture had no owner-facing display at all — a half-finished feature, not something removed.
+
+  All four restored/completed in this pass, re-applied against the *current* correct versions of each file (not overwritten with older ones), and every touched file re-verified with a full diff against the immediately prior delivery to confirm only the intended files changed.
+
+  **Process lesson, recorded honestly:** a reconciliation pass between parallel work sessions can silently drop earlier real work if it isn't explicitly re-checked and carried forward at every subsequent delivery — a file-diff against the immediate base isn't enough on its own; it needs a feature-level checklist too. Applying that discipline more deliberately from here on.
+
+---
+
+## September 12, 2026 (later same day) — Urgent live-testing blockers: missing ID Verification screen, notification click-through, explainer self-containment, privacy default
+
+Time-pressured session (client flagged an approaching usage limit) — prioritized the fastest, safest, highest-confidence fixes first, with everything else logged in the Fix Tracker to resume from directly next time.
+
+- **Real bug: ID Verification had no admin screen at all.** Confirmed directly: `buyer_id_verifications` data was already being fetched into state (`pendingBuyerIds`), a notification correctly fired on new submissions, but no tab or screen ever existed to view/act on it — different bug from Face Verification, which does have a working screen. Clarified for the client: ID verification and Face verification are genuinely two separate systems (a document/NIN vs. a live photo), not meant to share one screen. Built the missing "ID Verification" tab, mirroring the exact Face Verification pattern, wired to the `review_buyer_id` admin action (already correct — just had no caller). Also fixed that notification's `link`, which was `null`.
+- **Real root cause found for the long-standing "notification click lands on Overview" bug.** A partial fix already existed from an earlier session (reading the `?tab=` URL param) but only on initial mount (`useEffect` with empty `[]` deps) — so it silently did nothing when admin was already on `/admin` and clicked a second notification. Rebuilt using `useSearchParams()`, which is properly reactive to URL changes in the App Router.
+- **Self-correction on the explainer, done twice over out of caution.** First guessed the cause was a `React.CSSProperties` import issue — verified with a real, strict TypeScript compiler (not just the usual esbuild syntax check, which doesn't type-check) and found that guess was wrong before reporting it. Real, more likely cause: `InfoTip.tsx` depended on a separate new file, `lib/featureGlossary.ts` — if that file is ever missed when an update is applied (easy to do; it's a whole new file, not a change to an existing one), the import fails to resolve and the *entire app build* can break, not just the explainer. Rebuilt `InfoTip.tsx` as a single, fully self-contained file with the glossary inlined directly, so this class of failure can't recur. Not yet confirmed live — could not inspect the client's actual current deployed source this round.
+- **Owner privacy default flipped.** `properties.owner_identity_visible_to_tenant` default changed from `true` to `false` — "Keep Private" is now the real out-of-the-box state for every new listing; "Show my name" is something an owner opts into.
+
+**Queued for next session (logged in Fix Tracker, not yet started):** comprehensive explainer coverage across every dashboard element, mobile back/refresh reloading to splash screen, buyer default landing page, Mortgage/Rent-to-Own renaming and the 5.5%/4.5% commission correction, Artisan/Wallet removed from the homepage header, shortlet/hotel/event commission basis corrected to stay-duration instead of booking lead time, admin manual message archiving (7-day fallback), and message delivery receipts.
+
+---
+
 ## September 12, 2026 — Two real mobile UX bugs from live device testing (screenshots supplied)
 
 Both confirmed precisely against the client's own screenshots before fixing, not guessed at.

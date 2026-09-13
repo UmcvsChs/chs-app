@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -67,17 +67,25 @@ interface TraceProperty { id: string; title: string; verification_status: string
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
-  // Real, direct fix so a notification link like /admin?tab=platformearnings
-  // genuinely lands on the right tab, not just the default overview.
+  // Real, direct fix so a notification link like /admin?tab=offerreview
+  // genuinely lands on the right tab — not just on first load, but
+  // every time, including when admin is already sitting on /admin and
+  // clicks a second, different notification. The previous attempt
+  // here only read window.location.search once on mount (empty [] 
+  // deps), so it silently did nothing on a same-route navigation —
+  // exactly the "still lands on Overview" behaviour reported.
+  // useSearchParams() is the real, reactive way to do this in the App
+  // Router: it updates on every URL change, and this effect re-runs
+  // whenever it does.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const requestedTab = params.get("tab") as Tab | null;
+    const requestedTab = searchParams.get("tab") as Tab | null;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (requestedTab) setActiveTab(requestedTab);
-  }, []);
+  }, [searchParams]);
 
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
   // Real Overview stats — restored, found completely missing during
@@ -1343,6 +1351,32 @@ export default function AdminDashboard() {
     loadData();
   }
 
+  // Real, critical fix per direct client report: ID verification and
+  // Face (liveness) verification are two genuinely separate systems
+  // in this app -- different tables, different checks. Face
+  // Verification already had a real admin screen; ID Verification
+  // data was already being fetched into state, but no tab or screen
+  // ever existed to actually see or act on it -- the notification
+  // fired correctly (a database trigger watching the table), but
+  // there was nowhere for it to land. This uses the review_buyer_id
+  // action type, which already existed and works in
+  // apply_admin_action (approves sets profiles.valid_id_verified and
+  // notifies the buyer; rejects notifies them to resubmit) -- it just
+  // had no frontend caller until now.
+  async function handleBuyerIdReview(verificationId: string, approve: boolean) {
+    setActionError(null);
+    const { error } = await supabase.rpc("request_admin_action", {
+      p_action_type: "review_buyer_id",
+      p_target_id: verificationId,
+      p_proposed_changes: { status: approve ? "approved" : "rejected" },
+    });
+    if (error) {
+      setActionError(error.message);
+      return;
+    }
+    loadData();
+  }
+
   async function handleBuyerIdReview(submissionId: string, approve: boolean) {
     setActionError(null);
     const { error } = await supabase.rpc("request_admin_action", {
@@ -1498,6 +1532,7 @@ export default function AdminDashboard() {
           { key: "processedhistory", label: "🗄️ Processed History", domain: "owner_buyer_tenant" },
           { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
+          { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup" },
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
           { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
           { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant" },
@@ -1550,7 +1585,7 @@ export default function AdminDashboard() {
             <div className="col-span-2 bg-chs-charcoal rounded-xl p-4">
               <p className="text-[10px] uppercase text-white/60 font-semibold">💰 Real Platform Commission Earnings (all-time)</p>
               <p className="text-2xl font-bold text-white mt-1">{formatNaira(totalCommissionEarnings)}</p>
-              <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Rent-to-Own — updates automatically as real transactions complete.</p>
+              <p className="text-[10px] text-white/50 mt-1">Sum of every real, paid commission across Sale, Rental, Shortlet/Hire, and Mortgage (Rent to Own) — updates automatically as real transactions complete.</p>
             </div>
 
             {/* Real, new feature completing item #9 — CHS's own real
@@ -2373,6 +2408,63 @@ export default function AdminDashboard() {
             )}
 
             <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">📜 Real Sale Legal Documents ({pendingSaleDocs.length})</p>
+            {pendingSaleDocs.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No sale documents pending review.</p>
+            ) : (
+              pendingSaleDocs.map((doc) => (
+                <div key={doc.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
+                  <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
+                  <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleSaleDocReview(doc.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleSaleDocReview(doc.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Real, critical fix per direct client report: this whole
+            tab was missing — ID verification data was already being
+            fetched but had nowhere to be reviewed. Separate from Face
+            Verification above (different table, different real-world
+            check: a document/NIN, not a live photo). */}
+        {activeTab === "buyerid" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🪪 A real government-issued ID document and ID number submitted by a buyer before they can make offers. This is separate from Face Verification — review the actual document image below.
+            </p>
+            {pendingBuyerIds.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No ID verifications pending review.</p>
+            ) : (
+              pendingBuyerIds.map((sub) => (
+                <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
+                  <p className="text-xs text-gray-500 mb-2 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sub.id_document_url} alt="ID document" className="w-full rounded-lg mb-2" />
+                  <div className="flex gap-2">
+                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                      Approve
+                    </button>
+                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
+                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+
             {pendingSaleDocs.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No sale documents pending review.</p>
             ) : (

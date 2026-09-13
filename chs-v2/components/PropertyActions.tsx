@@ -727,7 +727,7 @@ export default function PropertyActions({ property }: { property: Property }) {
               disabled={rentToOwnSubmitting}
               className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
             >
-              {rentToOwnSubmitting ? "Sending request..." : "Request Rent to Own / Mortgage"}
+              {rentToOwnSubmitting ? "Sending request..." : "Request Mortgage (Rent to Own)"}
             </button>
             {error && <p className="text-xs text-chs-red text-center">{error}</p>}
           </>
