@@ -69,17 +69,22 @@ export default function NotificationBell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Real, direct client request, comparing this to an SMS/WhatsApp
+  // delivery receipt: capture the real moment a notification was
+  // actually read, not just a true/false flag.
   async function markAsRead(id: string) {
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+    const now = new Date().toISOString();
+    await supabase.from("notifications").update({ read: true, read_at: now }).eq("id", id);
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true, read_at: now } : n)));
   }
 
   async function markAllRead() {
     if (!session) return;
     const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadIds.length === 0) return;
-    await supabase.from("notifications").update({ read: true }).in("id", unreadIds);
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    const now = new Date().toISOString();
+    await supabase.from("notifications").update({ read: true, read_at: now }).in("id", unreadIds);
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true, read_at: now })));
   }
 
   if (!session) return null;
@@ -161,7 +166,10 @@ export default function NotificationBell() {
                 >
                   <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>
-                  <p className="text-[9px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-400 mt-1">
+                    Sent {new Date(n.created_at).toLocaleString()}
+                    {n.read_at && <> · <span className="text-green-600">Read {new Date(n.read_at).toLocaleString()}</span></>}
+                  </p>
                   {n.link && <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>}
                 </div>
               ))

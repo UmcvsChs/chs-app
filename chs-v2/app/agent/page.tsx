@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { AgentReferral } from "@/types/agentReferral";
 import { formatNaira } from "@/lib/format";
 import GuidePrompt from "@/components/GuidePrompt";
+import InfoTip from "@/components/InfoTip";
 import MessageThread from "@/components/MessageThread";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import WalletQuickView from "@/components/WalletQuickView";
@@ -572,7 +573,10 @@ export default function AgentDashboard() {
 
         {managedPortfolio && managedPortfolio.total_managed_properties > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-sm font-bold text-chs-charcoal mb-3">🏘️ Your Real Managed Portfolio</p>
+            <p className="text-sm font-bold text-chs-charcoal mb-3 flex items-center">
+              🏘️ Your Real Managed Portfolio
+              <InfoTip text="Every property where you have full management authority — real occupancy, maintenance, and disputes across all of them, in one place." />
+            </p>
             <div className="grid grid-cols-3 gap-2 mb-3">
               <div className="bg-[var(--zone-card)] rounded-lg p-2 text-center">
                 <p className="text-lg font-bold text-chs-charcoal">{managedPortfolio.total_managed_properties}</p>

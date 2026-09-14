@@ -6,6 +6,39 @@
 
 ---
 
+## September 12, 2026 (continued once more) — Explainer sweep extended to Agent, Manager, Tenant, Guest, Artisan
+
+- Swept the remaining five dashboards for the same kind of unexplained jargon found earlier on Owner and Admin. Tenant dashboard already had good coverage (Auto-pay was already explained). Guest and Artisan dashboards showed no obvious jargon gaps in their header/summary areas on this pass.
+- Real gaps found and fixed: Agent's "Your Real Managed Portfolio" section header (no explainer at all), and Manager's "My Tenant Register" / "My Properties & Owners Register" links (both real jargon terms, zero explanation). Both files syntax-checked clean.
+- **Running total this session: 12 real explainer placements** across Owner, Admin, Agent, and Manager.
+- **Honest caveat**: this was a targeted jargon-term search (grepping for likely unclear terms), not an exhaustive line-by-line audit of every single element on Tenant/Guest/Artisan. Fewer gaps were found there than expected, but that's not the same as confirming full coverage — worth a closer pass later if the client still finds unexplained terms there.
+
+---
+
+## September 12, 2026 (continued once more) — Explainer coverage: systematic audit, 9 real gaps closed on Owner + Admin
+
+- Systematically checked every Admin tab's content area for a missing intro explainer, rather than guessing at random spots. Found the Admin "Analytics" tab had **zero** explanatory text at all — jumped straight into date filters — matching the client's own example precisely. Fixed, plus found 6 more tabs completely missing any intro: Disputes, Feedback, Vendors, Artisans, Inspections, Developers.
+- Added real explainers to the Owner dashboard's Analytics and Promote links — the literal example the client gave.
+- **One real mistake caught and fixed mid-task**: an edit to the Feedback tab left an unclosed JSX fragment. Caught immediately via a syntax-check-after-every-single-edit discipline (not batched checks at the end) — exactly the kind of thing that discipline exists to catch. Final whole-file brace-balance sanity check run as an extra safety net.
+- **Honest scope note**: this is 9 new explainer placements. Owner and Admin dashboards got real, deliberate attention this round; Agent, Manager, Tenant, Guest, and Artisan dashboards have not been audited yet. The client's ask ("everything, every dashboard") is a large, real remaining scope — logged clearly rather than claimed as done.
+
+---
+
+## September 12, 2026 (continued once more) — Real read timestamps for notifications, matching the SMS-receipt comparison
+
+- Focused on the most central system (`notifications`, used across every category via `notify_user()`) rather than a shallow pass across many separate conversation tables. Real gap: `read` existed only as a true/false flag — no timestamp, so there was never a real "when" to show. Added `read_at` (migration applied live); `NotificationBell.tsx` now captures the real moment a notification is read and displays it inline as "Sent [time] · Read [time]" — directly matching the client's own SMS/WhatsApp delivery-receipt comparison.
+- **Not yet done**: a dedicated admin-facing view to check whether a specific message *they* sent was read by the recipient (this fix gives the recipient visibility into their own read status; admin has no lookup screen yet). Also not yet extended to other real message tables (`engage_chs_messages`, `offer_messages`), which have no read tracking at all.
+
+---
+
+## September 12, 2026 (continued once more) — Manual archiving built for Engage CHS, as the concrete pattern for the rest
+
+- **Real scope finding first**: no archive concept existed anywhere — not in the database, not in the frontend. Also found that "Processed History" (an existing tab) already permanently preserves every rental application/offer/listing/registration decision forever — nothing there was ever auto-deleting, contrary to what the client's report implied for that category. The real, confirmed gap was specifically the Engage CHS system (the actual chat/concern-message flow): items vanished from admin's active view the instant they were accepted or rejected, since that tab only ever queried `status = 'pending'`.
+- **Built for Engage CHS**, as the concrete pattern to replicate elsewhere: added `archived_at` to `engage_chs_requests` (migration applied live). Handled requests now stay visible in a new "Recently handled" section for a real 7 days — computed from `admin_last_read_at` at query time, no cron job or scheduled function needed — or until admin taps a real "Send to Archive" button.
+- **Not yet done**: replicating this same pattern to every other admin subcategory (disputes, feedback, fault reports, etc.), which the client explicitly asked for "across board." That's a real, sizeable remaining scope — logged clearly rather than rushed through incompletely.
+
+---
+
 ## September 12, 2026 (continued further still) — Revenue streams document corrected; mobile splash-reload investigated
 
 - **Client-supplied "Complete Revenue Streams" reference document was the actual source of the shortlet nomenclature confusion — not the live app.** The PDF described shortlet/hotel/event commission tiers as based on how far in advance a booking is made ("Short-notice," "Long-notice"). Already confirmed earlier this session that the real database function and `TermsContent.tsx` have always calculated and described these tiers correctly, by real stay duration. Regenerated the full document with the correct framing, plus updated its now-stale Rent-to-Own percentages (was still showing 5%/5.5%) to the current 5.5%/4.5%. Two formatting bugs caught and fixed in the process: a text-overlap issue from a too-narrow table column, and the ₦ symbol rendering as a black box in the PDF (font encoding issue — replaced with "NGN" text).

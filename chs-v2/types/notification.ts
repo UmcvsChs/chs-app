@@ -7,5 +7,6 @@ export interface Notification {
   body: string;
   link: string | null;
   read: boolean;
+  read_at: string | null;
   created_at: string;
 }

@@ -816,13 +816,19 @@ export default function OwnerDashboard() {
                 Edit listing
               </Link>
               {" · "}
-              <Link href={`/analytics/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
-                Analytics
-              </Link>
+              <span className="inline-flex items-center">
+                <Link href={`/analytics/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
+                  Analytics
+                </Link>
+                <InfoTip term="property_analytics" />
+              </span>
               {" · "}
-              <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
-                ⭐ Promote
-              </Link>
+              <span className="inline-flex items-center">
+                <Link href={`/promote/${property.id}`} className="text-[10px] font-semibold text-chs-amber-dark underline">
+                  ⭐ Promote
+                </Link>
+                <InfoTip term="credit_based_promotion_pause_anytime" />
+              </span>
               {property.purpose === "sale" && (
                 <>
                   {" · "}

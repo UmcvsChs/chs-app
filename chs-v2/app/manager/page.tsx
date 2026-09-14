@@ -9,6 +9,7 @@ import { FaultReport, FaultQuotation } from "@/types/faultReport";
 import { formatNaira } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
 import RoleBadge from "@/components/RoleBadge";
+import InfoTip from "@/components/InfoTip";
 import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
 import GuidePrompt from "@/components/GuidePrompt";
@@ -241,9 +242,12 @@ export default function ManagerDashboard() {
         <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           📋 My Tenant Register →
         </Link>
+        <InfoTip term="a_real_tenant_register" />
+        <br />
         <Link href="/agent/property-register" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
           🏠 My Properties &amp; Owners Register →
         </Link>
+        <InfoTip term="real_my_properties_owners_register" />
         <Link href="/expenses" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">
           💵 My Expenses & Income →
         </Link>

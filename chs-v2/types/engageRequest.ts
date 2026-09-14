@@ -19,4 +19,5 @@ export interface EngageRequest {
   admin_last_read_at: string;
   status: "pending" | "accepted" | "rejected" | "more_info_requested" | "agreement_signed";
   created_at: string;
+  archived_at: string | null;
 }

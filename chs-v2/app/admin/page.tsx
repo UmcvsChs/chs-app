@@ -509,6 +509,7 @@ export default function AdminDashboard() {
   }, []);
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
+  const [recentlyHandledEngage, setRecentlyHandledEngage] = useState<EngageRequest[]>([]);
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
   const [pendingArtisans, setPendingArtisans] = useState<Artisan[]>([]);
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
@@ -663,13 +664,23 @@ export default function AdminDashboard() {
     // behind a flood of new ones — the wrong items to hide from an
     // admin queue. referral_fee_settings is a small, bounded config
     // table, not a growing queue, so it's left unlimited.
-    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
+    const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, handledEngageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
       supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      // Real, direct client request: items admin has already accepted
+      // or rejected shouldn't vanish from view the instant they're
+      // handled — they stay visible here for a real 7 days after
+      // admin last read them, or until admin manually archives them,
+      // whichever comes first.
+      supabase.from("engage_chs_requests").select("*")
+        .neq("status", "pending")
+        .is("archived_at", null)
+        .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`)
+        .order("created_at", { ascending: false }).limit(200),
       supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
       supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
       supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: true }).limit(200),
@@ -857,6 +868,7 @@ export default function AdminDashboard() {
     setOpenDisputes(disputesRes.data || []);
     setPendingFeedback(feedbackRes.data || []);
     setPendingEngage(engageRes.data || []);
+    setRecentlyHandledEngage(handledEngageRes.data || []);
     setPendingVendors(vendorsRes.data || []);
     setFeeSettings(feeSettingsRes.data || []);
     setOwedFees(owedFeesRes.data || []);
@@ -1175,6 +1187,19 @@ export default function AdminDashboard() {
         p_title: "CHS needs more information",
         p_body: `${request.service_type} (Ref ${request.reference}) — ${question.trim()}`,
       });
+    }
+    loadData();
+  }
+
+  // Real, direct client request: admin decides when a handled request
+  // moves to archive, not the system deciding automatically the
+  // instant it's acted on.
+  async function handleArchiveEngage(requestId: string) {
+    setActionError(null);
+    const { error } = await supabase.from("engage_chs_requests").update({ archived_at: new Date().toISOString() }).eq("id", requestId);
+    if (error) {
+      setActionError("Could not archive this. Please try again.");
+      return;
     }
     loadData();
   }
@@ -2005,6 +2030,10 @@ export default function AdminDashboard() {
 
         {activeTab === "analytics" && (
           <div className="space-y-3">
+            <p className="text-xs text-gray-500 flex items-center">
+              A real, date-range breakdown of platform activity — properties sold, new tenancies, shortlet bookings, new listings, new users, and total commission revenue.
+              <InfoTip term="real_date_range_analytics_report" />
+            </p>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {([
                 { key: "today", label: "Today" },
@@ -2836,6 +2865,9 @@ export default function AdminDashboard() {
 
         {activeTab === "disputes" && (
           <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              ⚖️ A real disagreement between a tenant and owner (e.g. over move-out condition or a refund) that CHS needs to review and rule on — using the actual move-in/move-out condition reports as evidence where available.
+            </p>
             {openDisputes.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No open disputes.</p>
           ) : (
@@ -2888,10 +2920,14 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {activeTab === "feedback" &&
-          (pendingFeedback.length === 0 ? (
-            <p className="text-center text-sm text-gray-400 py-8">No pending community feedback.</p>
-          ) : (
+        {activeTab === "feedback" && (
+          <>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              💬 Real, unsolicited feedback submitted by users about their experience with CHS — not a formal dispute or complaint about a specific transaction.
+            </p>
+            {pendingFeedback.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No pending community feedback.</p>
+            ) : (
             pendingFeedback.map((f) => (
               <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <div className="flex justify-between items-start">
@@ -2911,24 +2947,65 @@ export default function AdminDashboard() {
                 </div>
               </div>
             ))
-          ))}
+          )}
+          </>
+        )}
 
-        {activeTab === "engage" &&
-          (pendingEngage.length === 0 ? (
-            <p className="text-center text-sm text-gray-400 py-8">No pending Engage CHS requests.</p>
-          ) : (
-            pendingEngage.map((r) => (
-              <EngageRequestCard
-                key={r.id}
-                request={r}
-                session={session}
-                onAccept={handleEngageAccept}
-                onReject={handleEngageReject}
-                onRequestMoreInfo={handleEngageRequestMoreInfo}
-              />
-            ))
-          ))}
+        {activeTab === "engage" && (
+          <>
+            {pendingEngage.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No pending Engage CHS requests.</p>
+            ) : (
+              pendingEngage.map((r) => (
+                <EngageRequestCard
+                  key={r.id}
+                  request={r}
+                  session={session}
+                  onAccept={handleEngageAccept}
+                  onReject={handleEngageReject}
+                  onRequestMoreInfo={handleEngageRequestMoreInfo}
+                />
+              ))
+            )}
 
+            {/* Real, direct client request: handled requests stay
+                visible here for a real 7 days (from when admin last
+                read them) instead of vanishing the instant they're
+                acted on — admin sends them to Archive manually, or
+                they age out automatically after 7 days. */}
+            {recentlyHandledEngage.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledEngage.map((r) => (
+                  <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{r.service_type}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${
+                        r.status === "accepted" ? "bg-green-100 text-green-700" : r.status === "rejected" ? "bg-gray-200 text-gray-500" : "bg-chs-amber-light text-chs-amber-dark"
+                      }`}>
+                        {r.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">Ref {r.reference}</p>
+                    {r.admin_note && <p className="text-[11px] text-gray-600 mt-1">{r.admin_note}</p>}
+                    <button onClick={() => handleArchiveEngage(r.id)}
+                      className="mt-2 w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "vendors" && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+            🏪 A business wanting to sell building materials or services on the CHS Marketplace, awaiting review of their real CAC registration and business details before they can list.
+          </p>
+        )}
         {activeTab === "vendors" &&
           (pendingVendors.length === 0 ? (
             <p className="text-center text-sm text-gray-400 py-8">No pending vendor registrations.</p>
@@ -3052,6 +3129,11 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "artisans" && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+            🔧 A real tradesperson (plumber, electrician, etc.) registering to quote on maintenance jobs, awaiting review of their trade and details before they can be matched with real jobs.
+          </p>
+        )}
+        {activeTab === "artisans" && (
           <>
             {pendingArtisans.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No pending artisan registrations.</p>
@@ -3091,6 +3173,11 @@ export default function AdminDashboard() {
         )}
 
         {activeTab === "inspections" && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+            🚗 Real physical property inspections already booked, including the transport fee split between whoever requested it.
+          </p>
+        )}
+        {activeTab === "inspections" && (
           <>
             {upcomingInspections.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No upcoming inspections booked.</p>
@@ -3114,6 +3201,11 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {activeTab === "developers" && (
+          <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+            🏗️ A commercial developer applying to list real construction/development projects on CHS, awaiting review of their application before their account is upgraded.
+          </p>
+        )}
         {activeTab === "developers" && (
           <>
             {developerApplications.length === 0 ? (
