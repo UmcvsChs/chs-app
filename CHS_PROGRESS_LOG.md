@@ -6,6 +6,20 @@
 
 ---
 
+## September 15, 2026 — SECOND build failure, same root cause category, verification process upgraded properly this time
+
+The client deployed the previous fix and got a *different* real Netlify error this time (genuine progress — the first bug was truly gone): `Cannot find name 'InfoTip'` in `app/admin/page.tsx`, at the Analytics tab explainer added earlier this session. The `<InfoTip>` component was used but its import statement was never added to this file.
+
+**Same underlying gap as the previous bug**: `esbuild` transpiles but does not type-check, so it cannot detect an undefined JSX component reference — only a real TypeScript compiler catches this, which is exactly what Netlify's build does and what my own verification wasn't doing. Two real, consecutive, deploy-blocking bugs from the same category of gap.
+
+**Fixed**: added the missing `import InfoTip from "@/components/InfoTip";`.
+
+**Verification process properly upgraded this time**, not just patched: wrote and ran an actual missing-import checker (parses every JSX component tag used in a file, cross-references against real import statements and locally-defined symbols, correctly excludes TypeScript generics like `Record<T>` which can look like JSX to a naive check) — and ran it, this time, across the **entire 434-file project**, not just files touched this session. Result: clean, with one confirmed false positive (a generic type parameter `<T extends {...}>` in `owner/page.tsx`, not a real issue). Combined with the existing esbuild, brace-balance, and duplicate-declaration checks, `app/admin/page.tsx` now passes all four checks.
+
+**Also confirmed, while investigating**: `app/virtual-inspection/[id]/page.tsx` is genuinely absent from the project — this was a deliberate decision from earlier in this engagement (superseded by the other session's real `property_videos` room-video system), not a new oversight. Verified this explicitly rather than assuming.
+
+---
+
 ## September 13, 2026 — CRITICAL: build-breaking duplicate function, found via a real Netlify build log
 
 The client reported that no deploy had succeeded since this handover began, and attached the actual Netlify build log. It showed a genuine TypeScript compile failure: `Duplicate function implementation` for `handleBuyerIdReview` in `app/admin/page.tsx` — the function had been defined twice in the same component scope (once with parameter name `verificationId`, once with `submissionId`), both doing the identical thing. This is a 100%-reproducible, guaranteed build failure on every single attempt — not intermittent — which matches exactly what the client described.

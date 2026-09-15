@@ -19,6 +19,7 @@ import GuidePrompt from "@/components/GuidePrompt";
 import DocumentViewLink from "@/components/DocumentViewLink";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentManager } from "@/components/EngageDocuments";
+import InfoTip from "@/components/InfoTip";
 
 interface DeveloperApplication {
   id: string;
