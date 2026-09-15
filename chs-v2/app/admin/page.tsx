@@ -1402,20 +1402,6 @@ export default function AdminDashboard() {
     loadData();
   }
 
-  async function handleBuyerIdReview(submissionId: string, approve: boolean) {
-    setActionError(null);
-    const { error } = await supabase.rpc("request_admin_action", {
-      p_action_type: "review_buyer_id",
-      p_target_id: submissionId,
-      p_proposed_changes: { status: approve ? "approved" : "rejected" },
-    });
-    if (error) {
-      setActionError(error.message);
-      return;
-    }
-    loadData();
-  }
-
   async function handleApprovePrecommitMessage(messageId: string) {
     setActionError(null);
     const { error } = await supabase.rpc("approve_precommit_message", { p_message_id: messageId });

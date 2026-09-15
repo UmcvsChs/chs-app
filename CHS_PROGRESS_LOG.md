@@ -6,6 +6,18 @@
 
 ---
 
+## September 13, 2026 — CRITICAL: build-breaking duplicate function, found via a real Netlify build log
+
+The client reported that no deploy had succeeded since this handover began, and attached the actual Netlify build log. It showed a genuine TypeScript compile failure: `Duplicate function implementation` for `handleBuyerIdReview` in `app/admin/page.tsx` — the function had been defined twice in the same component scope (once with parameter name `verificationId`, once with `submissionId`), both doing the identical thing. This is a 100%-reproducible, guaranteed build failure on every single attempt — not intermittent — which matches exactly what the client described.
+
+**Root cause of why this wasn't caught earlier**: every prior verification this session used `esbuild` for a "syntax check." `esbuild` only transpiles — it does not type-check, and duplicate top-level function declarations are not a JavaScript syntax error (only a TypeScript semantic one), so esbuild passed this file clean every time despite the real bug being present. This is a genuine gap in the verification process used throughout this engagement, now corrected: duplicate-declaration checks (across every function and every state variable, scope-aware) are now run explicitly as part of verifying any file before delivery, in addition to esbuild.
+
+**Fixed**: removed the redundant second definition. Verified with a real TypeScript compiler pass on the specific error class that broke the Netlify build (not just esbuild), confirmed zero remaining duplicates. Also ran the same duplicate-check across the entire 434-file project, not just files touched this session — found one additional apparent duplicate (`loadReports` in `components/ShortletCheckInOut.tsx`), investigated properly, and confirmed it was a false positive: two same-named functions correctly scoped inside two separate, unrelated components in the same file, which is valid code, not a bug.
+
+**Honest scope of impact**: this bug was introduced when the ID Verification tab was first built earlier in this session and would have broken every single "complete project" delivery since then. The client had only attempted 1–2 of the recent zips before reporting this, so the exact count of affected deliveries isn't fully known, but it is safe to assume every zip since the ID Verification tab was added carried this same guaranteed failure.
+
+---
+
 ## September 12, 2026 (continued once more) — Explainer sweep extended to Agent, Manager, Tenant, Guest, Artisan
 
 - Swept the remaining five dashboards for the same kind of unexplained jargon found earlier on Owner and Admin. Tenant dashboard already had good coverage (Auto-pay was already explained). Guest and Artisan dashboards showed no obvious jargon gaps in their header/summary areas on this pass.
