@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
@@ -62,11 +62,19 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
+type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
 export default function AdminDashboard() {
+  return (
+    <Suspense fallback={null}>
+      <AdminDashboardInner />
+    </Suspense>
+  );
+}
+
+function AdminDashboardInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
