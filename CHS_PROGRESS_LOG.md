@@ -6,6 +6,22 @@
 
 ---
 
+## September 15, 2026 (continued) — Adopted the working v14 base; found one more real bug of the same class the other agent missed
+
+The client's own deploy attempts kept failing, and — reasonably, given the delay — brought in a different agent, who diagnosed and fixed two real build-breaking issues this session's verification never caught:
+1. `"buyerid"` was missing from the `Tab` type union in `app/admin/page.tsx` — the tab and its render logic existed, but its name was never added to the list of valid tab values, a real TypeScript error.
+2. `useSearchParams()` in `app/admin/page.tsx` needs a `<Suspense>` boundary in the Next.js App Router — added correctly.
+
+Also found: a stale `tsconfig.tsbuildinfo` build-cache file had been riding along in every zip since the original handover, never noticed or removed.
+
+**This session adopted that corrected file as the new base** rather than defend the prior approach, and ran the full verification suite (duplicate-declaration check, missing-import check, both scope-aware) across the entire project against it, plus a new, targeted check specifically for the `useSearchParams`-without-`Suspense` pattern just diagnosed.
+
+**Found one more real instance the other agent's fix didn't cover**: `app/condition-report/[tenancyId]/page.tsx` used `useSearchParams()` directly in its default-exported component with no `Suspense` boundary at all — a genuine, unfixed case of the exact same bug class. Fixed using the identical pattern already proven in the other four files (inner component + `Suspense`-wrapped default export). Verified with esbuild, brace-balance, duplicate-declaration, and missing-import checks; confirmed clean.
+
+Two pending buyer ID verifications (`08120000003` and `08036762208`) were approved directly in the live database while deployment was blocked, so testing could continue without waiting on a working build.
+
+---
+
 ## September 15, 2026 — SECOND build failure, same root cause category, verification process upgraded properly this time
 
 The client deployed the previous fix and got a *different* real Netlify error this time (genuine progress — the first bug was truly gone): `Cannot find name 'InfoTip'` in `app/admin/page.tsx`, at the Analytics tab explainer added earlier this session. The `<InfoTip>` component was used but its import statement was never added to this file.

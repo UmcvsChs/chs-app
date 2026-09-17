@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use } from "react";
+import { Suspense, useState, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,7 +14,21 @@ function generateReference(): string {
 
 const CONDITION_OPTIONS = ["good", "fair", "poor"] as const;
 
-export default function ConditionReportPage({
+// Real, required Suspense boundary — useSearchParams() (needed to
+// read ?type=move_out vs move_in) requires this in the Next.js App
+// Router, or the production build fails at type-check time. Found via
+// a systematic sweep of every file using useSearchParams after the
+// same real bug was found and fixed in a few other files but missed
+// here.
+export default function ConditionReportPage(props: { params: Promise<{ tenancyId: string }> }) {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>}>
+      <ConditionReportPageInner {...props} />
+    </Suspense>
+  );
+}
+
+function ConditionReportPageInner({
   params,
 }: {
   params: Promise<{ tenancyId: string }>;
