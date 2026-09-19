@@ -21,6 +21,7 @@ const DOCUMENTS = [
   { file: "CHS_HANDOVER_NOTES.pdf", label: "Handover Notes", description: "The real, current technical handover — architecture, patterns, and what a new developer needs to know." },
   { file: "CHS_PROPERTY_MANAGER_GUIDE.docx", label: "Property Manager Guide", description: "Real, focused guidance for the property manager role specifically." },
   { file: "CHS_FIX_TRACKER.pdf", label: "Fix Tracker", description: "The real, current, itemized list of fixes — what's done, what's in progress, what's next." },
+  { file: "CHS_AUDIT_AND_RECOVERY_REPORT.pdf", label: "Audit & Recovery Report", description: "A direct account of what was found and fixed after a separate period of work by another agent — real regressions, real improvements, and how each was resolved." },
   { file: "CHS_NIGERIA_PROPERTY_DOCUMENTS_RESEARCH.pdf", label: "Nigeria Property Documents Research", description: "Real research on the legal documents required for property verification and compliance in Nigeria." },
 ];
 

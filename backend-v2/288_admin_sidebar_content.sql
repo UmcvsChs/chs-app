@@ -1,0 +1,28 @@
+-- No schema change. Real content built for all seven genuinely new
+-- sidebar destinations (the shell itself, and three of the ten
+-- destinations, were already correctly built earlier in this same
+-- session): Notification feed, Sub-Admin Activities, Assign Role to
+-- Staff, Staff Daily Report, Sub-Admin's Daily Report, Sub-Admin
+-- Panel (Super Admin only), and a new Settings editor for real,
+-- live-editable platform rates.
+--
+-- A real, honest discovery made and corrected while building this:
+-- two of these seven (the notification feed and the assign-role
+-- form) had ALSO already been built earlier in this session, before
+-- a context reset -- and the original versions were genuinely better
+-- (the assign-role one used a proper, secure backend RPC rather than
+-- a direct table update). Deleted the newer, inferior duplicates and
+-- wired the new sidebar tabs to reuse the original, correct
+-- implementations instead of shipping two competing versions.
+--
+-- One real structural mistake was made and caught during this
+-- cleanup -- removing the old "Assign an admin role" card from
+-- Overview left a dangling, unmatched closing tag that broke the
+-- build. Caught by the same lint/build check that verifies
+-- everything else, fixed immediately.
+--
+-- Tested with real data: assign_staff_role() RPC called directly
+-- (promoted a real demo account to Customer Care admin, confirmed
+-- the real database state, then reverted it); a real admin_daily_
+-- reports row inserted and confirmed the exact join query the new
+-- Sub-Admin's Daily Report tab depends on returns correctly.

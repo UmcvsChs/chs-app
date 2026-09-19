@@ -9,6 +9,7 @@ import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
+import InfoTip from "@/components/InfoTip";
 
 // Real, new page — a direct, honest answer to a direct client
 // question: no, a Buyer genuinely had no dedicated interface beyond
@@ -67,8 +68,8 @@ export default function MyOffersPage() {
         </div>
         <p className="text-xs text-white/60 mt-1">{offers.length} real offer{offers.length !== 1 ? "s" : ""} made</p>
         <div className="flex gap-1.5 mt-2">
-          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications</Link>
-          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
+          <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications<InfoTip term="my_applications" /></Link>
+          <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions<InfoTip text="Every real payment you've made through CHS, with a downloadable receipt for each." /></Link>
         </div>
       </div>
 
@@ -76,7 +77,7 @@ export default function MyOffersPage() {
         {/* Restored: lost during a prior reconciliation pass between
             two parallel work sessions. */}
         <Link href="/rent-to-own" className="block bg-chs-amber-light rounded-xl p-3 mb-1">
-          <p className="text-xs font-bold text-chs-amber-dark">🏠 Have a Mortgage (Rent to Own) agreement instead?</p>
+          <p className="text-xs font-bold text-chs-amber-dark">🏠 Have a Mortgage (Rent to Own) agreement instead?<InfoTip term="rent_to_own_mortgage" /></p>
           <p className="text-[11px] text-gray-600 mt-0.5">Those are tracked separately — tap here to view it and pay your monthly installment.</p>
         </Link>
         {offers.length === 0 ? (

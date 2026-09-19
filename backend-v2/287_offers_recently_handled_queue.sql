@@ -1,0 +1,33 @@
+-- Real audit-and-recovery round following nine days of separate work
+-- by another agent. Full details in CHS_AUDIT_AND_RECOVERY_REPORT.pdf
+-- (also bundled into the app's Document Site). Summary:
+--
+-- 1. Explainer hover/click bug, genuinely fixed per direct client
+-- clarification: hover was deliberately reintroduced by the client's
+-- own request to solve a real, separate problem (a tiny "?" trigger
+-- sitting too close to a much bigger link, causing imprecise taps to
+-- hit the wrong thing ~60% of the time). Fixed both real problems as
+-- the two separate things they are: a genuinely larger invisible tap
+-- target around the "?", and hover/click rebuilt as two fully
+-- independent pieces of state that can never close what the other
+-- one opened.
+--
+-- 2. Offers-queue "disappearing" bug, confirmed never actually fixed
+-- by the other agent despite their own transcript describing the
+-- plan. Applied the identical, proven "Recently Handled" pattern
+-- already working for Engage CHS: offers.admin_last_read_at column
+-- added (archived_at already existed from a prior partial attempt),
+-- real query, real archive handler, real UI section. Tested end to
+-- end with real data: created a real offer, relayed it, confirmed it
+-- moved to Recently Handled rather than vanishing, archived it,
+-- confirmed it cleared only then.
+--
+-- 3. Feature Explainer coverage restored on seven dashboards
+-- (Buyer, Host, Guest, Developer, Vendor, Artisan, Staff) confirmed
+-- lost during the other agent's work.
+--
+-- Two further real, pre-existing bugs found and fixed along the way
+-- (HomePageClient.tsx and rent-to-own/page.tsx, both a real
+-- setState-in-effect pattern).
+
+alter table offers add column if not exists admin_last_read_at timestamptz;

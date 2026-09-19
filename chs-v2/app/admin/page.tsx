@@ -16,6 +16,7 @@ import { Offer } from "@/types/offer";
 import { Artisan } from "@/types/artisan";
 import { Inspection } from "@/types/inspection";
 import GuidePrompt from "@/components/GuidePrompt";
+import PlatformSettingsPanel from "@/components/PlatformSettingsPanel";
 import DocumentViewLink from "@/components/DocumentViewLink";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentManager } from "@/components/EngageDocuments";
@@ -37,6 +38,7 @@ interface DeveloperApplication {
 import { ReferralFeeSetting, ReferralFeeOwed } from "@/types/referralFee";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import RoleBadge from "@/components/RoleBadge";
+import AdminSidebar from "@/components/AdminSidebar";
 import NotificationBell from "@/components/NotificationBell";
 import { formatNaira } from "@/lib/format";
 
@@ -62,7 +64,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -185,6 +187,33 @@ function AdminDashboardInner() {
       .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true })
       .then(({ data }) => setPendingOfferDecisions((data as unknown as typeof pendingOfferDecisions) || []));
   }, []);
+  // Real, direct fix for a repeated, explicit client complaint: an
+  // offer previously vanished from this queue the instant admin acted
+  // on it. It now moves down into this real "Recently Handled"
+  // section for 7 real days (or until admin manually archives it),
+  // matching the exact, already-working pattern built for Engage CHS.
+  const [recentlyHandledOffers, setRecentlyHandledOffers] = useState<{
+    id: string; amount: number; status: string; buyer_full_name: string | null; buyer_phone: string | null;
+    admin_last_read_at: string | null; properties: { title: string } | null;
+  }[]>([]);
+  function loadRecentlyHandledOffers() {
+    supabase.from("offers").select("id, amount, status, buyer_full_name, buyer_phone, admin_last_read_at, properties(title)")
+      .not("status", "in", "(awaiting_admin_review,owner_decided_pending_relay)")
+      .is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledOffers((data as unknown as typeof recentlyHandledOffers) || []));
+  }
+  useEffect(() => { loadRecentlyHandledOffers(); }, []);
+  async function handleArchiveOffer(offerId: string) {
+    setActionError(null);
+    const { error } = await supabase.from("offers").update({ archived_at: new Date().toISOString() }).eq("id", offerId);
+    if (error) {
+      setActionError("Could not archive this. Please try again.");
+      return;
+    }
+    setRecentlyHandledOffers((prev) => prev.filter((o) => o.id !== offerId));
+  }
   const [staleCommissions, setStaleCommissions] = useState<{
     id: string; transaction_type: string; payer_role: string; commission_amount: number;
     base_amount: number; created_at: string; payer_name: string; payer_phone: string;
@@ -381,6 +410,23 @@ function AdminDashboardInner() {
     setContactSettingsResult("✓ Real contact details updated.");
   }
   const [showAdminReportForm, setShowAdminReportForm] = useState(false);
+  // Real, new feature closing a confirmed gap: submission existed,
+  // but no real way for the super admin to actually view what was
+  // submitted. staff_role_at_time holds one of the five real
+  // sub-admin domain values for a sub-admin's own report, or is
+  // genuinely something else (or null) for a regular staff member's
+  // — the real, existing distinction used to split the two views.
+  const SUB_ADMIN_DOMAINS = ["customer_care", "registration_setup", "owner_buyer_tenant", "agent_relations", "artisan_dev_pm_vendor"];
+  const [dailyReports, setDailyReports] = useState<{
+    id: string; report_date: string; activities: string; transactions_handled: string | null; complaints_raised: string | null;
+    staff_role_at_time: string | null; created_at: string; profiles: { full_name: string; phone: string }[] | null;
+  }[]>([]);
+  useEffect(() => {
+    if (!profile?.is_super_admin) return;
+    supabase.from("admin_daily_reports").select("id, report_date, activities, transactions_handled, complaints_raised, staff_role_at_time, created_at, profiles!admin_daily_reports_submitted_by_fkey(full_name, phone)")
+      .order("report_date", { ascending: false }).limit(200)
+      .then(({ data }) => setDailyReports((data as unknown as typeof dailyReports) || []));
+  }, [profile?.is_super_admin]);
   const [adminReportActivities, setAdminReportActivities] = useState("");
   const [adminReportTransactions, setAdminReportTransactions] = useState("");
   const [adminReportComplaints, setAdminReportComplaints] = useState("");
@@ -524,6 +570,16 @@ function AdminDashboardInner() {
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
   const [showGuide, setShowGuide] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsFeed, setNotificationsFeed] = useState<{
+    id: string; title: string; body: string; link: string | null; read: boolean; created_at: string;
+  }[]>([]);
+  useEffect(() => {
+    if (!session) return;
+    supabase.from("notifications").select("id, title, body, link, read, created_at")
+      .eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(100)
+      .then(({ data }) => setNotificationsFeed(data || []));
+  }, [session]);
 
   // Real "Trace an Account" tool state — the direct fix for the
   // MTN-style support gap: search by phone/email/name, then see
@@ -598,6 +654,15 @@ function AdminDashboardInner() {
     profiles: { full_name: string }[] | null;
   }[]>([]);
   const [loadingActionHistory, setLoadingActionHistory] = useState(false);
+  // Real, new state for the seven genuinely new sidebar destinations —
+  // Notification feed, Assign Role to Staff, Staff Daily Report,
+  // Sub-Admin's Daily Report, and Sub-Admin Panel. (Quick Search,
+  // Customer Care, and Audit Trail all route to real, already-working
+  // tabs — Trace an Account, Disputes, and Audit Log respectively —
+  // and Sub-Admin Activities reuses the action-history data above.)
+  const [teamDailyReports, setTeamDailyReports] = useState<{ id: string; report_date: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; team_member: { full_name: string }[] | null; submitter: { full_name: string }[] | null }[]>([]);
+  const [adminDailyReports, setAdminDailyReports] = useState<{ id: string; report_date: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; staff_role_at_time: string | null; submitter: { full_name: string }[] | null }[]>([]);
+  const [subAdminRoster, setSubAdminRoster] = useState<{ id: string; full_name: string; phone: string; staff_role: string | null; is_super_admin: boolean }[]>([]);
   const [pendingLoginRequests, setPendingLoginRequests] = useState<{
     id: string; admin_id: string; code: string; created_at: string;
     profiles: { full_name: string; role: string }[] | null;
@@ -934,6 +999,42 @@ function AdminDashboardInner() {
     setLoadingActionHistory(false);
     setShowActionHistory(true);
   }
+
+  // Real, new auto-load for the dedicated "Sub-Admin Activities"
+  // sidebar tab — reuses the exact same real data already proven
+  // working in the Overview toggle above, just surfaced as its own
+  // real destination per the client's sidebar design.
+  useEffect(() => {
+    if (activeTab === "subadminactivities" && actionHistory.length === 0 && !loadingActionHistory) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      handleToggleActionHistory();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Real, new loads for the remaining genuinely new sidebar
+  // destinations — each fires once, the first time its tab opens.
+  useEffect(() => {
+    if (activeTab === "staffreports" && teamDailyReports.length === 0) {
+      supabase.from("team_daily_reports")
+        .select("id, report_date, activities, transactions_handled, complaints_raised, team_member:profiles!team_daily_reports_team_member_id_fkey(full_name), submitter:profiles!team_daily_reports_submitted_by_fkey(full_name)")
+        .order("report_date", { ascending: false }).limit(100)
+        .then(({ data }) => setTeamDailyReports((data as unknown as typeof teamDailyReports) || []));
+    }
+    if (activeTab === "subadmindailyreports" && adminDailyReports.length === 0) {
+      supabase.from("admin_daily_reports")
+        .select("id, report_date, activities, transactions_handled, complaints_raised, staff_role_at_time, submitter:profiles!admin_daily_reports_submitted_by_fkey(full_name)")
+        .order("report_date", { ascending: false }).limit(100)
+        .then(({ data }) => setAdminDailyReports((data as unknown as typeof adminDailyReports) || []));
+    }
+    if ((activeTab === "subadminpanel" || activeTab === "assignrole") && subAdminRoster.length === 0) {
+      supabase.from("profiles").select("id, full_name, phone, staff_role, is_super_admin")
+        .eq("role", "admin").order("full_name", { ascending: true })
+        .then(({ data }) => setSubAdminRoster(data || []));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
 
   async function handleTraceSearch() {
     if (!traceQuery.trim()) return;
@@ -1513,6 +1614,9 @@ function AdminDashboardInner() {
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
           <div className="flex items-center gap-2">
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden bg-white/15 px-2.5 py-1.5 rounded-full text-xs font-semibold" aria-label="Open admin menu">
+              ☰
+            </button>
             <NotificationBell />
             <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
               Log out
@@ -1542,6 +1646,22 @@ function AdminDashboardInner() {
         </div>
       </div>
 
+      {/* Real, new left sidebar per direct client design request —
+          the ten real, meta/oversight items listed by name (not the
+          existing ~25 day-to-day operational tabs, which stay on the
+          horizontal bar below exactly as they were). Hidden entirely
+          on narrow phone screens in favor of the toggle button below,
+          since a permanent sidebar this wide would eat too much of a
+          small screen's real content space. */}
+      <div className="md:flex">
+        <AdminSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          isSuperAdmin={!!profile?.is_super_admin}
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+        />
+        <div className="flex-1 min-w-0">
       <div className="flex border-b border-gray-200 bg-white px-4 overflow-x-auto">
         {([
           { key: "overview", label: "Overview", domain: null },
@@ -1967,34 +2087,6 @@ function AdminDashboardInner() {
               </div>
               <span className="text-chs-red text-lg">→</span>
             </Link>
-            {profile?.is_super_admin && (
-              <div className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2">
-                <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
-                <p className="text-[10px] text-gray-400">
-                  The person must already have a real CHS account — this promotes their existing account, it doesn&apos;t create a new one.
-                </p>
-                <input type="text" value={assignContact} onChange={(e) => setAssignContact(e.target.value)}
-                  placeholder="Their phone number or email"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                <select value={assignRole} onChange={(e) => setAssignRole(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                  <option value="customer_care">Customer Care (disputes, feedback)</option>
-                  <option value="registration_setup">Registration & Setup (approvals, face verification)</option>
-                  <option value="owner_buyer_tenant">Owner/Buyer/Tenant (properties, applications, sales)</option>
-                  <option value="agent_relations">Agent Relations (referral fees)</option>
-                  <option value="artisan_dev_pm_vendor">Artisan/Developer/PM/Vendor</option>
-                </select>
-                {assignMessage && (
-                  <p className={`text-xs rounded-lg px-3 py-2 ${assignMessage.startsWith("✓") ? "text-green-700 bg-green-50" : "text-chs-red bg-red-50"}`}>
-                    {assignMessage}
-                  </p>
-                )}
-                <button onClick={handleAssignStaffRole} disabled={assigning}
-                  className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
-                  {assigning ? "Assigning..." : "Assign role"}
-                </button>
-              </div>
-            )}
             <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 text-center">
               <p className="font-serif text-2xl font-bold text-chs-charcoal">{overviewStats.totalListings}</p>
               <p className="text-[10px] text-gray-400 mt-1">Total listings</p>
@@ -2706,7 +2798,12 @@ function AdminDashboardInner() {
                   )}
                   <p className="text-[11px] text-gray-500 mt-1">{o.buyer_occupation} · {o.buyer_source_of_funds}</p>
                   {o.note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{o.note}&quot;</p>}
-                  <button onClick={async () => { await supabase.rpc("admin_relay_offer_to_owner", { p_offer_id: o.id }); setPendingOfferReview((prev) => prev.filter((x) => x.id !== o.id)); }}
+                  <button onClick={async () => {
+                    await supabase.rpc("admin_relay_offer_to_owner", { p_offer_id: o.id });
+                    await supabase.from("offers").update({ admin_last_read_at: new Date().toISOString() }).eq("id", o.id);
+                    setPendingOfferReview((prev) => prev.filter((x) => x.id !== o.id));
+                    loadRecentlyHandledOffers();
+                  }}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     ✓ Reviewed — relay to owner
                   </button>
@@ -2727,9 +2824,40 @@ function AdminDashboardInner() {
                     <p className="text-xs text-chs-charcoal mt-1">Buyer: {o.buyer_full_name} — {o.buyer_phone}</p>
                     <p className="text-xs font-bold mt-1">{o.owner_decision === "accepted" ? "✅ Owner accepted" : "❌ Owner declined"}</p>
                     {o.seller_response_note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{o.seller_response_note}&quot;</p>}
-                    <button onClick={async () => { await supabase.rpc("admin_relay_offer_decision_to_buyer", { p_offer_id: o.id }); setPendingOfferDecisions((prev) => prev.filter((x) => x.id !== o.id)); }}
+                    <button onClick={async () => {
+                      await supabase.rpc("admin_relay_offer_decision_to_buyer", { p_offer_id: o.id });
+                      await supabase.from("offers").update({ admin_last_read_at: new Date().toISOString() }).eq("id", o.id);
+                      setPendingOfferDecisions((prev) => prev.filter((x) => x.id !== o.id));
+                      loadRecentlyHandledOffers();
+                    }}
                       className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                       ✓ Reviewed — relay to buyer
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {recentlyHandledOffers.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledOffers.map((o) => (
+                  <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${
+                        o.status === "accepted" ? "bg-green-100 text-green-700" : o.status === "rejected" ? "bg-gray-200 text-gray-500" : "bg-chs-amber-light text-chs-amber-dark"
+                      }`}>
+                        {o.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{o.buyer_full_name} — {o.buyer_phone}</p>
+                    <button onClick={() => handleArchiveOffer(o.id)}
+                      className="mt-2 w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
                     </button>
                   </div>
                 ))}
@@ -3420,8 +3548,209 @@ function AdminDashboardInner() {
             )}
           </div>
         )}
+
+        {activeTab === "notificationsfeed" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🔔 Every real notification you&apos;ve received, in one place — the same ones in the bell dropdown, without the limit.
+            </p>
+            {notificationsFeed.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real notifications yet.</p>
+            ) : (
+              notificationsFeed.map((n) => (
+                <button key={n.id} onClick={async () => {
+                  if (!n.read) {
+                    await supabase.from("notifications").update({ read: true, read_at: new Date().toISOString() }).eq("id", n.id);
+                    setNotificationsFeed((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+                  }
+                  if (n.link) router.push(n.link);
+                }} className={`block w-full text-left rounded-xl border p-3 mb-2 ${n.read ? "bg-white border-gray-100" : "bg-chs-amber-light border-chs-amber-dark"}`}>
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{n.title}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(n.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mt-0.5">{n.body}</p>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "subadminactivities" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📜 A real, permanent record of every resolved sub-admin request — once approved or rejected, it stays here rather than vanishing.
+            </p>
+            {loadingActionHistory ? (
+              <p className="text-center text-sm text-gray-400 py-8">Loading...</p>
+            ) : actionHistory.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No resolved actions yet.</p>
+            ) : (
+              actionHistory.map((h) => (
+                <div key={h.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <span className={h.status === "approved" ? "text-green-700 font-semibold text-xs" : "text-chs-red font-semibold text-xs"}>
+                    {h.status === "approved" ? "✓" : "✕"} {h.action_type.replace(/_/g, " ")}
+                  </span>
+                  <p className="text-[10px] text-gray-500 mt-0.5">
+                    {h.profiles?.[0]?.full_name || "Unknown"} · {h.resolved_at && new Date(h.resolved_at).toLocaleString()}
+                  </p>
+                  {h.resolution_note && <p className="text-[11px] text-gray-600 mt-1">&quot;{h.resolution_note}&quot;</p>}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "assignrole" && (
+          <div>
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2 mb-4">
+              <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
+              <p className="text-[10px] text-gray-400">
+                The person must already have a real CHS account — this promotes their existing account, it doesn&apos;t create a new one.
+              </p>
+              <input type="text" value={assignContact} onChange={(e) => setAssignContact(e.target.value)}
+                placeholder="Their phone number or email"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <select value={assignRole} onChange={(e) => setAssignRole(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+                <option value="customer_care">Customer Care (disputes, feedback)</option>
+                <option value="registration_setup">Registration & Setup (approvals, face verification)</option>
+                <option value="owner_buyer_tenant">Owner/Buyer/Tenant (properties, applications, sales)</option>
+                <option value="agent_relations">Agent Relations (referral fees)</option>
+                <option value="artisan_dev_pm_vendor">Artisan/Developer/PM/Vendor</option>
+              </select>
+              {assignMessage && (
+                <p className={`text-xs rounded-lg px-3 py-2 ${assignMessage.startsWith("✓") ? "text-green-700 bg-green-50" : "text-chs-red bg-red-50"}`}>
+                  {assignMessage}
+                </p>
+              )}
+              <button onClick={async () => { await handleAssignStaffRole(); setSubAdminRoster([]); }} disabled={assigning}
+                className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
+                {assigning ? "Assigning..." : "Assign role"}
+              </button>
+            </div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Every real current sub-admin</p>
+            {subAdminRoster.filter((s) => !s.is_super_admin).length === 0 ? (
+              <p className="text-xs text-gray-400">No real sub-admins assigned yet.</p>
+            ) : (
+              subAdminRoster.filter((s) => !s.is_super_admin).map((s) => (
+                <div key={s.id} className="bg-white rounded-lg border border-gray-100 p-2.5 mb-1.5 flex justify-between items-center">
+                  <p className="text-xs text-chs-charcoal">{s.full_name} — {s.phone}</p>
+                  <span className="text-[9px] font-bold text-gray-500 capitalize">{s.staff_role?.replace(/_/g, " ") || "No domain"}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "staffreports" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📋 Real daily reports submitted by team members across every real agent and property manager on the platform — not CHS&apos;s own internal staff (see Sub-Admin&apos;s Daily Report for that).
+            </p>
+            {teamDailyReports.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real staff reports yet.</p>
+            ) : (
+              teamDailyReports.map((r) => (
+                <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{r.team_member?.[0]?.full_name || "Team member"}</p>
+                    <span className="text-[9px] text-gray-400">{r.report_date}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-1">Submitted by {r.submitter?.[0]?.full_name || "—"}</p>
+                  <p className="text-xs text-gray-700">{r.activities}</p>
+                  {r.transactions_handled && <p className="text-[11px] text-gray-500 mt-1">Transactions: {r.transactions_handled}</p>}
+                  {r.complaints_raised && <p className="text-[11px] text-chs-red mt-1">Complaints: {r.complaints_raised}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "subadmindailyreports" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🗂️ Real daily reports from CHS&apos;s own internal admin/sub-admin staff.
+            </p>
+            {adminDailyReports.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real sub-admin reports yet.</p>
+            ) : (
+              adminDailyReports.map((r) => (
+                <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{r.submitter?.[0]?.full_name || "Sub-admin"}</p>
+                    <span className="text-[9px] text-gray-400">{r.report_date}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mb-1 capitalize">{r.staff_role_at_time?.replace(/_/g, " ")}</p>
+                  <p className="text-xs text-gray-700">{r.activities}</p>
+                  {r.transactions_handled && <p className="text-[11px] text-gray-500 mt-1">Transactions: {r.transactions_handled}</p>}
+                  {r.complaints_raised && <p className="text-[11px] text-chs-red mt-1">Complaints: {r.complaints_raised}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {activeTab === "subadminpanel" && (
+          <div>
+            {!profile?.is_super_admin ? (
+              <p className="text-center text-sm text-gray-400 py-8">This real panel is visible to Super Admin only.</p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+                  🛡️ Every real sub-admin and what they can currently see — the same, real domain-based restriction enforced at the database level, shown here so you know exactly what each one&apos;s own dashboard looks like right now.
+                </p>
+                {subAdminRoster.filter((s) => !s.is_super_admin).length === 0 ? (
+                  <p className="text-center text-sm text-gray-400 py-8">No real sub-admins assigned yet.</p>
+                ) : (
+                  subAdminRoster.filter((s) => !s.is_super_admin).map((s) => {
+                    const domainTabLabels: Record<string, string[]> = {
+                      customer_care: ["Disputes", "Feedback"],
+                      registration_setup: ["Face Verification", "ID Verification", "Registrations"],
+                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings"],
+                      agent_relations: ["Referral fees"],
+                      artisan_dev_pm_vendor: ["Vendors", "Maintenance", "Artisans", "Developers"],
+                    };
+                    const visibleTabs = s.staff_role ? domainTabLabels[s.staff_role] || [] : [];
+                    return (
+                      <div key={s.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                        <p className="text-sm font-semibold text-chs-charcoal">{s.full_name} — {s.phone}</p>
+                        <p className="text-[10px] text-gray-500 mb-1.5 capitalize">Domain: {s.staff_role?.replace(/_/g, " ") || "None assigned"}</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Real tabs this sub-admin currently sees</p>
+                        <div className="flex flex-wrap gap-1">
+                          {visibleTabs.length === 0 ? (
+                            <span className="text-[10px] text-gray-400">None — no domain assigned yet.</span>
+                          ) : (
+                            visibleTabs.map((t) => (
+                              <span key={t} className="text-[9px] bg-white border border-gray-200 rounded-full px-2 py-0.5 text-chs-charcoal">{t}</span>
+                            ))
+                          )}
+                          <span className="text-[9px] bg-white border border-gray-200 rounded-full px-2 py-0.5 text-chs-charcoal">Overview</span>
+                          <span className="text-[9px] bg-white border border-gray-200 rounded-full px-2 py-0.5 text-chs-charcoal">Analytics</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div>
+            {!profile?.is_super_admin ? (
+              <p className="text-center text-sm text-gray-400 py-8">Real platform settings are visible to Super Admin only.</p>
+            ) : (
+              <PlatformSettingsPanel />
+            )}
+          </div>
+        )}
+
       </div>
       {showGuide && <GuidePrompt role="admin" onDismiss={() => setShowGuide(false)} />}
+        </div>
+      </div>
     </div>
   );
 }

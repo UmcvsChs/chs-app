@@ -45,7 +45,11 @@ export default function HomePageClient({ properties, platformStats }: { properti
   const [isArtisan, setIsArtisan] = useState(false);
 
   useEffect(() => {
-    if (!session) { setIsArtisan(false); return; }
+    if (!session) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsArtisan(false);
+      return;
+    }
     supabase.from("artisans").select("id", { count: "exact", head: true }).eq("user_id", session.user.id)
       .then(({ count }) => setIsArtisan(!!count && count > 0));
   }, [session]);

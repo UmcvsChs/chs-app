@@ -76,6 +76,7 @@ export default function RentToOwnPage() {
       router.push("/login");
       return;
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session]);

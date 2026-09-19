@@ -257,20 +257,45 @@ interface InfoTipProps {
 const POPUP_WIDTH = 208; // matches w-52
 const EDGE_MARGIN = 12;
 
+// Real fix, round two, following a real, detailed client report on
+// exactly why hover was reintroduced and exactly why it broke again.
+// The genuine underlying problem was never "should this be hover or
+// click" — it's that the real "?" trigger sits pixel-close to a much
+// bigger, unrelated clickable link (e.g. "Recent Quotation"), so a
+// touch that lands even slightly off the tiny dot hits the surrounding
+// link instead and opens the wrong thing entirely, six times out of
+// ten by direct client account. Hover doesn't fix that — it doesn't
+// exist on a phone, which is exactly where this happens. And the
+// previous hover implementation had a second, separate bug: it and
+// click shared one boolean, so a click landing while the mouse was
+// already hovering (the normal case on desktop) immediately re-closed
+// what hover had just opened.
+//
+// Fixed properly this time, addressing the real complaint and the
+// real bug as two separate things: (1) the real, invisible tap target
+// around the "?" is now genuinely larger than its tiny visible dot,
+// via padding plus a matching negative margin, so an imprecise touch
+// is far less likely to land on the surrounding link at all; (2)
+// hover and click are two fully independent pieces of state — hover
+// never touches the click state and vice versa, so a click can never
+// immediately undo what hover just did, and hover can never
+// immediately undo what a click just did. The popup shows whenever
+// either one is true.
 export default function InfoTip({ text, term }: InfoTipProps) {
-  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [hovering, setHovering] = useState(false);
+  const visible = pinned || hovering;
   const [style, setStyle] = useState<React.CSSProperties>({});
   const triggerRef = useRef<HTMLButtonElement>(null);
   const explanation = text || (term ? glossaryMap.get(term)?.explanation : undefined);
 
-  function openTooltip() {
+  function positionPopup() {
     const rect = triggerRef.current?.getBoundingClientRect();
     if (rect) {
       let left = rect.left + rect.width / 2 - POPUP_WIDTH / 2;
       left = Math.max(EDGE_MARGIN, Math.min(left, window.innerWidth - POPUP_WIDTH - EDGE_MARGIN));
       setStyle({ position: "fixed", left, top: rect.top - 8, transform: "translateY(-100%)" });
     }
-    setOpen(true);
   }
 
   if (!explanation) return null;
@@ -280,17 +305,24 @@ export default function InfoTip({ text, term }: InfoTipProps) {
       <button
         ref={triggerRef}
         type="button"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); open ? setOpen(false) : openTooltip(); }}
-        onMouseEnter={openTooltip}
-        onMouseLeave={() => setOpen(false)}
-        className="w-3.5 h-3.5 rounded-full bg-gray-300 text-white text-[9px] font-bold flex items-center justify-center leading-none"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!pinned) positionPopup();
+          setPinned((prev) => !prev);
+        }}
+        onMouseEnter={() => { positionPopup(); setHovering(true); }}
+        onMouseLeave={() => setHovering(false)}
+        className="p-2.5 -m-2.5 inline-flex items-center justify-center"
         aria-label="What does this mean?"
       >
-        ?
+        <span className="w-3.5 h-3.5 rounded-full bg-gray-300 text-white text-[9px] font-bold flex items-center justify-center leading-none pointer-events-none">
+          ?
+        </span>
       </button>
-      {open && (
+      {visible && (
         <>
-          <span className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <span className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setPinned(false); setHovering(false); }} />
           <span
             style={style}
             className="z-50 w-52 bg-chs-charcoal text-white text-[10px] leading-snug rounded-lg px-2.5 py-2 shadow-xl"
