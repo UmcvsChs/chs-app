@@ -1,0 +1,18 @@
+-- No schema change. Real, confirmed regression found and fixed: the
+-- InfoTip explainers on the owner dashboard's My Earnings, Market
+-- Demand, and Engage CHS nav pills -- built and verified working
+-- earlier in this same session -- were genuinely missing from the
+-- current source file. Confirmed directly by grep before touching
+-- anything, not assumed from the client's screenshot alone. Restored
+-- exactly as they were. Root cause not fully certain -- most likely
+-- lost during the v15-zip baseline swap or a subsequent file
+-- operation -- but the fix itself is confirmed correct and rebuilt
+-- clean.
+--
+-- Notification click-through (router.push, not window.location,
+-- with real stopPropagation/preventDefault) was directly re-checked
+-- in the current source and found genuinely correct -- no bug found
+-- on review. The client's screenshot was explicitly taken before
+-- deploying the previous zip, so this may already be resolved once
+-- the current zip goes live; flagged for a direct re-test rather
+-- than assumed fixed or assumed still broken.

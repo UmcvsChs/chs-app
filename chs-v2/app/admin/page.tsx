@@ -64,7 +64,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -1658,38 +1658,59 @@ function AdminDashboardInner() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isSuperAdmin={!!profile?.is_super_admin}
+          viewerDomain={profile?.staff_role || null}
           sidebarOpen={sidebarOpen}
           setSidebarOpen={setSidebarOpen}
         />
         <div className="flex-1 min-w-0">
       <div className="flex border-b border-gray-200 bg-white px-4 overflow-x-auto">
         {([
+          // Real, direct fix per explicit client feedback: these were
+          // scattered with no real logic to the order, making related
+          // items (e.g. every kind of verification) hard to find
+          // without scrolling past several unrelated ones first.
+          // Regrouped into real, named categories below — nothing
+          // removed, only reordered.
+
+          // General
           { key: "overview", label: "Overview", domain: null },
           { key: "analytics", label: "📊 Analytics", domain: null },
+
+          // Financial
           { key: "finance", label: "Finance", domain: "finance" },
+          { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant" },
+          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations" },
+          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
+
+          // Verification — every real kind, grouped together
+          { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
+          { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup" },
+          { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
+          { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
+
+          // Review & Approval queues
+          { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
+          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant" },
+          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
+
+          // Complaints & Care
+          { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
+          { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
+          { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor" },
+
+          // Oversight
+          { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
+          { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant" },
+          { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
+          { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only" },
+
+          // Tools — also reachable from the new sidebar, kept here too
           { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
           { key: "auditlog", label: "📋 Audit Log", domain: "super_admin_only" },
           { key: "processedhistory", label: "🗄️ Processed History", domain: "owner_buyer_tenant" },
-          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
-          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
-          { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup" },
-          { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
-          { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
-          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant" },
-          { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
-          { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
-          { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
-          { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only" },
-          { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations" },
-          { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
-          { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
-          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
-          { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant" },
-          { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant" },
         ] as { key: Tab; label: string; domain: string | null }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
@@ -3578,11 +3599,15 @@ function AdminDashboardInner() {
 
         {activeTab === "subadminactivities" && (
           <div>
-            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
-              📜 A real, permanent record of every resolved sub-admin request — once approved or rejected, it stays here rather than vanishing.
-            </p>
-            {loadingActionHistory ? (
-              <p className="text-center text-sm text-gray-400 py-8">Loading...</p>
+            {!profile?.is_super_admin ? (
+              <p className="text-center text-sm text-gray-400 py-8">This real activity log is visible to Super Admin only.</p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+                  📜 A real, permanent record of every resolved sub-admin request — once approved or rejected, it stays here rather than vanishing.
+                </p>
+                {loadingActionHistory ? (
+                  <p className="text-center text-sm text-gray-400 py-8">Loading...</p>
             ) : actionHistory.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No resolved actions yet.</p>
             ) : (
@@ -3597,6 +3622,8 @@ function AdminDashboardInner() {
                   {h.resolution_note && <p className="text-[11px] text-gray-600 mt-1">&quot;{h.resolution_note}&quot;</p>}
                 </div>
               ))
+            )}
+              </>
             )}
           </div>
         )}
@@ -3732,6 +3759,74 @@ function AdminDashboardInner() {
                     );
                   })
                 )}
+              </>
+            )}
+          </div>
+        )}
+
+        {activeTab === "superadminindex" && (
+          <div>
+            {!profile?.is_super_admin ? (
+              <p className="text-center text-sm text-gray-400 py-8">This real shortcut index is visible to Super Admin only.</p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-4">
+                  🧭 A real, direct shortcut into every real section on the long horizontal bar below — grouped the same way, so you never have to scroll to find one thing.
+                </p>
+                {[
+                  { group: "General", items: [
+                    { key: "overview" as Tab, label: "Overview" },
+                    { key: "analytics" as Tab, label: "Analytics" },
+                  ] },
+                  { group: "Financial", items: [
+                    { key: "finance" as Tab, label: "Finance" },
+                    { key: "platformearnings" as Tab, label: "Platform Earnings" },
+                    { key: "referrals" as Tab, label: `Referral Fees (${owedFees.filter(f => f.status === "owed").length})` },
+                    { key: "shortletdeposits" as Tab, label: "Shortlet/Hire Deposits" },
+                  ] },
+                  { group: "Verification", items: [
+                    { key: "registrations" as Tab, label: `Registrations (${pendingRegistrationsFull.length})` },
+                    { key: "liveness" as Tab, label: `Face Verification (${pendingLiveness.length})` },
+                    { key: "buyerid" as Tab, label: `ID Verification (${pendingBuyerIds.length})` },
+                    { key: "properties" as Tab, label: `Properties (${pendingProperties.length})` },
+                    { key: "vendors" as Tab, label: `Vendors (${pendingVendors.length})` },
+                    { key: "artisans" as Tab, label: `Artisans (${pendingArtisans.length})` },
+                    { key: "developers" as Tab, label: `Developers (${developerApplications.length})` },
+                  ] },
+                  { group: "Review & Approval", items: [
+                    { key: "applications" as Tab, label: `Applications (${pendingApplications.length})` },
+                    { key: "offerreview" as Tab, label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})` },
+                    { key: "saleapprovals" as Tab, label: `Sale Approvals (${pendingSaleApprovals.length})` },
+                  ] },
+                  { group: "Complaints & Care", items: [
+                    { key: "disputes" as Tab, label: `Disputes (${openDisputes.length})` },
+                    { key: "feedback" as Tab, label: `Feedback (${pendingFeedback.length})` },
+                    { key: "faults" as Tab, label: `Maintenance (${unroutedFaults.length})` },
+                  ] },
+                  { group: "Oversight", items: [
+                    { key: "tenantregisteroversight" as Tab, label: "Tenant Register Oversight" },
+                    { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
+                    { key: "inspections" as Tab, label: `Inspections (${upcomingInspections.length})` },
+                    { key: "engage" as Tab, label: `Engage CHS (${pendingEngage.length})` },
+                  ] },
+                  { group: "Tools", items: [
+                    { key: "trace" as Tab, label: "Trace an Account" },
+                    { key: "auditlog" as Tab, label: "Audit Log" },
+                    { key: "processedhistory" as Tab, label: "Processed History" },
+                  ] },
+                ].map((section) => (
+                  <div key={section.group} className="mb-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">{section.group}</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {section.items.map((item) => (
+                        <button key={item.key} onClick={() => setActiveTab(item.key)}
+                          className="text-left px-3 py-2 rounded-lg bg-[var(--zone-card)] border border-gray-100 text-xs font-semibold text-chs-charcoal hover:border-chs-red">
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </>
             )}
           </div>

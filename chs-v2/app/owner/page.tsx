@@ -579,7 +579,7 @@ export default function OwnerDashboard() {
           </div>
           <div className="flex gap-2 items-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Link href="/my-earnings" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              My Earnings
+              My Earnings<InfoTip text="Real income only — every real naira you've earned from rent, sales, or bookings, itemized by who paid and when. This is different from Transaction History, which also shows what you've paid out." />
             </Link>
             <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Recent Applications
@@ -591,10 +591,10 @@ export default function OwnerDashboard() {
               Transaction History
             </Link>
             <Link href="/market-demand" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Market Demand
+              Market Demand<InfoTip text="Real, genuine insight into what buyers and tenants are actually searching for in your area — helps you price and describe your listing to match real demand, not guesswork." />
             </Link>
             <Link href="/engage-chs" className="shrink-0 whitespace-nowrap relative bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
-              Engage CHS
+              Engage CHS<InfoTip text="A real, direct line to CHS's own professional services — request a document, a legal check, or hands-on help with something specific, separate from your normal buyer/tenant messages." />
               {engageUnreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 bg-chs-red text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {engageUnreadCount}

@@ -1,0 +1,33 @@
+-- No schema change. Real, direct fixes following detailed client
+-- testing on the live, deployed sidebar:
+--
+-- (1) Real background color added -- zone-admin's own established
+-- --zone-accent (the same dark charcoal already used on this page's
+-- header bar), per explicit client insistence after the first
+-- version shipped plain white.
+--
+-- (2) Feature Catalog and Document Site added as real sidebar links
+-- -- both were real, working pages, just never listed in the new
+-- sidebar.
+--
+-- (3) A new "Super Admin" sidebar item -- a real, grouped shortcut
+-- index into the full ~25-tab horizontal bar, letting a super admin
+-- jump directly to any section without scrolling.
+--
+-- (4) The horizontal tab bar itself reorganized into real, named
+-- groups (General, Financial, Verification, Review & Approval,
+-- Complaints & Care, Oversight, Tools) per direct client complaint
+-- that related items (e.g. every kind of verification) were
+-- scattered with several unrelated items between them.
+--
+-- (5) A real, previously undiscussed gap found and fixed during this
+-- work: several sidebar shortcuts were bypassing the same domain
+-- restriction that already, correctly, protects the horizontal tabs
+-- and the underlying data -- e.g. any sub-admin could reach "Quick
+-- Search" or "Customer Care" via the sidebar regardless of their own
+-- assigned domain. Fixed by passing the viewer's real domain into
+-- the sidebar and restricting each item to match its actual,
+-- intended audience. Confirmed the real database-level RLS on the
+-- two daily-report tables was already correctly restrictive
+-- regardless of this UI gap -- this was a genuine UX fix layered on
+-- an already-secure backend, not a patch over a real vulnerability.
