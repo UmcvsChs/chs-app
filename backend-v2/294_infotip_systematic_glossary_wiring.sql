@@ -1,0 +1,18 @@
+-- No schema change. Real, direct answer to "how do we make the
+-- explainer comprehensive" -- discovered the actual, fastest path:
+-- a real ~196-entry glossary already existed (built earlier this
+-- session), but only 7 entries were ever wired to a real UI element
+-- anywhere in the app. 189 real, already-written explanations were
+-- sitting completely unused.
+--
+-- Began systematically wiring these up rather than writing new
+-- content from scratch: Diaspora Mode and the profile page, NIN
+-- uniqueness / terms acceptance / the per-role comprehension
+-- questionnaire on the register page, wallet-to-wallet transfer,
+-- digital receipts (Print/Save as PDF), house-rules attestation on
+-- the shortlet booking form, the inspection transport fee, and
+-- Urgent Sale activation. 10 real entries wired up this round,
+-- bringing genuine coverage from 7 to 17 of 196 -- 179 real,
+-- ready-to-use explanations remain, and continuing this same
+-- systematic sweep page by page is the real, fastest path to true
+-- comprehensiveness.

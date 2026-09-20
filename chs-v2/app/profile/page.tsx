@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { compressImage } from "@/lib/imageCompression";
 import LivenessCheck from "@/components/LivenessCheck";
 import BiometricSetup from "@/components/BiometricSetup";
+import InfoTip from "@/components/InfoTip";
 import BankAccountSecurity from "@/components/BankAccountSecurity";
 import { formatNaira } from "@/lib/format";
 
@@ -341,7 +342,7 @@ export default function ProfilePage() {
           </div>
 
           <label className="flex items-center justify-between mb-3">
-            <span className="text-xs text-gray-600">🌍 Diaspora Mode</span>
+            <span className="text-xs text-gray-600">🌍 Diaspora Mode<InfoTip term="diaspora_mode" /></span>
             <input type="checkbox" checked={diasporaMode} onChange={(e) => setDiasporaMode(e.target.checked)} />
           </label>
 

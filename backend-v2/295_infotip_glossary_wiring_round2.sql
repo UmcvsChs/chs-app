@@ -1,0 +1,16 @@
+-- No schema change. Continued systematic sweep wiring the real,
+-- already-written 196-entry glossary into actual UI elements.
+--
+-- This round: Tenant dashboard (formal notices, message-landlord),
+-- Agent dashboard (digital remittance, referral link, commission
+-- attribution, and three links that had genuinely LOST their earlier
+-- explainers -- tenant register, expenses tracking, team management
+-- -- restored and upgraded to the real glossary versions), Developer
+-- dashboard (registration review), Artisan dashboard (ratings
+-- received, job dispute resolution), Vendor dashboard (listings,
+-- quote requests).
+--
+-- Real progress this round: glossary connections went from 17 to 28
+-- (11 more wired this round). 168 of 196 real entries remain
+-- unconnected -- continuing the same systematic, page-by-page sweep
+-- is the ongoing plan.

@@ -6,6 +6,7 @@ import { use } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import InfoTip from "@/components/InfoTip";
 import { formatNaira } from "@/lib/format";
 
 // Real, new page per direct client request: neither CHS nor its
@@ -169,7 +170,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
             onClick={() => window.print()}
             className="w-full py-3 rounded-full bg-chs-red text-white text-[13.5px] font-bold shadow-[0_4px_14px_rgba(232,98,47,0.35)] no-print"
           >
-            🖨️ Print / Save as PDF
+            🖨️ Print / Save as PDF<InfoTip term="digital_receipts" />
           </button>
           <Link href="/" className="block text-center text-xs text-gray-400 mt-3 no-print">
             Back to homepage

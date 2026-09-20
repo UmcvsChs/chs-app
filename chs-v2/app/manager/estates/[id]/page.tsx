@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import InfoTip from "@/components/InfoTip";
 import CurrencyInput from "@/components/CurrencyInput";
 
 interface EstateOverview {
@@ -257,7 +258,7 @@ export default function EstateDetailPage() {
 
         {/* Real bulk onboarding — the actual answer to 500 units */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4">
-          <p className="text-sm font-bold text-chs-charcoal mb-1">📥 Bulk-add units (CSV)</p>
+          <p className="text-sm font-bold text-chs-charcoal mb-1">📥 Bulk-add units (CSV)<InfoTip term="bulk_unit_onboarding" /></p>
           <p className="text-[10px] text-gray-400 mb-2">
             Required columns, exactly: <code>unit_label,unit_type,purpose,price,bedrooms</code>. One row per real
             unit — add all 500 at once instead of one at a time.
@@ -347,7 +348,7 @@ export default function EstateDetailPage() {
                       ) : (
                         <button onClick={() => { setSettingOccupantUnitId(u.id); setOccupantResult(null); }}
                           className="text-[9px] text-chs-red underline">
-                          Mark as owner-occupied (no rental tenancy)
+                          Mark as owner-occupied (no rental tenancy)<InfoTip term="owner_occupier_support_in_estates" />
                         </button>
                       )}
                     </div>

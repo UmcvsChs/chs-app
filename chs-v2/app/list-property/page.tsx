@@ -536,7 +536,7 @@ export default function ListPropertyPage() {
             <div className="border border-gray-200 rounded-lg p-3">
               <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-2">
                 <input type="checkbox" checked={depositEnabled} onChange={(e) => setDepositEnabled(e.target.checked)} />
-                Require a refundable security deposit
+                Require a refundable security deposit<InfoTip term="flexible_security_deposit" />
               </label>
               <p className="text-[10px] text-gray-400 mb-2">
                 Only ever charged to a genuinely first-time guest — automatically waived once they have 3+ real ratings on CHS.

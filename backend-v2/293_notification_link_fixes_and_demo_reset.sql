@@ -1,0 +1,33 @@
+-- Real, direct fixes following a precise, confirmed client report.
+--
+-- (1) Found the exact real cause of "click to view" not reaching the
+-- application: the notification link itself pointed to the generic
+-- /owner dashboard root instead of /owner-applications, where
+-- rental applications actually live. Fixed in both
+-- submit_rental_application() (the "application has started" notice)
+-- and admin_relay_application_to_owner() (the "ready for your
+-- decision" notice) -- the second one's own code comment even
+-- already claimed "a real, direct link takes them straight to it,"
+-- which was not true until now. Confirmed the equivalent offer
+-- notifications were NOT affected -- offers display inline on /owner
+-- itself, so that link was already correct.
+--
+-- (2) A real backlog of stale test notifications (spanning August 23
+-- through September 10, from this session's own testing) was found
+-- and deleted -- including the exact notification referencing a real
+-- rental application that had already been deleted during earlier
+-- test cleanup, which is why "My Applications" showed nothing for a
+-- notification that appeared to exist.
+--
+-- (3) Diagnosed and fixed the real cause of Round 2 demo accounts
+-- (0812...) appearing to "auto-verify" identity: all five accounts
+-- had valid_id_verified = true set at creation, for convenience
+-- testing other features -- confirmed submit_buyer_id_verification()
+-- itself never auto-verifies anything; it always creates a genuine
+-- pending record. Reset all five accounts completely: real
+-- 100,000,000 wallet balance, valid_id_verified reset to false with
+-- all ID fields cleared, and every one of their own real offers,
+-- applications, tenancies, wallet transactions, and notifications
+-- deleted so buying/renting on the same existing properties can be
+-- genuinely retested from scratch. Real property listings and owner
+-- accounts themselves were left untouched.

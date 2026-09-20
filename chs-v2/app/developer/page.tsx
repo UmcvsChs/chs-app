@@ -70,7 +70,7 @@ export default function DeveloperDashboardPage() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Commercial Developer" />
-        <h1 className="font-serif text-lg font-bold mt-1">My Developer Dashboard</h1>
+        <h1 className="font-serif text-lg font-bold mt-1">My Developer Dashboard<InfoTip term="developer_registration_review" /></h1>
         {application && (
           <p className="text-xs text-white/60 mt-1">{application.company_name} — {application.status}</p>
         )}

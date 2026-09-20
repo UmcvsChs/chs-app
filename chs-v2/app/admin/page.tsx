@@ -92,10 +92,29 @@ function AdminDashboardInner() {
   // useSearchParams() is the real, reactive way to do this in the App
   // Router: it updates on every URL change, and this effect re-runs
   // whenever it does.
+  // Real, critical fix following a direct, confirmed client report: a
+  // buyer's real ID verification notification arrived, the "Tap to
+  // view" link correctly switched to the ID Verification tab, but the
+  // tab showed empty — because this effect only ever changed which
+  // tab was visible, it never re-fetched real data. If the admin was
+  // already on this page when the buyer submitted, the underlying
+  // data was fetched once at page-mount time, before the real
+  // submission existed, and was never refreshed afterward. Confirmed
+  // directly: the real database record existed the whole time, RLS
+  // was correctly allowing it, the render logic was correct — the
+  // only real bug was that arriving via a notification link never
+  // triggered a fresh reload. Now it does, every time.
   useEffect(() => {
     const requestedTab = searchParams.get("tab") as Tab | null;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (requestedTab) setActiveTab(requestedTab);
+    if (requestedTab) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveTab(requestedTab);
+      if (profile?.role === "admin") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        loadData();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
@@ -2586,8 +2605,25 @@ function AdminDashboardInner() {
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
                   <p className="text-xs text-gray-500 mb-2 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={sub.id_document_url} alt="ID document" className="w-full rounded-lg mb-2" />
+                  {/* Real, direct fix: the real upload form explicitly
+                      accepts a PDF as well as an image
+                      (image/*,application/pdf), but a bare <img> tag
+                      cannot render a PDF at all — it would show a
+                      broken image icon, giving admin nothing real to
+                      review for any buyer who submitted a PDF. Now
+                      shows the real image inline when it is one, and
+                      a real, working "Open document" link for a PDF
+                      (or anything else an <img> can't render)
+                      instead. */}
+                  {/\.pdf($|\?)/i.test(sub.id_document_url) ? (
+                    <a href={sub.id_document_url} target="_blank" rel="noreferrer"
+                      className="block w-full text-center py-2.5 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-chs-red mb-2">
+                      📄 Open the real submitted document (PDF)
+                    </a>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={sub.id_document_url} alt="ID document" className="w-full rounded-lg mb-2" />
+                  )}
                   <div className="flex gap-2">
                     <button onClick={() => handleBuyerIdReview(sub.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">

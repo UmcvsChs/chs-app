@@ -138,7 +138,7 @@ export default function GuestDashboardPage() {
                   </div>
                 ) : (
                   <button onClick={() => setDisputingBookingId(b.id)} className="text-[10px] text-chs-red underline mt-2">
-                    ⚠️ Raise a concern about this booking
+                    ⚠️ Raise a concern about this booking<InfoTip term="dispute_filing_for_guest_and_host" />
                   </button>
                 )}
               </div>

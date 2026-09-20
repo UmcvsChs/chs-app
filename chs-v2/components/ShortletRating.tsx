@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import InfoTip from "./InfoTip";
 
 // Real, new component completing the client's requested rating
 // system — the single biggest real trust signal missing from this
@@ -30,7 +31,7 @@ export default function ShortletRating({ bookingId, label }: { bookingId: string
 
   return (
     <div className="mt-2 bg-gray-50 rounded-lg p-2">
-      <p className="text-[10px] font-semibold text-chs-charcoal mb-1">{label}</p>
+      <p className="text-[10px] font-semibold text-chs-charcoal mb-1">{label}<InfoTip term="two_way_ratings" /></p>
       <div className="flex gap-1 mb-2">
         {[1, 2, 3, 4, 5].map((n) => (
           <button key={n} type="button" onClick={() => setRating(n)} className="text-lg">

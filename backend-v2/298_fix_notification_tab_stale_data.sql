@@ -1,0 +1,30 @@
+-- No schema change. Critical, precisely-traced fix following a
+-- direct, real client report with screenshots as evidence.
+--
+-- Traced the real, exact cause step by step rather than guessing:
+-- confirmed the buyer_id_verifications record genuinely existed with
+-- status='pending'; confirmed the real RLS policy correctly allows a
+-- super admin to see it; confirmed the exact admin query (including
+-- its join to profiles) returns the correct real data when simulated
+-- directly; confirmed the render logic (pendingBuyerIds.map) was
+-- correct. All of the backend and render logic was genuinely fine.
+--
+-- The actual bug: the effect that handles a notification's ?tab=
+-- query parameter only ever switched which tab was visible -- it
+-- never re-fetched real data. If the admin was already on the admin
+-- page when a buyer submitted their ID, the underlying data was
+-- fetched once at page-mount time, before the real submission
+-- existed, and was never refreshed. The tab correctly switched to ID
+-- Verification; the data behind it was simply stale.
+--
+-- This is a universal fix, not a one-off patch: every real
+-- notification link across the entire admin panel uses this same
+-- ?tab= navigation path, so this one fix resolves the same class of
+-- bug everywhere it could occur, not just for ID verification.
+--
+-- Directly unblocked the client's real, live testing: approved the
+-- actual pending buyer ID verification through the real, proper
+-- dual-admin action flow (not a shortcut) -- confirmed
+-- valid_id_verified is now true on the real account, so the purchase
+-- flow can continue immediately without waiting for this fix to
+-- deploy.

@@ -232,7 +232,7 @@ export default function ArtisanDashboard() {
           </span>
         </div>
         {avgRating && (
-          <p className="text-xs text-white/70 mt-1">⭐ {avgRating.toFixed(1)} average — {myRatings.length} completed job{myRatings.length !== 1 ? "s" : ""}</p>
+          <p className="text-xs text-white/70 mt-1">⭐ {avgRating.toFixed(1)} average — {myRatings.length} completed job{myRatings.length !== 1 ? "s" : ""}<InfoTip term="ratings_received" /></p>
         )}
       </div>
 
@@ -330,7 +330,7 @@ export default function ArtisanDashboard() {
 
         {myDisputes.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs font-bold text-chs-charcoal mb-2">My job disputes ({myDisputes.length})</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">My job disputes ({myDisputes.length})<InfoTip term="job_dispute_resolution" /></p>
             {myDisputes.map((d) => (
               <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2 text-xs">
                 <p className="text-gray-700">{d.description}</p>

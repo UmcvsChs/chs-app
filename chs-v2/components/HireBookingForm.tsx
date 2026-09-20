@@ -424,7 +424,7 @@ export default function HireBookingForm({
           </a>
           <label className="flex items-start gap-2 text-[11px] text-chs-charcoal">
             <input type="checkbox" checked={rulesAcknowledged} onChange={(e) => setRulesAcknowledged(e.target.checked)} className="mt-0.5" />
-            <span>I have read and agree to comply with the real house rules above.</span>
+            <span>I have read and agree to comply with the real house rules above.<InfoTip term="house_rules_attestation" /></span>
           </label>
         </div>
       )}

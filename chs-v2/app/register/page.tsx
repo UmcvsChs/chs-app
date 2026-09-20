@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import ComprehensionCheck from "@/components/ComprehensionCheck";
+import InfoTip from "@/components/InfoTip";
 import TermsContent from "@/components/TermsContent";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -403,7 +404,7 @@ function RegisterPageContent() {
               placeholder="your@email.com" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN) <span className="text-chs-red">*</span></label>
+            <label className="text-xs font-semibold text-gray-600">National Identification Number (NIN) <span className="text-chs-red">*</span><InfoTip term="nin_uniqueness_check" /></label>
             <input id="field-nin" type="text" inputMode="numeric" autoComplete="off" name="nin-not-a-real-autofill-category" maxLength={11} value={nin}
               onChange={(e) => { setNin(e.target.value.replace(/\D/g, "")); setError(null); }}
               placeholder="11-digit NIN" className={fieldClass("field-nin", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
@@ -655,13 +656,13 @@ function RegisterPageContent() {
               complete Terms & Conditions in a genuinely readable,
               scrollable panel directly above the quiz. */}
           <div>
-            <p className="text-xs font-bold text-chs-charcoal mb-1">Please read before continuing</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-1">Please read before continuing<InfoTip term="terms_conditions_scroll_to_accept_gate" /></p>
             <div className="max-h-72 overflow-y-auto border border-gray-200 rounded-xl p-3 bg-white text-[11px] leading-relaxed">
               <TermsContent />
             </div>
           </div>
 
-          <ComprehensionCheck role={role} onPassed={setComprehensionPassed} />
+          <ComprehensionCheck role={role} onPassed={setComprehensionPassed} /><InfoTip term="dynamic_per_role_comprehension_questionnaire" />
 
           <button type="submit" disabled={submitting || !comprehensionPassed}
             className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">

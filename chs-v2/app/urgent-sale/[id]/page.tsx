@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import InfoTip from "@/components/InfoTip";
 
 const REASONS = [
   { value: "relocation", label: "Relocating (travel, job, school, etc.)" },
@@ -126,7 +127,7 @@ export default function UrgentSalePage() {
     <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <Link href="/owner" className="text-xs text-gray-400">← Back to My Properties</Link>
-        <h1 className="font-serif text-2xl font-bold text-red-600 mt-1 mb-1">🚨 Urgent Sale</h1>
+        <h1 className="font-serif text-2xl font-bold text-red-600 mt-1 mb-1">🚨 Urgent Sale<InfoTip term="urgent_emergency_sale_activation" /></h1>
         <p className="text-sm text-gray-500 mb-6">{property.title}</p>
 
         {property.is_urgent_sale && (

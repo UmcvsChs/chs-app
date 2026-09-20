@@ -406,7 +406,7 @@ export default function VendorDashboard() {
           </form>
         )}
 
-        <p className="text-xs font-bold text-chs-charcoal mb-2">My listings ({products.length})</p>
+        <p className="text-xs font-bold text-chs-charcoal mb-2">My listings ({products.length})<InfoTip term="listing_products_bundles" /></p>
         {products.length === 0 ? (
           <p className="text-sm text-gray-400">No listings added yet.</p>
         ) : (
@@ -430,7 +430,7 @@ export default function VendorDashboard() {
               {p.listing_type === "service" && p.quoteRequests.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-gray-100">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                    Quote requests ({p.quoteRequests.length})
+                    Quote requests ({p.quoteRequests.length})<InfoTip term="service_quote_requests" />
                   </p>
                   {p.quoteRequests.map((q) => (
                     <QuoteRequestRow key={q.id} quote={q} onRespond={handleRespondToQuote} />
@@ -532,6 +532,7 @@ function QuoteRequestRow({
         <div className="mt-2 space-y-1.5">
           <textarea value={response} onChange={(e) => setResponse(e.target.value)} rows={2}
             placeholder="Your response — no phone numbers or emails" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
+          <span className="text-[9px] text-gray-400">Why no contact info?<InfoTip term="marketplace_admin_mediated_contact_filtered_messaging" /></span>
           <input type="number" value={amount} onChange={(e) => setAmount(e.target.value === "" ? "" : parseInt(e.target.value))}
             placeholder="Real quoted amount (₦)" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
           <button onClick={() => onRespond(quote.id, response, amount || null)}

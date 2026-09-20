@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { calcInspectionFee, AREA_MEETING_POINTS, CHS_OFFICE } from "@/lib/inspectionFee";
 import { formatNaira } from "@/lib/format";
+import InfoTip from "./InfoTip";
 
 interface InspectionBookingFormProps {
   propertyId: string;
@@ -151,7 +152,7 @@ export default function InspectionBookingForm({
       )}
 
       <div className="bg-chs-amber-light rounded-lg px-3 py-2.5">
-        <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport fee — calculated by distance</p>
+        <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport fee — calculated by distance<InfoTip term="inspection_booking_transport_fee" /></p>
         <p className="text-xs text-chs-amber-dark">
           ~{fee.distanceKm}km from {CHS_OFFICE} — {formatNaira(fee.totalFee)} round trip, split evenly.
         </p>

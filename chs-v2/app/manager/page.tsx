@@ -236,7 +236,7 @@ export default function ManagerDashboard() {
         <div className="flex justify-between items-center mt-1">
           <h1 className="font-serif text-lg font-bold">Property Manager</h1>
           <Link href="/manager/estates" className="text-[10px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">
-            🏘️ My Estates
+            🏘️ My Estates<InfoTip term="estate_management" />
           </Link>
         </div>
         <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">

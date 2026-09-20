@@ -1580,7 +1580,7 @@ function InspectionRequestRow({
           <span className={`text-[10px] font-bold px-2 py-1 rounded-full shrink-0 ${
             score >= 60 ? "bg-green-100 text-green-700" : score >= 30 ? "bg-amber-100 text-amber-700" : "bg-gray-200 text-gray-500"
           }`}>
-            {score}/100 ready
+            {score}/100 ready<InfoTip term="buyer_tenant_readiness_score" />
           </span>
         )}
       </div>

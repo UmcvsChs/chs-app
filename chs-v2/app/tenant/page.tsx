@@ -303,7 +303,7 @@ export default function TenantDashboard() {
         </Link>
         {notices.length > 0 && (
           <div>
-            <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Formal notices</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Formal notices<InfoTip term="formal_notices" /></p>
             {notices.map((n) => (
               <div key={n.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <button
@@ -469,7 +469,7 @@ export default function TenantDashboard() {
                   onClick={() => setMessagingTenancy(t)}
                   className="block mt-1 text-[10px] font-semibold text-chs-charcoal underline"
                 >
-                  💬 Message {t.manager_id ? "property manager" : "landlord"}
+                  💬 Message {t.manager_id ? "property manager" : "landlord"}<InfoTip term="owner_tenant_message_thread" />
                 </button>
               </div>
             ))}

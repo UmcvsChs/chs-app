@@ -1,0 +1,16 @@
+-- No schema change. Continued systematic sweep, round 3.
+--
+-- Manager dashboard (My Estates, restored after the same kind of
+-- earlier loss found on the owner and agent dashboards), Estates
+-- page (subscription activation, service charges billed), Estate
+-- detail page (bulk CSV unit upload, owner-occupier registration),
+-- Guest dashboard (dispute filing), and the shared ShortletRating
+-- component -- one fix there covers both guest and host, since both
+-- reuse the same real component for rating each other after a stay.
+-- Also wired the real security deposit toggle on the listing form
+-- itself (list-property), not just its display elsewhere.
+--
+-- Real progress this round: glossary connections went from 28 to 36
+-- (8 more wired this round, one of which -- the shared rating
+-- component -- covers two real roles at once). 160 of 196 remain
+-- unconnected.

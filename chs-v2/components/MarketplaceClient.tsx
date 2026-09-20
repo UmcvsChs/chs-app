@@ -258,7 +258,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                           disabled={buyingId === product.id}
                           className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50"
                         >
-                          {buyingId === product.id ? "Processing..." : "🛒 Buy now (price + 6%)"}
+                          {buyingId === product.id ? "Processing..." : "🛒 Buy now (price + 6%)"}<InfoTip term="marketplace_real_direct_buy_now" />
                         </button>
                       )
                     )}

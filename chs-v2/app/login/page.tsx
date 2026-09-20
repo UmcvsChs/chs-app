@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import ChsLogo from "@/components/ChsLogo";
+import InfoTip from "@/components/InfoTip";
 import BiometricLogin from "@/components/BiometricLogin";
 
 const ROLE_OPTIONS = [
@@ -185,7 +186,7 @@ export default function LoginPage() {
           </>
         ) : (
           <button onClick={() => setShowBiometric(true)} className="w-full py-2.5 rounded-full border-2 border-chs-charcoal text-chs-charcoal text-xs font-semibold mb-4">
-            🔐 Log in with Face ID / fingerprint instead
+            🔐 Log in with Face ID / fingerprint instead<InfoTip term="biometric_login_face_id_fingerprint" />
           </button>
         )}
 

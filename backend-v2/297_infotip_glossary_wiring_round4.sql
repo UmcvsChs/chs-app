@@ -1,0 +1,11 @@
+-- No schema change. Continued systematic sweep, round 4.
+--
+-- Marketplace (Buy Now, admin-mediated contact-filtered messaging on
+-- the vendor's own quote-response form), the Readiness Score badge
+-- on the owner's inspection requests, and two real, platform-wide,
+-- shared components -- ThemeToggle (dark mode, appears on nearly
+-- every page) and the Face ID/fingerprint login option -- both fixed
+-- once, taking effect everywhere they're used.
+--
+-- Real progress this round: glossary connections went from 36 to 41.
+-- 155 of 196 remain unconnected.

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { NIGERIAN_STATES } from "@/lib/geoData";
+import InfoTip from "@/components/InfoTip";
 import { formatNaira } from "@/lib/format";
 
 interface Estate {
@@ -168,7 +169,7 @@ export default function EstatesPage() {
               ) : managerReport ? (
                 <div className="space-y-1.5 text-xs bg-[var(--zone-card)] rounded-lg p-3">
                   <div className="flex justify-between"><span className="text-gray-500">New tenancies this period</span><span className="font-semibold">{managerReport.new_tenancies_count}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-500">Service charges billed</span><span className="font-semibold">{formatNaira(managerReport.service_charges_billed)}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-500">Service charges billed<InfoTip term="estate_service_charges" /></span><span className="font-semibold">{formatNaira(managerReport.service_charges_billed)}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Service charges collected</span><span className="font-bold text-green-700">{formatNaira(managerReport.service_charges_collected)}</span></div>
                   <div className="flex justify-between"><span className="text-gray-500">Maintenance resolved</span><span className="font-semibold">{managerReport.maintenance_resolved}</span></div>
                 </div>
@@ -255,7 +256,7 @@ export default function EstatesPage() {
                       </div>
                     ) : (
                       <button onClick={() => setActivatingId(e.id)} className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                        💳 Subscribe to unlock this estate
+                        💳 Subscribe to unlock this estate<InfoTip term="estate_subscription" />
                       </button>
                     )}
                   </div>

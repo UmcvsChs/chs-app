@@ -305,7 +305,7 @@ export default function WalletPage() {
                 onClick={() => { setShowTransferForm(true); setTransferMessage(null); }}
                 className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold"
               >
-                Send to another CHS user
+                Send to another CHS user<InfoTip term="wallet_to_wallet_transfer" />
               </button>
             ) : (
               <form onSubmit={handleTransferSubmit} className="space-y-2">

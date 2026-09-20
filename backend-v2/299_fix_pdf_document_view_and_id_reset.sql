@@ -1,0 +1,16 @@
+-- No schema change. Real, direct fix found while answering a client
+-- question about document visibility: the real ID verification
+-- upload form correctly accepts image/*,application/pdf, but the
+-- admin review screen only ever used a bare <img> tag -- which
+-- cannot render a PDF at all. Any buyer submitting a PDF (exactly
+-- like the one just approved) would have shown admin a broken image
+-- icon, not the real document. Fixed to detect a PDF and show a
+-- real, working "Open the real submitted document" link instead,
+-- while images still render inline as before.
+--
+-- Reset the specific ID verification for the demo buyer account
+-- (deleted the old record, cleared valid_id_verified and the ID
+-- fields on the profile) without touching their wallet, offers, or
+-- other transaction history -- so the complete, real flow (submit,
+-- notification, fresh admin data, real document view, approve) can
+-- be tested end to end from scratch.

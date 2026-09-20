@@ -410,20 +410,20 @@ export default function AgentDashboard() {
             daily activity reports. */}
 
         <Link href="/agent/tenant-register" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          📋 My Tenant Register →
+          📋 My Tenant Register →<InfoTip term="a_real_tenant_register" />
         </Link>
 
         <Link href="/agent/property-register" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          🏠 My Properties &amp; Owners Register →
+          🏠 My Properties &amp; Owners Register →<InfoTip text="Every real property you manage on behalf of an owner, and the real owner contact tied to each one — your working reference, not a public listing." />
         </Link>
 
         <Link href="/expenses" className="block bg-white rounded-xl border border-gray-200 p-4 text-sm font-bold text-chs-charcoal">
-          💵 My Expenses & Income →
+          💵 My Expenses & Income →<InfoTip term="expenses_income_tracking" />
         </Link>
 
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <button onClick={() => setShowTeamSection(!showTeamSection)} className="text-sm font-bold text-chs-charcoal">
-            👥 {showTeamSection ? "Hide" : "Manage"} My Team
+            👥 {showTeamSection ? "Hide" : "Manage"} My Team<InfoTip term="a_real_mini_admin_your_own_team" />
           </button>
           {showTeamSection && (
             <div className="mt-3">
@@ -544,7 +544,7 @@ export default function AgentDashboard() {
         {managedProperties.length > 0 && (
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <button onClick={() => setShowRemitForm(!showRemitForm)} className="text-sm font-bold text-chs-charcoal">
-              💸 {showRemitForm ? "Hide" : "Remit"} Collected Rent to an Owner
+              💸 {showRemitForm ? "Hide" : "Remit"} Collected Rent to an Owner<InfoTip term="digital_remittance_to_an_owner_s_wallet" />
             </button>
             {showRemitForm && (
               <div className="mt-3">
@@ -673,9 +673,9 @@ export default function AgentDashboard() {
         })()}
 
         <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">Your referral link</p>
+          <p className="text-xs font-bold text-chs-charcoal mb-2">Your referral link<InfoTip term="unique_referral_link" /></p>
           <p className="text-xs text-gray-500 mb-3">
-            Share this — you earn commission on any resulting transaction.
+            Share this — you earn commission on any resulting transaction.<InfoTip term="automatic_commission_attribution" />
           </p>
           <button
             onClick={copyReferralLink}
