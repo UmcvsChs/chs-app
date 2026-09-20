@@ -157,3 +157,15 @@ input:disabled:not([type="checkbox"]):not([type="radio"]), select:disabled, text
   color: #9ca3af !important;
 }
 
+/* Real, new keyframe for PromotedTicker — a continuous, seamless
+   scroll built directly from a client-provided reference design. The
+   ticker renders its real item list twice back to back and animates
+   the combined strip exactly halfway (-50%), which is what makes the
+   loop point invisible: by the time the first copy has scrolled
+   fully off-screen, the second copy is sitting exactly where the
+   first one started. */
+@keyframes chs-ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+

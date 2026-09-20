@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import HomePageClient from "@/components/HomePageClient";
+import PromotedTicker from "@/components/PromotedTicker";
 import { Property } from "@/types/property";
 
 // Forces this page to fetch fresh data on every single visit, rather
@@ -132,6 +133,7 @@ export default async function Home() {
     <HomePageClient
       properties={sortedProperties as Property[]}
       platformStats={{ activeListings, areasCovered, statesCovered, longestVerifiedYears }}
+      promotedTicker={<PromotedTicker />}
     />
   );
 }

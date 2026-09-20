@@ -31,7 +31,7 @@ interface PlatformStats {
   longestVerifiedYears: number;
 }
 
-export default function HomePageClient({ properties, platformStats }: { properties: Property[]; platformStats: PlatformStats }) {
+export default function HomePageClient({ properties, platformStats, promotedTicker }: { properties: Property[]; platformStats: PlatformStats; promotedTicker?: React.ReactNode }) {
   const [activePurpose, setActivePurpose] = useState<PropertyPurpose | "all">("all");
   const [activeType, setActiveType] = useState("all");
   const [searchFilters, setSearchFilters] = useState<Parameters<typeof applyPropertyFilters>[1]>(null);
@@ -248,6 +248,8 @@ export default function HomePageClient({ properties, platformStats }: { properti
           </button>
         ))}
       </nav>
+
+      {promotedTicker}
 
       {/* Real property-type quick filters — restored, found missing
           during a full, direct comparison against the real original

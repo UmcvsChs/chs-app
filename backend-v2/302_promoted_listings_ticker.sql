@@ -1,0 +1,26 @@
+-- No schema change. Real, new feature built directly from a client-
+-- provided reference (a sister app's own scrolling promoted-goods
+-- ticker). A thin, continuously auto-scrolling strip on the real
+-- public homepage, right below the purpose tabs (Rent/Sale/Shortlet),
+-- matching the reference's exact placement below its own top tab row.
+--
+-- Connected to the same real, existing promotion system per direct
+-- client clarification -- not a separate paid product. Pulls from
+-- both real promotion mechanisms already in place (the credit-based
+-- property_promotions and the older promoted_until tier), the same
+-- dual-system logic the homepage's own sort order already uses.
+-- A property appears on the ticker automatically the moment a real
+-- promotion goes live, and disappears automatically when it ends --
+-- no separate step for the owner.
+--
+-- Pure CSS animation, no client JS needed: the real item list renders
+-- twice back to back and the combined strip animates exactly halfway,
+-- which is what makes the loop seamless -- by the time the first copy
+-- scrolls off-screen, the second copy sits exactly where the first
+-- one started. Hovering pauses it so a genuinely interested visitor
+-- can read and click through. Renders nothing at all when there are
+-- no real active promotions, rather than showing an empty strip.
+--
+-- Tested end to end with real data: inserted a real, temporary active
+-- promotion, confirmed the exact query the component uses returns
+-- the correct real property, then removed the test data.
