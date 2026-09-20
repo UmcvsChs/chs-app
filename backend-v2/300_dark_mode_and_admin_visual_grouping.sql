@@ -1,0 +1,21 @@
+-- No schema change. Two real, confirmed fixes from a detailed
+-- client message with a reference image.
+--
+-- (1) Dark mode was genuinely broken, not just subtle -- confirmed
+-- the exact cause: the .dark class only ever overrode the generic
+-- --background/--foreground variables, but nearly every real
+-- dashboard renders using its own zone's --zone-bg/--zone-card
+-- instead, which dark mode never touched. Every real zone (owner,
+-- buyer, tenant, agent, manager, artisan, admin, host, guest,
+-- developer, staff, and all three marketplace stages) now has a
+-- genuine dark equivalent, keeping each role's own accent color as
+-- its identity while the surface underneath actually inverts.
+--
+-- (2) The admin horizontal tab bar was reordered into logical groups
+-- in an earlier round, but rendered as one flat, undifferentiated
+-- strip with no visual sign the grouping existed -- confirmed
+-- directly in the render code. Every tab now carries real group
+-- metadata, and a genuine visual divider renders between groups,
+-- computed after the real per-domain filtering so a sub-admin who
+-- only sees a handful of tabs still gets correct dividers for
+-- exactly what they can see.

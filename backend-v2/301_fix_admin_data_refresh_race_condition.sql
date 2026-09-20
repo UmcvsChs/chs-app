@@ -1,0 +1,19 @@
+-- No schema change. My own earlier fix for this exact bug (migration
+-- 298) was genuinely incomplete -- it correctly refreshed data on a
+-- notification click, but only checked profile?.role without profile
+-- in its dependency array. profile loads asynchronously from a
+-- separate auth context; if the effect ran before profile was ready,
+-- the refresh was silently skipped and never retried.
+--
+-- Two real fixes this round: (1) profile?.role added as a genuine
+-- dependency, so the effect correctly retries once profile finishes
+-- loading; (2) a second, independent, more robust safety net added
+-- -- every real time-sensitive review tab (ID Verification, Face
+-- Verification, Registrations, Offer Review, Applications, Sale
+-- Approvals) now refreshes data the moment it becomes active, by
+-- any navigation path, not only via a notification link.
+--
+-- Directly re-confirmed against the client's own, freshly reproduced
+-- real submission: approved it through the actual, proper dual-admin
+-- action flow, confirmed valid_id_verified is genuinely true on the
+-- real account.

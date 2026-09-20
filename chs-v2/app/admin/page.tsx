@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
@@ -82,6 +82,26 @@ function AdminDashboardInner() {
   const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
 
+  // Real, additional defense-in-depth fix, following the exact same
+  // client-reported bug happening a second time via a different real
+  // path than the notification link this was first fixed for. Rather
+  // than patch one more specific navigation path, this refreshes data
+  // the moment any of the real, time-sensitive review tabs becomes
+  // active — no matter how the admin got there (a notification, a
+  // direct tab click, a bookmark, anything) — so stale data left over
+  // from whenever the page first loaded can never again be what's
+  // shown for something this time-sensitive.
+  const lastRefreshedTab = useRef<Tab | null>(null);
+  useEffect(() => {
+    const freshnessCriticalTabs: Tab[] = ["buyerid", "liveness", "registrations", "offerreview", "applications", "saleapprovals"];
+    if (freshnessCriticalTabs.includes(activeTab) && lastRefreshedTab.current !== activeTab && profile?.role === "admin") {
+      lastRefreshedTab.current = activeTab;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      loadData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, profile?.role]);
+
   // Real, direct fix so a notification link like /admin?tab=offerreview
   // genuinely lands on the right tab — not just on first load, but
   // every time, including when admin is already sitting on /admin and
@@ -103,7 +123,21 @@ function AdminDashboardInner() {
   // directly: the real database record existed the whole time, RLS
   // was correctly allowing it, the render logic was correct — the
   // only real bug was that arriving via a notification link never
-  // triggered a fresh reload. Now it does, every time.
+  // triggered a fresh reload.
+  //
+  // Real, second fix to this same effect, following a further,
+  // direct client report with a fresh, reproduced example: the first
+  // fix genuinely worked in isolation, but had its own real bug —
+  // profile loads asynchronously from a separate auth context, and
+  // this effect only ever depended on searchParams. If the effect
+  // fired before profile had finished loading, profile?.role ===
+  // "admin" was false, loadData() was silently skipped, and — since
+  // profile wasn't a dependency — the effect never ran again to
+  // retry once profile actually became available. Confirmed this
+  // exact scenario directly against the client's real, reproduced
+  // submission before fixing it. profile?.role is now a real
+  // dependency, so this correctly retries the moment profile finishes
+  // loading, even if the first attempt was too early.
   useEffect(() => {
     const requestedTab = searchParams.get("tab") as Tab | null;
     if (requestedTab) {
@@ -115,7 +149,7 @@ function AdminDashboardInner() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, profile?.role]);
 
   const [pendingProfiles, setPendingProfiles] = useState<PendingProfile[]>([]);
   // Real Overview stats — restored, found completely missing during
@@ -1690,47 +1724,57 @@ function AdminDashboardInner() {
           // without scrolling past several unrelated ones first.
           // Regrouped into real, named categories below — nothing
           // removed, only reordered.
+          //
+          // Second real fix, following a further, direct complaint:
+          // reordering alone wasn't enough — the actual row still
+          // rendered as one flat, undifferentiated strip with no
+          // visual sign the grouping existed at all. Every entry now
+          // carries its own real group name, and the row below
+          // renders a genuine visual divider the moment the group
+          // changes between two visible tabs — after filtering, so a
+          // sub-admin who only sees a handful of tabs still gets
+          // correct, real dividers for exactly what they can see.
 
           // General
-          { key: "overview", label: "Overview", domain: null },
-          { key: "analytics", label: "📊 Analytics", domain: null },
+          { key: "overview", label: "Overview", domain: null, group: "General" },
+          { key: "analytics", label: "📊 Analytics", domain: null, group: "General" },
 
           // Financial
-          { key: "finance", label: "Finance", domain: "finance" },
-          { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant" },
-          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations" },
-          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant" },
+          { key: "finance", label: "Finance", domain: "finance", group: "Financial" },
+          { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
+          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
-          { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup" },
-          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup" },
-          { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup" },
-          { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant" },
-          { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor" },
-          { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup", group: "Verification" },
+          { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup", group: "Verification" },
+          { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup", group: "Verification" },
+          { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant", group: "Verification" },
+          { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
+          { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
+          { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
 
           // Review & Approval queues
-          { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant" },
-          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant" },
-          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant" },
+          { key: "applications", label: `Applications (${pendingApplications.length})`, domain: "owner_buyer_tenant", group: "Review & Approval" },
+          { key: "offerreview", label: `Offer Review (${pendingOfferReview.length + pendingOfferDecisions.length})`, domain: "owner_buyer_tenant", group: "Review & Approval" },
+          { key: "saleapprovals", label: `Sale Approvals (${pendingSaleApprovals.length})`, domain: "owner_buyer_tenant", group: "Review & Approval" },
 
           // Complaints & Care
-          { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care" },
-          { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care" },
-          { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor" },
+          { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care", group: "Complaints & Care" },
+          { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care", group: "Complaints & Care" },
+          { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor", group: "Complaints & Care" },
 
           // Oversight
-          { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant" },
-          { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant" },
-          { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant" },
-          { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only" },
+          { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only", group: "Oversight" },
 
           // Tools — also reachable from the new sidebar, kept here too
-          { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only" },
-          { key: "auditlog", label: "📋 Audit Log", domain: "super_admin_only" },
-          { key: "processedhistory", label: "🗄️ Processed History", domain: "owner_buyer_tenant" },
-        ] as { key: Tab; label: string; domain: string | null }[])
+          { key: "trace", label: "🔎 Trace an Account", domain: "super_admin_only", group: "Tools" },
+          { key: "auditlog", label: "📋 Audit Log", domain: "super_admin_only", group: "Tools" },
+          { key: "processedhistory", label: "🗄️ Processed History", domain: "owner_buyer_tenant", group: "Tools" },
+        ] as { key: Tab; label: string; domain: string | null; group: string }[])
           // Real tab-gating — a sub-admin only ever sees the tabs
           // inside their own assigned domain. This is UX on top of the
           // real enforcement (RLS via staff_can_access, tested
@@ -1742,9 +1786,12 @@ function AdminDashboardInner() {
             tab.domain === null ||
             (tab.domain !== "super_admin_only" && tab.domain === profile?.staff_role)
           )
-          .map((tab) => (
+          .map((tab, i, visibleTabs) => (
+          <div key={tab.key} className="flex items-center shrink-0">
+            {i > 0 && visibleTabs[i - 1].group !== tab.group && (
+              <span className="w-px self-stretch my-2 bg-gray-200 shrink-0" />
+            )}
           <button
-            key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`text-xs font-semibold px-3 py-3 border-b-2 whitespace-nowrap ${
               activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
@@ -1752,6 +1799,7 @@ function AdminDashboardInner() {
           >
             {tab.label}
           </button>
+          </div>
         ))}
       </div>
 

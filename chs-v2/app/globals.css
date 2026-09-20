@@ -29,6 +29,31 @@
   --chs-steel-blue-light: #232a30;
 }
 
+/* Real, direct fix for a genuine, confirmed root cause: dark mode
+   previously only ever touched the generic --background/--foreground
+   variables — but nearly every real dashboard in the app renders
+   using its own zone's --zone-bg/--zone-card instead (bg-owner,
+   bg-buyer, and so on), which dark mode never overrode at all. That's
+   the real, exact reason it was "barely noticeable" — most of the
+   actual UI genuinely didn't respond to the toggle. Every real zone
+   now gets a genuine dark equivalent, keeping each role's own accent
+   color as its real identity (the same principle the light palette
+   already uses) while the surface underneath it genuinely inverts. */
+.dark.zone-buyer, .dark .zone-buyer { --zone-bg: #14181c; --zone-card: #1c2126; }
+.dark.zone-owner, .dark .zone-owner { --zone-bg: #1c1712; --zone-card: #241d16; }
+.dark.zone-agent, .dark .zone-agent { --zone-bg: #1c1810; --zone-card: #242015; }
+.dark.zone-manager, .dark .zone-manager { --zone-bg: #131a18; --zone-card: #1a2320; }
+.dark.zone-artisan, .dark .zone-artisan { --zone-bg: #1c1510; --zone-card: #251c15; }
+.dark.zone-admin, .dark .zone-admin { --zone-bg: #18161a; --zone-card: #201d22; }
+.dark.zone-tenant, .dark .zone-tenant { --zone-bg: #121814; --zone-card: #19211b; }
+.dark.zone-host, .dark .zone-host { --zone-bg: #1c1413; --zone-card: #251b19; }
+.dark.zone-guest, .dark .zone-guest { --zone-bg: #10181a; --zone-card: #172023; }
+.dark.zone-developer, .dark .zone-developer { --zone-bg: #16161c; --zone-card: #1d1d24; }
+.dark.zone-staff, .dark .zone-staff { --zone-bg: #1a1714; --zone-card: #221e1a; }
+.dark.zone-market-browse, .dark .zone-market-browse { --zone-bg: #10160f; --zone-card: #171e16; }
+.dark.zone-market-cart, .dark .zone-market-cart { --zone-bg: #1c1710; --zone-card: #251f16; }
+.dark.zone-market-checkout, .dark .zone-market-checkout { --zone-bg: #1c1310; --zone-card: #251916; }
+
 /* A real, distinct color identity per role/section — restored,
    following a direct client request that every dashboard feel
    genuinely different, never plain white/gray throughout. Each real
