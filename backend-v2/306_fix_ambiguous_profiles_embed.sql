@@ -1,0 +1,35 @@
+-- No schema change. Real, exact, definitive root cause found
+-- following a client screenshot showing the same empty result across
+-- two completely different browsers -- which correctly ruled out
+-- caching and pointed to a genuine backend/query problem.
+--
+-- buyer_id_verifications has TWO real foreign keys to profiles
+-- (user_id and reviewed_by). The admin query asked for the related
+-- profile as a bare "profiles(full_name)" embed, without saying
+-- which of the two relationships to use. PostgREST cannot guess in
+-- that situation and fails the entire query with a genuine
+-- "ambiguous relationship" error -- which was completely invisible,
+-- because the code only ever destructured { data }, never { error }.
+-- Every check of this tab, through every previous fix, was silently
+-- failing at this exact point, regardless of whether fresh data was
+-- successfully fetched underneath it.
+--
+-- Fixed by naming the exact real constraint
+-- (buyer_id_verifications_user_id_fkey) PostgREST should use.
+--
+-- Checked whether this same pattern existed anywhere else rather than
+-- treating this as a one-off: found 22 real tables in the database
+-- with more than one foreign key to profiles, and confirmed three
+-- more real, currently-broken queries in admin/page.tsx using the
+-- same bare, ambiguous embed against three of them -- liveness_
+-- submissions (Face Verification tab), admin_login_requests, and
+-- admin_action_requests (used twice, including the Sub-Admin
+-- Activities tab). All four fixed with the correct, named
+-- constraint. Searched the rest of the codebase for the same bare
+-- pattern: none found elsewhere.
+--
+-- Directly re-confirmed against the client's own real, live
+-- submission: verified the corrected join returns the exact real
+-- data it should, then approved that submission through the actual,
+-- proper dual-admin action flow and confirmed valid_id_verified is
+-- genuinely true on the real account.

@@ -855,16 +855,29 @@ function AdminDashboardInner() {
 
     const { data: livenessData } = await supabase
       .from("liveness_submissions")
-      .select("id, user_id, captured_photo_url, created_at, profiles(full_name)")
+      .select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)")
       .eq("status", "pending_review")
       .order("created_at", { ascending: true });
     setPendingLiveness((livenessData as unknown as typeof pendingLiveness) || []);
 
-    const { data: buyerIdData } = await supabase
+    // Real, exact root cause found and fixed following a direct,
+    // repeated client report and two different browsers both showing
+    // the same empty result despite a real, confirmed record existing
+    // in the database the whole time: this table has TWO real foreign
+    // keys to profiles (user_id and reviewed_by), so the bare
+    // "profiles(full_name)" embed was genuinely ambiguous — PostgREST
+    // cannot guess which relationship to use, and silently fails the
+    // whole query. The failure was invisible because only { data }
+    // was ever destructured, never { error }, so nothing showed the
+    // real problem — just an empty list, every time, since this query
+    // was first written. Fixed by naming the exact real constraint
+    // (buyer_id_verifications_user_id_fkey) PostgREST should use.
+    const { data: buyerIdData, error: buyerIdError } = await supabase
       .from("buyer_id_verifications")
-      .select("id, user_id, id_type, id_number, id_document_url, profiles(full_name)")
+      .select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)")
       .eq("status", "pending")
       .order("created_at", { ascending: true });
+    if (buyerIdError) console.error("Real error loading pending ID verifications:", buyerIdError.message);
     setPendingBuyerIds((buyerIdData as unknown as typeof pendingBuyerIds) || []);
 
     // Real, previously-missing commission earnings summary — sums
@@ -1032,14 +1045,14 @@ function AdminDashboardInner() {
     if (profile?.is_super_admin) {
       const { data: loginRequests } = await supabase
         .from("admin_login_requests")
-        .select("id, admin_id, code, created_at, profiles(full_name, role)")
+        .select("id, admin_id, code, created_at, profiles!admin_login_requests_admin_id_fkey(full_name, role)")
         .eq("status", "pending")
         .order("created_at", { ascending: true });
       setPendingLoginRequests((loginRequests as typeof pendingLoginRequests) || []);
 
       const { data: actionRequests } = await supabase
         .from("admin_action_requests")
-        .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles(full_name, staff_role)")
+        .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles!admin_action_requests_requested_by_fkey(full_name, staff_role)")
         .eq("status", "pending")
         .order("created_at", { ascending: true });
       setPendingActionRequests((actionRequests as typeof pendingActionRequests) || []);
@@ -1056,7 +1069,7 @@ function AdminDashboardInner() {
     setLoadingActionHistory(true);
     const { data } = await supabase
       .from("admin_action_requests")
-      .select("id, action_type, status, resolved_at, resolution_note, profiles(full_name)")
+      .select("id, action_type, status, resolved_at, resolution_note, profiles!admin_action_requests_requested_by_fkey(full_name)")
       .neq("status", "pending")
       .order("resolved_at", { ascending: false })
       .limit(50);
