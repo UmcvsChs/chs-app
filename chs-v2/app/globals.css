@@ -44,7 +44,7 @@
 .dark.zone-agent, .dark .zone-agent { --zone-bg: #1c1810; --zone-card: #242015; }
 .dark.zone-manager, .dark .zone-manager { --zone-bg: #131a18; --zone-card: #1a2320; }
 .dark.zone-artisan, .dark .zone-artisan { --zone-bg: #1c1510; --zone-card: #251c15; }
-.dark.zone-admin, .dark .zone-admin { --zone-bg: #18161a; --zone-card: #201d22; }
+.dark.zone-admin, .dark .zone-admin { --zone-bg: #12161e; --zone-card: #1a1f2b; }
 .dark.zone-tenant, .dark .zone-tenant { --zone-bg: #121814; --zone-card: #19211b; }
 .dark.zone-host, .dark .zone-host { --zone-bg: #1c1413; --zone-card: #251b19; }
 .dark.zone-guest, .dark .zone-guest { --zone-bg: #10181a; --zone-card: #172023; }
@@ -66,7 +66,7 @@
 .zone-agent { --zone-bg: #f7f2e3; --zone-card: #fdfaf0; --zone-accent: #b8860b; }
 .zone-manager { --zone-bg: #e8f1ef; --zone-card: #f4faf9; --zone-accent: #1d3329; }
 .zone-artisan { --zone-bg: #f6ece5; --zone-card: #fdf5f0; --zone-accent: #a0522d; }
-.zone-admin { --zone-bg: #efeaf1; --zone-card: #f8f5f9; --zone-accent: #322e2b; }
+.zone-admin { --zone-bg: #eef1f5; --zone-card: #f7f9fb; --zone-accent: #1a2942; }
 .zone-tenant { --zone-bg: #eef4ee; --zone-card: #f8fbf7; --zone-accent: #14251e; }
 /* Real, new zones per a direct, repeated client request — Host,
    Guest, Developer, and Staff had each been quietly borrowing another

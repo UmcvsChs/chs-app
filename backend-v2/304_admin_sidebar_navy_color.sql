@@ -1,0 +1,10 @@
+-- No schema change. Admin's zone-accent (the sidebar and header bar's
+-- real background color) changed from a near-black charcoal (#322e2b)
+-- to a deep, professional navy (#1a2942), per direct team feedback
+-- that the previous color read as unprofessional. Also updated
+-- zone-admin's light and dark background/card tones to a matching
+-- cool blue-gray, so the whole admin surface feels cohesive with the
+-- new navy rather than just the sidebar changing in isolation.
+-- Confirmed the sidebar and header both reference this same real CSS
+-- variable directly, so this one change covers both without any
+-- separate, hardcoded color to hunt down.

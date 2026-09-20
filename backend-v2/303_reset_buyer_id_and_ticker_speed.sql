@@ -1,0 +1,12 @@
+-- No schema change.
+--
+-- (1) Confirmed directly: the demo buyer not being asked for ID
+-- verification was genuinely correct, expected behavior, not a
+-- regression -- their valid_id_verified was true because it had been
+-- approved twice already in earlier rounds to unblock real testing.
+-- Reset again per direct request: deleted the old verification
+-- record, cleared valid_id_verified and all ID fields on the
+-- profile, so the real flow can be watched fresh from scratch.
+--
+-- (2) Promoted ticker slowed down by 2 seconds per direct request
+-- (45s -> 47s per full scroll cycle).

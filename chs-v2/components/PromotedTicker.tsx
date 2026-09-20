@@ -74,7 +74,7 @@ export default async function PromotedTicker() {
 
   return (
     <div className="bg-chs-charcoal overflow-hidden py-2 border-y border-white/10">
-      <div className="flex w-max animate-[chs-ticker-scroll_45s_linear_infinite] hover:[animation-play-state:paused]">
+      <div className="flex w-max animate-[chs-ticker-scroll_47s_linear_infinite] hover:[animation-play-state:paused]">
         {renderItems("a")}
         {renderItems("b")}
       </div>
