@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
@@ -91,11 +91,23 @@ function AdminDashboardInner() {
   // direct tab click, a bookmark, anything) — so stale data left over
   // from whenever the page first loaded can never again be what's
   // shown for something this time-sensitive.
-  const lastRefreshedTab = useRef<Tab | null>(null);
+  //
+  // Real, second fix to this same effect, found and confirmed against
+  // a further, genuinely reproduced client report: the first version
+  // of this fix added a ref that only allowed one real refresh per
+  // tab, for the entire page session — meaning the very first time an
+  // admin opened ID Verification (even to correctly see it empty), it
+  // was marked "already refreshed" and every later, genuinely new
+  // submission arriving after that was silently skipped. That guard
+  // was never actually needed — a useEffect with activeTab in its own
+  // dependency array only re-runs when activeTab genuinely changes
+  // value on its own, so there was no real redundant-firing risk to
+  // guard against in the first place. Removed entirely: this now
+  // correctly refreshes every real time the tab becomes active, not
+  // just the first time in a session.
   useEffect(() => {
     const freshnessCriticalTabs: Tab[] = ["buyerid", "liveness", "registrations", "offerreview", "applications", "saleapprovals"];
-    if (freshnessCriticalTabs.includes(activeTab) && lastRefreshedTab.current !== activeTab && profile?.role === "admin") {
-      lastRefreshedTab.current = activeTab;
+    if (freshnessCriticalTabs.includes(activeTab) && profile?.role === "admin") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       loadData();
     }

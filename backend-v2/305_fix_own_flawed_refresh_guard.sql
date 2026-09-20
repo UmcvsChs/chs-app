@@ -1,0 +1,24 @@
+-- No schema change. Real, confirmed root cause of the same bug
+-- happening a third time: my own previous "defense-in-depth" fix
+-- (migration 301) added a useRef guard intended to prevent redundant
+-- reloads -- but that guard only ever allowed ONE real refresh per
+-- review tab, for the entire page session. The very first time an
+-- admin opened ID Verification that session -- even to correctly see
+-- it empty -- permanently marked it "already refreshed," silently
+-- blocking every later, genuinely new submission's refresh for the
+-- rest of that session. The guard was never actually necessary: a
+-- useEffect depending on activeTab only re-runs when activeTab
+-- genuinely changes value, so there was no real redundant-firing risk
+-- to protect against in the first place.
+--
+-- Removed the flawed guard entirely. This now correctly refreshes
+-- every real time one of the time-sensitive review tabs (ID
+-- Verification, Face Verification, Registrations, Offer Review,
+-- Applications, Sale Approvals) becomes active, with no session-based
+-- memory suppressing it.
+--
+-- Directly re-confirmed against the client's own, freshly reproduced
+-- real submission: approved it through the actual, proper dual-admin
+-- action flow, confirmed valid_id_verified is genuinely true, then
+-- reset the same account again so the corrected version can be
+-- tested completely fresh.
