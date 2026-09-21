@@ -28,6 +28,27 @@ export default function PropertyActions({ property }: { property: Property }) {
   const [buyerPhone, setBuyerPhone] = useState("");
   const [buyerOccupation, setBuyerOccupation] = useState("");
   const [buyerSourceOfFunds, setBuyerSourceOfFunds] = useState("");
+
+  // Real, direct fix: a buyer returning here after their identity was
+  // approved previously landed on a blank form, having to retype
+  // everything they'd already entered before submitting for
+  // verification. Their real, in-progress answers are now saved
+  // alongside that submission and restored here automatically.
+  useEffect(() => {
+    supabase.from("buyer_id_verifications").select("draft_offer")
+      .eq("return_property_id", property.id).eq("status", "approved")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => {
+        const draft = data?.draft_offer as Record<string, string> | undefined;
+        if (draft) {
+          if (draft.buyer_full_name) setBuyerFullName(draft.buyer_full_name);
+          if (draft.buyer_phone) setBuyerPhone(draft.buyer_phone);
+          if (draft.buyer_occupation) setBuyerOccupation(draft.buyer_occupation);
+          if (draft.buyer_source_of_funds) setBuyerSourceOfFunds(draft.buyer_source_of_funds);
+        }
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [property.id]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [offerSuccess, setOfferSuccess] = useState(false);
@@ -598,7 +619,9 @@ export default function PropertyActions({ property }: { property: Property }) {
   if (activeForm === "offer" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <IdentityVerificationGate session={session} onVerified={() => setIdentityVerified(true)} />
+        <IdentityVerificationGate session={session} onVerified={() => setIdentityVerified(true)}
+          propertyId={property.id}
+          draftOffer={{ buyer_full_name: buyerFullName, buyer_phone: buyerPhone, buyer_occupation: buyerOccupation, buyer_source_of_funds: buyerSourceOfFunds }} />
         <form onSubmit={handleSubmitOffer} className="space-y-3">
           <p className="text-[10px] font-bold text-gray-400 uppercase">About you (shown to the seller)</p>
           <div>

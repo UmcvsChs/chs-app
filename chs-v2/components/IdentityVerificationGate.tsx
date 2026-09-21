@@ -15,9 +15,13 @@ const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passp
 export default function IdentityVerificationGate({
   session,
   onVerified,
+  propertyId,
+  draftOffer,
 }: {
   session: Session;
   onVerified: () => void;
+  propertyId?: string;
+  draftOffer?: Record<string, string>;
 }) {
   const [checking, setChecking] = useState(true);
   const [alreadyVerified, setAlreadyVerified] = useState(false);
@@ -55,10 +59,17 @@ export default function IdentityVerificationGate({
     // The real fix: this now genuinely creates a pending submission
     // for CHS staff to review — it no longer self-certifies the
     // instant the form fields are filled in.
+    // Real, direct fix: previously the approval notification had
+    // nowhere to send the buyer back to, and their in-progress offer
+    // details were lost while waiting for review. Now saves both
+    // right here, at submission time, so the approval notification
+    // can link straight back with everything ready to resume.
     const { error: rpcError } = await supabase.rpc("submit_buyer_id_verification", {
       p_id_type: idType,
       p_id_number: idNumber.trim(),
       p_id_document_url: idDocumentUrl,
+      p_return_property_id: propertyId || null,
+      p_draft_offer: draftOffer || null,
     });
 
     setSubmitting(false);

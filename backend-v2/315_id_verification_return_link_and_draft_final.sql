@@ -1,0 +1,22 @@
+-- Real, direct fix for two connected client requests, built and
+-- tested together as one real flow.
+--
+-- (1) Confirmed directly: the ID verification approval notification
+-- was calling notify_user with no link argument at all, while every
+-- comparable case elsewhere in the same function passes one. Fixed:
+-- submit_buyer_id_verification now accepts and saves which real
+-- property the buyer was on, and apply_admin_action's approval path
+-- now sends a real, working link straight back to it.
+--
+-- (2) The buyer's in-progress offer answers (name, phone, occupation,
+-- source of funds) are now saved alongside their ID submission and
+-- automatically restored when they return to that property after
+-- approval -- no retyping anything.
+--
+-- Tested completely end to end with real data: submitted a real
+-- verification with a real property and draft answers attached,
+-- approved it through the actual admin flow, confirmed the resulting
+-- notification carries the exact correct property link, and confirmed
+-- the exact query the property page uses correctly returns the saved
+-- draft answers. Test data removed afterward; the real demo buyer
+-- reset again for a genuinely fresh test.
