@@ -292,7 +292,8 @@ function AdminDashboardInner() {
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
   const [pendingOfferReview, setPendingOfferReview] = useState<{
     id: string; amount: number; note: string | null; buyer_full_name: string | null; buyer_phone: string | null; buyer_occupation: string | null;
-    buyer_source_of_funds: string | null; created_at: string; properties: { title: string } | null;
+    buyer_source_of_funds: string | null; created_at: string;
+    properties: { title: string; reference_number: string; profiles: { full_name: string; phone: string } | null } | null;
     buyer: { valid_id_verified: boolean } | null;
   }[]>([]);
   const [pendingOfferDecisions, setPendingOfferDecisions] = useState<{
@@ -970,7 +971,7 @@ function AdminDashboardInner() {
     // everything else.
     const { data: offerReviewData } = await supabase
       .from("offers")
-      .select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
+      .select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title, reference_number, profiles!properties_owner_id_fkey(full_name, phone)), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
       .eq("status", "awaiting_admin_review").order("created_at", { ascending: true });
     setPendingOfferReview((offerReviewData as unknown as typeof pendingOfferReview) || []);
 
@@ -3282,10 +3283,16 @@ function AdminDashboardInner() {
               pendingOfferReview.map((o) => (
                 <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
-                    <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
+                    <div>
+                      <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
+                      <p className="text-[9px] text-gray-400 font-mono">{o.properties?.reference_number}</p>
+                    </div>
                     <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleString()}</span>
                   </div>
                   <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
+                  <p className="text-[10px] text-chs-charcoal bg-gray-50 rounded-lg px-2 py-1 mt-1.5">
+                    → Will relay to real owner: <span className="font-bold">{o.properties?.profiles?.full_name}</span> ({o.properties?.profiles?.phone})
+                  </p>
                   <p className="text-xs text-chs-charcoal mt-1">{o.buyer_full_name} — {o.buyer_phone}</p>
                   {o.buyer?.valid_id_verified ? (
                     <span className="text-[9px] font-bold text-green-700">✓ ID Verified</span>

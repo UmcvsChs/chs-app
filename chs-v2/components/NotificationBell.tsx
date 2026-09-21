@@ -113,12 +113,24 @@ export default function NotificationBell() {
       // already sitting on, router.push() is a genuine no-op — no
       // remount, no re-fetch, so brand-new data (a fresh offer, a
       // fresh application) stays invisible until an unrelated reload
-      // happens to occur. Now checks for exactly that case and uses a
-      // real, targeted reload only then, keeping the smooth,
-      // non-disruptive router.push() for every genuine cross-route
-      // click, which is the real majority of real clicks.
+      // happens to occur.
+      //
+      // Real, third fix to this same handler: the second fix
+      // deliberately excluded /admin, trusting its own, separate
+      // query-parameter refresh mechanism to handle every same-route
+      // case there instead. That trust was misplaced for one real,
+      // confirmed case — two notifications pointing to the exact same
+      // full URL (path and query string both identical), which
+      // genuinely happens whenever admin is already sitting on a tab
+      // and a second, new item arrives for that same tab. In that
+      // exact case there is no real change for admin's own mechanism
+      // to detect, so it correctly does nothing — and nothing else
+      // was in place to catch it. Removed the exclusion entirely:
+      // every same-route click, including admin's, now gets the same
+      // real, reliable, guaranteed refresh. A brief, real reload is a
+      // small real cost next to silently stale data.
       const destinationPath = n.link.split("?")[0];
-      if (destinationPath === pathname && !destinationPath.startsWith("/admin")) {
+      if (destinationPath === pathname) {
         window.location.href = n.link;
       } else {
         router.push(n.link);

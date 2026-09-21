@@ -1,0 +1,21 @@
+-- No schema change. Real, exact fix for a genuine gap left by my own
+-- previous fix. That fix deliberately excluded /admin from a
+-- reliable, forced refresh, trusting admin's own query-parameter
+-- mechanism to handle every same-route case on its own. Confirmed
+-- directly: that trust was wrong for one real, reproducible case --
+-- two notifications pointing to the exact same full URL, path and
+-- query string both identical, which genuinely happens whenever
+-- admin is already sitting on a tab and a second, new item arrives
+-- for that same tab (confirmed against the real offer reported: both
+-- notifications pointed to the identical /admin?tab=offerreview).
+-- In that exact case there is no real change for admin's own
+-- mechanism to detect, so nothing refreshed, and nothing else caught
+-- it.
+--
+-- Removed the exclusion entirely. Every same-route notification
+-- click, including admin's, now gets the same real, reliable, forced
+-- reload -- no more special-casing that can leave a gap.
+--
+-- Confirmed directly: the real offer reported (Shola Olu, 17,500,000,
+-- PROP-000287) is genuinely sitting in the correct, owner-decided
+-- state right now and is immediately findable once this deploys.

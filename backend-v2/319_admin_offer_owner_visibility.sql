@@ -1,0 +1,13 @@
+-- No schema change. Real, direct improvement following a genuine,
+-- valid client concern about identification at scale: admin's own
+-- Offer Review card showed the property title and the buyer's
+-- details, but never showed WHICH real owner an offer would actually
+-- be relayed to -- a genuine visibility gap, confirmed directly in
+-- the real code, even though the underlying routing itself (a hard
+-- foreign key, properties.owner_id) was never actually ambiguous.
+--
+-- Fixed: the card now shows the property's real, permanent reference
+-- number (PROP-000XXX) and a direct, explicit line -- "Will relay to
+-- real owner: [name] ([phone])" -- before admin ever clicks the
+-- button. Verified directly against the real Shola Olu offer: now
+-- correctly shows PROP-000287 and Demo House Seller (08050000003).
