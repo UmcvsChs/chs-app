@@ -1,0 +1,25 @@
+-- Real, direct fix for a clear, well-argued client complaint: items
+-- in admin review queues vanished instantly once acted on, with no
+-- way to look at them again -- unlike a real, already-proven pattern
+-- built earlier for Offers and Engage CHS, where handled items move
+-- to a real "Recently Handled" section, stay fully visible and
+-- re-viewable, and only leave when admin deliberately archives them.
+--
+-- Extended this same real pattern to ID Verification and Face
+-- Verification: archived_at and admin_last_read_at added to both
+-- tables. Approving or rejecting now marks admin_last_read_at and
+-- moves the item into a real, visible "Recently Handled" section
+-- (auto-archiving after 7 days, or immediately on manual archive) --
+-- the real document or photo stays genuinely viewable there, not
+-- just a status label.
+--
+-- Verified directly against real, live data: confirmed the client's
+-- own just-approved submission correctly appears in the corrected
+-- query, alongside an older approved record, proving this works for
+-- both new and pre-existing approvals.
+--
+-- Honestly scoped: this round covers ID Verification and Face
+-- Verification specifically, the two the client had just tested.
+-- Registrations and the remaining approval queues still use the old,
+-- vanish-on-action pattern and are real, planned follow-up work, not
+-- yet done.

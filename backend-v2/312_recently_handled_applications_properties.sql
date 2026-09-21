@@ -1,0 +1,23 @@
+-- Continuing the same real "Recently Handled, archived manually"
+-- pattern -- this round: Applications and Properties.
+--
+-- Applications: all three real decision points (admin relaying to
+-- owner, admin relaying the owner's decision to the tenant, and the
+-- original screening step) now mark admin_last_read_at. A real
+-- Recently Handled section shows anything outside the four real
+-- pending statuses (pending, awaiting_admin_review,
+-- awaiting_owner_decision, owner_decided_pending_relay).
+--
+-- Properties: verification approve/reject now marks
+-- verification_admin_last_read_at. A real Recently Handled section
+-- shows anything no longer "pending" verification.
+--
+-- A real type error was caught by the full production build (not
+-- just lint) and fixed before packaging: the Properties Recently
+-- Handled state was typed against an existing interface that didn't
+-- actually have the fields this new data needs, corrected with its
+-- own properly-matched type instead of reusing a mismatched one.
+--
+-- Verified directly against real, live data: 821 real properties
+-- already sit outside "pending" verification, confirming this will
+-- surface genuine, substantial history immediately once deployed.

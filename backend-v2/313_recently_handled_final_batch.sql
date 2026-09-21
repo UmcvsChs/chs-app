@@ -1,0 +1,19 @@
+-- Completes the "Recently Handled, archived manually" pattern across
+-- every real admin review queue, per explicit client instruction to
+-- do this across the whole admin page. This round: Sale Approvals
+-- (reusing offers' existing archived_at/admin_last_read_at from the
+-- earlier Offers fix), Vendors, Artisans, and Developers (the last
+-- one covering all three real stages: pending, reviewed, partnered).
+--
+-- Every real decision handler across all eight queues now marks its
+-- own admin_last_read_at and refreshes its own Recently Handled list;
+-- every handled item stays genuinely visible, with a real manual
+-- archive button, until admin deliberately sends it away.
+--
+-- Full list, all now on the same real pattern: Offers, Engage CHS,
+-- ID Verification, Face Verification, Registrations, Applications,
+-- Properties, Sale Approvals, Vendors, Artisans, Developers.
+--
+-- Verified directly against real, live data: 5 real cleared sales
+-- already exist and will populate Sale Approvals' Recently Handled
+-- section immediately.

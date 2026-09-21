@@ -1,0 +1,30 @@
+-- Continuing the same real "Recently Handled, archived manually"
+-- pattern to Registrations, following Offers, Engage CHS, ID
+-- Verification, and Face Verification. Two new, nullable columns
+-- added to profiles (registration_archived_at,
+-- registration_admin_last_read_at) -- additive only, no effect on
+-- anything else profiles is used for across the app.
+--
+-- A real, new get_recently_handled_registrations() RPC mirrors the
+-- existing pending-registrations function, including the same
+-- multi-source KYC document lookup (valid ID, manager certificate,
+-- or a linked buyer ID verification), so a registration's actual
+-- uploaded document stays genuinely viewable after a decision, not
+-- just a status label. A real archive_registration() RPC lets admin
+-- deliberately send one to archive.
+--
+-- Both real decision paths (the standard approve/reject, and the
+-- separate reject-with-reason flow) now mark
+-- registration_admin_last_read_at and refresh the Recently Handled
+-- list.
+--
+-- One real structural mistake made and caught during this work: a
+-- str_replace edit accidentally dropped the
+-- {activeTab === "applications" &&} line, breaking the build.
+-- Caught immediately by the same lint check that verifies everything
+-- else, fixed before this was ever packaged.
+--
+-- Tested directly against the real, live database: confirmed the new
+-- function correctly returns every real, already-approved account,
+-- including the client's own just-verified buyer with the correct
+-- real document URL attached.

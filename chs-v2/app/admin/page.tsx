@@ -181,8 +181,55 @@ function AdminDashboardInner() {
   // distinct financial safety checkpoint between an owner accepting a
   // sale offer and money actually moving to escrow.
   const [pendingSaleApprovals, setPendingSaleApprovals] = useState<(Offer & { properties: { title: string } | null })[]>([]);
+  const [recentlyHandledSaleApprovals, setRecentlyHandledSaleApprovals] = useState<{ id: string; amount: number; chs_cleared: boolean; properties: { title: string } | null }[]>([]);
+  function loadRecentlyHandledSaleApprovals() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("offers")
+      .select("id, amount, chs_cleared, properties(title)")
+      .eq("status", "accepted").eq("chs_cleared", true)
+      .is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledSaleApprovals((data as unknown as typeof recentlyHandledSaleApprovals) || []));
+  }
+  useEffect(() => { loadRecentlyHandledSaleApprovals(); }, []);
+  async function handleArchiveSaleApproval(id: string) {
+    await supabase.from("offers").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledSaleApprovals((prev) => prev.filter((x) => x.id !== id));
+  }
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
+  // Real, direct fix per explicit, repeated client feedback: nothing
+  // an admin acts on should vanish — it should move here, stay fully
+  // re-viewable, and only ever leave when admin deliberately archives
+  // it. Same real, already-proven pattern as Offers and Engage CHS,
+  // now extended to ID Verification and Face Verification.
+  const [recentlyHandledBuyerIds, setRecentlyHandledBuyerIds] = useState<{ id: string; status: string; id_type: string; id_number: string; id_document_url: string; admin_last_read_at: string | null; profiles: { full_name: string } | null }[]>([]);
+  const [recentlyHandledLiveness, setRecentlyHandledLiveness] = useState<{ id: string; status: string; captured_photo_url: string; admin_last_read_at: string | null; profiles: { full_name: string } | null }[]>([]);
+  function loadRecentlyHandledVerifications() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("buyer_id_verifications")
+      .select("id, status, id_type, id_number, id_document_url, admin_last_read_at, profiles!buyer_id_verifications_user_id_fkey(full_name)")
+      .not("status", "eq", "pending").is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledBuyerIds((data as unknown as typeof recentlyHandledBuyerIds) || []));
+    supabase.from("liveness_submissions")
+      .select("id, status, captured_photo_url, admin_last_read_at, profiles!liveness_submissions_user_id_fkey(full_name)")
+      .not("status", "eq", "pending_review").is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledLiveness((data as unknown as typeof recentlyHandledLiveness) || []));
+  }
+  useEffect(() => { loadRecentlyHandledVerifications(); }, []);
+  async function handleArchiveBuyerId(id: string) {
+    await supabase.from("buyer_id_verifications").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledBuyerIds((prev) => prev.filter((x) => x.id !== id));
+  }
+  async function handleArchiveLiveness(id: string) {
+    await supabase.from("liveness_submissions").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledLiveness((prev) => prev.filter((x) => x.id !== id));
+  }
   const [pendingAgentIds, setPendingAgentIds] = useState<{ id: string; full_name: string; phone: string; valid_id_type: string; valid_id_number: string; valid_id_document_url: string }[]>([]);
   const [pendingManagerCerts, setPendingManagerCerts] = useState<{ id: string; full_name: string; phone: string; profession: string; professional_registration_number: string | null; certificate_document_url: string }[]>([]);
   const [pendingRegistrationsFull, setPendingRegistrationsFull] = useState<{
@@ -208,6 +255,18 @@ function AdminDashboardInner() {
     supabase.rpc("get_pending_registrations_full").then(({ data }) => setPendingRegistrationsFull(data || []));
   }, []);
 
+  const [recentlyHandledRegistrations, setRecentlyHandledRegistrations] = useState<{
+    id: string; full_name: string; phone: string; role: string; status: string; id_type: string | null; id_number: string | null; document_url: string | null;
+  }[]>([]);
+  function loadRecentlyHandledRegistrations() {
+    supabase.rpc("get_recently_handled_registrations").then(({ data }) => setRecentlyHandledRegistrations(data || []));
+  }
+  useEffect(() => { loadRecentlyHandledRegistrations(); }, []);
+  async function handleArchiveRegistration(userId: string) {
+    await supabase.rpc("archive_registration", { p_user_id: userId });
+    setRecentlyHandledRegistrations((prev) => prev.filter((x) => x.id !== userId));
+  }
+
   async function handleRejectWithReason(userId: string) {
     const reason = (rejectReasons[userId] || "").trim();
     if (!reason) {
@@ -219,7 +278,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("profiles").update({ registration_admin_last_read_at: new Date().toISOString() }).eq("id", userId);
     setPendingRegistrationsFull((prev) => prev.filter((p) => p.id !== userId));
+    loadRecentlyHandledRegistrations();
   }
   const [tenantRegisterSearch, setTenantRegisterSearch] = useState("");
   const [tenantRegisterResults, setTenantRegisterResults] = useState<{
@@ -610,7 +671,39 @@ function AdminDashboardInner() {
     if (!error && walletResult) setWalletResult({ ...walletResult, frozen: freeze });
   }
   const [pendingApplications, setPendingApplications] = useState<RentalApplication[]>([]);
+  const [recentlyHandledApplications, setRecentlyHandledApplications] = useState<RentalApplication[]>([]);
+  function loadRecentlyHandledApplications() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("rental_applications")
+      .select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)")
+      .not("status", "in", "(pending,awaiting_admin_review,awaiting_owner_decision,owner_decided_pending_relay)")
+      .is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledApplications((data as unknown as RentalApplication[]) || []));
+  }
+  useEffect(() => { loadRecentlyHandledApplications(); }, []);
+  async function handleArchiveApplication(id: string) {
+    await supabase.from("rental_applications").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledApplications((prev) => prev.filter((x) => x.id !== id));
+  }
   const [pendingProperties, setPendingProperties] = useState<PendingProperty[]>([]);
+  const [recentlyHandledProperties, setRecentlyHandledProperties] = useState<{ id: string; title: string; price: number; location_area: string; verification_status: string }[]>([]);
+  function loadRecentlyHandledProperties() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("properties")
+      .select("id, title, price, purpose, location_area, verification_status, owner_id, profiles!properties_owner_id_fkey(full_name, phone)")
+      .not("verification_status", "eq", "pending")
+      .is("verification_archived_at", null)
+      .or(`verification_admin_last_read_at.is.null,verification_admin_last_read_at.gt.${cutoff}`)
+      .order("verification_admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledProperties((data as unknown as { id: string; title: string; price: number; location_area: string; verification_status: string }[]) || []));
+  }
+  useEffect(() => { loadRecentlyHandledProperties(); }, []);
+  async function handleArchiveProperty(id: string) {
+    await supabase.from("properties").update({ verification_archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledProperties((prev) => prev.filter((x) => x.id !== id));
+  }
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
   const [conditionReports, setConditionReports] = useState<{
     id: string; reference: string; report_type: string; status: string; affidavit_url: string | null;
@@ -631,9 +724,51 @@ function AdminDashboardInner() {
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
   const [recentlyHandledEngage, setRecentlyHandledEngage] = useState<EngageRequest[]>([]);
   const [pendingVendors, setPendingVendors] = useState<MarketplaceVendor[]>([]);
+  const [recentlyHandledVendors, setRecentlyHandledVendors] = useState<{ id: string; business_name: string; category: string; location_state: string; verification_status: string }[]>([]);
+  function loadRecentlyHandledVendors() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("marketplace_vendors").select("*")
+      .not("verification_status", "eq", "pending").is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledVendors((data as unknown as typeof recentlyHandledVendors) || []));
+  }
+  useEffect(() => { loadRecentlyHandledVendors(); }, []);
+  async function handleArchiveVendor(id: string) {
+    await supabase.from("marketplace_vendors").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledVendors((prev) => prev.filter((x) => x.id !== id));
+  }
   const [pendingArtisans, setPendingArtisans] = useState<Artisan[]>([]);
+  const [recentlyHandledArtisans, setRecentlyHandledArtisans] = useState<{ id: string; trades: string[]; base_state: string; verification_status: string }[]>([]);
+  function loadRecentlyHandledArtisans() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("artisans").select("*")
+      .not("verification_status", "eq", "pending").is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledArtisans((data as unknown as typeof recentlyHandledArtisans) || []));
+  }
+  useEffect(() => { loadRecentlyHandledArtisans(); }, []);
+  async function handleArchiveArtisan(id: string) {
+    await supabase.from("artisans").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledArtisans((prev) => prev.filter((x) => x.id !== id));
+  }
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
+  const [recentlyHandledDevelopers, setRecentlyHandledDevelopers] = useState<{ id: string; company_name: string; status: string }[]>([]);
+  function loadRecentlyHandledDevelopers() {
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase.from("developer_applications").select("id, company_name, status")
+      .not("status", "in", "(pending,reviewed)").is("archived_at", null)
+      .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
+      .order("admin_last_read_at", { ascending: false }).limit(200)
+      .then(({ data }) => setRecentlyHandledDevelopers((data as unknown as typeof recentlyHandledDevelopers) || []));
+  }
+  useEffect(() => { loadRecentlyHandledDevelopers(); }, []);
+  async function handleArchiveDeveloper(id: string) {
+    await supabase.from("developer_applications").update({ archived_at: new Date().toISOString() }).eq("id", id);
+    setRecentlyHandledDevelopers((prev) => prev.filter((x) => x.id !== id));
+  }
   const [showGuide, setShowGuide] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsFeed, setNotificationsFeed] = useState<{
@@ -1208,7 +1343,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("profiles").update({ registration_admin_last_read_at: new Date().toISOString() }).eq("id", profileId);
     loadData();
+    loadRecentlyHandledRegistrations();
   }
 
   // Genuinely never approves an application directly — only ever moves
@@ -1219,13 +1356,14 @@ function AdminDashboardInner() {
     setActionError(null);
     const { error } = await supabase
       .from("rental_applications")
-      .update({ status: "awaiting_owner_decision" })
+      .update({ status: "awaiting_owner_decision", admin_last_read_at: new Date().toISOString() })
       .eq("id", applicationId);
     if (error) {
       setActionError("Could not update this application. Please try again.");
       return;
     }
     loadData();
+    loadRecentlyHandledApplications();
   }
 
   async function handleRelayOwnerDecision(applicationId: string) {
@@ -1235,7 +1373,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("rental_applications").update({ admin_last_read_at: new Date().toISOString() }).eq("id", applicationId);
     loadData();
+    loadRecentlyHandledApplications();
   }
 
   async function handlePropertyVerification(propertyId: string, status: "verified" | "rejected") {
@@ -1260,7 +1400,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("properties").update({ verification_admin_last_read_at: new Date().toISOString() }).eq("id", propertyId);
     loadData();
+    loadRecentlyHandledProperties();
   }
 
   async function handleDisputeRuling(disputeId: string, status: "ruled_for_tenant" | "ruled_for_owner", notes: string) {
@@ -1403,7 +1545,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("marketplace_vendors").update({ admin_last_read_at: new Date().toISOString() }).eq("id", vendorId);
     loadData();
+    loadRecentlyHandledVendors();
   }
 
   // The actual point of building this admin-adjustable rather than
@@ -1501,7 +1645,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("artisans").update({ admin_last_read_at: new Date().toISOString() }).eq("id", artisanId);
     loadData();
+    loadRecentlyHandledArtisans();
   }
 
   async function handleDeveloperReviewed(appId: string) {
@@ -1515,7 +1661,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("developer_applications").update({ admin_last_read_at: new Date().toISOString() }).eq("id", appId);
     loadData();
+    loadRecentlyHandledDevelopers();
   }
 
   async function handleDeveloperPartnered(appId: string) {
@@ -1533,7 +1681,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("developer_applications").update({ admin_last_read_at: new Date().toISOString() }).eq("id", appId);
     loadData();
+    loadRecentlyHandledDevelopers();
   }
 
   async function handleClearSale(offerId: string) {
@@ -1547,7 +1697,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("offers").update({ admin_last_read_at: new Date().toISOString() }).eq("id", offerId);
     loadData();
+    loadRecentlyHandledSaleApprovals();
   }
 
   async function handleLivenessReview(submissionId: string, approve: boolean) {
@@ -1561,7 +1713,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("liveness_submissions").update({ admin_last_read_at: new Date().toISOString() }).eq("id", submissionId);
     loadData();
+    loadRecentlyHandledVerifications();
   }
 
   // Real, critical fix per direct client report: ID verification and
@@ -1587,7 +1741,9 @@ function AdminDashboardInner() {
       setActionError(error.message);
       return;
     }
+    await supabase.from("buyer_id_verifications").update({ admin_last_read_at: new Date().toISOString() }).eq("id", verificationId);
     loadData();
+    loadRecentlyHandledVerifications();
   }
 
   async function handleApprovePrecommitMessage(messageId: string) {
@@ -2603,6 +2759,29 @@ function AdminDashboardInner() {
                 </div>
               ))
             )}
+
+            {recentlyHandledSaleApprovals.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledSaleApprovals.map((offer) => (
+                  <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">
+                        Cleared
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">{formatNaira(offer.amount)}</p>
+                    <button onClick={() => handleArchiveSaleApproval(offer.id)}
+                      className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2634,6 +2813,30 @@ function AdminDashboardInner() {
                   </div>
                 </div>
               ))
+            )}
+
+            {recentlyHandledLiveness.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledLiveness.map((sub) => (
+                  <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start mb-2">
+                      <p className="text-sm font-semibold text-chs-charcoal">{sub.profiles?.full_name || "User"}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${sub.status === "approved" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {sub.status}
+                      </span>
+                    </div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={sub.captured_photo_url} alt="Liveness capture" className="w-full rounded-lg mb-2" />
+                    <button onClick={() => handleArchiveLiveness(sub.id)}
+                      className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
 
             <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">📜 Real Sale Legal Documents ({pendingSaleDocs.length})</p>
@@ -2709,6 +2912,38 @@ function AdminDashboardInner() {
                   </div>
                 </div>
               ))
+            )}
+
+            {recentlyHandledBuyerIds.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledBuyerIds.map((sub) => (
+                  <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{sub.profiles?.full_name || "User"}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${sub.status === "approved" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {sub.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
+                    {/\.pdf($|\?)/i.test(sub.id_document_url) ? (
+                      <a href={sub.id_document_url} target="_blank" rel="noreferrer"
+                        className="block w-full text-center py-2.5 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-chs-red mb-2">
+                        📄 Open the real submitted document (PDF)
+                      </a>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={sub.id_document_url} alt="ID document" className="w-full rounded-lg mb-2" />
+                    )}
+                    <button onClick={() => handleArchiveBuyerId(sub.id)}
+                      className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
 
             {pendingSaleDocs.length === 0 ? (
@@ -2818,6 +3053,32 @@ function AdminDashboardInner() {
                 </div>
               ))
             )}
+
+            {recentlyHandledRegistrations.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledRegistrations.map((p) => (
+                  <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${p.status === "approved" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {p.status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">{p.phone} — {p.role}</p>
+                    {p.document_url && (
+                      <DocumentViewLink url={p.document_url} label="🔍 View the real, uploaded document again" />
+                    )}
+                    <button onClick={() => handleArchiveRegistration(p.id)}
+                      className="w-full mt-2 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -2885,7 +3146,12 @@ function AdminDashboardInner() {
                   </button>
                 )}
                 {app.status === "awaiting_admin_review" && (
-                  <button onClick={async () => { await supabase.rpc("admin_relay_application_to_owner", { p_application_id: app.id }); loadData(); }}
+                  <button onClick={async () => {
+                      await supabase.rpc("admin_relay_application_to_owner", { p_application_id: app.id });
+                      await supabase.from("rental_applications").update({ admin_last_read_at: new Date().toISOString() }).eq("id", app.id);
+                      loadData();
+                      loadRecentlyHandledApplications();
+                    }}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     ✓ Reviewed — relay to owner for a decision
                   </button>
@@ -2904,6 +3170,29 @@ function AdminDashboardInner() {
               </div>
             ))
           ))}
+
+        {recentlyHandledApplications.length > 0 && activeTab === "applications" && (
+          <div className="mt-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+              Recently handled — archives automatically after 7 days
+            </p>
+            {recentlyHandledApplications.map((app) => (
+              <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title || "Property"}</p>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${app.status === "approved" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                    {app.status?.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">{app.tenant?.full_name} — {app.tenant?.phone}</p>
+                <button onClick={() => handleArchiveApplication(app.id)}
+                  className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                  🗄️ Send to Archive
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {activeTab === "offerreview" && (
           <div>
@@ -3112,6 +3401,29 @@ function AdminDashboardInner() {
               );
             })
           )}
+
+          {recentlyHandledProperties.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                Recently handled — archives automatically after 7 days
+              </p>
+              {recentlyHandledProperties.map((prop) => (
+                <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${prop.verification_status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                      {prop.verification_status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-2">{formatNaira(prop.price)} · {prop.location_area}</p>
+                  <button onClick={() => handleArchiveProperty(prop.id)}
+                    className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                    🗄️ Send to Archive
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           </div>
         )}
 
@@ -3285,6 +3597,29 @@ function AdminDashboardInner() {
             ))
           ))}
 
+        {activeTab === "vendors" && recentlyHandledVendors.length > 0 && (
+          <div className="mt-4">
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+              Recently handled — archives automatically after 7 days
+            </p>
+            {recentlyHandledVendors.map((v) => (
+              <div key={v.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                <div className="flex justify-between items-start">
+                  <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${v.verification_status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                    {v.verification_status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">{v.category} — {v.location_state}</p>
+                <button onClick={() => handleArchiveVendor(v.id)}
+                  className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                  🗄️ Send to Archive
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {activeTab === "referrals" && (
           <>
             <p className="text-xs font-bold text-chs-charcoal mb-2">Agent referrals — real, un-paid-out ({agentReferrals.length})</p>
@@ -3422,6 +3757,28 @@ function AdminDashboardInner() {
                 </div>
               ))
             )}
+            {recentlyHandledArtisans.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledArtisans.map((a) => (
+                  <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${a.verification_status === "verified" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {a.verification_status}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2">{a.base_state}</p>
+                    <button onClick={() => handleArchiveArtisan(a.id)}
+                      className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -3490,6 +3847,27 @@ function AdminDashboardInner() {
                   )}
                 </div>
               ))
+            )}
+            {recentlyHandledDevelopers.length > 0 && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Recently handled — archives automatically after 7 days
+                </p>
+                {recentlyHandledDevelopers.map((d) => (
+                  <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full capitalize ${d.status === "partnered" ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-500"}`}>
+                        {d.status}
+                      </span>
+                    </div>
+                    <button onClick={() => handleArchiveDeveloper(d.id)}
+                      className="w-full mt-2 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                      🗄️ Send to Archive
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </>
         )}
