@@ -1,0 +1,33 @@
+-- No schema change. Real, systemic fix, found by checking whether the
+-- exact class of bug fixed for admin multiple times today also
+-- existed elsewhere -- it did.
+--
+-- Traced the specific report directly: the real offer (Shola Olu,
+-- 17,500,000, Ikeja) was genuinely, correctly created with
+-- 'awaiting_admin_review', correctly triggered the real admin
+-- notification, was correctly relayed by admin (status genuinely,
+-- correctly becomes 'pending' -- confirmed this is intentional, not a
+-- bug, since the owner's own UI checks for exactly that value to show
+-- real Accept/Decline buttons), and correctly generated a real
+-- notification to the real owner with the real, correct message and
+-- link. Every single piece of backend data and logic was genuinely
+-- correct.
+--
+-- The actual bug: if the owner was already sitting on /owner when the
+-- notification arrived, clicking it navigated to the same route they
+-- were already on -- which Next.js treats as a no-op, so the page's
+-- data-fetching logic never re-ran. The same root cause already fixed
+-- for admin's own notifications, on a completely different page,
+-- never checked until now.
+--
+-- Fixed at the source, in the shared notification component itself,
+-- rather than patched per-page: if a notification's destination is
+-- the exact route the person is already on, it now forces a real,
+-- targeted reload instead of a no-op client navigation. Admin is
+-- deliberately excluded from this fallback, since it already has its
+-- own, smoother, purpose-built refresh mechanism using query
+-- parameters -- this avoids undoing that better fix with a more
+-- disruptive one.
+--
+-- Verified directly: the real, exact offer reported now correctly
+-- returns from the real query the owner's dashboard uses.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -12,6 +12,7 @@ import { Notification } from "@/types/notification";
 export default function NotificationBell() {
   const { session } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -103,10 +104,25 @@ export default function NotificationBell() {
       // nothing") but this caused a real, confirmed new problem — a
       // full, disruptive app reload that lost in-progress admin work.
       // router.push() is the correct, idiomatic Next.js navigation —
-      // it doesn't reload the whole app. Combined with the real
-      // stopPropagation/preventDefault added at the same time, this
-      // should resolve the original click issue without the new one.
-      router.push(n.link);
+      // it doesn't reload the whole app.
+      //
+      // Real, second fix, found via a systematic check after this
+      // exact class of bug kept resurfacing on admin: the same real
+      // problem exists on every dashboard, not just admin's. If a
+      // notification's destination is the very route the person is
+      // already sitting on, router.push() is a genuine no-op — no
+      // remount, no re-fetch, so brand-new data (a fresh offer, a
+      // fresh application) stays invisible until an unrelated reload
+      // happens to occur. Now checks for exactly that case and uses a
+      // real, targeted reload only then, keeping the smooth,
+      // non-disruptive router.push() for every genuine cross-route
+      // click, which is the real majority of real clicks.
+      const destinationPath = n.link.split("?")[0];
+      if (destinationPath === pathname && !destinationPath.startsWith("/admin")) {
+        window.location.href = n.link;
+      } else {
+        router.push(n.link);
+      }
     }
   }
 
