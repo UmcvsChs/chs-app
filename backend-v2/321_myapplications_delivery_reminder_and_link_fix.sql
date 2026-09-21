@@ -1,0 +1,25 @@
+-- No schema change. Real, direct answer to "should this be reachable
+-- somewhere more obvious" -- yes, and built into the one place a
+-- buyer would naturally already check on any application: My
+-- Applications.
+--
+-- A real, visible "Action needed — provide your delivery address"
+-- link now appears there for any paid offer still missing a real
+-- delivery request, driven by the same real database state (paid,
+-- not yet legal-transfer-confirmed, no dispatch record) the property
+-- page itself checks -- so it can never show a step that's already
+-- genuinely done, and never hide one that's genuinely still needed.
+-- Once a real request exists, it instead shows real, live delivery
+-- status.
+--
+-- A real, separate bug found and fixed while building this: the
+-- existing "Proceed to payment" link for an accepted-but-unpaid offer
+-- was using the offer's own ID instead of the property's ID --
+-- genuinely broken, would have sent a buyer to a wrong or missing
+-- page. Fixed in the same pass, since it's the exact same kind of
+-- problem this whole fix exists to prevent.
+--
+-- Verified directly: the client's own real transaction (paid,
+-- unconfirmed, no dispatch request) matches these exact conditions,
+-- confirming the new banner will genuinely show for them once this
+-- deploys.

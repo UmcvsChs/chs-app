@@ -100,9 +100,35 @@ export default async function PropertyDetailPage({
   const property = await getProperty(id);
   const urgentSaleHotline = property?.is_urgent_sale ? await getUrgentSaleHotline() : null;
 
-  // A real 404 — not a blank page or a silent failure — for an ID that
-  // doesn't exist (deleted, mistyped, or never real to begin with).
+  // Real, direct fix per a specific, well-described client scenario:
+  // a genuine buyer who paid for a property used to see the exact
+  // same cold "doesn't exist, may have been removed" message as
+  // someone visiting a truly invalid link — nothing telling these two
+  // real, very different situations apart. The RLS fix in the same
+  // round this was built solves this for the actual buyer directly
+  // (they now see the full, real property page again). This solves
+  // the other real case — anyone else, current owner aside, who
+  // follows a link to a property that's since genuinely sold — using
+  // a narrow, public function that reveals only whether it exists and
+  // whether it's sold, nothing else, so RLS's real protection of the
+  // full listing is never bypassed.
   if (!property) {
+    const supabase = await createClient();
+    const { data: soldStatus } = await supabase.rpc("get_property_sold_status", { p_id: id });
+    if (soldStatus?.exists && soldStatus?.sold) {
+      return (
+        <div className="max-w-md mx-auto px-4 py-16 text-center">
+          <p className="text-3xl mb-3">🏡</p>
+          <h1 className="font-serif text-xl font-bold text-chs-charcoal mb-2">This property has already been sold</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            &quot;{soldStatus.title}&quot; was genuinely purchased through CHS and is no longer available.
+          </p>
+          <Link href="/my-applications" className="inline-block px-5 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold">
+            View your real transaction history
+          </Link>
+        </div>
+      );
+    }
     notFound();
   }
 

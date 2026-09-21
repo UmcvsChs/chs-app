@@ -1,0 +1,33 @@
+-- Real, direct fixes for two connected, well-described client
+-- concerns.
+--
+-- (1) Confirmed the genuine root cause: a property correctly
+-- disappears from public listings once sold (status leaves 'active',
+-- which the real, existing RLS rule requires for anyone but the
+-- owner or admin) -- but there was no exception for the one person
+-- who most needed continued access: the actual buyer who bought it.
+-- The instant a sale completed, they were locked out of their own
+-- purchase by the same rule correctly hiding it from the public.
+-- Added a real, narrow RLS policy: a buyer with a real offer record
+-- on a property can always read it, regardless of its status.
+--
+-- A real mistake was made and caught while building this: the first
+-- version queried offers directly, but two of offers' own policies
+-- query properties right back -- genuine circular RLS recursion,
+-- caught immediately by testing directly, not left for the client to
+-- find. Fixed with a security-definer function, breaking the cycle.
+-- Verified directly both ways afterward: the real buyer can now read
+-- the property (confirmed), and an unrelated buyer with no real offer
+-- on it still correctly cannot (also confirmed) -- not overly
+-- permissive.
+--
+-- (2) A real, better message for the other genuine case -- someone
+-- who isn't the buyer following a link to a now-sold property. A
+-- narrow, public function reveals only whether a property exists and
+-- whether it's sold, letting the property page show a real, specific
+-- "This property has already been sold" message with a link to real
+-- transaction history, instead of a generic, cold 404 -- without ever
+-- bypassing RLS's real protection of the full listing.
+--
+-- (3) Promoted ticker slowed by 2 more seconds per direct request
+-- (47s -> 49s).

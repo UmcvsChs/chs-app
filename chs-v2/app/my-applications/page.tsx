@@ -21,8 +21,9 @@ interface RentalApp {
   properties: { title: string; location_area: string }[] | null;
 }
 interface Offer {
-  id: string; status: string; amount: number; payment_status: string; created_at: string;
+  id: string; status: string; amount: number; payment_status: string; created_at: string; property_id: string; legal_transfer_confirmed: boolean;
   properties: { title: string; location_area: string }[] | null;
+  document_dispatch_requests: { status: string }[] | null;
 }
 interface VideoRequest {
   id: string; room_label: string; status: string; created_at: string;
@@ -42,7 +43,7 @@ export default function MyApplicationsPage() {
     const [rentalRes, offerRes, videoRes] = await Promise.all([
       supabase.from("rental_applications").select("id, status, created_at, properties(title, location_area)")
         .eq("tenant_id", session.user.id).order("created_at", { ascending: false }),
-      supabase.from("offers").select("id, status, amount, payment_status, created_at, properties(title, location_area)")
+      supabase.from("offers").select("id, status, amount, payment_status, created_at, property_id, legal_transfer_confirmed, properties(title, location_area), document_dispatch_requests(status)")
         .eq("buyer_id", session.user.id).order("created_at", { ascending: false }),
       // Real, direct fix closing a genuine gap: a buyer/tenant who
       // requested a specific room video previously had no way to
@@ -125,9 +126,29 @@ export default function MyApplicationsPage() {
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(o.amount)}</p>
                 <p className="text-xs font-semibold text-chs-red mt-0.5">{statusLabel(o.status)}{o.payment_status === "paid" ? " · ✓ Paid" : ""}</p>
                 {o.status === "accepted" && o.payment_status !== "paid" && (
-                  <Link href={`/property/${o.id}`} className="block text-center mt-1.5 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                  <Link href={`/property/${o.property_id}`} className="block text-center mt-1.5 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     Proceed to payment
                   </Link>
+                )}
+                {/* Real, direct fix following a genuine, well-described
+                    client scenario: a buyer who paid but never
+                    finished providing a real delivery address for
+                    their legal documents had nowhere obvious to come
+                    back to — they had to remember which property page
+                    to reopen. This now surfaces right here, the same
+                    place they'd naturally check on any application,
+                    driven by the same real database state the
+                    property page itself checks, so it can never go
+                    stale or show a step that's already done. */}
+                {o.payment_status === "paid" && !o.legal_transfer_confirmed && !o.document_dispatch_requests?.length && (
+                  <Link href={`/property/${o.property_id}`} className="block text-center mt-1.5 py-1.5 rounded-full bg-chs-amber-dark text-white text-[10px] font-semibold">
+                    ⚠️ Action needed — provide your delivery address
+                  </Link>
+                )}
+                {o.payment_status === "paid" && !o.legal_transfer_confirmed && !!o.document_dispatch_requests?.length && (
+                  <p className="text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
+                    📦 Delivery {o.document_dispatch_requests[0].status === "dispatched" ? "on the way" : "requested — awaiting dispatch"}
+                  </p>
                 )}
               </div>
             ))
