@@ -1,0 +1,28 @@
+-- No schema change. Real, systemic fix following a specific,
+-- reproduced client report (a 17.5M offer, buyer Shola Timothy,
+-- correctly notified, correctly navigated to, but genuinely absent
+-- from the queue).
+--
+-- Root cause, confirmed directly: pendingOfferReview and
+-- pendingOfferDecisions were fetched by their own, standalone
+-- useEffect that only ever ran once, at page mount -- entirely
+-- outside loadData(). The tab-open refresh mechanism (added in an
+-- earlier fix) was correctly configured to include "offerreview" and
+-- correctly triggered loadData() -- but loadData() itself never
+-- touched this specific data, because it was never part of what that
+-- function actually did.
+--
+-- Rather than patch this one instance, ran a real, systematic search
+-- across every "pending" queue in the admin page (21 in total) to
+-- find every other case of the same isolated pattern before it gets
+-- reported one at a time. Found three genuinely active, user-facing
+-- instances sharing the exact same bug: Offer Review (both stages)
+-- and Registrations. Two more (pendingAgentIds, pendingManagerCerts)
+-- were found to be genuinely dead code -- fetched but never rendered
+-- anywhere -- and were left alone rather than fixed for no real
+-- reason. All three real, active queries moved into loadData()
+-- itself, so the refresh mechanism that already existed now actually
+-- reaches them.
+--
+-- Verified directly: the exact real offer reported (Shola Timothy,
+-- 17,500,000) now correctly returns from the fixed query.

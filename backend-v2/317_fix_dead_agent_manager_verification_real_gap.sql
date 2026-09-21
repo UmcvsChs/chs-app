@@ -1,0 +1,20 @@
+-- Real, direct correction. I was wrong to call agent ID / manager
+-- certificate verification "no real effect" -- confirmed directly
+-- against real, live accounts: one agent and three managers,
+-- ALL with already-approved accounts (so never visible in
+-- Registrations, which only shows accounts still pending initial
+-- approval) and ALL with a genuine, real, uploaded document sitting
+-- completely unreachable by any admin screen. Real people, real
+-- documents, genuinely invisible -- not redundant with anything.
+--
+-- Built the missing real UI: a section within Registrations showing
+-- exactly these cases, with the real document viewable and a real
+-- Verify/Dismiss action, feeding into the same Recently Handled
+-- pattern already built for everything else. Moved the underlying
+-- fetch into loadData() from the start this time, rather than
+-- repeat the isolated-effect mistake found and fixed earlier today.
+--
+-- Also reset the real demo buyer completely fresh per direct
+-- request: removed a leftover real offer and ID verification record
+-- from earlier testing, confirmed valid_id_verified is false and no
+-- records remain, ready for a genuinely clean end-to-end test.

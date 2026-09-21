@@ -251,10 +251,6 @@ function AdminDashboardInner() {
     setPropertySearchLoading(false);
   }
 
-  useEffect(() => {
-    supabase.rpc("get_pending_registrations_full").then(({ data }) => setPendingRegistrationsFull(data || []));
-  }, []);
-
   const [recentlyHandledRegistrations, setRecentlyHandledRegistrations] = useState<{
     id: string; full_name: string; phone: string; role: string; status: string; id_type: string | null; id_number: string | null; document_url: string | null;
   }[]>([]);
@@ -299,20 +295,10 @@ function AdminDashboardInner() {
     buyer_source_of_funds: string | null; created_at: string; properties: { title: string } | null;
     buyer: { valid_id_verified: boolean } | null;
   }[]>([]);
-  useEffect(() => {
-    supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
-      .eq("status", "awaiting_admin_review").order("created_at", { ascending: true })
-      .then(({ data }) => setPendingOfferReview((data as unknown as typeof pendingOfferReview) || []));
-  }, []);
   const [pendingOfferDecisions, setPendingOfferDecisions] = useState<{
     id: string; amount: number; owner_decision: string | null; seller_response_note: string | null;
     buyer_full_name: string | null; buyer_phone: string | null; owner_decision_at: string; properties: { title: string } | null;
   }[]>([]);
-  useEffect(() => {
-    supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)")
-      .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true })
-      .then(({ data }) => setPendingOfferDecisions((data as unknown as typeof pendingOfferDecisions) || []));
-  }, []);
   // Real, direct fix for a repeated, explicit client complaint: an
   // offer previously vanished from this queue the instant admin acted
   // on it. It now moves down into this real "Recently Handled"
@@ -484,21 +470,6 @@ function AdminDashboardInner() {
     setTenantRegisterLoading(false);
   }
 
-  useEffect(() => {
-    // Real, critical fix — confirmed directly against a real, live
-    // account: a Property Manager's uploaded professional certificate
-    // (and an Agent's uploaded valid ID) had never had any admin
-    // review screen at all, on top of the earlier, separate buyer-ID
-    // fix. This was forcing admin to approve these two real
-    // registration types completely blind, with no way to ever see
-    // the document that was actually, correctly uploaded.
-    supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url")
-      .eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null)
-      .then(({ data }) => setPendingAgentIds(data || []));
-    supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url")
-      .eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null)
-      .then(({ data }) => setPendingManagerCerts(data || []));
-  }, []);
 
   const [totalCommissionEarnings, setTotalCommissionEarnings] = useState(0);
   const [openOwnerConcerns, setOpenOwnerConcerns] = useState<{ id: string; subject: string; message: string; profiles: { full_name: string } | null }[]>([]);
@@ -988,6 +959,48 @@ function AdminDashboardInner() {
       .order("created_at", { ascending: true });
     setPendingSaleApprovals((saleApprovalsData as unknown as typeof pendingSaleApprovals) || []);
 
+    // Real, direct fix following a repeated, confirmed client report:
+    // these two queries used to live in their own, separate useEffect
+    // that only ever ran once, at page mount -- completely outside
+    // loadData(), so none of the earlier freshness fixes ever touched
+    // them. An offer notification correctly switched to this tab and
+    // correctly triggered a reload, but the reload never actually
+    // refreshed this specific data, because it was never part of what
+    // "reload" meant. Moved here so it now genuinely refreshes with
+    // everything else.
+    const { data: offerReviewData } = await supabase
+      .from("offers")
+      .select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
+      .eq("status", "awaiting_admin_review").order("created_at", { ascending: true });
+    setPendingOfferReview((offerReviewData as unknown as typeof pendingOfferReview) || []);
+
+    const { data: offerDecisionsData } = await supabase
+      .from("offers")
+      .select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)")
+      .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true });
+    setPendingOfferDecisions((offerDecisionsData as unknown as typeof pendingOfferDecisions) || []);
+
+    // Real, direct fix -- same exact bug, same exact cause: this also
+    // used to live in its own, mount-only useEffect, completely
+    // outside loadData(), so a fresh registration never actually
+    // showed up without a full page reload.
+    const { data: registrationsData } = await supabase.rpc("get_pending_registrations_full");
+    setPendingRegistrationsFull(registrationsData || []);
+
+    // Real, critical fix — confirmed directly against real, live
+    // accounts: an already-approved Agent's or Property Manager's
+    // uploaded document (valid ID, professional certificate) had
+    // never had any real admin review screen at all — invisible in
+    // Registrations, since their account was already approved, and
+    // invisible everywhere else too. Genuinely unreachable, not
+    // redundant with anything.
+    const { data: agentIdData } = await supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url")
+      .eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null);
+    setPendingAgentIds(agentIdData || []);
+    const { data: managerCertData } = await supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url")
+      .eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null);
+    setPendingManagerCerts(managerCertData || []);
+
     const { data: livenessData } = await supabase
       .from("liveness_submissions")
       .select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)")
@@ -1330,6 +1343,26 @@ function AdminDashboardInner() {
     if (!error) {
       setPendingLoginRequests((prev) => prev.filter((r) => r.id !== requestId));
     }
+  }
+
+  async function handleAgentIdVerification(agentId: string, verified: boolean) {
+    setActionError(null);
+    if (verified) {
+      const { error } = await supabase.from("profiles").update({ valid_id_verified: true }).eq("id", agentId);
+      if (error) { setActionError(error.message); return; }
+    }
+    setPendingAgentIds((prev) => prev.filter((a) => a.id !== agentId));
+    loadRecentlyHandledRegistrations();
+  }
+
+  async function handleManagerCertVerification(managerId: string, verified: boolean) {
+    setActionError(null);
+    if (verified) {
+      const { error } = await supabase.from("profiles").update({ professional_credentials_verified: true }).eq("id", managerId);
+      if (error) { setActionError(error.message); return; }
+    }
+    setPendingManagerCerts((prev) => prev.filter((m) => m.id !== managerId));
+    loadRecentlyHandledRegistrations();
   }
 
   async function handleProfileDecision(profileId: string, status: "approved" | "rejected") {
@@ -3052,6 +3085,50 @@ function AdminDashboardInner() {
                   </div>
                 </div>
               ))
+            )}
+
+            {(pendingAgentIds.length > 0 || pendingManagerCerts.length > 0) && (
+              <div className="mt-4">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">
+                  Already-active accounts with a real document awaiting verification
+                </p>
+                {pendingAgentIds.map((a) => (
+                  <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{a.full_name} <span className="text-[9px] font-normal text-gray-400">— Agent</span></p>
+                    <p className="text-xs text-gray-500">{a.phone}</p>
+                    <p className="text-xs text-chs-charcoal mt-1"><span className="font-semibold">ID type:</span> {a.valid_id_type} — {a.valid_id_number}</p>
+                    <DocumentViewLink url={a.valid_id_document_url} label="🔍 View the real, uploaded ID document" />
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => handleAgentIdVerification(a.id, true)}
+                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Verify
+                      </button>
+                      <button onClick={() => handleAgentIdVerification(a.id, false)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {pendingManagerCerts.map((m) => (
+                  <div key={m.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{m.full_name} <span className="text-[9px] font-normal text-gray-400">— Property Manager</span></p>
+                    <p className="text-xs text-gray-500">{m.phone}</p>
+                    <p className="text-xs text-chs-charcoal mt-1"><span className="font-semibold">{m.profession}:</span> {m.professional_registration_number || "—"}</p>
+                    <DocumentViewLink url={m.certificate_document_url} label="🔍 View the real, uploaded certificate" />
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={() => handleManagerCertVerification(m.id, true)}
+                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Verify
+                      </button>
+                      <button onClick={() => handleManagerCertVerification(m.id, false)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
 
             {recentlyHandledRegistrations.length > 0 && (
