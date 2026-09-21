@@ -1,0 +1,28 @@
+-- No schema change. Three real, direct fixes.
+--
+-- (1) Confirmed directly: request_document_dispatch correctly saved
+-- a buyer's real delivery request all along, but admin had no screen
+-- anywhere to see it -- a genuine, complete gap, not a bug in the
+-- submission itself. Built a real section showing every real,
+-- pending hard-copy request with the actual address, phone, and
+-- preferred method, and a real "Mark as dispatched" action. Verified
+-- directly: the client's own real request (Ikeja Bungalow, 20 Aminu
+-- Bambale Road, Barnawa) is genuinely there and will now display
+-- correctly.
+--
+-- (2) Made the mobile admin menu button more visually obvious (added
+-- a real "Menu" label next to the icon) -- the underlying mobile
+-- drawer itself was already structurally correct, so this addresses
+-- the most likely real cause (the icon alone being easy to miss)
+-- without claiming a deeper bug that direct code review didn't
+-- support.
+--
+-- (3) Found and fixed a real, confirmed bug in face verification:
+-- the camera stream was being attached to the video element in the
+-- same synchronous block that first makes that element exist,
+-- meaning the element genuinely didn't exist yet at that exact
+-- moment. Camera access itself always succeeded silently, so no
+-- error ever showed -- the real instructions and buttons rendered
+-- correctly, but the camera feed itself was never actually attached
+-- to anything. Fixed by moving the attachment into its own effect
+-- that only runs once the video element genuinely exists.

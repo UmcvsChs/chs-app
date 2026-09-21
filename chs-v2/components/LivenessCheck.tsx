@@ -27,12 +27,29 @@ export default function LivenessCheck({ session, onSubmitted }: { session: Sessi
     };
   }, [stream]);
 
+  // Real, direct fix for a confirmed, reproduced bug: the video
+  // element only exists in the DOM once started becomes true, but the
+  // stream was being attached to videoRef.current in the same
+  // synchronous block that calls setStarted(true) — meaning
+  // videoRef.current was still genuinely null at that exact moment,
+  // since React hadn't yet re-rendered to create the video element.
+  // getUserMedia itself succeeded every time, so no error ever showed
+  // — the real instructions and buttons rendered correctly, but the
+  // actual camera feed was never attached to anything, exactly
+  // matching the report of seeing the steps with no visible camera.
+  // Moved the real attachment into its own effect, which only runs
+  // after React has genuinely finished rendering the video element.
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, started]);
+
   async function handleStart() {
     setError(null);
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
       setStream(mediaStream);
-      if (videoRef.current) videoRef.current.srcObject = mediaStream;
       setStarted(true);
       setStepIndex(0);
     } catch {

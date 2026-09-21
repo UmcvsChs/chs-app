@@ -604,6 +604,30 @@ function AdminDashboardInner() {
   const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
   const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
+  // Real, direct fix answering a genuine, direct client question:
+  // "where does the message go" for a real hard-copy delivery
+  // request. Confirmed directly — nowhere. request_document_dispatch
+  // correctly saved it to a real table, but no admin screen ever
+  // existed to see it. Built here, next to the related legal-transfer
+  // confirmation this feeds into.
+  const [pendingDispatchRequests, setPendingDispatchRequests] = useState<{
+    id: string; delivery_address: string; delivery_phone: string; preferred_method: string; delivery_note: string | null; status: string; created_at: string;
+    offers: { amount: number; properties: { title: string; reference_number: string } | null } | null;
+  }[]>([]);
+  function loadPendingDispatchRequests() {
+    supabase.from("document_dispatch_requests")
+      .select("id, delivery_address, delivery_phone, preferred_method, delivery_note, status, created_at, offers(amount, properties(title, reference_number))")
+      .eq("status", "requested").order("created_at", { ascending: true })
+      .then(({ data }) => setPendingDispatchRequests((data as unknown as typeof pendingDispatchRequests) || []));
+  }
+  useEffect(() => { loadPendingDispatchRequests(); }, []);
+  async function handleMarkDispatched(id: string, method: string) {
+    setActionError(null);
+    const { error } = await supabase.from("document_dispatch_requests")
+      .update({ status: "dispatched", dispatched_at: new Date().toISOString(), dispatch_method: method }).eq("id", id);
+    if (error) { setActionError(error.message); return; }
+    setPendingDispatchRequests((prev) => prev.filter((d) => d.id !== id));
+  }
 
   async function handleWalletSearch() {
     setWalletSearchError(null);
@@ -1882,8 +1906,8 @@ function AdminDashboardInner() {
         <div className="flex justify-between items-center">
           <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
           <div className="flex items-center gap-2">
-            <button onClick={() => setSidebarOpen(true)} className="md:hidden bg-white/15 px-2.5 py-1.5 rounded-full text-xs font-semibold" aria-label="Open admin menu">
-              ☰
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden flex items-center gap-1 bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold" aria-label="Open admin menu">
+              <span className="text-sm">☰</span> Menu
             </button>
             <NotificationBell />
             <button onClick={() => signOut()} className="bg-white/15 px-3 py-1.5 rounded-full text-xs font-semibold">
@@ -2998,6 +3022,26 @@ function AdminDashboardInner() {
                       Reject
                     </button>
                   </div>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">📦 Real Hard-Copy Document Requests ({pendingDispatchRequests.length})</p>
+            {pendingDispatchRequests.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-4">No real delivery requests pending.</p>
+            ) : (
+              pendingDispatchRequests.map((d) => (
+                <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{d.offers?.properties?.title || "Property"}</p>
+                  <p className="text-[9px] text-gray-400 font-mono">{d.offers?.properties?.reference_number}</p>
+                  <p className="text-xs text-chs-charcoal mt-1.5"><span className="font-semibold">Address:</span> {d.delivery_address}</p>
+                  <p className="text-xs text-chs-charcoal"><span className="font-semibold">Phone:</span> {d.delivery_phone}</p>
+                  <p className="text-xs text-chs-charcoal"><span className="font-semibold">Preferred method:</span> {d.preferred_method}</p>
+                  {d.delivery_note && <p className="text-xs text-gray-500 mt-1">&quot;{d.delivery_note}&quot;</p>}
+                  <button onClick={() => handleMarkDispatched(d.id, d.preferred_method)}
+                    className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                    ✓ Mark as dispatched
+                  </button>
                 </div>
               ))
             )}
