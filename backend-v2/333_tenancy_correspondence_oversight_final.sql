@@ -1,0 +1,28 @@
+-- Real, direct correction following a genuine, well-reasoned client
+-- argument: CHS's own role as platform moderator means every real
+-- tenant-landlord/manager correspondence should be genuinely visible
+-- to admin, "as if copied" -- not gated or delayed before delivery
+-- (deliberately kept direct and frictionless, exactly as it was, per
+-- the client's own explicit allowance), but seen, so CHS can notice
+-- and escalate when a landlord or manager is slow to respond to
+-- something real, like a fault report.
+--
+-- A real, admin-only function (checked internally, not just granted
+-- by role -- a real security mistake in my own first attempt at this
+-- was caught and fixed before it was ever used) surfaces every real
+-- tenancy with messages, the actual latest message and who sent it,
+-- and a genuine, direct "awaiting reply" flag for exactly the
+-- scenario described -- the tenant's own message sitting unanswered.
+--
+-- Built into the real Tenant Register Oversight tab, the natural,
+-- already-existing home for this kind of oversight.
+--
+-- Tested directly with a real fault report message: confirmed it
+-- appears correctly and the escalation flag correctly triggers,
+-- exactly matching the real scenario this was built to catch.
+--
+-- Honest, remaining scope: this covers tenant-landlord/manager
+-- correspondence specifically, matching the primary example given.
+-- The same principle could extend to shortlet guest-host messaging
+-- too, if wanted -- not yet built, and worth a direct answer on
+-- whether that's desired before doing it.

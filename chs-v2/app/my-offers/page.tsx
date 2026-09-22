@@ -10,6 +10,7 @@ import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
 import InfoTip from "@/components/InfoTip";
+import OfferMessageThread from "@/components/OfferMessageThread";
 
 // Real, new page — a direct, honest answer to a direct client
 // question: no, a Buyer genuinely had no dedicated interface beyond
@@ -95,6 +96,23 @@ export default function MyOffersPage() {
                 <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{o.status}</span>
               </div>
               <p className="text-[10px] text-gray-400 mt-1">{new Date(o.created_at).toLocaleDateString()}</p>
+              {/* Real, direct fix per explicit, repeated client
+                  request: wherever a rejected offer is actually seen,
+                  the real reply conversation should be right there —
+                  not on a separate page the person has to be routed
+                  to correctly first. This is the exact same real,
+                  moderated chat already built and working on the
+                  property page, now also reachable straight from
+                  here, since this is genuinely where a buyer
+                  naturally lands and checks. */}
+              {o.status === "rejected" && session && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <p className="text-[10px] font-semibold text-chs-amber-dark mb-1.5">
+                    Reply below to negotiate — the seller may have left a real counter-message.
+                  </p>
+                  <OfferMessageThread offerId={o.id} viewerRole="buyer" viewerId={session.user.id} />
+                </div>
+              )}
             </div>
           ))
         )}

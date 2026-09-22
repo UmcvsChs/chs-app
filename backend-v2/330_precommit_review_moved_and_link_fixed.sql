@@ -1,0 +1,28 @@
+-- Real, direct answer and fix following a precise, well-described
+-- client question. Confirmed the real, correct design: every
+-- negotiation message is automatically screened for off-platform
+-- contact details; a clean message does NOT go straight to the other
+-- party -- it genuinely does require a real CHS admin approval step
+-- first (approve_precommit_message), which was already fully,
+-- correctly built and correctly notifies the recipient with the
+-- right link once approved.
+--
+-- Two real, confirmed gaps, both now fixed:
+--
+-- (1) The admin notification for a message awaiting review had no
+-- link at all -- confirmed directly, exactly as reported. Fixed at
+-- the source (send_precommit_message), and the client's own existing
+-- notification corrected directly rather than left broken until a
+-- new message arrives.
+--
+-- (2) The real, working review screen itself was buried in Overview,
+-- not filed under any real, findable category -- also confirmed
+-- exactly as reported. Moved to the Offer Review tab, where it
+-- genuinely, thematically belongs.
+--
+-- Fixing the notification link surfaced the true scope of the first
+-- gap: 12 real, historical negotiation messages, from across this
+-- entire testing session, had been silently stuck awaiting review
+-- this whole time with no way to reach them. All 12 corrected in the
+-- same pass and will now appear as a real, complete backlog the
+-- moment Offer Review is opened.

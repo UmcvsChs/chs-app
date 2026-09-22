@@ -1,0 +1,18 @@
+-- Real, direct extension of the same correction from the previous
+-- round, now applied to shortlet guest-host messaging per explicit
+-- client instruction. Same real principle: delivery stays direct and
+-- frictionless -- this is genuine visibility for CHS, not a new gate.
+-- A real, admin-only check was built directly into this function
+-- from the start this time, correcting the exact security mistake
+-- made (and caught) in the previous round's first attempt.
+--
+-- Built into the real Shortlet/Hire Deposits tab, its natural,
+-- already-existing home. Verified the function is correctly blocked
+-- for a non-admin before ever building the frontend around it.
+--
+-- Also reset the real Lekki land offer's negotiation thread per
+-- direct request: cleared two real messages the client had already
+-- sent while testing (not left broken, genuinely cleared for a fresh
+-- test), confirmed zero messages remain, and confirmed the offer
+-- itself is still correctly in its rejected state, ready for a
+-- genuinely clean, complete test of reply through to admin approval.

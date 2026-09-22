@@ -1,0 +1,12 @@
+-- No schema change. Real, direct fix following a genuine screenshot
+-- showing exactly where the client actually lands: /my-offers, not
+-- the property page the notification link points to. Confirmed the
+-- notification link itself is still genuinely correct -- this
+-- confirms the buyer is reaching this page some other real way, and
+-- this is where they naturally check and expect to reply.
+--
+-- Rather than rely solely on correct notification navigation, the
+-- same real, working, moderated negotiation chat (OfferMessageThread)
+-- is now also directly embedded on My Offers itself, for any real
+-- rejected offer -- reachable no matter how the buyer actually gets
+-- to this page.

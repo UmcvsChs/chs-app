@@ -279,6 +279,33 @@ function AdminDashboardInner() {
     loadRecentlyHandledRegistrations();
   }
   const [tenantRegisterSearch, setTenantRegisterSearch] = useState("");
+  // Real, direct correction per explicit client instruction: CHS's
+  // own role as moderator means every real tenant-landlord/manager
+  // correspondence should be visible here — not gated or delayed
+  // before delivery (that stays direct, exactly as it was, so no new
+  // friction is added to an already-established relationship), but
+  // genuinely seen, "as if copied," with a real, direct flag for
+  // exactly the case described: a tenant's real message sitting
+  // unanswered, which is CHS's real cue to escalate.
+  const [shortletCorrespondence, setShortletCorrespondence] = useState<{
+    booking_id: string; property_title: string; guest_name: string; guest_phone: string; host_name: string; host_phone: string;
+    last_message_text: string; awaiting_host_reply: boolean; last_message_at: string; message_count: number;
+  }[]>([]);
+  function loadShortletCorrespondence() {
+    supabase.rpc("get_shortlet_correspondence_overview").then(({ data }) => setShortletCorrespondence(data || []));
+  }
+  useEffect(() => { loadShortletCorrespondence(); }, []);
+
+  const [correspondenceOverview, setCorrespondenceOverview] = useState<{
+    tenancy_id: string; property_title: string; street_address: string | null;
+    tenant_name: string; tenant_phone: string; responsible_party_name: string | null; responsible_party_phone: string | null; responsible_party_role: string;
+    last_message_text: string; awaiting_landlord_reply: boolean; last_message_at: string; message_count: number;
+  }[]>([]);
+  function loadCorrespondenceOverview() {
+    supabase.rpc("get_tenancy_correspondence_overview").then(({ data }) => setCorrespondenceOverview(data || []));
+  }
+  useEffect(() => { loadCorrespondenceOverview(); }, []);
+
   const [tenantRegisterResults, setTenantRegisterResults] = useState<{
     id: string; reference_number: string; full_name: string; phone: string; location_area: string; street_address: string | null;
     property_type: string; bedrooms: number; annual_rent: number; occupation: string; id_type: string; id_number: string;
@@ -2274,29 +2301,6 @@ function AdminDashboardInner() {
               </div>
             )}
 
-            {pendingPrecommitMessages.length > 0 && (
-              <div className="col-span-2 bg-white rounded-xl border-2 border-chs-amber-dark p-3">
-                <p className="text-xs font-bold text-chs-amber-dark mb-2">📋 Real Negotiation Messages Awaiting Review ({pendingPrecommitMessages.length})</p>
-                <p className="text-[10px] text-gray-500 mb-2">No message reaches a non-committed buyer or seller until approved here — the real deterrent against taking a deal off-platform.</p>
-                {pendingPrecommitMessages.map((m) => (
-                  <div key={m.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
-                    <p className="text-[10px] text-gray-400 mb-1">{m.profiles?.full_name || "User"} ({m.sender_role}) — {m.offers?.properties?.title || "Property"}</p>
-                    <p className="text-xs text-chs-charcoal mb-2">{m.text}</p>
-                    <div className="flex gap-2">
-                      <button onClick={() => handleApprovePrecommitMessage(m.id)}
-                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                        Approve & deliver
-                      </button>
-                      <button onClick={() => handleRejectPrecommitMessage(m.id)}
-                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {profile?.is_super_admin && pendingLoginRequests.length > 0 && (
               <div className="col-span-2 bg-red-50 border-2 border-red-200 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-bold text-red-700">🔐 Admin logins awaiting your approval</p>
@@ -3318,6 +3322,37 @@ function AdminDashboardInner() {
 
         {activeTab === "offerreview" && (
           <div>
+            {/* Real, direct fix following a specific, well-described
+                client report: this real, working review queue
+                genuinely existed and functioned correctly, but lived
+                buried in Overview — not filed under any real,
+                findable category, exactly as reported. Moved here,
+                to the one tab where it genuinely, thematically
+                belongs — every one of these real messages is part of
+                an active offer negotiation. */}
+            {pendingPrecommitMessages.length > 0 && (
+              <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-3 mb-3">
+                <p className="text-xs font-bold text-chs-amber-dark mb-2">📋 Real Negotiation Messages Awaiting Review ({pendingPrecommitMessages.length})</p>
+                <p className="text-[10px] text-gray-500 mb-2">No message reaches a non-committed buyer or seller until approved here — the real deterrent against taking a deal off-platform.</p>
+                {pendingPrecommitMessages.map((m) => (
+                  <div key={m.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2 last:mb-0">
+                    <p className="text-[10px] text-gray-400 mb-1">{m.profiles?.full_name || "User"} ({m.sender_role}) — {m.offers?.properties?.title || "Property"}</p>
+                    <p className="text-xs text-chs-charcoal mb-2">{m.text}</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleApprovePrecommitMessage(m.id)}
+                        className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        Approve & deliver
+                      </button>
+                      <button onClick={() => handleRejectPrecommitMessage(m.id)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
               💰 A real offer waits here until CHS reviews the buyer&apos;s real, verified details and relays it to the owner — the owner never sees a raw phone number; any real contact happens through the moderated messages once the deal is underway.
             </p>
@@ -4002,6 +4037,29 @@ function AdminDashboardInner() {
 
         {activeTab === "tenantregisteroversight" && (
           <div>
+            {correspondenceOverview.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-chs-charcoal mb-1">💬 Real Tenant Correspondence — CHS sees every conversation</p>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  Messages deliver directly, as before — this is real, live visibility for CHS, not a delay. A real, red flag means the tenant&apos;s own message is still awaiting a reply.
+                </p>
+                {correspondenceOverview.map((c) => (
+                  <div key={c.tenancy_id} className={`rounded-xl border p-3 mb-2 ${c.awaiting_landlord_reply ? "bg-red-50 border-red-200" : "bg-[var(--zone-card)] border-gray-100"}`}>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{c.property_title}</p>
+                      {c.awaiting_landlord_reply && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-chs-red text-white">Awaiting reply</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-1">
+                      {c.tenant_name} ({c.tenant_phone}) ↔ {c.responsible_party_name || "Unassigned"} ({c.responsible_party_role})
+                    </p>
+                    <p className="text-xs text-chs-charcoal bg-white rounded-lg px-2 py-1.5 mb-1">&quot;{c.last_message_text}&quot;</p>
+                    <p className="text-[9px] text-gray-400">{new Date(c.last_message_at).toLocaleString()} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
+                  </div>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mb-2">
               Real oversight into the tenant register every agent/manager keeps — search by name, phone, or reference number to review the actual ID and selfie on file.
             </p>
@@ -4040,6 +4098,29 @@ function AdminDashboardInner() {
 
         {activeTab === "shortletdeposits" && (
           <div>
+            {shortletCorrespondence.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-bold text-chs-charcoal mb-1">💬 Real Guest–Host Correspondence — CHS sees every conversation</p>
+                <p className="text-[10px] text-gray-500 mb-2">
+                  Messages deliver directly, as before — this is real, live visibility for CHS, not a delay. A real, red flag means the guest&apos;s own message is still awaiting a reply.
+                </p>
+                {shortletCorrespondence.map((c) => (
+                  <div key={c.booking_id} className={`rounded-xl border p-3 mb-2 ${c.awaiting_host_reply ? "bg-red-50 border-red-200" : "bg-[var(--zone-card)] border-gray-100"}`}>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{c.property_title}</p>
+                      {c.awaiting_host_reply && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-chs-red text-white">Awaiting reply</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-1">
+                      {c.guest_name} ({c.guest_phone}) ↔ {c.host_name} ({c.host_phone})
+                    </p>
+                    <p className="text-xs text-chs-charcoal bg-white rounded-lg px-2 py-1.5 mb-1">&quot;{c.last_message_text}&quot;</p>
+                    <p className="text-[9px] text-gray-400">{new Date(c.last_message_at).toLocaleString()} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
+                  </div>
+                ))}
+              </div>
+            )}
             <p className="text-xs text-gray-500 mb-2">
               Real security deposits currently held, awaiting a genuine decision — released back to the guest if there was no real damage, or claimed for the host if there was, always with a real, recorded reason.
             </p>
