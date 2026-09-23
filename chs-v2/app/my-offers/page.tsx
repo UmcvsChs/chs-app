@@ -71,6 +71,13 @@ export default function MyOffersPage() {
         <div className="flex gap-1.5 mt-2">
           <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">All My Applications<InfoTip term="my_applications" /></Link>
           <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions<InfoTip text="Every real payment you've made through CHS, with a downloadable receipt for each." /></Link>
+          {/* Real, direct fix per explicit client request: the same
+              real, persistent, always-visible pill already built for
+              tenant, guest, and owner — brought here too, so every
+              dashboard shares the exact same, uniform way back to
+              browsing, not just an empty-state link that disappears
+              once a real offer exists. */}
+          <Link href="/" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">🔍 Browse Properties</Link>
         </div>
       </div>
 
@@ -83,8 +90,7 @@ export default function MyOffersPage() {
         </Link>
         {offers.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-xs text-gray-400 mb-3">You haven&apos;t made any real offers yet.</p>
-            <Link href="/" className="text-sm font-semibold text-chs-red underline">Browse properties</Link>
+            <p className="text-xs text-gray-400 mb-3">You haven&apos;t made any real offers yet. Use Browse Properties above to find one.</p>
           </div>
         ) : (
           offers.map((o) => (

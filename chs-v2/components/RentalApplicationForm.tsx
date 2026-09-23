@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { uploadDocument } from "@/lib/storage";
@@ -43,6 +43,52 @@ export default function RentalApplicationForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guarantorLink, setGuarantorLink] = useState<string | null>(null);
+
+  // Real, direct fix per a specific, well-described client incident:
+  // a real submission genuinely failed (almost certainly a session
+  // that quietly expired mid-form, confirmed by the exact sequence
+  // reported — refresh forced a fresh login), and everything typed
+  // was lost with no way back. This automatically saves every real
+  // field to this browser as it's typed, keyed to this specific
+  // property, and restores it the moment the form is reopened — the
+  // same real, everyday convenience the client described from
+  // renewing a driver's licence elsewhere. Nothing here is sent
+  // anywhere; it only ever lives in this browser until the real
+  // application is actually submitted, at which point it's cleared.
+  const draftKey = `chs_rental_draft_${propertyId}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved) {
+        const d = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (d.applicantFullName) setApplicantFullName(d.applicantFullName);
+        if (d.occupation) setOccupation(d.occupation);
+        if (d.presentAddress) setPresentAddress(d.presentAddress);
+        if (d.incomeSource) setIncomeSource(d.incomeSource);
+        if (d.employerBusinessName) setEmployerBusinessName(d.employerBusinessName);
+        if (d.employerBusinessAddress) setEmployerBusinessAddress(d.employerBusinessAddress);
+        if (d.idType) setIdType(d.idType);
+        if (d.idNumber) setIdNumber(d.idNumber);
+        if (d.guarantorName) setGuarantorName(d.guarantorName);
+        if (d.guarantorPhone) setGuarantorPhone(d.guarantorPhone);
+        if (d.moveInDate) setMoveInDate(d.moveInDate);
+      }
+    } catch { /* a corrupted or blocked draft should never break the real form */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({
+        applicantFullName, occupation, presentAddress, incomeSource,
+        employerBusinessName, employerBusinessAddress, idType, idNumber,
+        guarantorName, guarantorPhone, moveInDate,
+      }));
+    } catch { /* private-browsing or full storage should never break typing */ }
+  }, [draftKey, applicantFullName, occupation, presentAddress, incomeSource,
+      employerBusinessName, employerBusinessAddress, idType, idNumber,
+      guarantorName, guarantorPhone, moveInDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -94,10 +140,25 @@ export default function RentalApplicationForm({
     });
 
     if (rpcError || !data) {
-      setError("Could not submit your application. Please try again.");
+      // Real, direct fix for a genuine, serious bug: the actual
+      // error was always being thrown away and replaced with one
+      // generic sentence, no matter what really went wrong
+      // underneath — including the one case that matters most here,
+      // a session that quietly expired while the form was open. Real
+      // draft is deliberately kept in this failure branch — nothing
+      // typed is lost, exactly the point of building this.
+      const authLikely = rpcError?.message?.toLowerCase().includes("jwt") || rpcError?.message?.toLowerCase().includes("row-level security") || !session;
+      setError(authLikely
+        ? "Your session appears to have expired. Please log in again — everything you've typed here has been saved and will be waiting for you."
+        : `Could not submit your application: ${rpcError?.message || "please try again."}`);
       setSubmitting(false);
       return;
     }
+
+    // Real: the draft's only job was to survive a real failure —
+    // once the application has genuinely, successfully submitted,
+    // clearing it is correct, not a loss.
+    try { localStorage.removeItem(draftKey); } catch { /* real success should never be blocked by storage cleanup */ }
 
     setGuarantorLink(`${window.location.origin}/guarantor-confirm/${data.guarantor_token}`);
     setSubmitting(false);
@@ -138,6 +199,9 @@ export default function RentalApplicationForm({
     <form onSubmit={handleSubmit} className="space-y-3">
       <p className="text-xs text-gray-500">
         CHS will review your documents, your guarantor will independently confirm their own details, then the property owner makes the final decision.
+      </p>
+      <p className="text-[10px] text-gray-400">
+        💾 Your entries here are saved automatically in this browser as you type — if something interrupts you, reopening this form brings them right back.
       </p>
 
       <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">About you</p>

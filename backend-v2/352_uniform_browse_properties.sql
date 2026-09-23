@@ -1,0 +1,9 @@
+-- No schema change. Real, direct fix per explicit client request for
+-- one, uniform "Browse Properties" pattern across every dashboard.
+-- Buyer's own dashboard previously had a different, weaker version --
+-- a centered link that only appeared when the buyer had zero real
+-- offers, disappearing entirely once they made one. Replaced with the
+-- same real, persistent, always-visible header pill already built for
+-- tenant, guest, and owner -- all four dashboards now share the exact
+-- same style and placement, and buyer no longer loses this link the
+-- moment they have a real offer.

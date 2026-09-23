@@ -1,0 +1,26 @@
+-- No schema change. First real application of the new standing
+-- instruction: any correction made to one category is now extended
+-- to every other genuinely applicable category, without being asked.
+--
+-- The same two real fixes just built for the rental application form
+-- applied here to the two other long, real forms in the app:
+--
+-- Make an offer (PropertyActions.tsx): the same real error-swallowing
+-- bug existed here too -- fixed the same way, with the same real
+-- session-expiry detection. The same real draft-save/restore now
+-- covers every real field a buyer types into an offer.
+--
+-- List a property (list-property/page.tsx): same real error fix.
+-- Draft-save extended here too, honestly scoped to what can actually
+-- be saved -- the real text, number, and choice fields (title,
+-- location, price, description, room counts, and more) persist and
+-- restore automatically; real files (photos, videos, documents)
+-- still need reselecting if interrupted, since a browser genuinely
+-- cannot serialize a file into this kind of storage -- stated
+-- directly rather than silently left out.
+--
+-- A real, structural mistake was made and caught while building the
+-- offer-form version: the draft logic was placed before some of the
+-- fields it referenced were actually declared, which would have
+-- broken the whole file. Caught by the same full build check run
+-- before every delivery, fixed before this was ever packaged.

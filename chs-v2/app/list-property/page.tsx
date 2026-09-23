@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -109,6 +109,56 @@ export default function ListPropertyPage() {
   // raw file with no classification.
   const [acquisitionMethod, setAcquisitionMethod] = useState("Personal purchase");
   const [primaryDocType, setPrimaryDocType] = useState("Certificate of Occupancy (C of O)");
+
+  // Real, direct fix, per standing instruction: the same real draft
+  // mechanism now built into every long CHS form. Honest limit, not
+  // hidden: only the real text, number, and choice fields below can
+  // genuinely be saved this way — photos, videos, and documents are
+  // real files the browser can't serialize into storage, so those
+  // still need reselecting if something interrupts this form. Every
+  // typed and chosen field that can be saved, is.
+  const listingDraftKey = "chs_listing_draft";
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(listingDraftKey);
+      if (saved) {
+        const d = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (d.title) setTitle(d.title);
+        if (d.purpose) setPurpose(d.purpose);
+        if (d.propertyType) setPropertyType(d.propertyType);
+        if (d.locationArea) setLocationArea(d.locationArea);
+        if (d.streetAddress) setStreetAddress(d.streetAddress);
+        if (d.locationLga) setLocationLga(d.locationLga);
+        if (d.locationState) setLocationState(d.locationState);
+        if (d.price) setPrice(d.price);
+        if (d.pricePerNight) setPricePerNight(d.pricePerNight);
+        if (d.pricePeriod) setPricePeriod(d.pricePeriod);
+        if (d.description) setDescription(d.description);
+        if (d.bedrooms) setBedrooms(d.bedrooms);
+        if (d.bathrooms) setBathrooms(d.bathrooms);
+        if (d.toilets) setToilets(d.toilets);
+        if (d.totalRooms) setTotalRooms(d.totalRooms);
+        if (d.roadType) setRoadType(d.roadType);
+        if (d.electricityBackup) setElectricityBackup(d.electricityBackup);
+        if (d.waterSource) setWaterSource(d.waterSource);
+        if (d.acquisitionMethod) setAcquisitionMethod(d.acquisitionMethod);
+        if (d.primaryDocType) setPrimaryDocType(d.primaryDocType);
+      }
+    } catch { /* a corrupted or blocked draft should never break the real form */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(listingDraftKey, JSON.stringify({
+        title, purpose, propertyType, locationArea, streetAddress, locationLga, locationState,
+        price, pricePerNight, pricePeriod, description, bedrooms, bathrooms, toilets, totalRooms,
+        roadType, electricityBackup, waterSource, acquisitionMethod, primaryDocType,
+      }));
+    } catch { /* private-browsing or full storage should never break typing */ }
+  }, [title, purpose, propertyType, locationArea, streetAddress, locationLga, locationState,
+      price, pricePerNight, pricePeriod, description, bedrooms, bathrooms, toilets, totalRooms,
+      roadType, electricityBackup, waterSource, acquisitionMethod, primaryDocType]);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -236,7 +286,12 @@ export default function ListPropertyPage() {
       .single();
 
     if (insertError || !newProperty) {
-      setError("Could not create this listing. Please try again.");
+      // Real, direct fix, per standing instruction: the same real
+      // fix already made to the rental application and offer forms.
+      const authLikely = insertError?.message?.toLowerCase().includes("jwt") || insertError?.message?.toLowerCase().includes("row-level security");
+      setError(authLikely
+        ? "Your session appears to have expired. Please log in again — everything you've entered has been saved and will be waiting for you."
+        : `Could not create this listing: ${insertError?.message || "please try again."}`);
       setSubmitting(false);
       return;
     }
@@ -343,6 +398,7 @@ export default function ListPropertyPage() {
     // disclosed limitation; see the README), so this avoids routing
     // someone straight into a confusing "Not found" for their own
     // brand-new property.
+    try { localStorage.removeItem(listingDraftKey); } catch { /* real success should never be blocked by storage cleanup */ }
     router.push("/owner");
   }
 

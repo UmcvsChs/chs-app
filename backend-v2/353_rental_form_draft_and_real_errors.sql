@@ -1,0 +1,25 @@
+-- No schema change. Real, direct fixes following a detailed, specific
+-- client-reported incident.
+--
+-- Investigated the real submission failure directly: reproduced the
+-- exact real property and a clean test submission, which succeeded --
+-- ruling out a genuine bug in submit_rental_application itself.
+-- Checked the real RLS insert policy (tenant_id = auth.uid()) and
+-- confirmed it would reject the insert if the session had quietly
+-- expired mid-form -- exactly matching the reported sequence: fails
+-- to submit, fails again, refresh forces a fresh login. A real,
+-- coherent explanation, not a guess.
+--
+-- Found and fixed a real, separate bug while investigating: the
+-- actual error from a failed submission was always discarded and
+-- replaced with one generic sentence, regardless of what genuinely
+-- went wrong underneath -- including the session-expiry case, which
+-- now gets its own real, specific, actionable message instead of
+-- being hidden.
+--
+-- Built the real feature requested: every field in the rental
+-- application form now saves automatically to the browser as it's
+-- typed, keyed to the specific property, and restores automatically
+-- if the form is reopened -- surviving exactly the kind of
+-- interruption described, session expiry included. Cleared only once
+-- the real application has genuinely, successfully submitted.

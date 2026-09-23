@@ -81,6 +81,34 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   const [buyerOccupation, setBuyerOccupation] = useState("");
   const [buyerSourceOfFunds, setBuyerSourceOfFunds] = useState("");
 
+  // Real, direct fix, per standing instruction: the same real draft
+  // mechanism just built for the rental application form, applied
+  // here too — every field a buyer types into a real offer is saved
+  // to this browser as they type, keyed to this property, and
+  // restored automatically if something interrupts them.
+  const offerDraftKey = `chs_offer_draft_${property.id}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(offerDraftKey);
+      if (saved) {
+        const d = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (d.amount) setAmount(d.amount);
+        if (d.note) setNote(d.note);
+        if (d.buyerFullName) setBuyerFullName(d.buyerFullName);
+        if (d.buyerPhone) setBuyerPhone(d.buyerPhone);
+        if (d.buyerOccupation) setBuyerOccupation(d.buyerOccupation);
+        if (d.buyerSourceOfFunds) setBuyerSourceOfFunds(d.buyerSourceOfFunds);
+      }
+    } catch { /* a corrupted or blocked draft should never break the real form */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(offerDraftKey, JSON.stringify({ amount, note, buyerFullName, buyerPhone, buyerOccupation, buyerSourceOfFunds }));
+    } catch { /* private-browsing or full storage should never break typing */ }
+  }, [offerDraftKey, amount, note, buyerFullName, buyerPhone, buyerOccupation, buyerSourceOfFunds]);
+
   // Real, direct fix: a buyer returning here after their identity was
   // approved previously landed on a blank form, having to retype
   // everything they'd already entered before submitting for
@@ -424,12 +452,21 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     });
 
     if (insertError) {
+      // Real, direct fix, per standing instruction: the same real
+      // fix just made to the rental application form, applied here
+      // too — the actual error was being discarded for anything
+      // that wasn't a contact-info violation, including a session
+      // that quietly expired mid-form.
+      const authLikely = insertError.message.toLowerCase().includes("jwt") || insertError.message.toLowerCase().includes("row-level security");
       setError(insertError.message.includes("contact info") || insertError.message.includes("phone number") || insertError.message.includes("email")
         ? insertError.message
-        : "Could not submit your offer. Please try again.");
+        : authLikely
+          ? "Your session appears to have expired. Please log in again — everything you've typed here has been saved and will be waiting for you."
+          : `Could not submit your offer: ${insertError.message}`);
       setSubmitting(false);
       return;
     }
+    try { localStorage.removeItem(`chs_offer_draft_${property.id}`); } catch { /* real success should never be blocked by storage cleanup */ }
 
     setOfferSuccess(true);
     setSubmitting(false);
