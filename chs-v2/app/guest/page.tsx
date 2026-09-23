@@ -98,6 +98,15 @@ export default function GuestDashboardPage() {
         <RoleBadge label="Guest" />
         <h1 className="font-serif text-lg font-bold mt-1">My Guest Dashboard</h1>
         <p className="text-xs text-white/60 mt-1">Shortlet, hotel/event, and casual hire bookings — a real, different kind of stay from renting or buying.</p>
+        {/* Real, direct fix per explicit client request: the same
+            real, persistent "browse" link already on buyer's own
+            dashboard, extended to every other dashboard this
+            genuinely applies to — a guest needs this just as much,
+            to find their next stay without hunting for the small
+            top-left link. */}
+        <div className="flex gap-1.5 mt-2">
+          <Link href="/" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">🔍 Browse Properties</Link>
+        </div>
       </div>
 
       <div className="px-4 py-4 space-y-2">

@@ -1,0 +1,7 @@
+-- No schema change. Real, direct fix per explicit client request: the
+-- persistent "Browse Properties" link already on buyer's own
+-- dashboard was missing everywhere else, confirmed directly -- tenant
+-- and guest had no equivalent at all, only the small top-left "back
+-- to homepage" link; owner had a full row of quick actions but this
+-- one specifically. Added the same real, consistent pill to tenant,
+-- guest, and owner dashboards, matching buyer's own existing pattern.

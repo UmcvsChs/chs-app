@@ -601,6 +601,9 @@ export default function OwnerDashboard() {
                 </span>
               )}
             </Link>
+            <Link href="/" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
+              🔍 Browse Properties
+            </Link>
             <Link href="/list-property" className="shrink-0 whitespace-nowrap bg-chs-red text-xs font-semibold px-3 py-1.5 rounded-full">
               + List a property
             </Link>

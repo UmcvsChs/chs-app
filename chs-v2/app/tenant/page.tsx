@@ -287,6 +287,13 @@ export default function TenantDashboard() {
         <div className="flex gap-1.5 mt-2">
           <Link href="/my-applications" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Applications</Link>
           <Link href="/my-receipts" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">My Transactions</Link>
+          {/* Real, direct fix per explicit client request: buyer's own
+              dashboard already had a real, persistent way back to
+              general browsing without needing the small top-left link
+              — tenant's had no equivalent at all. Same real pattern,
+              extended here and to every other dashboard this applies
+              to, not just buyer's. */}
+          <Link href="/" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">🔍 Browse Properties</Link>
         </div>
       </div>
 

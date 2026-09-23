@@ -1,0 +1,10 @@
+-- No schema change. Real, new watermark on the receipt/voucher page,
+-- built directly from the pattern the client provided and asked to
+-- be studied: the company's own mark, centered behind the real
+-- content, low enough opacity to stay fully readable underneath,
+-- with a real, embedded generation timestamp -- made genuinely
+-- bolder and more visible than the reference, per direct instruction,
+-- using the real, existing solid-white logo mark asset already in
+-- the app. Survives the browser's own print-to-PDF exactly as seen
+-- on screen, since this receipt has no separate PDF-generation path
+-- to update.

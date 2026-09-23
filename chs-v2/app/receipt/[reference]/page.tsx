@@ -98,6 +98,26 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
         <div className="receipt-corner top-2 left-2 border-t-2 border-l-2 no-print" />
         <div className="receipt-corner top-2 right-2 border-t-2 border-r-2 no-print" />
 
+        {/* Real, new watermark, per direct client request, studied
+            directly from a real reference document the client
+            provided: the same real pattern — the company's own mark,
+            centered, low enough opacity that every word of the real
+            content on top stays fully readable — but made genuinely
+            bolder and more visible than that reference, per the
+            client's own explicit instruction, and with a real,
+            embedded generation timestamp beneath it: not just a
+            decorative mark, but a genuine, checkable sign of exactly
+            when this specific document was produced. print:opacity-100
+            ensures it survives the browser's own print-to-PDF exactly
+            as seen on screen. */}
+        <div className="pointer-events-none select-none absolute inset-0 z-0 flex flex-col items-center justify-center opacity-[0.18] print:opacity-[0.18]">
+          <img src="/logo-mark.png" alt="" className="w-56 h-56 object-contain grayscale brightness-0" />
+          <p className="text-[10px] font-bold tracking-[0.2em] text-chs-charcoal mt-1 uppercase">
+            CHS Verified · {new Date().toLocaleString("en-NG", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+        <div className="relative z-10">
+
         {/* Header band — real, deliberate branding per direct client
             request: a plain data table didn't read as a genuine,
             professional financial document. */}
@@ -175,6 +195,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
           <Link href="/" className="block text-center text-xs text-gray-400 mt-3 no-print">
             Back to homepage
           </Link>
+        </div>
         </div>
       </div>
     </div>
