@@ -66,6 +66,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { key: "subadmindailyreports", label: "Sub-Admin's Daily Report", icon: "🗂️", superAdminOnly: true },
   { key: "subadminpanel", label: "Sub-Admin Panel", icon: "🛡️", superAdminOnly: true },
   { key: "settings", label: "Settings", icon: "⚙️", superAdminOnly: true },
+  { key: "userregistry", label: "User Registry", icon: "🗂️", superAdminOnly: true },
   { key: "auditlog", label: "Audit Trail", icon: "🧾", superAdminOnly: true },
 ];
 

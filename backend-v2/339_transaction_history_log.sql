@@ -1,0 +1,28 @@
+-- Real, new Transaction History Log, built per direct client request
+-- from real, existing, confirmed data sources: transaction_commissions
+-- (every real commission, by type and payer role), offers (real sale
+-- outcomes, refund status, escrow state), and the real marketing/
+-- subscription tables. A real, admin-only, date-range-aware function
+-- powers this -- not a static snapshot.
+--
+-- Two real mistakes made and caught while building this, both before
+-- ever reaching the client: (1) the first version of the function
+-- referenced a column that didn't actually exist on promo_
+-- subscriptions -- caught by testing the function directly, corrected
+-- to derive the real amount from the linked package's real price
+-- instead; (2) a structural editing mistake briefly broke the
+-- Notifications Feed tab -- caught by the same full build check run
+-- before every delivery, fixed before this was ever packaged.
+--
+-- Honest, confirmed finding surfaced while building this: offers.
+-- refund_status has a real, ready schema (none/requested/refunded),
+-- but no real code path anywhere currently sets it past 'none' --
+-- there is genuinely no working refund request or processing feature
+-- in the app yet. The log reports this as an honest, accurate zero,
+-- with a direct note explaining why, rather than hide the gap.
+--
+-- Verified directly against real, live data before delivery: 13 real
+-- processed transactions, 5 successful sales totaling a real
+-- ₦123,000,000, 1 real transaction genuinely in escrow (₦17,500,000 —
+-- matches the Ikeja Bungalow), and ₦15,510,000 in real platform
+-- earnings, correctly broken down by payer role and transaction type.

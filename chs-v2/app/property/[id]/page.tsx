@@ -436,7 +436,7 @@ export default async function PropertyDetailPage({
         {isUnderVerification ? (
           <InterestButton propertyId={property.id} propertyTitle={property.title} />
         ) : (
-          <PropertyActions property={property} />
+          <PropertyActions property={property} isOwner={!!user && user.id === property.owner_id} />
         )}
 
         <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />

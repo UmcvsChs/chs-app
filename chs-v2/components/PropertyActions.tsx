@@ -18,9 +18,42 @@ import OfferMessageThread from "./OfferMessageThread";
 
 type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet" | "hire";
 
-export default function PropertyActions({ property }: { property: Property }) {
+export default function PropertyActions({ property, isOwner }: { property: Property; isOwner?: boolean }) {
   const router = useRouter();
   const { session, loading } = useAuth();
+  // Real, direct fix for a genuine, serious, confirmed gap: this
+  // component previously showed the exact same "Make an offer" buyer
+  // flow to literally everyone, including the property's own owner —
+  // there was no real check anywhere for "is the current viewer the
+  // person who owns this listing." An owner following a real
+  // notification about their own negotiation landed on a page telling
+  // them to make an offer on their own property, with no way to see
+  // or respond to what actually needed their decision.
+  const [ownerOffers, setOwnerOffers] = useState<{
+    id: string; amount: number; status: string; buyer_full_name: string | null; note: string | null;
+  }[]>([]);
+  const [ownerRentToOwnRequests, setOwnerRentToOwnRequests] = useState<{
+    id: string; monthly_amount: number; status: string; buyer: { full_name: string; phone: string } | null;
+  }[]>([]);
+  async function handleApproveRentToOwn(id: string) {
+    const { error } = await supabase.rpc("approve_rent_to_own_request", { p_agreement_id: id });
+    if (!error) setOwnerRentToOwnRequests((prev) => prev.filter((r) => r.id !== id));
+  }
+  useEffect(() => {
+    if (!isOwner) return;
+    supabase.from("offers").select("id, amount, status, buyer_full_name, note")
+      .eq("property_id", property.id)
+      .in("status", ["awaiting_owner_decision", "owner_decided_pending_relay", "rejected"])
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setOwnerOffers(data || []));
+    if (property.purpose === "rent_to_own") {
+      supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name, phone)")
+        .eq("property_id", property.id).eq("status", "requested")
+        .then(({ data }) => setOwnerRentToOwnRequests((data as unknown as typeof ownerRentToOwnRequests) || []));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOwner, property.id]);
+
   const [activeForm, setActiveForm] = useState<ActiveForm>("none");
   const [amount, setAmount] = useState<number | "">("");
   const [note, setNote] = useState("");
@@ -721,6 +754,49 @@ export default function PropertyActions({ property }: { property: Property }) {
           session={session}
           onSuccess={() => setShortletSuccess(true)}
         />
+      </div>
+    );
+  }
+
+  // Real, direct fix — an early, genuinely separate view for the
+  // property's own owner, instead of falling through to the same
+  // buyer-facing "Make an offer" flow everyone else sees.
+  if (isOwner) {
+    const activeOffer = ownerOffers.find((o) => o.status !== "rejected") || ownerOffers[0];
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+        <p className="text-sm font-bold text-chs-charcoal">🏠 This is your own listing</p>
+        <Link href={`/edit-listing/${property.id}`} className="block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
+          Edit this listing
+        </Link>
+        {activeOffer ? (
+          <div className="bg-[var(--zone-card)] rounded-lg p-3 mt-2">
+            <p className="text-xs font-bold text-chs-charcoal mb-1">
+              {activeOffer.status === "rejected" ? "A real negotiation is ongoing below" : "A real offer needs your decision"}
+            </p>
+            <p className="text-sm font-semibold text-chs-red">{formatNaira(activeOffer.amount)}</p>
+            <p className="text-xs text-gray-500 mb-2">from {activeOffer.buyer_full_name || "a real buyer"}</p>
+            {activeOffer.status === "awaiting_owner_decision" && (
+              <p className="text-[10px] text-gray-500 mb-2">Go to your dashboard&apos;s Recent Property Quotation to accept or decline this real offer.</p>
+            )}
+            {session && (
+              <OfferMessageThread offerId={activeOffer.id} viewerRole="seller" viewerId={session.user.id} />
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 text-center py-4">No real, active offers on this listing right now.</p>
+        )}
+        {ownerRentToOwnRequests.map((r) => (
+          <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-3 mt-2">
+            <p className="text-xs font-bold text-chs-charcoal mb-1">🏠 A real Rent-to-Own request needs your approval</p>
+            <p className="text-sm font-semibold text-chs-red">{formatNaira(r.monthly_amount)}/month</p>
+            <p className="text-xs text-gray-500 mb-2">from {r.buyer?.full_name} ({r.buyer?.phone})</p>
+            <button onClick={() => handleApproveRentToOwn(r.id)}
+              className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
+              Approve this real request
+            </button>
+          </div>
+        ))}
       </div>
     );
   }

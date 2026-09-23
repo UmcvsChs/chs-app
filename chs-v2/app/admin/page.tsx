@@ -64,7 +64,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -306,6 +306,33 @@ function AdminDashboardInner() {
   }
   useEffect(() => { loadCorrespondenceOverview(); }, []);
 
+  const [investorContact, setInvestorContact] = useState("");
+  // Real, new User Registry per direct client request: how many real
+  // people have registered, how many are genuinely active (using
+  // Supabase's own real sign-in timestamps, not invented tracking),
+  // and a real, searchable roster with each person's name and their
+  // own permanent, unique reference number.
+  const [registrySearch, setRegistrySearch] = useState("");
+  const [registryData, setRegistryData] = useState<{
+    total_registered: number; active_count: number;
+    users: { reference_number: string; full_name: string; phone: string; role: string; created_at: string; last_sign_in_at: string | null; is_active: boolean | null }[];
+  } | null>(null);
+  function loadUserRegistry() {
+    supabase.rpc("get_user_registry", { p_active_days: 30, p_search: registrySearch.trim() || null })
+      .then(({ data }) => setRegistryData(data));
+  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (activeTab === "userregistry") loadUserRegistry(); }, [activeTab]);
+  const [investorGrantResult, setInvestorGrantResult] = useState<string | null>(null);
+  async function handleGrantInvestor() {
+    setActionError(null);
+    setInvestorGrantResult(null);
+    const { data, error } = await supabase.rpc("grant_investor_access", { p_contact: investorContact.trim() });
+    if (error) { setActionError(error.message); return; }
+    setInvestorGrantResult(`✓ ${data} now has real investor access.`);
+    setInvestorContact("");
+  }
+
   const [tenantRegisterResults, setTenantRegisterResults] = useState<{
     id: string; reference_number: string; full_name: string; phone: string; location_area: string; street_address: string | null;
     property_type: string; bedrooms: number; annual_rent: number; occupation: string; id_type: string; id_number: string;
@@ -370,6 +397,42 @@ function AdminDashboardInner() {
     id: string; transaction_type: string; commission_amount: number; created_at: string;
     payer_role: string; status: string; profiles: { full_name: string; phone: string } | null;
   }[]>([]);
+  // Real, new Transaction History Log per direct client request:
+  // processed count, successful vs refunded outcomes, real money
+  // currently held in escrow, and platform earnings broken down by
+  // who paid and what kind of transaction it was — plus marketing
+  // and subscription revenue, kept genuinely separate from
+  // transaction commissions since it's a different real source of
+  // income. Real date-range filtering, not a static snapshot.
+  const [txLogRange, setTxLogRange] = useState<"7" | "30" | "60" | "90" | "180" | "365" | "custom">("30");
+  const [txLogCustomStart, setTxLogCustomStart] = useState("");
+  const [txLogCustomEnd, setTxLogCustomEnd] = useState("");
+  const [txLogData, setTxLogData] = useState<{
+    processed_count: number;
+    successful: { count: number; total_value: number };
+    refunded: { count: number; total_value: number };
+    in_escrow: { count: number; total_value: number };
+    platform_earnings: { total: number; by_payer_role: Record<string, number>; by_transaction_type: Record<string, number> };
+    marketing_and_subscriptions: { promotions_total: number; team_subscriptions_total: number };
+  } | null>(null);
+  const [txLogLoading, setTxLogLoading] = useState(false);
+  function loadTransactionLog() {
+    setTxLogLoading(true);
+    let start: string | null = null;
+    let end: string | null = null;
+    if (txLogRange === "custom") {
+      start = txLogCustomStart ? new Date(txLogCustomStart).toISOString() : null;
+      end = txLogCustomEnd ? new Date(txLogCustomEnd + "T23:59:59").toISOString() : null;
+    } else {
+      start = new Date(Date.now() - Number(txLogRange) * 24 * 60 * 60 * 1000).toISOString();
+      end = new Date().toISOString();
+    }
+    supabase.rpc("get_transaction_history_log", { p_start: start, p_end: end })
+      .then(({ data }) => { setTxLogData(data); setTxLogLoading(false); });
+  }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (activeTab === "transactionlog") loadTransactionLog(); }, [activeTab, txLogRange]);
+
   useEffect(() => {
     supabase.from("transaction_commissions")
       .select("id, transaction_type, commission_amount, created_at, payer_role, status, profiles!transaction_commissions_payer_id_fkey(full_name, phone)")
@@ -2008,6 +2071,7 @@ function AdminDashboardInner() {
           // Financial
           { key: "finance", label: "Finance", domain: "finance", group: "Financial" },
           { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "transactionlog", label: "📊 Transaction History Log", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
 
@@ -4266,6 +4330,92 @@ function AdminDashboardInner() {
           </div>
         )}
 
+        {activeTab === "transactionlog" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📊 A real, unified financial record — for genuine accountability and audit, not just a browsing screen.
+            </p>
+            <div className="flex gap-1.5 mb-3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {([["7", "This week"], ["30", "30 days"], ["60", "60 days"], ["90", "90 days"], ["180", "180 days"], ["365", "360 days"], ["custom", "Custom"]] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setTxLogRange(val)}
+                  className={`shrink-0 text-[10px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap ${txLogRange === val ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {txLogRange === "custom" && (
+              <div className="flex gap-2 mb-3">
+                <input type="date" value={txLogCustomStart} onChange={(e) => setTxLogCustomStart(e.target.value)}
+                  className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-xs" />
+                <input type="date" value={txLogCustomEnd} onChange={(e) => setTxLogCustomEnd(e.target.value)}
+                  className="flex-1 px-2 py-2 rounded-lg border border-gray-200 text-xs" />
+                <button onClick={loadTransactionLog} className="px-3 py-2 rounded-lg bg-chs-red text-white text-xs font-semibold">Go</button>
+              </div>
+            )}
+            {txLogLoading || !txLogData ? (
+              <p className="text-center text-sm text-gray-400 py-8">Loading real figures…</p>
+            ) : (
+              <>
+                <div className="bg-chs-charcoal text-white rounded-xl p-4 mb-3">
+                  <p className="text-[10px] text-white/70 uppercase font-bold">Processed (total transactions)</p>
+                  <p className="font-serif text-2xl font-bold mt-0.5">{txLogData.processed_count}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                    <p className="text-[9px] font-bold text-green-700 uppercase">Successful</p>
+                    <p className="text-lg font-bold text-chs-charcoal">{txLogData.successful.count}</p>
+                    <p className="text-[10px] text-gray-500">{formatNaira(txLogData.successful.total_value)}</p>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                    <p className="text-[9px] font-bold text-gray-500 uppercase">Refunded</p>
+                    <p className="text-lg font-bold text-chs-charcoal">{txLogData.refunded.count}</p>
+                    <p className="text-[10px] text-gray-500">{formatNaira(txLogData.refunded.total_value)}</p>
+                  </div>
+                </div>
+                <div className="bg-chs-amber-light rounded-xl p-3 mb-3">
+                  <p className="text-[9px] font-bold text-chs-amber-dark uppercase">🔒 In Escrow right now</p>
+                  <p className="text-lg font-bold text-chs-charcoal">{txLogData.in_escrow.count} real transaction{txLogData.in_escrow.count !== 1 ? "s" : ""}</p>
+                  <p className="text-xs text-gray-600">{formatNaira(txLogData.in_escrow.total_value)} currently held</p>
+                </div>
+                <div className="bg-white rounded-xl border-2 border-chs-red p-3 mb-3">
+                  <p className="text-xs font-bold text-chs-red mb-1">💰 Platform Earnings</p>
+                  <p className="font-serif text-xl font-bold text-chs-charcoal mb-2">{formatNaira(txLogData.platform_earnings.total)}</p>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">By who paid</p>
+                  {Object.entries(txLogData.platform_earnings.by_payer_role).map(([role, amt]) => (
+                    <div key={role} className="flex justify-between text-xs mb-0.5">
+                      <span className="capitalize text-gray-600">{role}</span>
+                      <span className="font-semibold text-chs-charcoal">{formatNaira(amt as number)}</span>
+                    </div>
+                  ))}
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mt-2 mb-1">By transaction type</p>
+                  {Object.entries(txLogData.platform_earnings.by_transaction_type).map(([type, amt]) => (
+                    <div key={type} className="flex justify-between text-xs mb-0.5">
+                      <span className="capitalize text-gray-600">{type.replace(/_/g, " ")}</span>
+                      <span className="font-semibold text-chs-charcoal">{formatNaira(amt as number)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-[var(--zone-card)] rounded-xl p-3">
+                  <p className="text-xs font-bold text-chs-charcoal mb-1">📣 Marketing & Subscriptions</p>
+                  <div className="flex justify-between text-xs mb-0.5">
+                    <span className="text-gray-600">Property promotions</span>
+                    <span className="font-semibold text-chs-charcoal">{formatNaira(txLogData.marketing_and_subscriptions.promotions_total)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600">Team subscriptions</span>
+                    <span className="font-semibold text-chs-charcoal">{formatNaira(txLogData.marketing_and_subscriptions.team_subscriptions_total)}</span>
+                  </div>
+                </div>
+                {txLogData.refunded.count === 0 && (
+                  <p className="text-[10px] text-gray-400 mt-3 text-center">
+                    Honest note: refunds show a real zero because there is currently no working refund request feature in the app — not because none were needed.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {activeTab === "notificationsfeed" && (
           <div>
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
@@ -4326,6 +4476,20 @@ function AdminDashboardInner() {
 
         {activeTab === "assignrole" && (
           <div>
+            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2 mb-4">
+              <p className="text-sm font-bold text-chs-charcoal">📊 Grant real investor access</p>
+              <p className="text-[10px] text-gray-400">
+                A genuine, restricted view of real business figures — growth, revenue, escrow health — with no individual buyer, seller, or tenant ever identifiable. The person must already have a real CHS account.
+              </p>
+              <input type="text" value={investorContact} onChange={(e) => setInvestorContact(e.target.value)}
+                placeholder="Their phone number or email"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+              <button onClick={handleGrantInvestor} className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
+                Grant investor access
+              </button>
+              {investorGrantResult && <p className="text-xs text-green-700">{investorGrantResult}</p>}
+            </div>
+
             <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2 mb-4">
               <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
               <p className="text-[10px] text-gray-400">
@@ -4430,7 +4594,7 @@ function AdminDashboardInner() {
                     const domainTabLabels: Record<string, string[]> = {
                       customer_care: ["Disputes", "Feedback"],
                       registration_setup: ["Face Verification", "ID Verification", "Registrations"],
-                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings"],
+                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
                       agent_relations: ["Referral fees"],
                       artisan_dev_pm_vendor: ["Vendors", "Maintenance", "Artisans", "Developers"],
                     };
@@ -4477,6 +4641,7 @@ function AdminDashboardInner() {
                   { group: "Financial", items: [
                     { key: "finance" as Tab, label: "Finance" },
                     { key: "platformearnings" as Tab, label: "Platform Earnings" },
+                    { key: "transactionlog" as Tab, label: "Transaction History Log" },
                     { key: "referrals" as Tab, label: `Referral Fees (${owedFees.filter(f => f.status === "owed").length})` },
                     { key: "shortletdeposits" as Tab, label: "Shortlet/Hire Deposits" },
                   ] },
@@ -4534,6 +4699,50 @@ function AdminDashboardInner() {
               <p className="text-center text-sm text-gray-400 py-8">Real platform settings are visible to Super Admin only.</p>
             ) : (
               <PlatformSettingsPanel />
+            )}
+          </div>
+        )}
+
+        {activeTab === "userregistry" && (
+          <div>
+            {!profile?.is_super_admin ? (
+              <p className="text-center text-sm text-gray-400 py-8">The real user registry is visible to Super Admin only.</p>
+            ) : !registryData ? (
+              <p className="text-center text-sm text-gray-400 py-8">Loading real figures…</p>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div className="bg-chs-charcoal text-white rounded-xl p-4">
+                    <p className="text-[10px] text-white/70 uppercase font-bold">Registered Users</p>
+                    <p className="font-serif text-2xl font-bold mt-0.5">{registryData.total_registered}</p>
+                  </div>
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <p className="text-[9px] font-bold text-green-700 uppercase">Active (30 days)</p>
+                    <p className="text-2xl font-bold text-chs-charcoal mt-0.5">{registryData.active_count}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mb-3">
+                  <input type="text" value={registrySearch} onChange={(e) => setRegistrySearch(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && loadUserRegistry()}
+                    placeholder="Search real name, phone, or reference number"
+                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                  <button onClick={loadUserRegistry} className="px-4 py-2 rounded-full bg-chs-red text-white text-xs font-semibold">Search</button>
+                </div>
+                {registryData.users.map((u) => (
+                  <div key={u.reference_number} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-xs">
+                    <div className="flex justify-between items-start">
+                      <span className="font-semibold text-chs-charcoal">{u.full_name}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${u.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                        {u.is_active ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <p className="text-gray-500 mt-0.5 font-mono">{u.reference_number} · {u.phone} · <span className="capitalize">{u.role}</span></p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      Registered {new Date(u.created_at).toLocaleDateString()} · Last seen {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : "never"}
+                    </p>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}

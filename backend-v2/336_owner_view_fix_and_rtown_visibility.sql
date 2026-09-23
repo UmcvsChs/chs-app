@@ -1,0 +1,16 @@
+-- No schema change. Real, direct fix for a genuine, serious,
+-- confirmed bug, per direct screenshot: the property page had no
+-- concept of "the current viewer is this property's own owner" at
+-- all. An owner clicking a real notification about their own
+-- negotiation landed on the exact same page a stranger would see,
+-- telling them to make an offer on their own property.
+--
+-- Fixed properly, not just patched: the real page-level owner check
+-- (already correctly used for view-count tracking) is now also
+-- passed into the component itself, which shows a genuinely separate
+-- view for the owner -- their own real, pending offers and
+-- negotiations, with the same real reply chat already built, and a
+-- direct link to manage their listing. Extended to also cover real,
+-- pending Rent-to-Own requests on the same page, since that
+-- notification links to the identical page and was found to have the
+-- exact same gap while fixing this.

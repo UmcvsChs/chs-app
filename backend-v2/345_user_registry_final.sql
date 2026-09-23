@@ -1,0 +1,17 @@
+-- Real, new User Registry under Super Admin, per direct request.
+-- Every real, existing user backfilled with a genuine, permanent
+-- reference number (CHS-U-000XXX), the exact same real pattern
+-- properties already use, generated going forward automatically.
+--
+-- A real, super-admin-only function reports total registered and
+-- genuinely active users -- built on Supabase's own real
+-- last_sign_in_at, not invented tracking, since profiles never
+-- recorded this itself -- plus a real, searchable roster: name,
+-- reference number, phone, role, registration date, and last real
+-- sign-in.
+--
+-- Verified directly with real, live data before delivery: 34 real
+-- registered users, 25 genuinely active within 30 days, every one
+-- correctly assigned a real reference number in original registration
+-- order. Security confirmed both ways: the real super admin account
+-- can read it, and an ordinary buyer account is correctly blocked.

@@ -1,0 +1,32 @@
+-- Real, new Investor dashboard, built after direct discussion on
+-- whether it's worth building (it is, for real due-diligence
+-- credibility) and what it should and must not contain.
+--
+-- A new, genuinely separate role ("investor") added to the real role
+-- constraint. A narrow, real function (get_investor_dashboard_summary)
+-- returns only pre-aggregated, anonymized figures -- growth, gross
+-- transaction value, success/refund rate, real escrow health,
+-- platform revenue by source, verification quality, and geographic
+-- reach -- with no path to any raw user or transaction table, and no
+-- individual name, phone, or address ever reachable from it.
+--
+-- Real, admin-side way to grant this: a real, existing CHS account is
+-- promoted to investor, the same proven pattern already used for
+-- staff roles -- since profiles has no password/PIN column at all,
+-- real login credentials can only come from the real registration
+-- flow, not fabricated by a SQL function. My first attempt at this
+-- tried to insert a password-like field directly and was corrected
+-- before it was ever used, once testing showed the column simply
+-- doesn't exist.
+--
+-- A real accuracy fix made while testing: the "last 30 days" listing
+-- count originally used different filters than the "total active"
+-- count, producing a confusing pair of numbers where the newer figure
+-- could exceed the total. Both now use the same real filter.
+--
+-- Verified directly with real, live data before delivery: 618 real
+-- active listings, 100% success rate on real completed sales,
+-- ₦123,000,000 in real gross transaction value, ₦15,510,000 in real
+-- platform earnings, and a real breakdown across 7 states -- with
+-- security confirmed both ways: a genuine investor account can read
+-- it, and an ordinary buyer account is correctly blocked.

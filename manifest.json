@@ -3,7 +3,7 @@
   "name": "CHS - Complete Housing Solutions",
   "short_name": "CHS",
   "description": "Your property, our commitment — Nigeria's transparent real estate platform connecting owners, tenants, agents, and property managers.",
-  "start_url": "/index.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#1E1B16",
