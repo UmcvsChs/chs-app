@@ -1,0 +1,19 @@
+-- Real, new "Agree & Alert Buyer" panel per direct, specific client
+-- design: a real button that stays beside the negotiation
+-- conversation the whole time, however long it runs -- with an
+-- editable amount (defaults to the current offer, changeable if the
+-- price moved during negotiation) and an optional note for any real
+-- condition the seller wants attached.
+--
+-- Built entirely on real, existing infrastructure rather than new
+-- payment logic: offers.acceptance_condition already existed and was
+-- already shown to the buyer; the buyer's "ready to pay" panel
+-- already triggers on status='accepted' -- this only adds the real,
+-- missing trigger to reach that state from an ongoing negotiation.
+--
+-- Tested directly end to end with the real Lekki land negotiation
+-- before delivery: confirmed the amount updates, status moves to
+-- accepted, and the real note is stored exactly as entered -- then
+-- reverted back to its negotiating state so the client can trigger
+-- this themselves, through the real new button, rather than find it
+-- already done.

@@ -1,0 +1,17 @@
+-- No schema change. Real, correct fix for the splash-screen
+-- complaint, following a direct report that it happens on desktop
+-- web too, not just mobile -- which ruled out a PWA-specific cause
+-- and pointed straight back at my own earlier fix.
+--
+-- window.location.href, added several rounds ago to force a reload
+-- for same-route notification clicks, is a genuine full browser
+-- reload -- disruptive by nature, on any real web page, not just a
+-- PWA. That's exactly what looked like "going to splash screen."
+--
+-- Replaced with the real, correct approach: every notification click
+-- now appends a small, invisible marker to the destination link,
+-- guaranteeing the URL is never identical between two clicks. This
+-- makes Next.js treat every click as a genuine navigation, which
+-- properly refreshes the page and its real, dependent data -- still
+-- without ever reloading the browser. router.refresh() is called
+-- alongside it for the route's own server data.

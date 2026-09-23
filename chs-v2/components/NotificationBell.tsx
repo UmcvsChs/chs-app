@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -12,7 +12,6 @@ import { Notification } from "@/types/notification";
 export default function NotificationBell() {
   const { session } = useAuth();
   const router = useRouter();
-  const pathname = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -120,21 +119,39 @@ export default function NotificationBell() {
       // query-parameter refresh mechanism to handle every same-route
       // case there instead. That trust was misplaced for one real,
       // confirmed case — two notifications pointing to the exact same
-      // full URL (path and query string both identical), which
-      // genuinely happens whenever admin is already sitting on a tab
-      // and a second, new item arrives for that same tab. In that
-      // exact case there is no real change for admin's own mechanism
-      // to detect, so it correctly does nothing — and nothing else
-      // was in place to catch it. Removed the exclusion entirely:
-      // every same-route click, including admin's, now gets the same
-      // real, reliable, guaranteed refresh. A brief, real reload is a
-      // small real cost next to silently stale data.
-      const destinationPath = n.link.split("?")[0];
-      if (destinationPath === pathname) {
-        window.location.href = n.link;
-      } else {
-        router.push(n.link);
-      }
+      // full URL.
+      //
+      // Real, fourth and correct fix, following a direct, repeated
+      // client report — including on desktop web, not just mobile,
+      // which ruled out a PWA-specific cause and pointed straight
+      // back at window.location.href itself: a full browser reload is
+      // disruptive by nature, wherever it fires. It doesn't just look
+      // like a "splash screen" on a PWA — a full reload genuinely is
+      // that, on any real web page, re-downloading and
+      // re-initializing the whole app for what the person only meant
+      // as "take me to this one thing." router.refresh() is the real,
+      // correct tool for this: it tells Next.js to re-fetch this
+      // route's real server data without ever reloading the browser
+      // page — no white flash, no re-download, no perceived "splash."
+      // Now called after every real notification navigation, not just
+      // the same-route case, since fresh data is always the right
+      // outcome and router.refresh() is safe and cheap to call
+      // regardless of whether the route actually changed.
+      // Real, fifth refinement to this same fix: router.refresh() alone
+      // re-fetches this route's real server data, but a client
+      // component with its own internal state (like the real
+      // negotiation panel on a property page) won't necessarily re-run
+      // its own fetch just because the parent server-refreshed — its
+      // effect's real dependencies (like property.id) genuinely
+      // haven't changed. The reliable fix is ensuring the destination
+      // URL itself is never identical between two clicks: a real,
+      // small, invisible marker appended to the link forces Next.js to
+      // treat this as a genuine navigation every time, which is what
+      // actually re-renders the page and its real, dependent
+      // components fresh — still without ever reloading the browser.
+      const freshLink = n.link + (n.link.includes("?") ? "&" : "?") + "_n=" + Date.now();
+      router.push(freshLink);
+      router.refresh();
     }
   }
 

@@ -29,6 +29,20 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   // notification about their own negotiation landed on a page telling
   // them to make an offer on their own property, with no way to see
   // or respond to what actually needed their decision.
+  const [finalizeAmount, setFinalizeAmount] = useState<number | "">("");
+  const [finalizeNote, setFinalizeNote] = useState("");
+  const [finalizing, setFinalizing] = useState(false);
+  const [finalizeSuccess, setFinalizeSuccess] = useState(false);
+  async function handleFinalizeAgreement(offerId: string) {
+    if (!finalizeAmount) return;
+    setFinalizing(true);
+    const { error } = await supabase.rpc("finalize_negotiated_agreement", {
+      p_offer_id: offerId, p_final_amount: finalizeAmount, p_note: finalizeNote.trim() || null,
+    });
+    setFinalizing(false);
+    if (!error) setFinalizeSuccess(true);
+  }
+
   const [ownerOffers, setOwnerOffers] = useState<{
     id: string; amount: number; status: string; buyer_full_name: string | null; note: string | null;
   }[]>([]);
@@ -40,16 +54,21 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     if (!error) setOwnerRentToOwnRequests((prev) => prev.filter((r) => r.id !== id));
   }
   useEffect(() => {
-    if (!isOwner) return;
-    supabase.from("offers").select("id, amount, status, buyer_full_name, note")
-      .eq("property_id", property.id)
-      .in("status", ["awaiting_owner_decision", "owner_decided_pending_relay", "rejected"])
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setOwnerOffers(data || []));
-    if (property.purpose === "rent_to_own") {
-      supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name, phone)")
-        .eq("property_id", property.id).eq("status", "requested")
-        .then(({ data }) => setOwnerRentToOwnRequests((data as unknown as typeof ownerRentToOwnRequests) || []));
+    if (isOwner) {
+      supabase.from("offers").select("id, amount, status, buyer_full_name, note")
+        .eq("property_id", property.id)
+        .in("status", ["awaiting_owner_decision", "owner_decided_pending_relay", "rejected"])
+        .order("created_at", { ascending: false })
+        .then(({ data }) => {
+          setOwnerOffers(data || []);
+          const active = (data || []).find((o) => o.status !== "rejected") || data?.[0];
+          if (active) setFinalizeAmount(active.amount);
+        });
+      if (property.purpose === "rent_to_own") {
+        supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name, phone)")
+          .eq("property_id", property.id).eq("status", "requested")
+          .then(({ data }) => setOwnerRentToOwnRequests((data as unknown as typeof ownerRentToOwnRequests) || []));
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwner, property.id]);
@@ -781,6 +800,34 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
             )}
             {session && (
               <OfferMessageThread offerId={activeOffer.id} viewerRole="seller" viewerId={session.user.id} />
+            )}
+            {/* Real, new panel per direct, specific client design: a
+                real button that stays beside the negotiation
+                conversation no matter how long it runs — whenever the
+                seller is genuinely okay with wherever the price has
+                landed, this is the one real action that turns talk
+                into a payable deal, with an optional note for any real
+                condition (a deadline, a term) the seller wants the
+                buyer to see alongside it. */}
+            {activeOffer.status === "rejected" && (
+              finalizeSuccess ? (
+                <p className="text-xs text-green-700 font-semibold text-center py-2 mt-2">✓ Buyer alerted — go-ahead sent</p>
+              ) : (
+                <div className="bg-white rounded-lg border-2 border-chs-red p-3 mt-2">
+                  <p className="text-[10px] font-bold text-chs-charcoal mb-1.5">
+                    Whenever you&apos;re okay with the price above, confirm it here to alert the buyer to pay:
+                  </p>
+                  <input type="number" value={finalizeAmount} onChange={(e) => setFinalizeAmount(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" placeholder="Final agreed amount" />
+                  <textarea value={finalizeNote} onChange={(e) => setFinalizeNote(e.target.value)}
+                    placeholder="Optional note — e.g. this offer is valid for 7 days" rows={2}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-xs mb-2" />
+                  <button onClick={() => handleFinalizeAgreement(activeOffer.id)} disabled={finalizing || !finalizeAmount}
+                    className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                    {finalizing ? "Sending…" : "✓ I agree — alert buyer to pay"}
+                  </button>
+                </div>
+              )
             )}
           </div>
         ) : (
