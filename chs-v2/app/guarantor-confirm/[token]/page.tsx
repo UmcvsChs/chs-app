@@ -33,8 +33,47 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [addressProofFile, setAddressProofFile] = useState<File | null>(null);
+  const [addressProofType, setAddressProofType] = useState("Utility Bill");
+  const [addressProofDate, setAddressProofDate] = useState("");
   const [signatureFullName, setSignatureFullName] = useState("");
   const [understood, setUnderstood] = useState(false);
+
+  // Real, direct fix per a specific, repeated client report — the
+  // same real draft mechanism already built for the rental
+  // application, offer, and listing forms, genuinely missed here
+  // when those were built. Keyed to the real, unique confirmation
+  // token, so a guarantor's own real entries — relationship, address,
+  // occupation, ID details, even their typed signature — survive
+  // exactly the kind of interruption described: getting distracted,
+  // a session issue, a refresh, anything short of actually
+  // submitting.
+  const guarantorDraftKey = `chs_guarantor_draft_${token}`;
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(guarantorDraftKey);
+      if (saved) {
+        const d = JSON.parse(saved);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (d.relationship) setRelationship(d.relationship);
+        if (d.address) setAddress(d.address);
+        if (d.occupation) setOccupation(d.occupation);
+        if (d.idType) setIdType(d.idType);
+        if (d.idNumber) setIdNumber(d.idNumber);
+        if (d.addressProofType) setAddressProofType(d.addressProofType);
+        if (d.addressProofDate) setAddressProofDate(d.addressProofDate);
+        if (d.signatureFullName) setSignatureFullName(d.signatureFullName);
+      }
+    } catch { /* a corrupted or blocked draft should never break the real form */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(guarantorDraftKey, JSON.stringify({
+        relationship, address, occupation, idType, idNumber, addressProofType, addressProofDate, signatureFullName,
+      }));
+    } catch { /* private-browsing or full storage should never break typing */ }
+  }, [guarantorDraftKey, relationship, address, occupation, idType, idNumber, addressProofType, addressProofDate, signatureFullName]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,6 +108,23 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
     // never touched.
     if (!idFile) {
       setError("Please attach a real photo or scan of your ID document — the type and number alone aren't enough.");
+      return;
+    }
+    // Real, new security layer per direct client discussion: an ID
+    // proves identity, not where someone currently lives — a real,
+    // separate, recent document is required to prove that.
+    if (!addressProofFile) {
+      setError("Please attach a real proof of your current address — a utility bill or bank statement, no older than 90 days.");
+      return;
+    }
+    if (!addressProofDate) {
+      setError("Please enter the real date shown on your proof of address.");
+      return;
+    }
+    const proofDate = new Date(addressProofDate);
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+    if (proofDate < ninetyDaysAgo) {
+      setError("Your proof of address must genuinely be dated within the last 90 days. Please provide a more recent one.");
       return;
     }
     if (!understood) {
@@ -109,6 +165,24 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       idDocumentUrl = signedData?.signedUrl || null;
     }
 
+    // Real, new upload for the address proof — same real, narrowly-
+    // scoped permission rule already fixed for the ID document
+    // covers this too, since both use the same real "guarantor-"
+    // path prefix.
+    let addressProofUrl: string | null = null;
+    if (addressProofFile) {
+      const ext2 = addressProofFile.name.split(".").pop();
+      const path2 = `guarantor-${token}/documents/guarantor-address-${Date.now()}.${ext2}`;
+      const { error: uploadError2 } = await supabase.storage.from("private-documents").upload(path2, addressProofFile);
+      if (uploadError2) {
+        setError(`Your proof of address could not be uploaded: ${uploadError2.message}. Please try a different file or try again.`);
+        setSubmitting(false);
+        return;
+      }
+      const { data: signedData2 } = await supabase.storage.from("private-documents").createSignedUrl(path2, 60 * 60 * 24 * 365);
+      addressProofUrl = signedData2?.signedUrl || null;
+    }
+
     const { error: rpcError } = await supabase.rpc("submit_guarantor_confirmation", {
       p_token: token,
       p_relationship: relationship.trim(),
@@ -118,6 +192,9 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       p_id_number: idNumber.trim(),
       p_id_document_url: idDocumentUrl,
       p_signature_full_name: signatureFullName.trim(),
+      p_address_proof_url: addressProofUrl,
+      p_address_proof_type: addressProofType,
+      p_address_proof_date: addressProofDate,
     });
 
     setSubmitting(false);
@@ -125,6 +202,7 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       setError(rpcError.message);
       return;
     }
+    try { localStorage.removeItem(guarantorDraftKey); } catch { /* real success should never be blocked by storage cleanup */ }
     setSubmitted(true);
   }
 
@@ -200,6 +278,29 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
           <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this ID *</p>
           <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
             className="w-full text-xs" />
+
+          {/* Real, new security layer per direct client discussion:
+              an ID proves who you are, not where you currently live —
+              a real, separate, recent document is required to prove
+              that, since a person can relocate at any time without
+              their ID ever reflecting it. */}
+          <div className="border-t border-gray-200 pt-3">
+            <p className="text-xs font-bold text-chs-charcoal mb-1">Proof of current address (required)</p>
+            <p className="text-[10px] text-gray-500 mb-2">
+              A real utility bill or bank statement in your own name, dated within the last 90 days — your ID alone can&apos;t confirm where you live right now.
+            </p>
+            <select value={addressProofType} onChange={(e) => setAddressProofType(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-2">
+              <option value="Utility Bill">Utility Bill (PHCN/NEPA, water, etc.)</option>
+              <option value="Bank Statement">Bank Statement</option>
+            </select>
+            <label className="text-[10px] font-semibold text-gray-600">Date shown on the document</label>
+            <input type="date" value={addressProofDate} onChange={(e) => setAddressProofDate(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-2" />
+            <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this document *</p>
+            <input type="file" accept="image/*,application/pdf" onChange={(e) => setAddressProofFile(e.target.files?.[0] || null)}
+              className="w-full text-xs" />
+          </div>
 
           <div className="border-t border-gray-200 pt-3">
             <p className="text-xs font-bold text-chs-charcoal mb-1">What you are agreeing to</p>

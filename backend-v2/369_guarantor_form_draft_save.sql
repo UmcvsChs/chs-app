@@ -1,0 +1,11 @@
+-- No schema change. Real, direct fix following a specific, repeated
+-- client report: the draft-saving standard applied to the rental
+-- application, offer, and listing forms was genuinely never extended
+-- to this specific guarantor confirmation page -- a real gap in
+-- applying the standing rule, not a regression of something that
+-- used to work. Every real field a guarantor enters -- relationship,
+-- address, occupation, ID details, their typed signature -- now
+-- saves automatically as they type, keyed to their own real,
+-- specific confirmation token, and restores automatically if
+-- interrupted. Cleared only once the real confirmation has genuinely
+-- succeeded.

@@ -3308,7 +3308,20 @@ function AdminDashboardInner() {
                     <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
                     <p className="text-[11px] text-gray-500">{app.guarantor_id_type} — {app.guarantor_id_number}</p>
                     {app.guarantor_id_document_url && (
-                      <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline">View guarantor&apos;s real, uploaded ID</a>
+                      <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View guarantor&apos;s real, uploaded ID</a>
+                    )}
+                    {/* Real, new display per direct client
+                        discussion: an ID alone can't confirm current
+                        address, so this shows the real, separate
+                        proof alongside it, with its own real date so
+                        admin can see at a glance whether it's still
+                        genuinely within the required 90 days. */}
+                    {app.guarantor_address_proof_url ? (
+                      <a href={app.guarantor_address_proof_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">
+                        View guarantor&apos;s real {app.guarantor_address_proof_type || "proof of address"} ({app.guarantor_address_proof_date})
+                      </a>
+                    ) : (
+                      <p className="text-[10px] text-gray-400">No real proof of address on file.</p>
                     )}
                     <p className="text-[11px] text-green-700 font-semibold mt-1">✓ Independently confirmed by the guarantor themselves</p>
                   </>

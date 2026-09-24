@@ -18,6 +18,9 @@ export interface RentalApplication {
   guarantor_id_type: string | null;
   guarantor_id_number: string | null;
   guarantor_id_document_url: string | null;
+  guarantor_address_proof_url: string | null;
+  guarantor_address_proof_type: string | null;
+  guarantor_address_proof_date: string | null;
   guarantor_confirmed_at: string | null;
   owner_decision: "approved" | "owner_declined" | null;
   applicant_full_name: string | null;

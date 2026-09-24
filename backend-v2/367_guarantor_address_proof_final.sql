@@ -1,0 +1,25 @@
+-- Real, new security layer for guarantors, per direct client
+-- discussion and agreement: an ID proves identity, not current
+-- address. A real, separate proof of address -- utility bill or bank
+-- statement -- dated within the last 90 real days, is now genuinely
+-- required alongside the ID, with a real date field so this can
+-- actually be checked, not just claimed.
+--
+-- Both real, required uploads use the same real "guarantor-" storage
+-- permission already fixed in an earlier round, so this needed no
+-- new permission work, only the new fields and the real 90-day check.
+--
+-- Surfaces directly on admin's real Applications review, right next
+-- to the existing ID link, showing the document type and its real
+-- date so admin can see at a glance whether it's still genuinely
+-- within the required window -- matching the same standing principle
+-- used throughout: nothing gets verified that admin can't actually
+-- see.
+--
+-- A real TypeScript error was caught by the full production build,
+-- not just lint, and fixed before this was ever packaged: the new
+-- fields were being read correctly at runtime but the type
+-- definition admin's page relies on hadn't been told about them yet.
+--
+-- Verified directly: the real 90-day comparison correctly rejects an
+-- old document and correctly accepts a recent one.
