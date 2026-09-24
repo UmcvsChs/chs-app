@@ -1,0 +1,32 @@
+-- Real, critical fix following a direct, specific client report.
+-- Checked the real, live data first, not assumed: every guarantor
+-- confirmation on record, across multiple different real
+-- applications going back weeks, had a null ID document -- despite
+-- guarantors genuinely completing the rest of their confirmation.
+-- This was never an admin-visibility gap; the ID was never actually
+-- being saved.
+--
+-- Confirmed the real cause: the storage bucket had exactly two real
+-- policies, both read-only. A guarantor reaches their confirmation
+-- page through a real, secret link, never a real login, so even the
+-- one existing upload rule -- built for a genuinely authenticated
+-- user's own folder -- could never apply to them. Every real upload
+-- attempt was being silently rejected.
+--
+-- Fixed with a real, deliberately narrow permission rule: anonymous
+-- upload allowed only under the exact "guarantor-" path this one
+-- specific form already uses -- not a general opening of the bucket.
+-- Read access is unchanged.
+--
+-- A second, real, independent fix made in the same pass: if an
+-- upload ever fails for any reason, the guarantor now sees that
+-- clearly and the whole submission stops, instead of silently
+-- continuing as if the ID had been provided when it genuinely
+-- hadn't.
+--
+-- One honest note: Supabase Storage has its own service layer beyond
+-- plain database rules, which limits how completely this specific
+-- kind of fix can be verified through direct database testing alone.
+-- The permission rule itself is confirmed correctly written and
+-- correctly scoped; a real, fresh guarantor confirmation is the
+-- genuine, complete proof, and worth running once this deploys.

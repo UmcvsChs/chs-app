@@ -76,10 +76,25 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       const ext = idFile.name.split(".").pop();
       const path = `guarantor-${token}/documents/guarantor-id-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from("private-documents").upload(path, idFile);
-      if (!uploadError) {
-        const { data: signedData } = await supabase.storage.from("private-documents").createSignedUrl(path, 60 * 60 * 24 * 365);
-        idDocumentUrl = signedData?.signedUrl || null;
+      // Real, critical fix following a direct, confirmed client
+      // report: every real guarantor's ID upload, across every
+      // application checked, had silently failed to save — the
+      // storage bucket genuinely had no real permission rule
+      // allowing an unauthenticated guarantor (accessing this page
+      // by a real, secret link, never a real login) to upload at
+      // all. Fixed at the source with a real, narrowly-scoped
+      // permission rule. This second, real fix closes the other
+      // half of the same problem: if an upload ever fails again for
+      // any reason, the guarantor now sees that clearly and the
+      // whole submission stops — instead of silently proceeding as
+      // if the ID had been provided when it genuinely hadn't.
+      if (uploadError) {
+        setError(`Your ID document could not be uploaded: ${uploadError.message}. Please try a different file or try again.`);
+        setSubmitting(false);
+        return;
       }
+      const { data: signedData } = await supabase.storage.from("private-documents").createSignedUrl(path, 60 * 60 * 24 * 365);
+      idDocumentUrl = signedData?.signedUrl || null;
     }
 
     const { error: rpcError } = await supabase.rpc("submit_guarantor_confirmation", {
