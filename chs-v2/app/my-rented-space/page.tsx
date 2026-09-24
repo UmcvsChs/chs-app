@@ -272,6 +272,10 @@ export default function MyRentedSpacePage() {
           <Link href={`/condition-report/${tenancy.id}?type=move_in`} className="block text-center mt-2 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
             File a move-in condition report
           </Link>
+          <a href="/documents/CHS_Standard_Condition_Affidavit_Template.docx" download
+            className="block text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
+            📥 Download the standard move-out affidavit template
+          </a>
           <Link href="/my-receipts" className="block text-center mt-1.5 text-[10px] font-semibold text-chs-red underline">
             View all real receipts →
           </Link>

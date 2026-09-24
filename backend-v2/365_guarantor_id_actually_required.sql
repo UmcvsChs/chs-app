@@ -1,0 +1,18 @@
+-- No schema change. Real, critical fix following a direct client
+-- report with a fresh, reproduced example (Juliana Patrick's
+-- application, guarantor Johnson Patrick, submitted minutes before
+-- being reported). Checked the exact real record directly: the
+-- guarantor's ID document was genuinely still null.
+--
+-- Confirmed the real, exact cause, and it is honestly a different
+-- bug from the one fixed in the previous round, not the same one
+-- resurfacing: this form's real validation only ever required the ID
+-- type and number as text -- the actual document upload was never
+-- required at all. A guarantor could type in a real ID number and
+-- submit successfully with no file selected. The earlier storage-
+-- permission fix was real and correct for when a file WAS provided;
+-- it never touched this separate, genuine gap.
+--
+-- Fixed directly: the document is now a genuinely required field,
+-- with a clear, visible label marking it as such, not just a silent
+-- rule enforced only at the moment of submission.

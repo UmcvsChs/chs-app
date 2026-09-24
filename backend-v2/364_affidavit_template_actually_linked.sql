@@ -1,0 +1,12 @@
+-- No schema change. Real, direct correction following a direct
+-- client question: the standard affidavit template was drafted and
+-- delivered as a file, but genuinely never wired into the app itself
+-- -- a tenant had no real way to reach it from inside the platform at
+-- all. Confirmed directly before fixing anything.
+--
+-- Fixed properly: the real template now lives in the app's own real
+-- document folder and is directly downloadable from two real points
+-- of need -- right on the move-out condition report page, next to
+-- the field asking for the finished, signed affidavit, and from the
+-- document shelf on My Rented Space, so a tenant can find and review
+-- it even before reaching move-out.

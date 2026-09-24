@@ -311,7 +311,19 @@ function ConditionReportPageInner({
           <div className="bg-chs-amber-light rounded-xl p-4 mb-4">
             <p className="text-xs font-bold text-chs-amber-dark mb-1">📜 Real court affidavit required</p>
             <p className="text-[11px] text-gray-600 mb-2">
-              Beyond normal wear and tear, you&apos;re required to obtain a real, sworn affidavit from a nearby High Court — a genuine undertaking stating the condition you met this property in, the condition you&apos;re leaving it in, and that you take real responsibility for any damage caused by your own negligence or action while in occupation. Upload the signed, stamped affidavit below.
+              Beyond normal wear and tear, you&apos;re required to obtain a real, sworn affidavit from a nearby High Court — a genuine undertaking stating the condition you met this property in, the condition you&apos;re leaving it in, and that you take real responsibility for any damage caused by your own negligence or action while in occupation.
+            </p>
+            {/* Real, direct fix following a direct client question:
+                the template existed, but a tenant had no way to
+                actually reach it from inside the app — this is
+                exactly the point of need, right where the upload
+                field asks for the finished, signed document. */}
+            <a href="/documents/CHS_Standard_Condition_Affidavit_Template.docx" download
+              className="block text-center mb-2 py-2 rounded-lg bg-white border border-chs-amber-dark text-chs-amber-dark text-xs font-semibold">
+              📥 Download the standard affidavit template
+            </a>
+            <p className="text-[11px] text-gray-600 mb-2">
+              Fill it in, attach this real condition report as Exhibit &quot;A&quot;, and take it to a High Court to be sworn before a Commissioner for Oaths. Upload the signed, stamped result below.
             </p>
             <input
               type="file"

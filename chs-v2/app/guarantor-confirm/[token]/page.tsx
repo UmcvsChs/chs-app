@@ -59,6 +59,18 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       setError("Please provide your own, real means of identification.");
       return;
     }
+    // Real, critical fix following a direct, confirmed client report
+    // with a fresh, reproduced example: this form asked for an ID
+    // type and number, but never actually required the document
+    // itself to be attached — a guarantor could type in a real ID
+    // number and submit successfully with no file selected at all.
+    // The earlier storage-permission fix was real and correct for
+    // when a file WAS provided; this is a genuinely separate gap it
+    // never touched.
+    if (!idFile) {
+      setError("Please attach a real photo or scan of your ID document — the type and number alone aren't enough.");
+      return;
+    }
     if (!understood) {
       setError("Please confirm you understand what standing as a guarantor means before continuing.");
       return;
@@ -185,6 +197,7 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
               placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           )}
+          <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this ID *</p>
           <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
             className="w-full text-xs" />
 
