@@ -7,6 +7,7 @@
 export interface RoomItem {
   item: string;
   condition: "good" | "fair" | "poor";
+  photo_url?: string | null;
 }
 
 export interface ConditionRoom {

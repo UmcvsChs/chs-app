@@ -183,13 +183,13 @@ export default function TenantDashboard() {
     setLoading(false);
   }
 
-  async function handlePayRent(tenancyId: string) {
+  async function handlePayRent(tenancyId: string, walletSource: "main" | "rent_savings" = "main") {
     setPayingRentId(tenancyId);
     setPayRentMessage((prev) => ({ ...prev, [tenancyId]: "" }));
-    const { data, error } = await supabase.rpc("pay_rent", { p_tenancy_id: tenancyId });
+    const { data, error } = await supabase.rpc("pay_rent", { p_tenancy_id: tenancyId, p_wallet_source: walletSource });
     setPayingRentId(null);
     if (error) {
-      setPayRentMessage((prev) => ({ ...prev, [tenancyId]: error.message.includes("insufficient_balance") ? "Insufficient wallet balance for the real total due." : error.message }));
+      setPayRentMessage((prev) => ({ ...prev, [tenancyId]: error.message.includes("insufficient_balance") ? "Insufficient wallet balance for the real total due." : error.message.replace("not_yet_due: ", "") }));
       return;
     }
     setPayRentMessage((prev) => ({ ...prev, [tenancyId]: `✓ Paid ${formatNaira(data.real_total_paid)} — lease renewed. Ref: ${data.reference}` }));
@@ -295,6 +295,15 @@ export default function TenantDashboard() {
               to, not just buyer's. */}
           <Link href="/" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">🔍 Browse Properties</Link>
         </div>
+        {/* Real, new link per direct client instruction: the actual
+            home for a tenant who has genuinely moved in — the
+            countdown, both wallets, the fault log, real documents,
+            and a direct line to whoever is responsible, all in one
+            real place. */}
+        <Link href="/my-rented-space" className="block bg-white/15 rounded-lg px-3 py-2 mt-2">
+          <p className="text-xs font-bold">🏠 My Rented Space</p>
+          <p className="text-[10px] text-white/70">Rent, wallets, faults, documents, and messages — all in one place</p>
+        </Link>
       </div>
 
       <div className="px-4 py-4 space-y-5">
@@ -368,10 +377,23 @@ export default function TenantDashboard() {
                 {(() => {
                   const daysLeft = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   const withinNoticeWindow = daysLeft <= 90 && daysLeft > 0;
+                  // Real, direct fix matching the client's own
+                  // original design, confirmed to have been lost:
+                  // the 30-day payment window is a genuinely
+                  // different, more urgent concern than the 90-day
+                  // renewal-notice window, and needs its own real,
+                  // distinct visual treatment — not danger literally,
+                  // but a real, gently pulsing alert the moment rent
+                  // is genuinely close or overdue.
+                  const paymentUrgent = daysLeft <= 30;
                   return (
-                    <div className={`mt-1.5 rounded-lg px-2.5 py-1.5 ${withinNoticeWindow && !t.notice_given_at ? "bg-chs-amber-light" : "bg-[var(--zone-card)]"}`}>
-                      <p className="text-xs font-bold text-chs-charcoal">
-                        {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
+                    <div className={`mt-1.5 rounded-lg px-2.5 py-1.5 ${
+                      paymentUrgent ? "bg-chs-red/10 border-2 border-chs-red animate-pulse"
+                      : withinNoticeWindow && !t.notice_given_at ? "bg-chs-amber-light"
+                      : "bg-[var(--zone-card)]"
+                    }`}>
+                      <p className={`text-xs font-bold ${paymentUrgent ? "text-chs-red" : "text-chs-charcoal"}`}>
+                        {paymentUrgent && "⚠️ "}{daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
                       </p>
                       {tenanciesWithPriorPayment.has(t.id) && (
                         <p className="text-[10px] text-green-700 font-semibold mt-0.5">
@@ -425,10 +447,52 @@ export default function TenantDashboard() {
                   </div>
                 )}
                 {payRentMessage[t.id] && <p className="text-[10px] text-gray-600 mt-1">{payRentMessage[t.id]}</p>}
-                <button onClick={() => handlePayRent(t.id)} disabled={payingRentId === t.id}
-                  className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                  {payingRentId === t.id ? "Processing..." : `Pay — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
-                </button>
+                {/* Real, critical fix following a direct, serious
+                    client report: a real tenant paid a full year of
+                    rent twice, because this button stayed exactly the
+                    same, still clickable, after a real successful
+                    payment — nothing here ever checked whether
+                    another payment was actually due. Now matches the
+                    same real 30-day window the backend itself
+                    enforces: the button only appears when payment is
+                    genuinely due or overdue; otherwise a clear, real
+                    confirmation replaces it, with a direct link to
+                    the receipt. */}
+                {(() => {
+                  const daysUntilDue = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (daysUntilDue > 30) {
+                    return (
+                      <div className="mt-1.5 bg-green-50 border border-green-200 rounded-lg p-2.5">
+                        <p className="text-xs font-semibold text-green-700">✓ Rent paid through {new Date(t.lease_end).toLocaleDateString()}</p>
+                        <Link href="/my-receipts" className="text-[10px] text-chs-red underline font-semibold">View your real receipt</Link>
+                      </div>
+                    );
+                  }
+                  return (
+                    <button onClick={() => handlePayRent(t.id, "main")} disabled={payingRentId === t.id}
+                      className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                      {payingRentId === t.id ? "Processing..." : `Pay from Main Wallet — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
+                    </button>
+                  );
+                })()}
+                {/* Real, direct fix matching the client's own original
+                    design: a tenant paying rent themselves should be
+                    able to choose their rent savings wallet too, not
+                    only the main wallet — this choice previously only
+                    existed for fully automatic payments. Only offered
+                    here when no one-time commission is owed, since
+                    rent savings exists purely to hold real rent
+                    money, not CHS's own commission. */}
+                {(() => {
+                  const daysUntilDue2 = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                  if (daysUntilDue2 > 30 || (pendingTenantCommission[t.id] || 0) > 0) return null;
+                  return (
+                    <button onClick={() => handlePayRent(t.id, "rent_savings")} disabled={payingRentId === t.id}
+                      className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
+                      Pay from Rent Savings — {formatNaira(t.annual_rent)}
+                    </button>
+                  );
+                })()}
                 <div className="mt-1.5 bg-white rounded-lg p-2">
                   <label className="flex items-center gap-1.5">
                     <input type="checkbox" checked={!!t.auto_pay_rent_enabled}

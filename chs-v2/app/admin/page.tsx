@@ -64,7 +64,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -793,19 +793,22 @@ function AdminDashboardInner() {
   const [openDisputes, setOpenDisputes] = useState<Dispute[]>([]);
   const [conditionReports, setConditionReports] = useState<{
     id: string; reference: string; report_type: string; status: string; affidavit_url: string | null;
-    affidavit_reference: string | null; submitted_at: string; tenancies: { tenant_id: string; landlord_id: string; properties: { title: string }[] | null } | null;
+    affidavit_reference: string | null; submitted_at: string; rooms: { name: string; notes: string; items: { item: string; condition: string; photo_url: string | null }[] }[];
+    tenancies: { tenant_id: string; landlord_id: string; properties: { title: string }[] | null } | null;
   }[]>([]);
-  useEffect(() => {
-    // Real, direct fix per Fix Tracker item 10: the real move-out
-    // affidavit upload already existed for tenants, but admin had
-    // genuinely no way to see any of it. Every real move-out report
-    // with an affidavit attached now surfaces here directly.
+  function loadConditionReports() {
+    // Real, direct fix following a direct, confirmed client report:
+    // this previously only ever showed move-out reports with a real
+    // affidavit attached — a genuine move-in report, or any move-out
+    // report before its affidavit was uploaded, was structurally
+    // invisible here. Now shows every real report, with its full,
+    // real room-by-room detail and photos.
     supabase.from("condition_reports")
-      .select("id, reference, report_type, status, affidavit_url, affidavit_reference, submitted_at, tenancies(tenant_id, landlord_id, properties(title))")
-      .not("affidavit_url", "is", null)
+      .select("id, reference, report_type, status, affidavit_url, affidavit_reference, submitted_at, rooms, tenancies(tenant_id, landlord_id, properties(title))")
       .order("submitted_at", { ascending: false }).limit(50)
       .then(({ data }) => setConditionReports((data as unknown as typeof conditionReports) || []));
-  }, []);
+  }
+  useEffect(() => { loadConditionReports(); }, []);
   const [pendingFeedback, setPendingFeedback] = useState<CommunityFeedback[]>([]);
   const [pendingEngage, setPendingEngage] = useState<EngageRequest[]>([]);
   const [recentlyHandledEngage, setRecentlyHandledEngage] = useState<EngageRequest[]>([]);
@@ -2091,6 +2094,7 @@ function AdminDashboardInner() {
 
           // Complaints & Care
           { key: "disputes", label: `Disputes (${openDisputes.length})`, domain: "customer_care", group: "Complaints & Care" },
+          { key: "conditionreports", label: `📋 Condition Reports (${conditionReports.length})`, domain: "customer_care", group: "Complaints & Care" },
           { key: "feedback", label: `Feedback (${pendingFeedback.length})`, domain: "customer_care", group: "Complaints & Care" },
           { key: "faults", label: `Maintenance (${unroutedFaults.length})`, domain: "artisan_dev_pm_vendor", group: "Complaints & Care" },
 
@@ -3691,23 +3695,50 @@ function AdminDashboardInner() {
               </div>
             ))
           )}
+          </div>
+        )}
 
-            {conditionReports.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs font-bold text-chs-charcoal mb-2">📜 Real Move-Out Court Affidavits ({conditionReports.length})</p>
-                {conditionReports.map((r) => (
-                  <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-semibold text-chs-charcoal">{r.tenancies?.properties?.[0]?.title || "Property"}</p>
-                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 capitalize">{r.report_type.replace(/_/g, " ")} · {r.status} · Ref: {r.reference}</p>
-                    <a href={r.affidavit_url!} target="_blank" rel="noreferrer" className="block text-[10px] text-chs-red underline mt-1">
+        {activeTab === "conditionreports" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              📋 Every real move-in and move-out condition report, room by room, with every real photo a tenant attached as evidence.
+            </p>
+            {conditionReports.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real condition reports submitted yet.</p>
+            ) : (
+              conditionReports.map((r) => (
+                <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-3">
+                  <div className="flex justify-between items-start">
+                    <p className="text-sm font-semibold text-chs-charcoal">{r.tenancies?.properties?.[0]?.title || "Property"}</p>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 capitalize mb-2">{r.report_type.replace(/_/g, " ")} · {r.status} · Ref: {r.reference}</p>
+                  {r.affidavit_url && (
+                    <a href={r.affidavit_url} target="_blank" rel="noreferrer" className="block text-[10px] text-chs-red underline mb-2">
                       📄 View real court affidavit ({r.affidavit_reference})
                     </a>
-                  </div>
-                ))}
-              </div>
+                  )}
+                  {(r.rooms || []).map((room, ri) => (
+                    <div key={ri} className="bg-white rounded-lg p-2 mb-1.5">
+                      <p className="text-xs font-bold text-chs-charcoal mb-1">{room.name}</p>
+                      {room.items.map((item, ii) => (
+                        <div key={ii} className="flex justify-between items-center text-[10px] mb-1 last:mb-0">
+                          <span className="text-gray-600">{item.item}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`font-bold capitalize px-1.5 py-0.5 rounded-full ${item.condition === "good" ? "bg-green-100 text-green-700" : item.condition === "fair" ? "bg-chs-amber-light text-chs-amber-dark" : "bg-red-100 text-chs-red"}`}>
+                              {item.condition}
+                            </span>
+                            {item.photo_url && (
+                              <a href={item.photo_url} target="_blank" rel="noreferrer" className="text-chs-red underline">📷 Photo</a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      {room.notes && <p className="text-[10px] text-gray-500 mt-1 italic">&quot;{room.notes}&quot;</p>}
+                    </div>
+                  ))}
+                </div>
+              ))
             )}
           </div>
         )}
@@ -4592,7 +4623,7 @@ function AdminDashboardInner() {
                 ) : (
                   subAdminRoster.filter((s) => !s.is_super_admin).map((s) => {
                     const domainTabLabels: Record<string, string[]> = {
-                      customer_care: ["Disputes", "Feedback"],
+                      customer_care: ["Disputes", "Condition Reports", "Feedback"],
                       registration_setup: ["Face Verification", "ID Verification", "Registrations"],
                       owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
                       agent_relations: ["Referral fees"],
@@ -4661,6 +4692,7 @@ function AdminDashboardInner() {
                   ] },
                   { group: "Complaints & Care", items: [
                     { key: "disputes" as Tab, label: `Disputes (${openDisputes.length})` },
+                    { key: "conditionreports" as Tab, label: `Condition Reports (${conditionReports.length})` },
                     { key: "feedback" as Tab, label: `Feedback (${pendingFeedback.length})` },
                     { key: "faults" as Tab, label: `Maintenance (${unroutedFaults.length})` },
                   ] },

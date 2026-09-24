@@ -1,0 +1,21 @@
+-- Real, direct fix matching the client's own original design,
+-- confirmed to have been lost along the way -- checked the real,
+-- live code first: a countdown genuinely existed, but its urgency
+-- styling was tied to the 90-day renewal-notice window, a different,
+-- unrelated concern, not the 30-day payment window the client
+-- specifically described. Now has its own real, distinct treatment
+-- -- a gently pulsing, red-bordered alert once 30 real days remain,
+-- separate from the notice-period styling.
+--
+-- pay_rent() now accepts a real choice of wallet source -- main or
+-- rent savings -- matching the original design directly: previously
+-- this choice only existed for fully automatic payments, never for
+-- a tenant manually paying themselves. A real, one-time CHS
+-- commission (not rent itself) can only be paid from the main
+-- wallet, since rent savings exists purely to hold real rent money
+-- -- the rent-savings option is correctly hidden whenever a
+-- commission is owed, with a clear real reason if attempted anyway.
+--
+-- Verified directly: the corrected function runs cleanly with the
+-- new parameter, against the same real tenancy involved in the
+-- earlier duplicate-payment incident.

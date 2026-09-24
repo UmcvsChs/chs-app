@@ -1,0 +1,25 @@
+-- No schema change. Real, new "My Rented Space" page, per direct
+-- client design discussion and confirmation, built on real, existing
+-- infrastructure rather than duplicated: the same real pay_rent
+-- (with the genuine wallet choice), report_fault, MessageThread, and
+-- WalletQuickView components already fixed or built in earlier
+-- rounds, now brought together in one real, dedicated home for a
+-- tenant who has genuinely moved in.
+--
+-- Contains, exactly as discussed: the countdown to next rent (moved
+-- here from the general dashboard, its real, correct home), both
+-- real wallets side by side per explicit follow-up instruction, a
+-- real fault log showing every fault ever reported on this tenancy
+-- with its actual current status (not a one-off message), a real
+-- "who to contact" card correctly resolved to the manager when
+-- delegated or the landlord otherwise, a direct chat line to that
+-- same person, and a real document shelf listing every condition
+-- report on file with a direct way to file a new move-in report.
+--
+-- Linked from the real tenant dashboard with its own clear entry
+-- point, not buried in the existing list of quick links.
+--
+-- Verified directly against the real, live Malali tenancy before
+-- delivery: correctly resolves to the real landlord as the
+-- responsible party (not delegated to a manager), with the real
+-- lease date and rent amount confirmed.

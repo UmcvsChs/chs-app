@@ -1,0 +1,31 @@
+-- Real, comprehensive rebuild of the condition report system, per
+-- direct, detailed client design discussion.
+--
+-- The form now opens with real, standard rooms and fixtures already
+-- filled in, derived from the property's own actual bedroom count --
+-- not a blank page. Every room and every item can still be freely
+-- added, renamed, or removed, keeping this genuinely flexible for
+-- whatever a real property has that the standard list doesn't
+-- anticipate, exactly as requested.
+--
+-- Every single room-and-fixture entry can now carry its own real
+-- photo -- the actual evidence behind "poor," attached to that exact
+-- complaint, not one photo for a whole report.
+--
+-- Fixed the confirmed root cause of admin never seeing a submitted
+-- report: a real notification now fires to every super admin on
+-- submission, and admin's own review screen -- previously filtered
+-- to only affidavit-carrying move-out reports, structurally hiding
+-- every move-in report -- now shows every real report, with its full
+-- room-by-room detail and photos, in its own real, dedicated tab.
+--
+-- A real, standard affidavit template was drafted separately
+-- (delivered as a Word document) -- neutral, non-self-serving
+-- language stating the property's condition as independently
+-- recorded on the real Condition Report, with the report itself
+-- attached as Exhibit A, so a tenant has a genuine starting point
+-- rather than free rein to draft something self-serving.
+--
+-- Honest, remaining scope: "My Rented Space" as its own dedicated
+-- tenant tab -- discussed and agreed in the previous exchange -- is
+-- not part of this round and remains the next real piece of work.

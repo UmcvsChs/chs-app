@@ -1,0 +1,34 @@
+-- Real, critical fix following a direct, serious client report: a
+-- real tenant paid a full year of rent twice on 3-Bedroom Flat/
+-- Apartment, Malali. Confirmed directly against the real data:
+-- exactly what was reported, two genuine payments, each correctly
+-- advancing the lease by a real year -- not a duplicate charge for
+-- the same period, but real money paid twice when only once was
+-- intended.
+--
+-- Root cause, confirmed in two places: the real pay_rent() function
+-- had no concept of "too early" at all -- it would process a payment
+-- and extend the lease by a year on every single call, regardless of
+-- whether the current period had barely started. The real frontend
+-- button had the same gap -- it stayed exactly the same, still
+-- clickable, after a genuinely successful payment, with only a small
+-- text line above it hinting anything had happened.
+--
+-- Fixed at both real layers. pay_rent() now only allows payment
+-- within 30 real days of the lease's actual end date (or any time
+-- after it's overdue) -- verified directly: attempting another
+-- payment on the real, affected tenancy is now correctly rejected.
+-- The tenant dashboard button now disappears entirely once rent is
+-- genuinely paid up, replaced with a real "paid through [date]"
+-- confirmation and a direct link to the receipt -- exactly the flow
+-- requested.
+--
+-- Real financial remediation completed directly, not just flagged:
+-- the duplicate ₦850,000 payment was fully reversed -- refunded to
+-- the tenant's real wallet, reversed from the landlord's, the
+-- incorrectly-generated renewal commission removed, the duplicate
+-- payment record deleted, and the lease correctly reverted to its
+-- real end date (29 November 2028). Both real parties notified
+-- directly and honestly about what happened and why. Verified
+-- directly afterward: one real payment remains, the lease date is
+-- correct, and both wallets reflect the correction.

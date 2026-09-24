@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState, use } from "react";
+import { Suspense, useState, use, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
-import { ConditionRoom } from "@/types/conditionReport";
+import { ConditionRoom, RoomItem } from "@/types/conditionReport";
 
 function generateReference(): string {
   return "CHS-COND-" + Math.floor(1000 + Math.random() * 9000);
@@ -14,12 +14,23 @@ function generateReference(): string {
 
 const CONDITION_OPTIONS = ["good", "fair", "poor"] as const;
 
+// Real, standard fixture checklist per room, per direct client design:
+// the same real items apply to almost any room, so listing them by
+// default is what makes this genuinely fast to fill in — while every
+// room and every item can still be freely added to or removed,
+// keeping this flexible for whatever a real property actually has
+// that this list doesn't anticipate.
+const STANDARD_ITEMS = ["Walls", "Floor/Tiles", "Ceiling/POP", "Doors", "Windows"];
+const WET_ROOM_ITEMS = [...STANDARD_ITEMS, "Plumbing/Drainage", "Water Closet/Fittings"];
+
+function defaultItemsFor(roomName: string): RoomItem[] {
+  const isWet = /toilet|bath|kitchen|wc/i.test(roomName);
+  return (isWet ? WET_ROOM_ITEMS : STANDARD_ITEMS).map((item) => ({ item, condition: "good" as const, photo_url: null }));
+}
+
 // Real, required Suspense boundary — useSearchParams() (needed to
 // read ?type=move_out vs move_in) requires this in the Next.js App
-// Router, or the production build fails at type-check time. Found via
-// a systematic sweep of every file using useSearchParams after the
-// same real bug was found and fixed in a few other files but missed
-// here.
+// Router, or the production build fails at type-check time.
 export default function ConditionReportPage(props: { params: Promise<{ tenancyId: string }> }) {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>}>
@@ -36,23 +47,54 @@ function ConditionReportPageInner({
   const { tenancyId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Real, new fix — this page previously only ever handled a move-in
-  // report. A real move-out report, with a real court affidavit
-  // requirement, was described and agreed on earlier but never
-  // actually built. Both now share this same real form.
   const reportType = searchParams.get("type") === "move_out" ? "move_out" : "move_in";
   const { session, loading: authLoading } = useAuth();
 
-  const [rooms, setRooms] = useState<ConditionRoom[]>([
-    { name: "Living Room", items: [{ item: "Walls", condition: "good" }], notes: "" },
-  ]);
+  const [rooms, setRooms] = useState<ConditionRoom[]>([]);
+  const [propertyTitle, setPropertyTitle] = useState("");
+  const [loadingProperty, setLoadingProperty] = useState(true);
   const [affidavitFile, setAffidavitFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingPhotoFor, setUploadingPhotoFor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Real, direct fix per explicit client design: the real, actual
+  // bedroom count on this specific property drives the starting room
+  // list — a genuine 3-bedroom flat opens with Living Room, Master
+  // Bedroom, Bedroom 2, Bedroom 3, Kitchen, and Toilet/Bathroom
+  // already there, each with its own real, standard fixture
+  // checklist already filled in — not a blank page a tenant has to
+  // build from nothing.
+  useEffect(() => {
+    supabase.from("tenancies").select("property_id, properties(title, bedrooms)")
+      .eq("id", tenancyId).maybeSingle()
+      .then(({ data }) => {
+        const prop = Array.isArray(data?.properties) ? data.properties[0] : data?.properties;
+        setPropertyTitle(prop?.title || "");
+        const bedroomCount = prop?.bedrooms || 1;
+        const defaultRooms: ConditionRoom[] = [
+          { name: "Living Room", items: defaultItemsFor("Living Room"), notes: "" },
+          ...(bedroomCount >= 1 ? [{ name: "Master Bedroom", items: defaultItemsFor("Bedroom"), notes: "" }] : []),
+          ...Array.from({ length: Math.max(0, bedroomCount - 1) }, (_, i) => ({
+            name: `Bedroom ${i + 2}`, items: defaultItemsFor("Bedroom"), notes: "",
+          })),
+          { name: "Kitchen", items: defaultItemsFor("Kitchen"), notes: "" },
+          { name: "Toilet/Bathroom", items: defaultItemsFor("Toilet"), notes: "" },
+          { name: "Exterior/Compound", items: defaultItemsFor("Exterior"), notes: "" },
+        ];
+        setRooms(defaultRooms);
+        setLoadingProperty(false);
+      });
+  }, [tenancyId]);
+
   function addRoom() {
-    setRooms([...rooms, { name: "", items: [{ item: "", condition: "good" }], notes: "" }]);
+    // Real, direct flexibility per explicit client request: a
+    // custom room with no preset items, for whatever a real property
+    // has that the standard list doesn't anticipate — a study, a BQ,
+    // a store, a generator house, anything real and specific to that
+    // one property.
+    setRooms([...rooms, { name: "", items: [{ item: "", condition: "good", photo_url: null }], notes: "" }]);
   }
 
   function updateRoomName(roomIndex: number, name: string) {
@@ -69,7 +111,7 @@ function ConditionReportPageInner({
 
   function addItem(roomIndex: number) {
     const updated = [...rooms];
-    updated[roomIndex].items.push({ item: "", condition: "good" });
+    updated[roomIndex].items.push({ item: "", condition: "good", photo_url: null });
     setRooms(updated);
   }
 
@@ -79,8 +121,32 @@ function ConditionReportPageInner({
     setRooms(updated as ConditionRoom[]);
   }
 
+  function removeItem(roomIndex: number, itemIndex: number) {
+    const updated = [...rooms];
+    updated[roomIndex].items = updated[roomIndex].items.filter((_, i) => i !== itemIndex);
+    setRooms(updated);
+  }
+
   function removeRoom(roomIndex: number) {
     setRooms(rooms.filter((_, i) => i !== roomIndex));
+  }
+
+  // Real, direct fix for what the client called the most important
+  // gap: every single room-and-fixture entry can now carry its own
+  // real photo — the actual evidence behind "poor," not just the
+  // word itself. A stiff window, a bad door, a WC that won't drain —
+  // each gets its own real proof, attached to that exact complaint.
+  async function handleItemPhoto(roomIndex: number, itemIndex: number, file: File | null) {
+    if (!file || !session) return;
+    const key = `${roomIndex}-${itemIndex}`;
+    setUploadingPhotoFor(key);
+    const url = await uploadDocument(file, session.user.id, `condition-r${roomIndex}-i${itemIndex}`);
+    setUploadingPhotoFor(null);
+    if (url) {
+      const updated = [...rooms];
+      updated[roomIndex].items[itemIndex] = { ...updated[roomIndex].items[itemIndex], photo_url: url };
+      setRooms(updated);
+    }
   }
 
   async function handleSubmit() {
@@ -90,10 +156,6 @@ function ConditionReportPageInner({
       setError("Please name every room before submitting.");
       return;
     }
-    // Real, deliberate requirement per direct client design: a
-    // move-out report requires a genuine court-issued affidavit —
-    // the tenant's real undertaking of the condition they're leaving
-    // the property in — uploaded as real evidence both sides can see.
     if (reportType === "move_out" && !affidavitFile) {
       setError("A real court affidavit is required for a move-out report — see the note below for what this means and why.");
       return;
@@ -108,7 +170,7 @@ function ConditionReportPageInner({
       affidavitReference = "AFFIDAVIT-" + Math.floor(100000 + Math.random() * 900000);
     }
 
-    const { error: insertError } = await supabase.from("condition_reports").insert({
+    const { data: reportData, error: insertError } = await supabase.from("condition_reports").insert({
       reference: generateReference(),
       tenancy_id: tenancyId,
       rooms,
@@ -118,18 +180,29 @@ function ConditionReportPageInner({
       report_type: reportType,
       affidavit_url: affidavitUrl,
       affidavit_reference: affidavitReference,
-    });
+    }).select().single();
 
     if (insertError) {
-      setError("Could not submit this report. Please try again.");
+      setError(`Could not submit this report: ${insertError.message}`);
       setSubmitting(false);
       return;
     }
 
+    // Real, direct fix for a genuine, confirmed gap: admin was never
+    // told a report existed at all — this insert alone left CHS with
+    // no way to know, and its own review screen only ever showed
+    // move-out reports with an affidavit attached, so a move-in
+    // report was structurally invisible either way. Both fixed: a
+    // real notification now goes to every super admin the moment
+    // this submits.
+    await supabase.rpc("notify_admins_condition_report", {
+      p_report_id: reportData.id, p_report_type: reportType, p_property_title: propertyTitle,
+    });
+
     setSuccess(true);
   }
 
-  if (authLoading) {
+  if (authLoading || loadingProperty) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
   if (!session) {
@@ -142,7 +215,7 @@ function ConditionReportPageInner({
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
         <p className="text-lg font-semibold text-chs-charcoal mb-2">✓ {reportType === "move_out" ? "Move-out" : "Move-in"} condition report submitted</p>
         <p className="text-sm text-gray-500 mb-4">
-          This is now on record — a real, dated document both you and your landlord can refer back to.
+          This is now on record — a real, dated document both you and your landlord can refer back to, with CHS notified directly.
         </p>
         <Link href="/tenant" className="text-sm font-semibold text-chs-red">Back to My Rentals</Link>
       </div>
@@ -155,6 +228,7 @@ function ConditionReportPageInner({
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">
           {reportType === "move_out" ? "Move-out condition report" : "Move-in condition report"}
         </h1>
+        <p className="text-sm text-gray-500 mb-1">{propertyTitle}</p>
         <p className="text-sm text-gray-500 mb-6">
           {reportType === "move_out"
             ? "Document the real condition of each room as you leave — this genuinely protects both you and your landlord if a dispute ever comes up later."
@@ -178,24 +252,43 @@ function ConditionReportPageInner({
               )}
             </div>
 
-            {room.items.map((item, itemIndex) => (
-              <div key={itemIndex} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={item.item}
-                  onChange={(e) => updateItem(roomIndex, itemIndex, "item", e.target.value)}
-                  placeholder="e.g. Walls, Windows, Flooring"
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs"
-                />
-                <select
-                  value={item.condition}
-                  onChange={(e) => updateItem(roomIndex, itemIndex, "condition", e.target.value)}
-                  className="px-2 py-2 rounded-lg border border-gray-200 text-xs bg-white"
-                >
-                  {CONDITION_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            ))}
+            {room.items.map((item, itemIndex) => {
+              const key = `${roomIndex}-${itemIndex}`;
+              return (
+                <div key={itemIndex} className="mb-2 bg-[var(--zone-card)] rounded-lg p-2">
+                  <div className="flex gap-2 mb-1.5">
+                    <input
+                      type="text"
+                      value={item.item}
+                      onChange={(e) => updateItem(roomIndex, itemIndex, "item", e.target.value)}
+                      placeholder="e.g. Walls, Windows, Flooring"
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-xs bg-white"
+                    />
+                    <select
+                      value={item.condition}
+                      onChange={(e) => updateItem(roomIndex, itemIndex, "condition", e.target.value)}
+                      className="px-2 py-2 rounded-lg border border-gray-200 text-xs bg-white"
+                    >
+                      {CONDITION_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <button onClick={() => removeItem(roomIndex, itemIndex)} className="text-[10px] text-gray-400 px-1">✕</button>
+                  </div>
+                  {item.photo_url ? (
+                    <div className="flex items-center gap-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={item.photo_url} alt={item.item} className="w-12 h-12 rounded object-cover" />
+                      <span className="text-[10px] text-green-700 font-semibold">✓ Real photo attached</span>
+                    </div>
+                  ) : (
+                    <label className="text-[10px] font-semibold text-chs-red cursor-pointer">
+                      📷 {uploadingPhotoFor === key ? "Uploading…" : "Attach a real photo of this"}
+                      <input type="file" accept="image/*" className="hidden"
+                        onChange={(e) => handleItemPhoto(roomIndex, itemIndex, e.target.files?.[0] || null)} />
+                    </label>
+                  )}
+                </div>
+              );
+            })}
             <button onClick={() => addItem(roomIndex)} className="text-[10px] font-semibold text-chs-red">
               + Add item
             </button>
@@ -211,7 +304,7 @@ function ConditionReportPageInner({
         ))}
 
         <button onClick={addRoom} className="w-full py-2.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold mb-4">
-          + Add another room
+          + Add another room (e.g. Study, BQ, Store — anything not listed above)
         </button>
 
         {reportType === "move_out" && (
