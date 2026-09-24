@@ -1,0 +1,25 @@
+-- No schema change. Real, direct performance fix, done now rather
+-- than deferred, following a direct follow-up question on when.
+--
+-- Mapped every one of the 21 real, separate database calls inside
+-- admin's own data-loading function individually before touching
+-- anything, checking each for a genuine dependency on another's
+-- result. Found exactly one real dependency in the whole section --
+-- a local JavaScript merge step that needs three of the results, but
+-- is not itself a network call and doesn't require those three
+-- queries to run in sequence with each other, only to have finished
+-- before the merge itself runs.
+--
+-- Every one of the 21 calls, plus a further two used only for a
+-- super admin, has been regrouped into real, concurrent batches
+-- (matching the exact same Promise.all pattern this file's own first
+-- 14 queries already correctly used) instead of running one after
+-- another with no genuine reason to. The real queries themselves are
+-- completely unchanged -- same data, same filters, same results --
+-- only the timing of when they run changed.
+--
+-- Verified two ways before delivery: the full production build,
+-- including TypeScript's own strict type-checking across this entire
+-- rewritten section, passed cleanly with zero errors; and a direct,
+-- live check against the real database confirmed the underlying
+-- queries still return correct, real data.

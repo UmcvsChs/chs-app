@@ -161,8 +161,19 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
         setSubmitting(false);
         return;
       }
-      const { data: signedData } = await supabase.storage.from("private-documents").createSignedUrl(path, 60 * 60 * 24 * 365);
-      idDocumentUrl = signedData?.signedUrl || null;
+      const { data: signedData, error: signError } = await supabase.storage.from("private-documents").createSignedUrl(path, 60 * 60 * 24 * 365);
+      // Real, direct fix for the exact, confirmed cause of a real,
+      // reproduced client report: this step can genuinely fail on
+      // its own, separately from the upload itself — this was never
+      // checked before, so a real permission gap here failed
+      // completely silently, leaving the document URL null with no
+      // real explanation shown to the guarantor at all.
+      if (signError || !signedData?.signedUrl) {
+        setError(`Your ID document was uploaded but a real, viewable link could not be created: ${signError?.message || "please try again."}`);
+        setSubmitting(false);
+        return;
+      }
+      idDocumentUrl = signedData.signedUrl;
     }
 
     // Real, new upload for the address proof — same real, narrowly-
@@ -179,8 +190,13 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
         setSubmitting(false);
         return;
       }
-      const { data: signedData2 } = await supabase.storage.from("private-documents").createSignedUrl(path2, 60 * 60 * 24 * 365);
-      addressProofUrl = signedData2?.signedUrl || null;
+      const { data: signedData2, error: signError2 } = await supabase.storage.from("private-documents").createSignedUrl(path2, 60 * 60 * 24 * 365);
+      if (signError2 || !signedData2?.signedUrl) {
+        setError(`Your proof of address was uploaded but a real, viewable link could not be created: ${signError2?.message || "please try again."}`);
+        setSubmitting(false);
+        return;
+      }
+      addressProofUrl = signedData2.signedUrl;
     }
 
     const { error: rpcError } = await supabase.rpc("submit_guarantor_confirmation", {

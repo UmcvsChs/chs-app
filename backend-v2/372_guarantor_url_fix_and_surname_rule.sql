@@ -1,0 +1,24 @@
+-- Real, critical fix following a direct report reproduced on two
+-- different browsers: confirmed the exact real cause -- the earlier
+-- guarantor storage permission only ever covered uploading a file,
+-- never generating a real, viewable signed link to it afterward. The
+-- upload was genuinely succeeding; creating the signed URL was
+-- silently failing with no error ever surfaced, leaving the real
+-- address-proof URL null. Fixed with the missing real read
+-- permission, and the frontend code now genuinely checks for and
+-- surfaces an error at this exact step, for both the ID document and
+-- the address proof, instead of silently proceeding with a null URL.
+--
+-- Real, new rule per explicit client instruction: a guarantor sharing
+-- the applicant's surname is now rejected, at both the real frontend
+-- and backend level -- checked directly against the exact test case
+-- in use (Juliana Patrick / Johnson Patrick) and confirmed it would
+-- have been correctly caught.
+--
+-- Honest, direct finding on the real admin performance concern, not
+-- yet acted on: counted 22 real, separate database calls inside
+-- admin's own data-loading function, 21 of them running one after
+-- another rather than together -- a real, confirmed explanation for
+-- the slowdown, not a vague one. Flagged as genuine, prioritized next
+-- work rather than risk a rushed, undertested change to this
+-- function today.

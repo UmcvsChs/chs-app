@@ -112,6 +112,19 @@ export default function RentalApplicationForm({
       setError("Please enter your guarantor's name and phone number — they'll confirm everything else about themselves directly.");
       return;
     }
+    // Real, direct fix per explicit client instruction: a spouse,
+    // parent, or child sharing the same surname as the applicant is
+    // too easy a shortcut to lean on and defeats the real purpose of
+    // an independent guarantor — CHS requires a genuine third party,
+    // not someone from the same household by name. Comparing the
+    // last real word of each name is a practical, honest proxy for
+    // this, matching exactly how the client described the rule.
+    const applicantSurname = applicantFullName.trim().split(/\s+/).pop()?.toLowerCase();
+    const guarantorSurname = guarantorName.trim().split(/\s+/).pop()?.toLowerCase();
+    if (applicantSurname && guarantorSurname && applicantSurname === guarantorSurname) {
+      setError("Your guarantor cannot share your surname — CHS requires a genuine third party, not a spouse, parent, or child. Please provide someone outside your immediate family.");
+      return;
+    }
     if (!moveInDate) {
       setError("Please choose your preferred move-in date.");
       return;

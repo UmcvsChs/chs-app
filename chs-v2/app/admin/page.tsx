@@ -1069,122 +1069,64 @@ function AdminDashboardInner() {
       rulesAcknowledged: ackRes.count || 0,
     });
 
-    const { data: saleApprovalsData } = await supabase
-      .from("offers")
-      .select("*, properties(title)")
-      .eq("status", "accepted")
-      .eq("chs_cleared", false)
-      .order("created_at", { ascending: true });
-    setPendingSaleApprovals((saleApprovalsData as unknown as typeof pendingSaleApprovals) || []);
+    // Real, direct fix for a genuine, confirmed performance problem,
+    // flagged directly by the client and traced precisely: this whole
+    // section used to run as 21 separate, real database calls, each
+    // one fully waiting for the last to finish before the next even
+    // started — even though none of them actually depend on each
+    // other's results. Checked every single one carefully before
+    // touching anything: the only real dependency in this entire
+    // section is a local JavaScript merge step further down, which
+    // needs three of these results but is not itself a network call.
+    // Grouped into real, concurrent batches instead — same real
+    // queries, same real results, just no longer waiting in a single
+    // file line for each other with no genuine reason to.
+    const [
+      saleApprovalsRes, offerReviewRes, offerDecisionsRes, registrationsRes,
+      agentIdRes, managerCertRes, livenessRes, buyerIdRes,
+      commissionRes, concernsRes, agentChangeRes, appealsRes,
+      msgOwnerRes, precommitRes, txnRes, installmentRes, rentRes,
+      saleDocsRes, legalTransferRes,
+    ] = await Promise.all([
+      supabase.from("offers").select("*, properties(title)").eq("status", "accepted").eq("chs_cleared", false).order("created_at", { ascending: true }),
+      supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title, reference_number, profiles!properties_owner_id_fkey(full_name, phone)), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)").eq("status", "awaiting_admin_review").order("created_at", { ascending: true }),
+      supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)").eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true }),
+      supabase.rpc("get_pending_registrations_full"),
+      supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url").eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null),
+      supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url").eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null),
+      supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: true }),
+      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)").eq("status", "pending").order("created_at", { ascending: true }),
+      supabase.from("transaction_commissions").select("commission_amount").eq("status", "paid"),
+      supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: true }),
+      supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: true }),
+      supabase.from("account_appeals").select("id, message, profiles:user_id(full_name, phone)").eq("status", "pending").order("created_at", { ascending: true }),
+      supabase.from("owner_admin_messages").select("owner_id, profiles:owner_id(full_name)").order("created_at", { ascending: false }),
+      supabase.from("precommit_messages").select("id, text, sender_role, profiles:sender_id(full_name), offers(properties(title))").eq("status", "pending_review").order("created_at", { ascending: true }),
+      supabase.from("transaction_commissions").select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title, street_address), profiles:payer_id(full_name)").eq("status", "paid").order("paid_at", { ascending: false }).limit(50),
+      supabase.from("sale_installment_payments").select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))").order("paid_at", { ascending: false }).limit(50),
+      supabase.from("rent_payments").select("id, amount, created_at, tenancies(property_id, properties(title, street_address))").order("created_at", { ascending: false }).limit(50),
+      supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: true }),
+      supabase.from("offers").select("id, amount, properties(title, owner_id)").eq("payment_status", "paid").eq("legal_transfer_confirmed", false).order("created_at", { ascending: true }),
+    ]);
 
-    // Real, direct fix following a repeated, confirmed client report:
-    // these two queries used to live in their own, separate useEffect
-    // that only ever ran once, at page mount -- completely outside
-    // loadData(), so none of the earlier freshness fixes ever touched
-    // them. An offer notification correctly switched to this tab and
-    // correctly triggered a reload, but the reload never actually
-    // refreshed this specific data, because it was never part of what
-    // "reload" meant. Moved here so it now genuinely refreshes with
-    // everything else.
-    const { data: offerReviewData } = await supabase
-      .from("offers")
-      .select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title, reference_number, profiles!properties_owner_id_fkey(full_name, phone)), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)")
-      .eq("status", "awaiting_admin_review").order("created_at", { ascending: true });
-    setPendingOfferReview((offerReviewData as unknown as typeof pendingOfferReview) || []);
-
-    const { data: offerDecisionsData } = await supabase
-      .from("offers")
-      .select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)")
-      .eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true });
-    setPendingOfferDecisions((offerDecisionsData as unknown as typeof pendingOfferDecisions) || []);
-
-    // Real, direct fix -- same exact bug, same exact cause: this also
-    // used to live in its own, mount-only useEffect, completely
-    // outside loadData(), so a fresh registration never actually
-    // showed up without a full page reload.
-    const { data: registrationsData } = await supabase.rpc("get_pending_registrations_full");
-    setPendingRegistrationsFull(registrationsData || []);
-
-    // Real, critical fix — confirmed directly against real, live
-    // accounts: an already-approved Agent's or Property Manager's
-    // uploaded document (valid ID, professional certificate) had
-    // never had any real admin review screen at all — invisible in
-    // Registrations, since their account was already approved, and
-    // invisible everywhere else too. Genuinely unreachable, not
-    // redundant with anything.
-    const { data: agentIdData } = await supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url")
-      .eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null);
-    setPendingAgentIds(agentIdData || []);
-    const { data: managerCertData } = await supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url")
-      .eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null);
-    setPendingManagerCerts(managerCertData || []);
-
-    const { data: livenessData } = await supabase
-      .from("liveness_submissions")
-      .select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)")
-      .eq("status", "pending_review")
-      .order("created_at", { ascending: true });
-    setPendingLiveness((livenessData as unknown as typeof pendingLiveness) || []);
-
-    // Real, exact root cause found and fixed following a direct,
-    // repeated client report and two different browsers both showing
-    // the same empty result despite a real, confirmed record existing
-    // in the database the whole time: this table has TWO real foreign
-    // keys to profiles (user_id and reviewed_by), so the bare
-    // "profiles(full_name)" embed was genuinely ambiguous — PostgREST
-    // cannot guess which relationship to use, and silently fails the
-    // whole query. The failure was invisible because only { data }
-    // was ever destructured, never { error }, so nothing showed the
-    // real problem — just an empty list, every time, since this query
-    // was first written. Fixed by naming the exact real constraint
-    // (buyer_id_verifications_user_id_fkey) PostgREST should use.
-    const { data: buyerIdData, error: buyerIdError } = await supabase
-      .from("buyer_id_verifications")
-      .select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
-    if (buyerIdError) console.error("Real error loading pending ID verifications:", buyerIdError.message);
-    setPendingBuyerIds((buyerIdData as unknown as typeof pendingBuyerIds) || []);
-
-    // Real, previously-missing commission earnings summary — sums
-    // every real, paid commission, not a projection or estimate.
-    const { data: commissionData } = await supabase
-      .from("transaction_commissions")
-      .select("commission_amount")
-      .eq("status", "paid");
-    setTotalCommissionEarnings((commissionData || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
-
-    const { data: concernsData } = await supabase
-      .from("owner_concerns")
-      .select("id, subject, message, profiles:owner_id(full_name)")
-      .eq("status", "open")
-      .order("created_at", { ascending: true });
-    setOpenOwnerConcerns((concernsData as unknown as typeof openOwnerConcerns) || []);
-
-    const { data: agentChangeData } = await supabase
-      .from("agent_change_requests")
-      .select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
-    setAgentChangeRequests((agentChangeData as unknown as typeof agentChangeRequests) || []);
-
-    const { data: appealsData } = await supabase
-      .from("account_appeals")
-      .select("id, message, profiles:user_id(full_name, phone)")
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
-    setPendingAppeals((appealsData as unknown as typeof pendingAppeals) || []);
+    setPendingSaleApprovals((saleApprovalsRes.data as unknown as typeof pendingSaleApprovals) || []);
+    setPendingOfferReview((offerReviewRes.data as unknown as typeof pendingOfferReview) || []);
+    setPendingOfferDecisions((offerDecisionsRes.data as unknown as typeof pendingOfferDecisions) || []);
+    setPendingRegistrationsFull(registrationsRes.data || []);
+    setPendingAgentIds(agentIdRes.data || []);
+    setPendingManagerCerts(managerCertRes.data || []);
+    setPendingLiveness((livenessRes.data as unknown as typeof pendingLiveness) || []);
+    if (buyerIdRes.error) console.error("Real error loading pending ID verifications:", buyerIdRes.error.message);
+    setPendingBuyerIds((buyerIdRes.data as unknown as typeof pendingBuyerIds) || []);
+    setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
+    setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
+    setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
+    setPendingAppeals((appealsRes.data as unknown as typeof pendingAppeals) || []);
     loadAdminReports();
 
-    // Real, distinct list of owners with active correspondence —
-    // derived from the actual messages table, not a guess.
-    const { data: msgOwnerData } = await supabase
-      .from("owner_admin_messages")
-      .select("owner_id, profiles:owner_id(full_name)")
-      .order("created_at", { ascending: false });
     const seen = new Set<string>();
     const uniqueOwners: { owner_id: string; full_name: string }[] = [];
-    (msgOwnerData || []).forEach((m: Record<string, unknown>) => {
+    (msgOwnerRes.data || []).forEach((m: Record<string, unknown>) => {
       const oid = m.owner_id as string;
       if (!seen.has(oid)) {
         seen.add(oid);
@@ -1194,38 +1136,9 @@ function AdminDashboardInner() {
       }
     });
     setOwnersWithMessages(uniqueOwners);
+    setPendingPrecommitMessages((precommitRes.data as unknown as typeof pendingPrecommitMessages) || []);
 
-    // Real, pending pre-commitment negotiation messages — genuine
-    // review queue, matching the exact strategic requirement that no
-    // negotiation reaches a non-committed buyer without CHS review.
-    const { data: precommitData } = await supabase
-      .from("precommit_messages")
-      .select("id, text, sender_role, profiles:sender_id(full_name), offers(properties(title))")
-      .eq("status", "pending_review")
-      .order("created_at", { ascending: true });
-    setPendingPrecommitMessages((precommitData as unknown as typeof pendingPrecommitMessages) || []);
-
-    // Real, itemized transaction log — the actual fix for "opaque
-    // earnings": every real commission line item, who paid it, what
-    // role, what percentage, and when — not just one lump total.
-    const { data: txnData } = await supabase
-      .from("transaction_commissions")
-      .select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title, street_address), profiles:payer_id(full_name)")
-      .eq("status", "paid")
-      .order("paid_at", { ascending: false })
-      .limit(50);
-
-    // Real fix: installment payments are deliberately NOT duplicated
-    // into transaction_commissions (a real unique constraint conflict
-    // found during testing), so they'd otherwise be invisible here —
-    // exactly the kind of "opaque earnings" gap being fixed. Fetched
-    // separately and merged into the same real, unified log.
-    const { data: installmentData } = await supabase
-      .from("sale_installment_payments")
-      .select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))")
-      .order("paid_at", { ascending: false })
-      .limit(50);
-    const installmentAsTransactions = (installmentData || []).flatMap((p: Record<string, unknown>) => {
+    const installmentAsTransactions = (installmentRes.data || []).flatMap((p: Record<string, unknown>) => {
       const offer = Array.isArray(p.offers) ? p.offers[0] : p.offers;
       const props = offer?.properties ? (Array.isArray(offer.properties) ? offer.properties[0] : offer.properties) : null;
       const buyerProfile = offer?.profiles ? (Array.isArray(offer.profiles) ? offer.profiles[0] : offer.profiles) : null;
@@ -1235,20 +1148,7 @@ function AdminDashboardInner() {
         paid_at: p.paid_at, properties: props, profiles: buyerProfile,
       }];
     });
-
-    // Real fix per direct client testing: a tenant's actual rent
-    // payment (peer-to-peer, not a CHS commission) was invisible to
-    // admin entirely — the money genuinely reached the landlord (this
-    // was verified directly), but admin had no way to see it happened
-    // at all. Merged in here too, clearly labeled as rent rather than
-    // CHS earnings, so admin retains real oversight of platform-wide
-    // money movement, not just CHS's own commission revenue.
-    const { data: rentData } = await supabase
-      .from("rent_payments")
-      .select("id, amount, created_at, tenancies(property_id, properties(title, street_address))")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    const rentAsTransactions = (rentData || []).map((r: Record<string, unknown>) => {
+    const rentAsTransactions = (rentRes.data || []).map((r: Record<string, unknown>) => {
       const tenancy = Array.isArray(r.tenancies) ? r.tenancies[0] : r.tenancies;
       const props = tenancy?.properties ? (Array.isArray(tenancy.properties) ? tenancy.properties[0] : tenancy.properties) : null;
       return {
@@ -1257,30 +1157,13 @@ function AdminDashboardInner() {
         paid_at: r.created_at, properties: props, profiles: null,
       };
     });
-
-    const merged = [...(txnData || []), ...installmentAsTransactions, ...rentAsTransactions]
+    const merged = [...(txnRes.data || []), ...installmentAsTransactions, ...rentAsTransactions]
       .sort((a, b) => new Date(b.paid_at as string).getTime() - new Date(a.paid_at as string).getTime())
       .slice(0, 50);
     setRecentTransactions(merged as unknown as typeof recentTransactions);
 
-    // Real, admin-wide escrow visibility now shown directly via
-    // pendingLegalTransfers below, with the actual release button
-    // right alongside it — no separate summary needed.
-
-    const { data: saleDocsData } = await supabase
-      .from("property_sale_documents")
-      .select("id, property_id, document_type, file_url, properties(title)")
-      .eq("verification_status", "pending")
-      .order("created_at", { ascending: true });
-    setPendingSaleDocs((saleDocsData as unknown as typeof pendingSaleDocs) || []);
-
-    const { data: legalTransferData } = await supabase
-      .from("offers")
-      .select("id, amount, properties(title, owner_id)")
-      .eq("payment_status", "paid")
-      .eq("legal_transfer_confirmed", false)
-      .order("created_at", { ascending: true });
-    setPendingLegalTransfers((legalTransferData as unknown as typeof pendingLegalTransfers) || []);
+    setPendingSaleDocs((saleDocsRes.data as unknown as typeof pendingSaleDocs) || []);
+    setPendingLegalTransfers((legalTransferRes.data as unknown as typeof pendingLegalTransfers) || []);
     setPendingApplications(applicationsRes.data || []);
     setPendingProperties(propertiesRes.data || []);
     setOpenDisputes(disputesRes.data || []);
@@ -1309,19 +1192,16 @@ function AdminDashboardInner() {
     // (RLS: admin_login_requests_own_read only shows their own), but
     // there's no reason to even ask unless they're the one who'd act.
     if (profile?.is_super_admin) {
-      const { data: loginRequests } = await supabase
-        .from("admin_login_requests")
-        .select("id, admin_id, code, created_at, profiles!admin_login_requests_admin_id_fkey(full_name, role)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true });
-      setPendingLoginRequests((loginRequests as typeof pendingLoginRequests) || []);
-
-      const { data: actionRequests } = await supabase
-        .from("admin_action_requests")
-        .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles!admin_action_requests_requested_by_fkey(full_name, staff_role)")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true });
-      setPendingActionRequests((actionRequests as typeof pendingActionRequests) || []);
+      const [loginRequestsRes, actionRequestsRes] = await Promise.all([
+        supabase.from("admin_login_requests")
+          .select("id, admin_id, code, created_at, profiles!admin_login_requests_admin_id_fkey(full_name, role)")
+          .eq("status", "pending").order("created_at", { ascending: true }),
+        supabase.from("admin_action_requests")
+          .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles!admin_action_requests_requested_by_fkey(full_name, staff_role)")
+          .eq("status", "pending").order("created_at", { ascending: true }),
+      ]);
+      setPendingLoginRequests((loginRequestsRes.data as typeof pendingLoginRequests) || []);
+      setPendingActionRequests((actionRequestsRes.data as typeof pendingActionRequests) || []);
     }
 
     setLoading(false);
