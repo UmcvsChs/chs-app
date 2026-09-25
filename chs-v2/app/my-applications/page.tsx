@@ -18,7 +18,7 @@ import TransactionCommissions from "@/components/TransactionCommissions";
 // moment they apply, and every notification about it links straight
 // back to this one place.
 interface RentalApp {
-  id: string; status: string; created_at: string; property_id: string;
+  id: string; status: string; created_at: string; owner_decision_at: string | null; property_id: string;
   properties: { title: string; location_area: string }[] | null;
 }
 interface Offer {
@@ -42,7 +42,7 @@ export default function MyApplicationsPage() {
   async function loadAll() {
     if (!session) return;
     const [rentalRes, offerRes, videoRes] = await Promise.all([
-      supabase.from("rental_applications").select("id, status, created_at, property_id, properties(title, location_area)")
+      supabase.from("rental_applications").select("id, status, created_at, owner_decision_at, property_id, properties(title, location_area)")
         .eq("tenant_id", session.user.id).order("created_at", { ascending: false }),
       supabase.from("offers").select("id, status, amount, payment_status, created_at, property_id, legal_transfer_confirmed, properties(title, location_area), document_dispatch_requests(status)")
         .eq("buyer_id", session.user.id).order("created_at", { ascending: false }),
@@ -117,7 +117,18 @@ export default function MyApplicationsPage() {
             rentalApps.map((a) => (
               <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{a.properties?.[0]?.title || "Property"}</p>
-                <p className="text-[10px] text-gray-400">{a.properties?.[0]?.location_area} · {new Date(a.created_at).toLocaleDateString()}</p>
+                <p className="text-[10px] text-gray-400">{a.properties?.[0]?.location_area} · Applied {new Date(a.created_at).toLocaleString()}</p>
+                {/* Real, direct fix per a specific, serious client
+                    report: the rich timestamp shown in the
+                    notification itself was completely gone once you
+                    clicked through to this page — just a bare date,
+                    with no time, and no reflection of when the
+                    current status actually happened. This shows
+                    exactly when the owner's real decision landed,
+                    full date and time, whenever one exists. */}
+                {a.owner_decision_at && (
+                  <p className="text-[10px] text-gray-400">Owner decided {new Date(a.owner_decision_at).toLocaleString()}</p>
+                )}
                 <p className="text-xs font-semibold text-chs-red mt-1">{statusLabel(a.status)}</p>
                 {a.status === "approved" && (
                   <Link href="/my-rented-space" className="block text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">

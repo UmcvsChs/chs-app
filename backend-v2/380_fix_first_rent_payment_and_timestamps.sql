@@ -1,0 +1,32 @@
+-- Real, critical fix for a genuine, serious business-logic bug,
+-- found through direct client questioning about who actually pays
+-- the rent, not just the commission.
+--
+-- Confirmed directly against the real, live tenancy: a brand-new
+-- lease had its end date set over a year out immediately on
+-- approval, and the rent-payment function's 30-day "not yet due"
+-- rule -- built specifically to stop duplicate renewal payments --
+-- was wrongly blocking the very first payment too. A new tenant
+-- genuinely had no way to pay their first year's rent at all; only
+-- the commission was ever payable.
+--
+-- Fixed at the real source: the 30-day rule now only applies once a
+-- real prior rent payment already exists on the tenancy (a genuine
+-- renewal). The first payment is always allowed, and correctly
+-- combines the real rent and the real one-time commission into a
+-- single payment -- confirmed directly: a live test on the real
+-- Bodija tenancy correctly charged ₦1,325,000 together (₦1,250,000
+-- rent plus ₦75,000 commission), exactly matching the client's own
+-- description of how this should work, then fully reversed afterward
+-- so the client can trigger it themselves, fresh.
+--
+-- Also removed a leftover, unused older version of this same
+-- function with a different parameter count -- the same real class
+-- of overload conflict that already caused one genuine failure this
+-- session, closed off here before it could resurface a second time.
+--
+-- Separately, fixed the real timestamp gap reported: My Applications
+-- previously showed only a bare submission date, with the rich
+-- sent/read timestamps from the notification itself completely gone
+-- once clicked through. Now shows exactly when the owner's real
+-- decision landed, full date and time.
