@@ -1,0 +1,20 @@
+-- Real, direct correction of a genuine mistake in the previous
+-- round, caught directly by the client with real evidence, not
+-- assumed: a working, already-proven commission payment mechanism
+-- already existed -- the same real, generic pay_transaction_commission
+-- function and its shared TransactionCommissions component, already
+-- successfully used on the tenant, owner, and wallet pages for both
+-- rentals and sales. A narrower, redundant function was mistakenly
+-- built instead of finding this first -- now removed.
+--
+-- The real, honest gap was narrower than first diagnosed: this
+-- already-generic mechanism simply hadn't been added to My
+-- Applications or My Offers yet. Added to both now, exactly as-is,
+-- not rebuilt.
+--
+-- Verified directly, across categories, that the single real
+-- mechanism genuinely already covers everything: pending commissions
+-- confirmed for houses, office spaces, and land, across both rental
+-- and sale transaction types, all through the same one real query
+-- with no type-specific logic at all -- proving this is genuinely
+-- "across board" rather than a category-by-category patch.

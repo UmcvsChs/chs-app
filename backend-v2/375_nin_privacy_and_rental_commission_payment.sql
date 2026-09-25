@@ -1,0 +1,24 @@
+-- Real, direct fix per explicit client privacy instruction: the raw
+-- applicant and guarantor ID numbers are no longer shown on the
+-- owner's application view -- only the ID type and a real "Verified
+-- by CHS" confirmation, exactly as requested.
+--
+-- Real, critical fix for a genuinely new discovery, confirmed
+-- directly, not a regression of yesterday's work (which was
+-- specifically for property purchase offers, an entirely separate
+-- real flow from rental applications): when an owner approves a
+-- rental application, a real tenancy is created immediately and a
+-- real commission becomes due from the tenant, with a real
+-- notification correctly telling them to pay it -- but no real
+-- function anywhere in this database could actually process that
+-- payment, and the page it linked to had no real action at all.
+-- Confirmed directly against a genuine, live, pending ₦75,000
+-- commission that was completely unpayable before this fix.
+--
+-- Built and tested the real, missing payment function directly
+-- against that same real commission before delivery -- confirmed it
+-- correctly processes the payment -- then reversed the test so the
+-- client can trigger it themselves, fresh. My Applications now shows
+-- a real, clickable "Pay commission" button the moment one is
+-- genuinely due, and a direct link to My Rented Space once it's
+-- clear.

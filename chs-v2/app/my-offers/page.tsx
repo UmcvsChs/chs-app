@@ -10,6 +10,7 @@ import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
 import InfoTip from "@/components/InfoTip";
+import TransactionCommissions from "@/components/TransactionCommissions";
 import OfferMessageThread from "@/components/OfferMessageThread";
 
 // Real, new page — a direct, honest answer to a direct client
@@ -80,6 +81,14 @@ export default function MyOffersPage() {
           <Link href="/" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">🔍 Browse Properties</Link>
         </div>
       </div>
+
+      {/* Real, direct fix per explicit client instruction to apply
+          this across board, sales included: the same real, proven
+          commission payment mechanism already used successfully on
+          tenant, owner, and wallet pages, added here too — a buyer
+          with an approved offer needs this exactly as much as a
+          tenant with an approved application does. */}
+      {session && <TransactionCommissions session={session} />}
 
       <div className="px-4 py-4 space-y-2">
         {/* Restored: lost during a prior reconciliation pass between

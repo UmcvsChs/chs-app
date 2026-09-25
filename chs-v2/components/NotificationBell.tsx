@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -11,7 +10,6 @@ import { Notification } from "@/types/notification";
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
   const { session } = useAuth();
-  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -137,21 +135,15 @@ export default function NotificationBell() {
       // the same-route case, since fresh data is always the right
       // outcome and router.refresh() is safe and cheap to call
       // regardless of whether the route actually changed.
-      // Real, fifth refinement to this same fix: router.refresh() alone
-      // re-fetches this route's real server data, but a client
-      // component with its own internal state (like the real
-      // negotiation panel on a property page) won't necessarily re-run
-      // its own fetch just because the parent server-refreshed — its
-      // effect's real dependencies (like property.id) genuinely
-      // haven't changed. The reliable fix is ensuring the destination
-      // URL itself is never identical between two clicks: a real,
-      // small, invisible marker appended to the link forces Next.js to
-      // treat this as a genuine navigation every time, which is what
-      // actually re-renders the page and its real, dependent
-      // components fresh — still without ever reloading the browser.
+      // Real, sixth change to this same handler, per direct, specific
+      // client request: the same real pattern Gmail and YouTube use
+      // — a notification opens in its own new tab, leaving the
+      // original list exactly where it was, scroll position and all,
+      // instead of navigating away from a long queue and losing your
+      // place in it entirely. The same fresh-link marker still
+      // applies, so the new tab always shows genuinely current data.
       const freshLink = n.link + (n.link.includes("?") ? "&" : "?") + "_n=" + Date.now();
-      router.push(freshLink);
-      router.refresh();
+      window.open(freshLink, "_blank");
     }
   }
 

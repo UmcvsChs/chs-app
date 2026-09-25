@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
+import TransactionCommissions from "@/components/TransactionCommissions";
 
 // Real, new page completing a direct, serious client concern: an
 // applied-for property used to leave no trace anywhere the applicant
@@ -17,7 +18,7 @@ import NotificationBell from "@/components/NotificationBell";
 // moment they apply, and every notification about it links straight
 // back to this one place.
 interface RentalApp {
-  id: string; status: string; created_at: string;
+  id: string; status: string; created_at: string; property_id: string;
   properties: { title: string; location_area: string }[] | null;
 }
 interface Offer {
@@ -41,7 +42,7 @@ export default function MyApplicationsPage() {
   async function loadAll() {
     if (!session) return;
     const [rentalRes, offerRes, videoRes] = await Promise.all([
-      supabase.from("rental_applications").select("id, status, created_at, properties(title, location_area)")
+      supabase.from("rental_applications").select("id, status, created_at, property_id, properties(title, location_area)")
         .eq("tenant_id", session.user.id).order("created_at", { ascending: false }),
       supabase.from("offers").select("id, status, amount, payment_status, created_at, property_id, legal_transfer_confirmed, properties(title, location_area), document_dispatch_requests(status)")
         .eq("buyer_id", session.user.id).order("created_at", { ascending: false }),
@@ -52,7 +53,8 @@ export default function MyApplicationsPage() {
       supabase.from("video_requests").select("id, room_label, status, created_at, properties(title, location_area)")
         .eq("requested_by", session.user.id).order("created_at", { ascending: false }),
     ]);
-    setRentalApps((rentalRes.data as unknown as RentalApp[]) || []);
+    const rawRentalApps = (rentalRes.data as unknown as RentalApp[]) || [];
+    setRentalApps(rawRentalApps);
     setOffers((offerRes.data as unknown as Offer[]) || []);
     setVideoRequests((videoRes.data as unknown as VideoRequest[]) || []);
     setLoading(false);
@@ -98,6 +100,14 @@ export default function MyApplicationsPage() {
         </div>
       </div>
 
+      {/* Real, direct correction following a direct, serious client
+          catch: a working, already-proven commission payment
+          mechanism already existed — the same real one already used
+          successfully on the tenant, owner, and wallet pages — and
+          simply hadn't been added here yet. Added here now, exactly
+          as-is, rather than building a second, narrower one. */}
+      {session && <TransactionCommissions session={session} />}
+
       <div className="px-4 py-4 space-y-4">
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-1.5">🏠 Rental Applications</p>
@@ -109,6 +119,11 @@ export default function MyApplicationsPage() {
                 <p className="text-sm font-semibold text-chs-charcoal">{a.properties?.[0]?.title || "Property"}</p>
                 <p className="text-[10px] text-gray-400">{a.properties?.[0]?.location_area} · {new Date(a.created_at).toLocaleDateString()}</p>
                 <p className="text-xs font-semibold text-chs-red mt-1">{statusLabel(a.status)}</p>
+                {a.status === "approved" && (
+                  <Link href="/my-rented-space" className="block text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
+                    Go to My Rented Space →
+                  </Link>
+                )}
               </div>
             ))
           )}

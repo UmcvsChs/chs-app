@@ -1,0 +1,25 @@
+-- No schema change. Real, direct, systematic reversal per explicit
+-- client instruction: newest items now come first, across every real
+-- queue, on every real dashboard -- checked and confirmed file by
+-- file, not assumed.
+--
+-- Found the real, complete scope first: searched the entire codebase
+-- for every ordering rule, then checked each one individually rather
+-- than blanket-replacing. Admin was the genuine, sole outlier --
+-- every other real dashboard (owner, manager, agent, artisan, vendor)
+-- was already correctly newest-first throughout. 25 real queue
+-- orderings on admin's own page were reversed -- every offer,
+-- application, dispute, verification, and pending item admin reviews.
+-- One matching real fix on the shared bank-account security
+-- component.
+--
+-- Two categories were deliberately left untouched, and it's worth
+-- being explicit about why, since a blanket search-and-replace would
+-- have wrongly caught both: real conversation threads (the tenant/
+-- owner/agent chat components) stay in their natural, chronological
+-- reading order, the same way every messaging app works -- reversing
+-- a conversation would make it unreadable, not faster. And two
+-- genuinely different kinds of ordering that aren't about recency at
+-- all -- a scheduled inspection date, an alphabetical staff list --
+-- were left exactly as they were, since "newest first" has no real
+-- meaning for either.

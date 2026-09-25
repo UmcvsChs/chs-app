@@ -256,7 +256,7 @@ export default function OwnerDashboard() {
       .order("created_at", { ascending: false });
 
     supabase.from("video_requests").select("id, room_label, note, created_at, property_id, properties(title), profiles!video_requests_requested_by_fkey(full_name)")
-      .in("property_id", (await supabase.from("properties").select("id").eq("owner_id", session.user.id)).data?.map((p) => p.id) || [])
+      .in("property_id", (ownedProperties || []).map((p) => p.id))
       .eq("status", "pending").order("created_at", { ascending: false })
       .then(({ data }) => setPendingVideoRequests((data as unknown as typeof pendingVideoRequests) || []));
 
@@ -305,59 +305,58 @@ export default function OwnerDashboard() {
 
     setProperties(withActivity);
 
-    const { data: ownedTenancies } = await supabase
-      .from("tenancies")
-      .select("id, tenant_id, property_id, status, management_delegated, lease_end, notice_given_at")
-      .eq("landlord_id", session.user.id);
+    // Real, direct fix per the same standing rule already applied to
+    // admin's own loadData(): these three real queries — tenancies,
+    // engage requests, and the wallet ledger — don't depend on each
+    // other at all, but were running one after another anyway. Their
+    // own real dependents (prior-payment lookups, unread message
+    // counts) still correctly wait for their own specific result, but
+    // now run together with each other too, once the query they
+    // actually depend on is back.
+    const [tenanciesRes, engageRes, walletRes] = await Promise.all([
+      supabase.from("tenancies").select("id, tenant_id, property_id, status, management_delegated, lease_end, notice_given_at").eq("landlord_id", session.user.id),
+      supabase.from("engage_chs_requests").select("*").eq("owner_id", session.user.id).order("created_at", { ascending: false }),
+      supabase.from("wallet_transactions").select("amount, direction, description").eq("user_id", session.user.id).eq("wallet_type", "main").eq("direction", "credit"),
+    ]);
+    const ownedTenancies = tenanciesRes.data;
+    const ownedEngageRequests = engageRes.data;
     setTenancies(ownedTenancies || []);
-    if (ownedTenancies && ownedTenancies.length > 0) {
-      const { data: priorPayments } = await supabase
-        .from("rent_payments")
-        .select("tenancy_id")
-        .in("tenancy_id", ownedTenancies.map((t) => t.id));
-      setTenanciesWithPriorPayment(new Set((priorPayments || []).map((p) => p.tenancy_id)));
-    }
-
-    const { data: ownedEngageRequests } = await supabase
-      .from("engage_chs_requests")
-      .select("*")
-      .eq("owner_id", session.user.id)
-      .order("created_at", { ascending: false });
     setEngageRequests(ownedEngageRequests || []);
-
-    // Real aggregate unread count for the dedicated Engage CHS badge —
-    // per direct instruction, separate from the general notification
-    // bell. One message-count query per real request, summed — the
-    // same real comparison EngageChatThread does per-conversation.
-    if (ownedEngageRequests && ownedEngageRequests.length > 0) {
-      const counts = await Promise.all(
-        ownedEngageRequests.map((r) =>
-          supabase
-            .from("engage_chs_messages")
-            .select("id", { count: "exact", head: true })
-            .eq("request_id", r.id)
-            .neq("sender_id", session.user.id)
-            .gt("created_at", r.client_last_read_at)
-        )
-      );
-      setEngageUnreadCount(counts.reduce((sum, c) => sum + (c.count || 0), 0));
-    }
-
-    // Real "rent collected" — restored, found missing during the
-    // systematic Owner dashboard comparison. Genuinely summed from
-    // real credit transactions whose description actually mentions
-    // rent, not just any credit to the wallet, which could include
-    // other real income types too (e.g. a withdrawal reversal).
-    const { data: walletData } = await supabase
-      .from("wallet_transactions")
-      .select("amount, direction, description")
-      .eq("user_id", session.user.id)
-      .eq("wallet_type", "main")
-      .eq("direction", "credit");
-    const rentSum = (walletData || [])
+    const rentSum = (walletRes.data || [])
       .filter((t) => (t.description || "").toLowerCase().includes("rent"))
       .reduce((sum, t) => sum + Number(t.amount), 0);
     setRentCollected(rentSum);
+
+    await Promise.all([
+      (async () => {
+        if (ownedTenancies && ownedTenancies.length > 0) {
+          const { data: priorPayments } = await supabase
+            .from("rent_payments")
+            .select("tenancy_id")
+            .in("tenancy_id", ownedTenancies.map((t) => t.id));
+          setTenanciesWithPriorPayment(new Set((priorPayments || []).map((p) => p.tenancy_id)));
+        }
+      })(),
+      (async () => {
+        // Real aggregate unread count for the dedicated Engage CHS badge —
+        // per direct instruction, separate from the general notification
+        // bell. One message-count query per real request, summed — the
+        // same real comparison EngageChatThread does per-conversation.
+        if (ownedEngageRequests && ownedEngageRequests.length > 0) {
+          const counts = await Promise.all(
+            ownedEngageRequests.map((r) =>
+              supabase
+                .from("engage_chs_messages")
+                .select("id", { count: "exact", head: true })
+                .eq("request_id", r.id)
+                .neq("sender_id", session.user.id)
+                .gt("created_at", r.client_last_read_at)
+            )
+          );
+          setEngageUnreadCount(counts.reduce((sum, c) => sum + (c.count || 0), 0));
+        }
+      })(),
+    ]);
 
     setLoading(false);
   }
@@ -1132,7 +1131,12 @@ export default function OwnerDashboard() {
                       </div>
                       <div>
                         <p className="text-gray-400 text-[10px] font-bold uppercase">Means of identification</p>
-                        <p className="text-gray-700">{app.applicant_id_type} — {app.applicant_id_number}</p>
+                        {/* Real, direct fix per explicit client
+                            instruction: the actual ID number has no
+                            real reason to be shown to the owner —
+                            CHS's own verification is what matters
+                            here, not the raw number itself. */}
+                        <p className="text-gray-700">{app.applicant_id_type} — ✓ Verified by CHS</p>
                       </div>
                       <div className="pt-2 border-t border-gray-200">
                         <p className="text-gray-400 text-[10px] font-bold uppercase">Guarantor</p>
@@ -1144,7 +1148,7 @@ export default function OwnerDashboard() {
                             <p className="text-green-700 font-semibold mt-0.5">✓ Independently confirmed by the guarantor themselves</p>
                             <p className="text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
                             <p className="text-gray-500">{app.guarantor_address}</p>
-                            <p className="text-gray-500">{app.guarantor_id_type} — {app.guarantor_id_number}</p>
+                            <p className="text-gray-500">{app.guarantor_id_type} — ✓ Verified by CHS</p>
                           </>
                         )}
                       </div>

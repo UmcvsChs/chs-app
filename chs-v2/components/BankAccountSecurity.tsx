@@ -131,7 +131,7 @@ export default function BankAccountSecurity({
 
   async function loadData() {
     const [linkedRes, pendingRes] = await Promise.all([
-      supabase.from("linked_bank_accounts").select("*").eq("user_id", session.user.id).order("updated_at", { ascending: true }),
+      supabase.from("linked_bank_accounts").select("*").eq("user_id", session.user.id).order("updated_at", { ascending: false }),
       supabase.from("pending_bank_account_changes").select("*").eq("user_id", session.user.id).eq("status", "pending").maybeSingle(),
     ]);
     setLinkedAccounts((linkedRes.data as LinkedBankAccount[]) || []);

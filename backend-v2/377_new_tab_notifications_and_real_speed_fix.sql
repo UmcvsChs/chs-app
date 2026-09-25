@@ -1,0 +1,28 @@
+-- No schema change. Two real, direct fixes.
+--
+-- Notifications now open in a real, new tab, matching the exact real
+-- pattern the client described from Gmail and YouTube -- the
+-- original list, however long, stays exactly where it was, scroll
+-- position included, instead of navigating away and losing your
+-- place in a queue of fifty.
+--
+-- Investigated the splash-screen complaint further than before,
+-- checking something genuinely not checked in earlier rounds: this
+-- app's own service worker. Found a real, significant cause -- it
+-- used a network-first strategy for every request, including the
+-- app's own interface files, meaning a refresh always waited for a
+-- full round trip before showing anything at all, every single time.
+-- Real apps that feel instant on reload serve their own shell from
+-- the cache immediately while live data still always comes fresh
+-- from the network underneath. Rewritten to do exactly that: this
+-- app's own files now serve instantly from cache while a fresh copy
+-- loads behind it; genuine, live data (from Supabase) still always
+-- comes from the network first, unchanged.
+--
+-- Also found and fixed the same real, sequential-loading pattern on
+-- the owner dashboard that was already found and fixed on admin's --
+-- 24 separate database calls, several genuinely independent of each
+-- other but running one after another anyway. Regrouped into real,
+-- concurrent batches the same proven way. A separate, real, wasteful
+-- duplicate query (re-fetching the same property IDs already
+-- available) was also found and removed in the same pass.

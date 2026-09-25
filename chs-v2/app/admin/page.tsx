@@ -707,7 +707,7 @@ function AdminDashboardInner() {
   function loadPendingDispatchRequests() {
     supabase.from("document_dispatch_requests")
       .select("id, delivery_address, delivery_phone, preferred_method, delivery_note, status, created_at, offers(amount, properties(title, reference_number))")
-      .eq("status", "requested").order("created_at", { ascending: true })
+      .eq("status", "requested").order("created_at", { ascending: false })
       .then(({ data }) => setPendingDispatchRequests((data as unknown as typeof pendingDispatchRequests) || []));
   }
   useEffect(() => { loadPendingDispatchRequests(); }, []);
@@ -1028,12 +1028,12 @@ function AdminDashboardInner() {
     // admin queue. referral_fee_settings is a small, bounded config
     // table, not a growing queue, so it's left unlimited.
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, handledEngageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: true }).limit(200),
-      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: true }).limit(200),
-      supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
-      supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
+      supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: false }).limit(200),
+      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
+      supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(200),
+      supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
+      supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
       // Real, direct client request: items admin has already accepted
       // or rejected shouldn't vanish from view the instant they're
       // handled — they stay visible here for a real 7 days after
@@ -1044,13 +1044,13 @@ function AdminDashboardInner() {
         .is("archived_at", null)
         .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()}`)
         .order("created_at", { ascending: false }).limit(200),
-      supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("marketplace_vendors").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
       supabase.from("referral_fee_settings").select("*").order("flat_fee_amount", { ascending: false }),
-      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: true }).limit(200),
-      supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: true }).limit(200),
-      supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: true }).limit(200),
+      supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }).limit(200),
+      supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: false }).limit(200),
+      supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
       supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
-      supabase.from("developer_applications").select("*").in("status", ["pending", "reviewed"]).order("created_at", { ascending: true }).limit(200),
+      supabase.from("developer_applications").select("*").in("status", ["pending", "reviewed"]).order("created_at", { ascending: false }).limit(200),
     ]);
     setPendingProfiles(profilesRes.data || []);
 
@@ -1088,25 +1088,25 @@ function AdminDashboardInner() {
       msgOwnerRes, precommitRes, txnRes, installmentRes, rentRes,
       saleDocsRes, legalTransferRes,
     ] = await Promise.all([
-      supabase.from("offers").select("*, properties(title)").eq("status", "accepted").eq("chs_cleared", false).order("created_at", { ascending: true }),
-      supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title, reference_number, profiles!properties_owner_id_fkey(full_name, phone)), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)").eq("status", "awaiting_admin_review").order("created_at", { ascending: true }),
-      supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)").eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: true }),
+      supabase.from("offers").select("*, properties(title)").eq("status", "accepted").eq("chs_cleared", false).order("created_at", { ascending: false }),
+      supabase.from("offers").select("id, amount, note, buyer_full_name, buyer_phone, buyer_occupation, buyer_source_of_funds, created_at, properties(title, reference_number, profiles!properties_owner_id_fkey(full_name, phone)), buyer:profiles!offers_buyer_id_fkey(valid_id_verified)").eq("status", "awaiting_admin_review").order("created_at", { ascending: false }),
+      supabase.from("offers").select("id, amount, owner_decision, seller_response_note, buyer_full_name, buyer_phone, owner_decision_at, properties(title)").eq("status", "owner_decided_pending_relay").order("owner_decision_at", { ascending: false }),
       supabase.rpc("get_pending_registrations_full"),
       supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url").eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null),
       supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url").eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null),
-      supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: true }),
-      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)").eq("status", "pending").order("created_at", { ascending: true }),
+      supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: false }),
+      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("transaction_commissions").select("commission_amount").eq("status", "paid"),
-      supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: true }),
-      supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: true }),
-      supabase.from("account_appeals").select("id, message, profiles:user_id(full_name, phone)").eq("status", "pending").order("created_at", { ascending: true }),
+      supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: false }),
+      supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("account_appeals").select("id, message, profiles:user_id(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("owner_admin_messages").select("owner_id, profiles:owner_id(full_name)").order("created_at", { ascending: false }),
-      supabase.from("precommit_messages").select("id, text, sender_role, profiles:sender_id(full_name), offers(properties(title))").eq("status", "pending_review").order("created_at", { ascending: true }),
+      supabase.from("precommit_messages").select("id, text, sender_role, profiles:sender_id(full_name), offers(properties(title))").eq("status", "pending_review").order("created_at", { ascending: false }),
       supabase.from("transaction_commissions").select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title, street_address), profiles:payer_id(full_name)").eq("status", "paid").order("paid_at", { ascending: false }).limit(50),
       supabase.from("sale_installment_payments").select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))").order("paid_at", { ascending: false }).limit(50),
       supabase.from("rent_payments").select("id, amount, created_at, tenancies(property_id, properties(title, street_address))").order("created_at", { ascending: false }).limit(50),
-      supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: true }),
-      supabase.from("offers").select("id, amount, properties(title, owner_id)").eq("payment_status", "paid").eq("legal_transfer_confirmed", false).order("created_at", { ascending: true }),
+      supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("offers").select("id, amount, properties(title, owner_id)").eq("payment_status", "paid").eq("legal_transfer_confirmed", false).order("created_at", { ascending: false }),
     ]);
 
     setPendingSaleApprovals((saleApprovalsRes.data as unknown as typeof pendingSaleApprovals) || []);
@@ -1195,10 +1195,10 @@ function AdminDashboardInner() {
       const [loginRequestsRes, actionRequestsRes] = await Promise.all([
         supabase.from("admin_login_requests")
           .select("id, admin_id, code, created_at, profiles!admin_login_requests_admin_id_fkey(full_name, role)")
-          .eq("status", "pending").order("created_at", { ascending: true }),
+          .eq("status", "pending").order("created_at", { ascending: false }),
         supabase.from("admin_action_requests")
           .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles!admin_action_requests_requested_by_fkey(full_name, staff_role)")
-          .eq("status", "pending").order("created_at", { ascending: true }),
+          .eq("status", "pending").order("created_at", { ascending: false }),
       ]);
       setPendingLoginRequests((loginRequestsRes.data as typeof pendingLoginRequests) || []);
       setPendingActionRequests((actionRequestsRes.data as typeof pendingActionRequests) || []);
