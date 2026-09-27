@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 
@@ -180,12 +181,12 @@ export default function TenantRegisterPage() {
             <input type="text" placeholder="ID number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
             <div>
-              <label className="text-[11px] text-gray-500">Soft copy of ID (photo/scan)</label>
-              <input type="file" accept="image/*,.pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)} className="w-full text-xs mt-1" />
+              <label className="text-[11px] text-gray-500 mb-1 block">Soft copy of ID (photo/scan)</label>
+              <FileUploadBox onFileSelect={setIdFile} accept="image/*,.pdf" label="the ID" selectedFileName={idFile?.name} />
             </div>
             <div>
-              <label className="text-[11px] text-gray-500">Selfie or passport photo</label>
-              <input type="file" accept="image/*" onChange={(e) => setSelfieFile(e.target.files?.[0] || null)} className="w-full text-xs mt-1" />
+              <label className="text-[11px] text-gray-500 mb-1 block">Selfie or passport photo</label>
+              <FileUploadBox onFileSelect={setSelfieFile} accept="image/*" label="a selfie or passport photo" selectedFileName={selfieFile?.name} />
             </div>
 
             <textarea placeholder="Any other notes" value={notes} onChange={(e) => setNotes(e.target.value)}

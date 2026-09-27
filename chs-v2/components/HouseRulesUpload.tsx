@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { Session } from "@supabase/supabase-js";
+import FileUploadBox from "@/components/FileUploadBox";
 
 // A real, genuinely new feature — even the original app never had a
 // working owner-side upload for this, only a tenant-facing screen
@@ -56,12 +57,11 @@ export default function HouseRulesUpload({ propertyId, session }: { propertyId: 
           📄 View current document
         </a>
       )}
-      <div className="flex gap-1.5 mt-1">
-        <input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="flex-1 text-[10px]" />
+      <div className="mt-1 space-y-1.5">
+        <FileUploadBox onFileSelect={setFile} accept="image/*,application/pdf" label="your house rules document" selectedFileName={file?.name} />
         {file && (
           <button onClick={handleUpload} disabled={uploading}
-            className="px-2.5 py-1 rounded-full bg-chs-red text-white text-[9px] font-semibold disabled:opacity-50">
+            className="w-full px-2.5 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
             {uploading ? "Uploading..." : existingUrl ? "Replace" : "Upload"}
           </button>
         )}

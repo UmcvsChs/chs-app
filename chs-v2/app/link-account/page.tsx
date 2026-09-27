@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -332,9 +333,8 @@ export default function LinkAccountPage() {
                 <input type="text" value={operatingStates} onChange={(e) => setOperatingStates(e.target.value)}
                   placeholder="States of operation (e.g. Kaduna, Abuja, Kano)" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
                 <div>
-                  <label className="text-xs font-semibold text-gray-600">Upload professional certificate / licence</label>
-                  <input type="file" accept="image/*,application/pdf"
-                    onChange={(e) => setCertFile(e.target.files?.[0] || null)} className="w-full mt-1 text-xs" />
+                  <label className="text-xs font-semibold text-gray-600 mb-1 block">Upload professional certificate / licence</label>
+                  <FileUploadBox onFileSelect={setCertFile} accept="image/*,application/pdf" label="your certificate" selectedFileName={certFile?.name} />
                 </div>
               </>
             )}
@@ -349,8 +349,7 @@ export default function LinkAccountPage() {
                 <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
                   placeholder={idType ? ID_TYPE_PLACEHOLDERS[idType] : "ID number"}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-                <input type="file" accept="image/*,application/pdf"
-                  onChange={(e) => setIdFile(e.target.files?.[0] || null)} className="w-full text-xs" />
+                <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
               </>
             )}
 

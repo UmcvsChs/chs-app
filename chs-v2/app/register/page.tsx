@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import FileUploadBox from "@/components/FileUploadBox";
 
 import { NIGERIAN_STATES, LGA_BY_STATE } from "@/lib/geoData";
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
@@ -446,8 +447,10 @@ function RegisterPageContent() {
               )}
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload a real photo or scan of this ID <span className="text-chs-red">*</span></label>
-                <input id="field-reg-id-file" type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-                  className={fieldClass("field-reg-id-file", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white")} />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name}
+                    id="field-reg-id-file" highlighted={invalidFieldId === "field-reg-id-file"} />
+                </div>
                 <p className="text-[10px] text-gray-400 mt-1">A real, verifiable document — not just typing your NIN number in — is what CHS actually checks before approving your account.</p>
               </div>
             </>
@@ -554,8 +557,9 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload the ID selected above</label>
-                <input id="field-id-file" type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-                  className="w-full mt-1 text-xs" />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="the ID" selectedFileName={idFile?.name} id="field-id-file" />
+                </div>
               </div>
             </div>
           )}
@@ -582,8 +586,9 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload professional certificate / licence</label>
-                <input id="field-cert-file" type="file" accept="image/*,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)}
-                  className="w-full mt-1 text-xs" />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setCertFile} accept="image/*,application/pdf" label="your certificate" selectedFileName={certFile?.name} id="field-cert-file" />
+                </div>
               </div>
             </div>
           )}
@@ -636,8 +641,9 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload company profile / portfolio (optional)</label>
-                <input type="file" accept="image/*,application/pdf" onChange={(e) => setPortfolioFile(e.target.files?.[0] || null)}
-                  className="w-full mt-1 text-xs" />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setPortfolioFile} accept="image/*,application/pdf" label="your company profile" selectedFileName={portfolioFile?.name} />
+                </div>
               </div>
               <p className="text-[10px] text-gray-400 bg-chs-amber-light rounded-lg px-3 py-2">
                 Commercial Developer partnerships are governed by a separate Developer Partnership Agreement in addition to the standard CHS Terms &amp; Conditions. CHS will review your submission and contact you to finalise terms before any project goes live.

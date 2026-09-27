@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 
 interface EngageDocument {
   id: string;
@@ -134,8 +135,7 @@ export function EngageDocumentManager({ requestId, adminUserId }: { requestId: s
         className="w-full py-1.5 rounded-full bg-chs-amber-light text-chs-amber-dark text-[10px] font-semibold disabled:opacity-50">
         Set due date (pending)
       </button>
-      <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] || null)}
-        className="w-full text-[10px]" />
+      <FileUploadBox onFileSelect={setFile} accept="application/pdf,image/*" label="the document" selectedFileName={file?.name} />
       <button onClick={handleUploadReady} disabled={uploading}
         className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
         {uploading ? "Working..." : "Upload & mark ready"}

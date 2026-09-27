@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 import { ENGAGE_SERVICE_TYPES, ENGAGE_CATEGORY_FIELDS, ENGAGE_NEXT_STEPS, ENGAGE_SPECIFICATION_FIELDS } from "@/types/engageCategoryFields";
 import ServiceTncGate from "@/components/ServiceTncGate";
 import CurrencyInput from "@/components/CurrencyInput";
@@ -380,9 +381,7 @@ export default function EngageChsPage() {
                       </button>
                     </div>
                     {docChoices[d.id] === "have" && (
-                      <input type="file" accept="image/*,application/pdf"
-                        onChange={(e) => setDocFiles({ ...docFiles, [d.id]: e.target.files?.[0] || null })}
-                        className="w-full text-[11px] text-chs-charcoal" />
+                      <FileUploadBox onFileSelect={(f) => setDocFiles({ ...docFiles, [d.id]: f })} accept="image/*,application/pdf" label="this document" selectedFileName={docFiles[d.id]?.name} />
                     )}
                     {docChoices[d.id] === "need_chs" && (
                       <p className="text-[10px] text-chs-amber-dark">CHS will be notified to prepare this once you submit.</p>

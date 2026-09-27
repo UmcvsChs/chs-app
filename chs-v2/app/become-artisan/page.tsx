@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 import { ARTISAN_TRADES, EQUIPMENT_TIERS } from "@/types/artisan";
 import { NIGERIAN_STATES, LGA_BY_STATE } from "@/lib/geoData";
 
@@ -161,8 +162,9 @@ export default function BecomeArtisanPage() {
           {certBody.trim() && (
             <div>
               <label className="text-xs font-semibold text-gray-600">Upload your certificate</label>
-              <input type="file" accept="image/*,application/pdf" onChange={(e) => setCertFile(e.target.files?.[0] || null)}
-                className="w-full mt-1 text-xs" />
+              <div className="mt-1">
+                <FileUploadBox onFileSelect={setCertFile} accept="image/*,application/pdf" label="your certificate" selectedFileName={certFile?.name} />
+              </div>
             </div>
           )}
 
@@ -181,13 +183,15 @@ export default function BecomeArtisanPage() {
               </p>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Photo of your real equipment</label>
-                <input type="file" accept="image/*" onChange={(e) => setEquipmentPhoto(e.target.files?.[0] || null)}
-                  className="w-full mt-1 text-xs" />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setEquipmentPhoto} accept="image/*" label="your equipment" selectedFileName={equipmentPhoto?.name} />
+                </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Purchase receipt (optional, but helps verification)</label>
-                <input type="file" accept="image/*,application/pdf" onChange={(e) => setEquipmentReceipt(e.target.files?.[0] || null)}
-                  className="w-full mt-1 text-xs" />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={setEquipmentReceipt} accept="image/*,application/pdf" label="the receipt" selectedFileName={equipmentReceipt?.name} />
+                </div>
               </div>
             </div>
           )}

@@ -14,11 +14,15 @@ export default function FileUploadBox({
   accept = "image/*",
   label = "Upload a photo or document",
   selectedFileName,
+  id,
+  highlighted,
 }: {
   onFileSelect: (file: File | null) => void;
   accept?: string;
   label?: string;
   selectedFileName?: string | null;
+  id?: string;
+  highlighted?: boolean;
 }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,12 +36,15 @@ export default function FileUploadBox({
 
   return (
     <div
+      id={id}
       onClick={() => inputRef.current?.click()}
       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={handleDrop}
       className={`cursor-pointer rounded-xl border-2 border-dashed p-4 text-center transition-colors ${
-        selectedFileName
+        highlighted
+          ? "border-chs-red border-2 bg-chs-amber-light"
+          : selectedFileName
           ? "border-green-400 bg-green-50"
           : dragging
           ? "border-chs-red bg-chs-amber-light"

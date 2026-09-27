@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 import { MarketplaceVendor, MarketplaceProduct, ListingType } from "@/types/marketplace";
 import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 import InfoTip from "@/components/InfoTip";
@@ -397,7 +398,7 @@ export default function VendorDashboard() {
             )}
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
               placeholder="Description" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            <input type="file" accept="image/*" onChange={(e) => setPhoto(e.target.files?.[0] || null)} className="w-full text-xs" />
+            <FileUploadBox onFileSelect={setPhoto} accept="image/*" label="a product photo" selectedFileName={photo?.name} />
             {error && <p className="text-xs text-chs-red">{error}</p>}
             <button type="submit" disabled={submitting}
               className="w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">

@@ -8,6 +8,7 @@ import { uploadPropertyPhoto, uploadDocument, uploadPropertyVideo } from "@/lib/
 import CurrencyInput from "@/components/CurrencyInput";
 import { shouldShowBedrooms } from "@/lib/format";
 import InfoTip from "@/components/InfoTip";
+import FileUploadBox from "@/components/FileUploadBox";
 
 import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
@@ -823,9 +824,10 @@ export default function ListPropertyPage() {
                   <label className="text-[10px] text-gray-500">
                     {slot.label} <span className="text-chs-red">*</span>
                   </label>
-                  <input type="file" accept="image/*"
-                    onChange={(e) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: e.target.files?.[0] || null })}
-                    className="w-full mt-0.5 text-[10px]" />
+                  <div className="mt-0.5">
+                    <FileUploadBox onFileSelect={(f) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: f })} accept="image/*"
+                      label={slot.label} selectedFileName={labeledPhotos[slot.key]?.name} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -838,9 +840,7 @@ export default function ListPropertyPage() {
           <div>
             <label className="text-xs font-semibold text-gray-600">Short video (optional)</label>
             <p className="text-[10px] text-gray-400 mb-1">A brief walkthrough helps buyers and tenants get a real feel for the property.</p>
-            <input type="file" accept="video/*"
-              onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-              className="w-full mt-1 text-xs" />
+            <FileUploadBox onFileSelect={setVideoFile} accept="video/*" label="a short walkthrough video" selectedFileName={videoFile?.name} />
           </div>
 
           <div className="border-t border-gray-200 pt-3 mt-2">
@@ -866,14 +866,9 @@ export default function ListPropertyPage() {
             {DOC_TYPES.map((doc) => (
               <div key={doc.value} className="mb-2">
                 <label className="text-[11px] text-gray-600">{doc.label}</label>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  onChange={(e) =>
-                    setDocuments({ ...documents, [doc.value]: e.target.files?.[0] || null })
-                  }
-                  className="w-full mt-1 text-xs"
-                />
+                <div className="mt-1">
+                  <FileUploadBox onFileSelect={(f) => setDocuments({ ...documents, [doc.value]: f })} accept="image/*,application/pdf" label={doc.label} selectedFileName={documents[doc.value]?.name} />
+                </div>
               </div>
             ))}
 
@@ -893,28 +888,16 @@ export default function ListPropertyPage() {
                 ].map((doc) => (
                   <div key={doc.value} className="mb-2">
                     <label className="text-[11px] text-gray-600">{doc.label} *</label>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) =>
-                        setSaleDocuments({ ...saleDocuments, [doc.value]: e.target.files?.[0] || null })
-                      }
-                      className="w-full mt-1 text-xs"
-                    />
+                    <div className="mt-1">
+                      <FileUploadBox onFileSelect={(f) => setSaleDocuments({ ...saleDocuments, [doc.value]: f })} accept="image/*,application/pdf" label={doc.label} selectedFileName={saleDocuments[doc.value]?.name} />
+                    </div>
                   </div>
                 ))}
                 {!propertyType.toLowerCase().includes("land") && !propertyType.toLowerCase().includes("farmland") && (
                   <div className="mb-2">
                     <label className="text-[11px] text-gray-600">Building Plan Approval *</label>
                     <p className="text-[9px] text-gray-400 mb-0.5">Required for a developed property with a real structure on it.</p>
-                    <input
-                      type="file"
-                      accept="image/*,application/pdf"
-                      onChange={(e) =>
-                        setSaleDocuments({ ...saleDocuments, building_plan_approval: e.target.files?.[0] || null })
-                      }
-                      className="w-full mt-1 text-xs"
-                    />
+                    <FileUploadBox onFileSelect={(f) => setSaleDocuments({ ...saleDocuments, building_plan_approval: f })} accept="image/*,application/pdf" label="the building plan approval" selectedFileName={saleDocuments.building_plan_approval?.name} />
                   </div>
                 )}
               </div>
