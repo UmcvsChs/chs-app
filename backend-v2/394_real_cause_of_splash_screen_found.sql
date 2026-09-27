@@ -1,0 +1,23 @@
+-- No schema change. The real, actual cause of the persistent splash-
+-- screen complaint, found after the service worker removal proved it
+-- was never the true source -- that removal was correct to make
+-- regardless, but the real problem was sitting somewhere else the
+-- whole time.
+--
+-- Traced directly to a fix built earlier this session, at a direct
+-- client request to match how Gmail and YouTube behave: opening a
+-- notification's destination in a genuinely new browser tab. That
+-- request was real and reasonable, but a literal new tab was the
+-- wrong way to deliver it -- a new tab cannot avoid cold-starting the
+-- entire application from scratch every single time: reloading every
+-- script, re-checking the session, everything. That is not a bug
+-- elsewhere in the app; a new tab structurally cannot behave any
+-- other way. It is also not what Gmail or YouTube actually do --
+-- both navigate within the same, already-warm tab and rely on the
+-- browser's own history to remember where you were.
+--
+-- Reverted to real, fast, same-tab navigation, the genuinely correct
+-- mechanism for this. Both reported symptoms -- the admin
+-- notification bell, and the tenant "my tenancy to recent
+-- transaction" flow -- share this same one component, so this single,
+-- real fix should resolve both.

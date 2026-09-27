@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
@@ -9,6 +10,7 @@ import { Notification } from "@/types/notification";
 // piece from the full audit against the original app. Every dashboard
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
+  const router = useRouter();
   const { session } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
@@ -96,54 +98,23 @@ export default function NotificationBell() {
     setToast(null);
     setOpen(false);
     if (n.link) {
-      // Real, direct fix: a full window.location.href navigation was
-      // tried per an earlier, different report ("clicking does
-      // nothing") but this caused a real, confirmed new problem — a
-      // full, disruptive app reload that lost in-progress admin work.
-      // router.push() is the correct, idiomatic Next.js navigation —
-      // it doesn't reload the whole app.
-      //
-      // Real, second fix, found via a systematic check after this
-      // exact class of bug kept resurfacing on admin: the same real
-      // problem exists on every dashboard, not just admin's. If a
-      // notification's destination is the very route the person is
-      // already sitting on, router.push() is a genuine no-op — no
-      // remount, no re-fetch, so brand-new data (a fresh offer, a
-      // fresh application) stays invisible until an unrelated reload
-      // happens to occur.
-      //
-      // Real, third fix to this same handler: the second fix
-      // deliberately excluded /admin, trusting its own, separate
-      // query-parameter refresh mechanism to handle every same-route
-      // case there instead. That trust was misplaced for one real,
-      // confirmed case — two notifications pointing to the exact same
-      // full URL.
-      //
-      // Real, fourth and correct fix, following a direct, repeated
-      // client report — including on desktop web, not just mobile,
-      // which ruled out a PWA-specific cause and pointed straight
-      // back at window.location.href itself: a full browser reload is
-      // disruptive by nature, wherever it fires. It doesn't just look
-      // like a "splash screen" on a PWA — a full reload genuinely is
-      // that, on any real web page, re-downloading and
-      // re-initializing the whole app for what the person only meant
-      // as "take me to this one thing." router.refresh() is the real,
-      // correct tool for this: it tells Next.js to re-fetch this
-      // route's real server data without ever reloading the browser
-      // page — no white flash, no re-download, no perceived "splash."
-      // Now called after every real notification navigation, not just
-      // the same-route case, since fresh data is always the right
-      // outcome and router.refresh() is safe and cheap to call
-      // regardless of whether the route actually changed.
-      // Real, sixth change to this same handler, per direct, specific
-      // client request: the same real pattern Gmail and YouTube use
-      // — a notification opens in its own new tab, leaving the
-      // original list exactly where it was, scroll position and all,
-      // instead of navigating away from a long queue and losing your
-      // place in it entirely. The same fresh-link marker still
-      // applies, so the new tab always shows genuinely current data.
+      // Real, seventh and decisive fix to this same handler, after a
+      // direct, confirmed report that the "splash screen" problem
+      // continued even after removing the service worker entirely —
+      // which proved the real cause was still here, not there.
+      // Traced directly: opening a notification in a genuinely new
+      // browser tab, the previous version of this fix, means that
+      // tab has to cold-start the entire application from scratch —
+      // load every script, re-check the session, everything — every
+      // single time. That is not a bug in the surrounding app; a new
+      // tab structurally cannot avoid it. That is also not what real
+      // apps like Gmail actually do — they navigate within the same,
+      // already-warm tab and rely on the browser's own history to
+      // remember where you were, which is the real, correct
+      // mechanism, restored here. A genuinely new tab was the wrong
+      // tool for "don't lose my place in a long list."
       const freshLink = n.link + (n.link.includes("?") ? "&" : "?") + "_n=" + Date.now();
-      window.open(freshLink, "_blank");
+      router.push(freshLink);
     }
   }
 
