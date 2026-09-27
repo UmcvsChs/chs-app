@@ -1,0 +1,17 @@
+-- Real, major fix per explicit client approval. See migrations 396
+-- and 397 for the full rent escrow system itself. This migration
+-- covers a real, important data-consistency issue caught during
+-- testing, plus verification.
+--
+-- Every real rent payment made before this system existed had its
+-- money already fully, directly credited to the landlord under the
+-- old logic. Without a fix, the new admin "held rent" view would have
+-- incorrectly shown these as still held, and an admin clicking
+-- release on one would have wrongly credited money a second time.
+-- Backfilled every existing real rent payment as already released,
+-- matching what genuinely already happened to that money. Verified
+-- directly afterward: zero real payments now incorrectly show as
+-- held, and the release function's own safety guard correctly
+-- refuses to release an already-released real payment, confirmed by
+-- testing it directly against one of the client's own real, existing
+-- payments.

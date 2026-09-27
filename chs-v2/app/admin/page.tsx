@@ -64,7 +64,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -451,6 +451,30 @@ function AdminDashboardInner() {
     payment_status: string; created_at: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
   }[]>([]);
   const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
+  const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; tenancies: { properties: { title: string } | null; landlord: { full_name: string } | null } | null }[]>([]);
+  useEffect(() => {
+    supabase.from("rent_payments").select("id, amount, release_deadline, tenancies(properties(title), landlord:landlord_id(full_name))")
+      .is("released_at", null)
+      .then(({ data }) => setHeldRent((data as unknown as typeof heldRent) || []));
+  }, []);
+  async function handleReleaseRent(id: string) {
+    await supabase.rpc("release_rent_to_landlord", { p_rent_payment_id: id, p_reason: "admin_override" });
+    setHeldRent((prev) => prev.filter((r) => r.id !== id));
+  }
+  const [heldHireDeposits, setHeldHireDeposits] = useState<{ id: string; security_deposit_amount: number; properties: { title: string }[] | null }[]>([]);
+  useEffect(() => {
+    // Real, new fix per a direct client question: no single, real
+    // place existed to see every real naira actually held in escrow
+    // across the platform at once — property sale escrow, marketplace
+    // escrow, and shortlet/hire deposits each lived in their own
+    // separate tab with no combined real total anywhere. Shortlet
+    // deposits already had a real query elsewhere (heldDeposits,
+    // reused directly below); this adds the matching real one for
+    // hire bookings specifically, which had none.
+    supabase.from("hire_bookings").select("id, security_deposit_amount, properties(title)")
+      .eq("security_deposit_status", "held")
+      .then(({ data }) => setHeldHireDeposits((data as unknown as typeof heldHireDeposits) || []));
+  }, []);
 
   useEffect(() => {
     supabase.from("service_quote_requests")
@@ -1956,6 +1980,7 @@ function AdminDashboardInner() {
           { key: "platformearnings", label: "Platform Earnings", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "transactionlog", label: "📊 Transaction History Log", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
+          { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
@@ -4084,6 +4109,97 @@ function AdminDashboardInner() {
           </div>
         )}
 
+        {activeTab === "escrowoversight" && (
+          <div>
+            {(() => {
+              const saleTotal = pendingLegalTransfers.reduce((s, t) => s + Number(t.amount), 0);
+              const marketplaceTotal = marketplaceQueue.filter((q) => q.payment_status === "held_escrow").reduce((s, q) => s + Number(q.quoted_amount || 0), 0);
+              const depositsTotal = heldDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0) + heldHireDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0);
+              const rentTotal = heldRent.reduce((s, r) => s + Number(r.amount), 0);
+              const grandTotal = saleTotal + marketplaceTotal + depositsTotal + rentTotal;
+              return (
+                <div className="bg-chs-charcoal rounded-xl p-4 mb-4 text-white">
+                  <p className="text-[10px] text-white/60 uppercase font-semibold">Total real funds currently held in escrow</p>
+                  <p className="text-2xl font-bold">{formatNaira(grandTotal)}</p>
+                  <div className="flex gap-4 mt-2 text-[10px] text-white/70">
+                    <span>Property sales: {formatNaira(saleTotal)}</span>
+                    <span>Rent: {formatNaira(rentTotal)}</span>
+                    <span>Marketplace: {formatNaira(marketplaceTotal)}</span>
+                    <span>Deposits: {formatNaira(depositsTotal)}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">🏠 Rent held pending confirmation ({heldRent.length})</p>
+            {heldRent.length === 0 ? (
+              <p className="text-[11px] text-gray-400 mb-4">No real rent currently held.</p>
+            ) : (
+              heldRent.map((r) => {
+                const daysLeft = Math.ceil((new Date(r.release_deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                return (
+                  <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-xs text-chs-charcoal">{r.tenancies?.properties?.title}</p>
+                        <p className="text-[10px] text-gray-400">Landlord: {r.tenancies?.landlord?.full_name} · {daysLeft > 0 ? `${daysLeft} days to auto-release` : "Past grace period"}</p>
+                      </div>
+                      <p className="text-xs font-bold text-chs-red">{formatNaira(r.amount)}</p>
+                    </div>
+                    <button onClick={() => handleReleaseRent(r.id)} className="w-full mt-1.5 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
+                      Release now
+                    </button>
+                  </div>
+                );
+              })
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Property sale escrow ({pendingLegalTransfers.length})</p>
+            {pendingLegalTransfers.length === 0 ? (
+              <p className="text-[11px] text-gray-400 mb-4">No real property sale funds currently held.</p>
+            ) : (
+              pendingLegalTransfers.map((t) => (
+                <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
+                  <p className="text-xs text-chs-charcoal">{t.properties?.title}</p>
+                  <p className="text-xs font-bold text-chs-red">{formatNaira(t.amount)}</p>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">🛒 Marketplace escrow ({marketplaceQueue.filter((q) => q.payment_status === "held_escrow").length})</p>
+            {marketplaceQueue.filter((q) => q.payment_status === "held_escrow").length === 0 ? (
+              <p className="text-[11px] text-gray-400 mb-4">No real marketplace funds currently held.</p>
+            ) : (
+              marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => (
+                <div key={q.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
+                  <p className="text-xs text-chs-charcoal">{q.marketplace_products?.[0]?.name || "Marketplace order"}</p>
+                  <p className="text-xs font-bold text-chs-red">{formatNaira(q.quoted_amount || 0)}</p>
+                </div>
+              ))
+            )}
+
+            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">🏨 Shortlet/hire deposits ({heldDeposits.length + heldHireDeposits.length})</p>
+            {(heldDeposits.length + heldHireDeposits.length) === 0 ? (
+              <p className="text-[11px] text-gray-400">No real deposits currently held.</p>
+            ) : (
+              <>
+                {heldDeposits.map((d) => (
+                  <div key={`s-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
+                    <p className="text-xs text-chs-charcoal">Shortlet — {d.properties?.[0]?.title}</p>
+                    <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
+                  </div>
+                ))}
+                {heldHireDeposits.map((d) => (
+                  <div key={`h-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
+                    <p className="text-xs text-chs-charcoal">Hire — {d.properties?.[0]?.title}</p>
+                    <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
         {activeTab === "shortletdeposits" && (
           <div>
             {shortletCorrespondence.length > 0 && (
@@ -4518,7 +4634,7 @@ function AdminDashboardInner() {
                     const domainTabLabels: Record<string, string[]> = {
                       customer_care: ["Disputes", "Condition Reports", "Feedback"],
                       registration_setup: ["Face Verification", "ID Verification", "Registrations"],
-                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
+                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Escrow Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
                       agent_relations: ["Referral fees"],
                       artisan_dev_pm_vendor: ["Vendors", "Maintenance", "Artisans", "Developers"],
                     };
@@ -4567,6 +4683,7 @@ function AdminDashboardInner() {
                     { key: "platformearnings" as Tab, label: "Platform Earnings" },
                     { key: "transactionlog" as Tab, label: "Transaction History Log" },
                     { key: "referrals" as Tab, label: `Referral Fees (${owedFees.filter(f => f.status === "owed").length})` },
+                    { key: "escrowoversight" as Tab, label: "🔒 Escrow Oversight" },
                     { key: "shortletdeposits" as Tab, label: "Shortlet/Hire Deposits" },
                   ] },
                   { group: "Verification", items: [

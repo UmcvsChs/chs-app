@@ -1,0 +1,20 @@
+-- No schema change. Real, new "Escrow Oversight" tab per a direct
+-- client question, confirmed first that no such unified view existed
+-- -- escrow money was scattered across Sale Approvals, Marketplace,
+-- and a single summary number in Transaction Log, with nothing
+-- pulling all of it into one place.
+--
+-- Built combining three real, existing sources rather than inventing
+-- new tracking: property sale escrow (the same real data already
+-- powering legal-transfer confirmation), marketplace escrow (the same
+-- real held-payment records already used for vendor payouts), and
+-- shortlet/hire security deposits (reused the shortlet query that
+-- already existed, added the matching real one for hire bookings,
+-- which had none). One real combined total at the top, broken down by
+-- category, with every individual held amount listed underneath.
+--
+-- A real duplicate variable name was caught by the full production
+-- build and fixed before this reached the client -- an existing
+-- shortlet-deposit query already used the same name this was about to
+-- reuse; corrected to build on it directly instead of silently
+-- overwriting it.

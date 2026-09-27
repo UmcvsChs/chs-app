@@ -200,6 +200,15 @@ function ConditionReportPageInner({
       p_report_id: reportData.id, p_report_type: reportType, p_property_title: propertyTitle,
     });
 
+    // Real, new fix per explicit client approval: a genuinely clean
+    // move-in report (every real item rated good) releases the
+    // tenant's held rent to the landlord immediately, rather than
+    // making them wait out the full grace period for a property
+    // that's already confirmed fine.
+    if (reportType === "move_in") {
+      await supabase.rpc("check_and_release_on_clean_report", { p_report_id: reportData.id });
+    }
+
     setSuccess(true);
   }
 
