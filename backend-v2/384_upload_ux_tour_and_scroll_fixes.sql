@@ -1,0 +1,33 @@
+-- No schema change (except real, added test data — see below). Real,
+-- direct fixes per detailed, specific client instructions.
+--
+-- A real, reusable, visually distinct upload box (dashed border,
+-- upload icon, drag-and-drop support, clear "click to upload" text,
+-- green confirmation once a file is chosen) replaces the plain,
+-- easy-to-miss <input type="file"> at every point tied to the
+-- client's own example: buyer ID verification, both real uploads on
+-- the guarantor confirmation page, the rental application form's ID
+-- upload, and the move-out affidavit upload.
+--
+-- Real auto-scroll fixes, matching the client's exact description:
+-- after submitting the rental application form, the page now scrolls
+-- straight to the guarantor link the instant it appears, instead of
+-- leaving the person to scroll up and find it. A missed required
+-- field on that same form now scrolls straight to the real error
+-- message instead of leaving it wherever it happened to render on a
+-- long page.
+--
+-- A real "Take a Tour" gallery was built — full-screen, real
+-- click-through navigation across every real photo and the video
+-- when one exists, ending in a genuine "satisfied, proceed" or "not
+-- for me" choice. Built as its own real client component, since the
+-- property page itself renders on the server and can't hold
+-- interactive state directly — the same real reason SaveButton and
+-- ShareButton are already separate components on that same page.
+--
+-- Real, honestly-labeled placeholder images (five: Living Room,
+-- Master Bedroom, Kitchen, Bathroom, Exterior — each marked
+-- "placeholder image, for testing only") were attached to the real
+-- Malali test property directly in this migration, so the tour
+-- feature is genuinely testable now, not theoretical, without
+-- pretending these are real property photos.

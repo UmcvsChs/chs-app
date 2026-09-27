@@ -385,7 +385,17 @@ export default function TenantDashboard() {
                   // distinct visual treatment — not danger literally,
                   // but a real, gently pulsing alert the moment rent
                   // is genuinely close or overdue.
-                  const paymentUrgent = daysLeft <= 30;
+                  // Real, critical fix following a direct, serious
+                  // client report with real evidence: lease_end is
+                  // set the moment an owner approves a brand-new
+                  // tenancy, long before any real payment has ever
+                  // been made — checking only "days until lease_end"
+                  // wrongly showed a completely unpaid, brand-new
+                  // tenancy as "paid" for up to a year, with no way
+                  // to pay at all. A tenancy with zero real payments
+                  // on record is always urgent, regardless of dates.
+                  const neverPaid = !tenanciesWithPriorPayment.has(t.id);
+                  const paymentUrgent = neverPaid || daysLeft <= 30;
                   return (
                     <div className={`mt-1.5 rounded-lg px-2.5 py-1.5 ${
                       paymentUrgent ? "bg-chs-red/10 border-2 border-chs-red animate-pulse"
@@ -393,7 +403,7 @@ export default function TenantDashboard() {
                       : "bg-[var(--zone-card)]"
                     }`}>
                       <p className={`text-xs font-bold ${paymentUrgent ? "text-chs-red" : "text-chs-charcoal"}`}>
-                        {paymentUrgent && "⚠️ "}{daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
+                        {paymentUrgent && "⚠️ "}{neverPaid ? "First rent payment due" : daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
                       </p>
                       {tenanciesWithPriorPayment.has(t.id) && (
                         <p className="text-[10px] text-green-700 font-semibold mt-0.5">
@@ -460,7 +470,12 @@ export default function TenantDashboard() {
                     the receipt. */}
                 {(() => {
                   const daysUntilDue = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  if (daysUntilDue > 30) {
+                  // Real, critical fix — same real bug, same real
+                  // cause: a brand-new, completely unpaid tenancy
+                  // must never show as "paid through" a date that
+                  // was only ever set at approval, before any real
+                  // payment existed.
+                  if (daysUntilDue > 30 && tenanciesWithPriorPayment.has(t.id)) {
                     return (
                       <div className="mt-1.5 bg-green-50 border border-green-200 rounded-lg p-2.5">
                         <p className="text-xs font-semibold text-green-700">✓ Rent paid through {new Date(t.lease_end).toLocaleDateString()}</p>
@@ -485,7 +500,7 @@ export default function TenantDashboard() {
                     money, not CHS's own commission. */}
                 {(() => {
                   const daysUntilDue2 = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                  if (daysUntilDue2 > 30 || (pendingTenantCommission[t.id] || 0) > 0) return null;
+                  if ((daysUntilDue2 > 30 && tenanciesWithPriorPayment.has(t.id)) || (pendingTenantCommission[t.id] || 0) > 0) return null;
                   return (
                     <button onClick={() => handlePayRent(t.id, "rent_savings")} disabled={payingRentId === t.id}
                       className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">

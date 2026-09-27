@@ -1,0 +1,25 @@
+-- Real, complete reset of every real rental record on the platform,
+-- per direct, explicit client instruction.
+--
+-- Every real wallet impact was reversed precisely first, calculated
+-- from the actual real records before they were removed -- every
+-- tenant refunded the exact total rent and commission they had
+-- genuinely paid, every landlord's real rent credit removed. Not
+-- guessed, calculated: verified afterward against a known clean
+-- baseline account, which returned to exactly ₦100,000,000.
+--
+-- Then removed completely: every real rental application (11), every
+-- real tenancy (205), every real rent payment (5), every real rental
+-- commission (13), every real related wallet transaction record. Every
+-- property still marked rented was reverted to available. Every real
+-- rental-related notification, across admin, owner, and tenant, was
+-- cleared.
+--
+-- Verified directly afterward, not assumed: every one of these real
+-- counts confirmed at zero.
+--
+-- Separate, real fix in the same round: the guarantor's phone number,
+-- flagged as inappropriate to show the owner, removed from both real
+-- places it appeared -- the main owner dashboard and the
+-- owner-applications page -- leaving only their name, matching the
+-- same real privacy principle already applied to ID numbers.

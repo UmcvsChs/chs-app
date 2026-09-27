@@ -1140,7 +1140,7 @@ export default function OwnerDashboard() {
                       </div>
                       <div className="pt-2 border-t border-gray-200">
                         <p className="text-gray-400 text-[10px] font-bold uppercase">Guarantor</p>
-                        <p className="text-gray-700">{app.guarantor_name} — {app.guarantor_phone}</p>
+                        <p className="text-gray-700">{app.guarantor_name}</p>
                         {app.status === "awaiting_guarantor_confirmation" ? (
                           <p className="text-chs-amber-dark font-semibold mt-0.5">⏳ Awaiting the guarantor&apos;s own, independent confirmation — not yet completed by them directly.</p>
                         ) : (

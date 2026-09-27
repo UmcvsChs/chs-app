@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import FileUploadBox from "@/components/FileUploadBox";
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
@@ -292,8 +293,7 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           )}
           <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this ID *</p>
-          <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-            className="w-full text-xs" />
+          <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
 
           {/* Real, new security layer per direct client discussion:
               an ID proves who you are, not where you currently live —
@@ -314,8 +314,7 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
             <input type="date" value={addressProofDate} onChange={(e) => setAddressProofDate(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm mb-2" />
             <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this document *</p>
-            <input type="file" accept="image/*,application/pdf" onChange={(e) => setAddressProofFile(e.target.files?.[0] || null)}
-              className="w-full text-xs" />
+            <FileUploadBox onFileSelect={setAddressProofFile} accept="image/*,application/pdf" label="your proof of address" selectedFileName={addressProofFile?.name} />
           </div>
 
           <div className="border-t border-gray-200 pt-3">

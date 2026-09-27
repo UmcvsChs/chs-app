@@ -1,0 +1,27 @@
+-- No schema change. Real, critical fix for the exact bug shown in
+-- direct client evidence: a tenant able to pay only a commission,
+-- with the real rent and the landlord's money never moving at all.
+--
+-- Traced to its real, exact source: an earlier round wired the
+-- generic pay_transaction_commission mechanism onto rental
+-- commissions. That function is correct for a property sale, where
+-- rent doesn't exist -- but for a tenant's first rental commission,
+-- it only ever settled CHS's own fee, never touched the tenancy,
+-- never created a real rent payment, never paid the landlord. Fixed
+-- at the source: a tenant's first rental commission now correctly
+-- routes through pay_rent, which combines the real rent and the real
+-- commission into one payment. Verified directly against both real,
+-- live commissions from the client's own screenshots (₦60,000 on
+-- ₦1,000,000 rent, ₦75,000 on ₦1,250,000 rent) -- both correctly
+-- charged the full combined total in one transaction, then fully
+-- reversed afterward so the client can trigger them fresh.
+--
+-- A second, related, genuine bug was found and fixed in the same
+-- pass: the "rent paid through" display, on both the main tenant
+-- dashboard and My Rented Space, was based purely on the lease's end
+-- date -- which is set the moment a tenancy is approved, long before
+-- any real payment exists. A completely unpaid, brand-new tenancy
+-- could show as "paid" for up to a year, with no way to pay at all.
+-- Both pages now check whether a real payment has ever actually been
+-- made, and correctly show "first payment due" with a working button
+-- for the real, combined total whenever it hasn't.

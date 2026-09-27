@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { uploadDocument } from "@/lib/storage";
 import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 import InfoTip from "@/components/InfoTip";
+import FileUploadBox from "@/components/FileUploadBox";
 
 interface RentalApplicationFormProps {
   propertyId: string;
@@ -42,6 +43,18 @@ export default function RentalApplicationForm({
   const [moveInDate, setMoveInDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    // Real, direct fix per a specific, repeated client complaint: if
+    // a required field was missed and the person had already
+    // scrolled to the submit button at the bottom, the error message
+    // appeared wherever it lived on the page, not wherever they were
+    // looking — easy to miss entirely on a long form. This scrolls
+    // straight to it the instant it appears.
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
   const [guarantorLink, setGuarantorLink] = useState<string | null>(null);
 
   // Real, direct fix per a specific, well-described client incident:
@@ -181,9 +194,22 @@ export default function RentalApplicationForm({
   // moving forward until the guarantor completes their own real,
   // independent step, so the applicant needs the real link in hand to
   // send it themselves right now, not just a generic "submitted" message.
+  const guarantorLinkRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Real, direct fix per a specific, repeated client complaint: a
+    // long form being replaced by a short success screen left the
+    // browser sitting wherever it scrolled to fill in the form —
+    // often the bottom, showing nothing relevant at all. This
+    // scrolls straight to the real next step the instant it appears,
+    // instead of leaving the person to hunt for it themselves.
+    if (guarantorLink && guarantorLinkRef.current) {
+      guarantorLinkRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [guarantorLink]);
+
   if (guarantorLink) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" ref={guarantorLinkRef}>
         <div className="bg-chs-amber-light rounded-lg p-4 border border-chs-amber-dark">
           <p className="text-sm font-bold text-chs-charcoal mb-2">✓ Your details are in — one real step left</p>
           <p className="text-xs text-gray-600 mb-3">
@@ -261,8 +287,7 @@ export default function RentalApplicationForm({
           placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"}
           className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       )}
-      <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-        className="w-full text-xs" />
+      <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
 
       <div className="border-t border-gray-200 pt-3">
         <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Your guarantor<InfoTip text="A real person who agrees to stand behind you — if you genuinely can't pay rent, your guarantor is who the landlord can turn to. Most landlords require one; it's a standard part of renting, not a sign of distrust in you specifically." /></p>
@@ -290,7 +315,7 @@ export default function RentalApplicationForm({
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
         />
       </div>
-      {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
+      {error && <p ref={errorRef} className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
       <button
         type="submit"
         disabled={submitting}

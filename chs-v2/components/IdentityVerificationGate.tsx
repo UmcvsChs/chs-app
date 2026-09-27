@@ -5,6 +5,7 @@ import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import FileUploadBox from "@/components/FileUploadBox";
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
@@ -110,8 +111,7 @@ export default function IdentityVerificationGate({
             placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"}
             className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
         )}
-        <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-          className="w-full text-xs" />
+        <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
         {error && <p className="text-[10px] text-chs-red">{error}</p>}
         <button onClick={handleSubmit} disabled={submitting}
           className="w-full py-2.5 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">

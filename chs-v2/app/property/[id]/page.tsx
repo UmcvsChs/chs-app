@@ -13,6 +13,7 @@ import { calcInspectionFee } from "@/lib/inspectionFee";
 import MediaRequests from "@/components/MediaRequests";
 import SaveButton from "@/components/SaveButton";
 import ShareButton from "@/components/ShareButton";
+import PropertyTourButton from "@/components/PropertyTourButton";
 import PropertyCard from "@/components/PropertyCard";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
 import { MediaRequest } from "@/types/mediaRequest";
@@ -261,6 +262,16 @@ export default async function PropertyDetailPage({
         ) : (
           <span className="text-chs-steel-blue text-sm">No photo yet</span>
         )}
+        {/* Real, new "Take a Tour" experience per direct client
+            instruction — a real client component, since this page
+            itself renders on the server and can't hold interactive
+            state directly, the same real reason SaveButton and
+            ShareButton are their own separate components too. */}
+        <PropertyTourButton
+          photos={property.photos || []}
+          videoUrl={property.video_url}
+          propertyTitle={property.title}
+        />
       </div>
 
       {property.video_url && (

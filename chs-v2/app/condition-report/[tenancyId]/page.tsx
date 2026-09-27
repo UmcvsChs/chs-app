@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
 import { ConditionRoom, RoomItem } from "@/types/conditionReport";
+import FileUploadBox from "@/components/FileUploadBox";
 
 function generateReference(): string {
   return "CHS-COND-" + Math.floor(1000 + Math.random() * 9000);
@@ -325,12 +326,7 @@ function ConditionReportPageInner({
             <p className="text-[11px] text-gray-600 mb-2">
               Fill it in, attach this real condition report as Exhibit &quot;A&quot;, and take it to a High Court to be sworn before a Commissioner for Oaths. Upload the signed, stamped result below.
             </p>
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => setAffidavitFile(e.target.files?.[0] || null)}
-              className="w-full text-xs"
-            />
+            <FileUploadBox onFileSelect={setAffidavitFile} accept=".pdf,.jpg,.jpeg,.png" label="the signed affidavit" selectedFileName={affidavitFile?.name} />
           </div>
         )}
 

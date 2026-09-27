@@ -63,6 +63,8 @@ export default function MyRentedSpacePage() {
   const [faultError, setFaultError] = useState<string | null>(null);
 
   const [payingRent, setPayingRent] = useState(false);
+  const [hasEverPaid, setHasEverPaid] = useState<boolean | null>(null);
+  const [pendingCommission, setPendingCommission] = useState(0);
   const [payMessage, setPayMessage] = useState("");
 
   useEffect(() => {
@@ -87,6 +89,18 @@ export default function MyRentedSpacePage() {
           supabase.from("condition_reports").select("id, reference, report_type, status, submitted_at")
             .eq("tenancy_id", data.id).order("submitted_at", { ascending: false })
             .then(({ data: r }) => setReports(r || []));
+          // Real, critical fix following a direct, serious client
+          // report with real evidence: lease_end is set the moment a
+          // tenancy is approved, long before any real payment has
+          // ever been made — this checks the real, actual payment
+          // history directly, rather than assuming dates alone mean
+          // anything has been paid.
+          supabase.from("rent_payments").select("id", { count: "exact", head: true })
+            .eq("tenancy_id", data.id)
+            .then(({ count }) => setHasEverPaid((count || 0) > 0));
+          supabase.from("transaction_commissions").select("commission_amount")
+            .eq("tenancy_id", data.id).eq("payer_role", "tenant").neq("status", "paid").maybeSingle()
+            .then(({ data: c }) => setPendingCommission(c ? Number(c.commission_amount) : 0));
         }
       });
   }
@@ -137,7 +151,8 @@ export default function MyRentedSpacePage() {
   }
 
   const daysLeft = Math.ceil((new Date(tenancy.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  const paymentUrgent = daysLeft <= 30;
+  const neverPaid = hasEverPaid === false;
+  const paymentUrgent = neverPaid || daysLeft <= 30;
   const responsibleName = tenancy.management_delegated ? tenancy.manager?.full_name : tenancy.landlord?.full_name;
   const responsiblePhone = tenancy.management_delegated ? tenancy.manager?.phone : tenancy.landlord?.phone;
   const responsibleId = tenancy.management_delegated ? tenancy.manager_id : tenancy.landlord_id;
@@ -161,7 +176,7 @@ export default function MyRentedSpacePage() {
             this is its genuine home, not the general dashboard. */}
         <div className={`rounded-xl px-3 py-2.5 ${paymentUrgent ? "bg-chs-red/10 border-2 border-chs-red animate-pulse" : "bg-white border border-gray-200"}`}>
           <p className={`text-sm font-bold ${paymentUrgent ? "text-chs-red" : "text-chs-charcoal"}`}>
-            {paymentUrgent && "⚠️ "}{daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
+            {paymentUrgent && "⚠️ "}{neverPaid ? "First rent payment due" : daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
           </p>
           <p className="text-xs text-gray-500">{formatNaira(tenancy.annual_rent)}/year · Lease runs to {new Date(tenancy.lease_end).toLocaleDateString()}</p>
           {payMessage && <p className="text-xs text-gray-600 mt-1">{payMessage}</p>}
@@ -169,12 +184,14 @@ export default function MyRentedSpacePage() {
             <div className="mt-2 space-y-1.5">
               <button onClick={() => handlePayRent("main")} disabled={payingRent}
                 className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                {payingRent ? "Processing…" : `Pay from Main Wallet — ${formatNaira(tenancy.annual_rent)}`}
+                {payingRent ? "Processing…" : `Pay from Main Wallet — ${formatNaira(tenancy.annual_rent + pendingCommission)}`}
               </button>
-              <button onClick={() => handlePayRent("rent_savings")} disabled={payingRent}
-                className="w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
-                Pay from Rent Savings — {formatNaira(tenancy.annual_rent)}
-              </button>
+              {pendingCommission === 0 && (
+                <button onClick={() => handlePayRent("rent_savings")} disabled={payingRent}
+                  className="w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
+                  Pay from Rent Savings — {formatNaira(tenancy.annual_rent)}
+                </button>
+              )}
             </div>
           )}
         </div>
