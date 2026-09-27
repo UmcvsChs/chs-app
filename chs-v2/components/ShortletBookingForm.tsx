@@ -6,6 +6,7 @@ import { Session } from "@supabase/supabase-js";
 import { ShortletBooking } from "@/types/shortletBooking";
 import { formatNaira } from "@/lib/format";
 import { uploadDocument } from "@/lib/storage";
+import FileUploadBox from "@/components/FileUploadBox";
 
 interface ShortletBookingFormProps {
   propertyId: string;
@@ -175,8 +176,7 @@ export default function ShortletBookingForm({
             placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)}
             placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-          <input type="file" accept="image/*,application/pdf" onChange={(e) => setIdFile(e.target.files?.[0] || null)}
-            className="w-full text-xs" />
+          <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
         </div>
       </div>
 
