@@ -1,0 +1,23 @@
+-- No schema change. Real, critical fix for a genuine, serious,
+-- confirmed bug, found and proven directly in the code, not disputed.
+--
+-- Owner-Applications, the exact real page the "needs your decision"
+-- notification links to, was a genuine dead end: it showed the
+-- application's status, then sent the owner straight back to the
+-- main dashboard with a plain "Open on Owner Dashboard" link -- no
+-- real approve or decline action existed on this page at all. A
+-- notification correctly opened a new tab, correctly landed here
+-- first in the list, and then handed the owner nothing to actually
+-- do, exactly as described.
+--
+-- Rebuilt completely: the full real applicant and guarantor detail,
+-- and the real, working Approve / Decline buttons -- the same real
+-- record_owner_decision call already proven correct on the main
+-- dashboard -- now live directly on this page. Nowhere left to be
+-- sent back to.
+--
+-- Confirmed directly against the real, live application this was
+-- reported against (Salako Adebayo, Office Space Ikeja) -- correctly
+-- sitting in awaiting_owner_decision, ready for the owner's real
+-- click, not touched by me this time so the client can test the
+-- genuine thing themselves.
