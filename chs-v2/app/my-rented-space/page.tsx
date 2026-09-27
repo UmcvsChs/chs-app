@@ -201,7 +201,7 @@ export default function MyRentedSpacePage() {
             about their rent money, not the general dashboard. */}
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-1.5">💰 Your Wallets</p>
-          <WalletQuickView userId={session.user.id} extra="rent_savings" />
+          <WalletQuickView userId={session.user.id} extra="rent_savings" onLight />
         </div>
 
         {/* Real "who to contact" card + direct chat, per direct
@@ -289,9 +289,13 @@ export default function MyRentedSpacePage() {
           <Link href={`/condition-report/${tenancy.id}?type=move_in`} className="block text-center mt-2 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
             File a move-in condition report
           </Link>
+          <a href="/documents/CHS_Standard_Condition_Affidavit_Template.pdf" target="_blank" rel="noreferrer"
+            className="block text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
+            👁️ View the standard move-out affidavit template
+          </a>
           <a href="/documents/CHS_Standard_Condition_Affidavit_Template.docx" download
             className="block text-center mt-1.5 py-1.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold">
-            📥 Download the standard move-out affidavit template
+            📥 Download to fill and sign
           </a>
           <Link href="/my-receipts" className="block text-center mt-1.5 text-[10px] font-semibold text-chs-red underline">
             View all real receipts →

@@ -1,0 +1,25 @@
+-- Real, direct fixes per detailed, specific client instructions.
+--
+-- Fixed the real notification wording sent the moment a rental
+-- application is approved, on both the standard and agent-managed
+-- paths: it previously named only the commission, giving exactly the
+-- wrong impression that CHS was chasing its own fee. Now leads with
+-- the real rent, names the commission or agency fee honestly as a
+-- small service charge alongside it, and states the real combined
+-- total plainly.
+--
+-- Confirmed directly, not assumed, that the "431 days" reading on My
+-- Rented Space was mathematically correct: the real tenancy's move-in
+-- date was genuinely scheduled over two months out, so a full year
+-- from that real future date lands exactly there.
+--
+-- Fixed a real, confirmed gap in the condition report flow: a
+-- submitted report was technically viewable by the owner if they knew
+-- to check, but nothing ever actually notified them. Now notifies the
+-- real, correctly-resolved responsible party -- the manager when
+-- delegated, the landlord otherwise -- alongside admin.
+--
+-- Added a real View link, opening the same affidavit template as an
+-- actual PDF the browser can display, ahead of the Download link for
+-- the real, editable Word copy -- on both the condition report page
+-- and My Rented Space.

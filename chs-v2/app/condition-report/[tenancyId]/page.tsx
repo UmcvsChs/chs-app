@@ -319,9 +319,19 @@ function ConditionReportPageInner({
                 actually reach it from inside the app — this is
                 exactly the point of need, right where the upload
                 field asks for the finished, signed document. */}
-            <a href="/documents/CHS_Standard_Condition_Affidavit_Template.docx" download
+            {/* Real, direct fix per a specific, direct client
+                instruction: nobody should download a document
+                sight-unseen — a real View link, opening the same
+                template as a real PDF the browser can actually
+                display, comes first; Download stays for the real,
+                editable Word copy to actually fill in and sign. */}
+            <a href="/documents/CHS_Standard_Condition_Affidavit_Template.pdf" target="_blank" rel="noreferrer"
               className="block text-center mb-2 py-2 rounded-lg bg-white border border-chs-amber-dark text-chs-amber-dark text-xs font-semibold">
-              📥 Download the standard affidavit template
+              👁️ View the standard affidavit template
+            </a>
+            <a href="/documents/CHS_Standard_Condition_Affidavit_Template.docx" download
+              className="block text-center mb-2 py-2 rounded-lg bg-chs-amber-dark text-white text-xs font-semibold">
+              📥 Download to fill and sign
             </a>
             <p className="text-[11px] text-gray-600 mb-2">
               Fill it in, attach this real condition report as Exhibit &quot;A&quot;, and take it to a High Court to be sworn before a Commissioner for Oaths. Upload the signed, stamped result below.

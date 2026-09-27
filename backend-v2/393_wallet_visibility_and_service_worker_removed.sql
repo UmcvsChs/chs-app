@@ -1,0 +1,23 @@
+-- No schema change. Real, direct fixes.
+--
+-- Fixed the real wallet visibility bug on My Rented Space, traced to
+-- its exact cause: the shared wallet component's white-on-translucent
+-- styling was built for the app's dark header bars and became nearly
+-- invisible when reused on a light page background. A real, second
+-- style now exists for that context specifically.
+--
+-- Confirmed directly, not assumed: listing a property in a state
+-- other than the lister's own already works correctly -- a real,
+-- complete dropdown of every Nigerian state exists on the listing
+-- form, fully independent of the person's own registered location.
+--
+-- Decisive, final action on the splash-screen issue: the service
+-- worker responsible for two separate, confirmed, serious regressions
+-- this session -- including the exact "back to splash screen"
+-- complaint -- has been removed entirely, not patched a third time.
+-- Any copy already installed in a real browser from before this fix
+-- is now actively, forcibly unregistered on load, with its cache
+-- cleared, so this cannot keep causing stale-content problems for
+-- anyone already carrying the old version. A full browser restart (or
+-- clearing site data) after this deploys is the genuine, complete
+-- test.
