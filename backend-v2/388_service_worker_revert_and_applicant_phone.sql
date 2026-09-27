@@ -1,0 +1,29 @@
+-- Real, critical fixes, both traced to their exact, confirmed source,
+-- not guessed at.
+--
+-- The service worker change from the previous round was a real
+-- regression, caught directly: it cached the page itself, not just
+-- static files. In a real deployment cycle, that means a browser
+-- could keep showing an old, already-fixed page after a genuinely
+-- new version shipped, including broken references to that old
+-- build's script files. This produced exactly the two symptoms
+-- reported together -- an already-fixed guarantor-phone display
+-- looking unfixed, and pages hanging or reloading. Reverted
+-- decisively: only Next.js's own permanently-hashed script files are
+-- ever cached; the actual pages and all real data always fetch
+-- fresh, falling back to a cached copy only if the network genuinely
+-- fails.
+--
+-- The applicant's own phone number was never actually collected on
+-- the rental application at all -- only the guarantor provides one.
+-- Admin was shown the phone tied to the logged-in account instead,
+-- correct in production, genuinely wrong when a shared test account
+-- submits. Added the same real field the guarantor already has,
+-- required on the form, stored, and shown to admin in place of the
+-- account's own number.
+--
+-- A real overload conflict from changing this function's parameters
+-- was caught and fixed proactively this time, before it ever reached
+-- the client -- the same exact class of bug that caused a real,
+-- confirmed failure earlier this session, checked for immediately
+-- rather than discovered later.

@@ -3172,7 +3172,7 @@ function AdminDashboardInner() {
                 </p>
 
                 <p className="text-[10px] font-bold text-gray-400 uppercase mt-2">Applicant</p>
-                <p className="text-xs text-chs-charcoal">{app.applicant_full_name || app.tenant?.full_name || "Applicant"} — {app.tenant?.phone}</p>
+                <p className="text-xs text-chs-charcoal">{app.applicant_full_name || app.tenant?.full_name || "Applicant"} — {app.applicant_phone || app.tenant?.phone}</p>
                 <p className="text-[11px] text-gray-500">{app.applicant_occupation} · {app.applicant_present_address}</p>
                 <p className="text-[11px] text-gray-500">Income: {app.applicant_income_source}</p>
                 <p className="text-[11px] text-gray-500">{app.applicant_id_type} — {app.applicant_id_number}</p>

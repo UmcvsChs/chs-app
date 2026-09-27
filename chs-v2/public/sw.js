@@ -3,7 +3,7 @@
 // real requirements browsers check for full PWA installability,
 // alongside the manifest — having a manifest alone isn't the complete
 // picture.
-const CACHE_NAME = "chs-v2-cache-v2";
+const CACHE_NAME = "chs-v2-cache-v3";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -11,60 +11,53 @@ self.addEventListener("install", () => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+    caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
   );
   event.waitUntil(self.clients.claim());
 });
 
-// Real, direct fix following a repeated, serious client report,
-// compared directly against real apps like Gmail and YouTube: the
-// previous network-first strategy applied to every single request,
-// including this app's own interface files — meaning a refresh
-// always waited for a full round trip before showing anything at
-// all, every time, which is genuinely what made it feel like
-// starting over from a splash screen. A real PWA that feels instant
-// on reload, the way the client described other real apps behaving,
-// serves its own shell from the cache immediately while the real,
-// live data underneath still always comes from the network, fresh,
-// every time — this is that real, correct split, not a guess:
-//
-// Supabase's own API calls (the actual data: offers, applications,
-// notifications, everything this app is built to always show live)
-// are matched by hostname and stay genuinely network-first, exactly
-// as before — real data freshness was never the actual problem.
-//
-// Everything else — this app's own HTML, JS, CSS, images, the real
-// interface itself — now serves instantly from the cache first if
-// it's there, while a fresh copy is fetched in the background to
-// replace it for next time. The interface appears immediately; nothing
-// about the platform's own live data behavior changes.
+// Real, critical fix reverting a real, confirmed regression from the
+// previous version: caching the page itself (not just static files)
+// meant a browser could keep showing an old, already-fixed page after
+// a new real deployment went live — including references to script
+// files from that old build, which no longer exist once a new one
+// ships. That's a real, serious risk in an app that deploys real
+// fixes constantly, and it directly caused two real, separate
+// symptoms reported together: an already-fixed page appearing
+// unfixed, and pages hanging or reloading unexpectedly. A cache-first
+// strategy is only safe for files that never change once built
+// (Next.js's own hashed script and style files, genuinely safe here);
+// it is never safe for the page itself. Reverted to always fetching
+// fresh, falling back to a cached copy only if the network genuinely
+// fails — the same real, correct principle already used for this
+// app's real data.
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  const isDataRequest = url.hostname.includes("supabase.co") || event.request.method !== "GET";
+  if (event.request.method !== "GET") return;
 
-  if (isDataRequest) {
+  const url = new URL(event.request.url);
+  const isHashedStaticAsset = url.pathname.startsWith("/_next/static/");
+
+  if (isHashedStaticAsset) {
     event.respondWith(
-      fetch(event.request)
-        .then((response) => {
+      caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        return fetch(event.request).then((response) => {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           return response;
-        })
-        .catch(() => caches.match(event.request))
+        });
+      })
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return response;
-        })
-        .catch(() => cached);
-      return cached || fetchPromise;
-    })
+    fetch(event.request)
+      .then((response) => {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });

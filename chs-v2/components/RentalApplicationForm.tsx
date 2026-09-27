@@ -30,6 +30,7 @@ export default function RentalApplicationForm({
   onSuccess,
 }: RentalApplicationFormProps) {
   const [applicantFullName, setApplicantFullName] = useState("");
+  const [applicantPhone, setApplicantPhone] = useState("");
   const [occupation, setOccupation] = useState("");
   const [presentAddress, setPresentAddress] = useState("");
   const [incomeSource, setIncomeSource] = useState("");
@@ -76,6 +77,7 @@ export default function RentalApplicationForm({
         const d = JSON.parse(saved);
         // eslint-disable-next-line react-hooks/set-state-in-effect
         if (d.applicantFullName) setApplicantFullName(d.applicantFullName);
+        if (d.applicantPhone) setApplicantPhone(d.applicantPhone);
         if (d.occupation) setOccupation(d.occupation);
         if (d.presentAddress) setPresentAddress(d.presentAddress);
         if (d.incomeSource) setIncomeSource(d.incomeSource);
@@ -94,12 +96,12 @@ export default function RentalApplicationForm({
   useEffect(() => {
     try {
       localStorage.setItem(draftKey, JSON.stringify({
-        applicantFullName, occupation, presentAddress, incomeSource,
+        applicantFullName, applicantPhone, occupation, presentAddress, incomeSource,
         employerBusinessName, employerBusinessAddress, idType, idNumber,
         guarantorName, guarantorPhone, moveInDate,
       }));
     } catch { /* private-browsing or full storage should never break typing */ }
-  }, [draftKey, applicantFullName, occupation, presentAddress, incomeSource,
+  }, [draftKey, applicantFullName, applicantPhone, occupation, presentAddress, incomeSource,
       employerBusinessName, employerBusinessAddress, idType, idNumber,
       guarantorName, guarantorPhone, moveInDate]);
 
@@ -107,6 +109,15 @@ export default function RentalApplicationForm({
     e.preventDefault();
     if (!applicantFullName.trim()) {
       setError("Please enter your real, full name — this is what the owner will see you as.");
+      return;
+    }
+    // Real, direct fix per a specific, direct client question: admin
+    // genuinely had no way to reach the applicant themselves — only
+    // the phone tied to whichever account was logged in, which isn't
+    // always the applicant's own real number. Required here, exactly
+    // like the guarantor's own phone already is.
+    if (!applicantPhone.trim()) {
+      setError("Please provide your own, real phone number — CHS may need to reach you directly.");
       return;
     }
     if (!occupation.trim() || !presentAddress.trim() || !incomeSource.trim()) {
@@ -152,6 +163,7 @@ export default function RentalApplicationForm({
     const { data, error: rpcError } = await supabase.rpc("submit_rental_application", {
       p_property_id: propertyId,
       p_applicant_full_name: applicantFullName.trim(),
+      p_applicant_phone: applicantPhone.trim(),
       p_occupation: occupation.trim(),
       p_present_address: presentAddress.trim(),
       p_income_source: incomeSource.trim(),
@@ -248,6 +260,11 @@ export default function RentalApplicationForm({
         <label className="text-xs font-semibold text-gray-600">Your full name (as on your ID)</label>
         <input type="text" value={applicantFullName} onChange={(e) => setApplicantFullName(e.target.value)}
           placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+      </div>
+      <div>
+        <label className="text-xs font-semibold text-gray-600">Your phone number</label>
+        <input type="tel" value={applicantPhone} onChange={(e) => setApplicantPhone(e.target.value)}
+          placeholder="08XXXXXXXXX — CHS may need to reach you directly" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Occupation</label>
