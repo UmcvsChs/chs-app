@@ -1,0 +1,34 @@
+-- Applied live: 401_phone_nin_lock_and_verified_badge,
+--               402_offer_buyer_verified_snapshot,
+--               403_owner_protected_views.
+--
+-- 401  Identity form now requires a validated contact phone (kept on the
+--      submission, deliberately NOT copied onto profiles.phone, which is
+--      the person's unique login). The one-NIN-per-person rule now also
+--      covers the ID verification path: a NIN locked to / verified on
+--      another account is refused; a NIN different from the one the
+--      person registered with is refused; approval locks the NIN onto
+--      the profile permanently (engaging idx_profiles_nin_unique);
+--      already-verified people were backfilled into the lock.
+--      Applications record the applicant's verified status at submission
+--      so the owner's "ID verified" badge can show (an owner cannot read
+--      another user's profile, so it never could before).
+-- 402  Same snapshot for offers (buyer_verified).
+-- 403  Owner-safe views (owner_rental_applications, owner_offers).
+--
+-- ================= PENDING STEP - NOT YET APPLIED =================
+-- Owners can currently still read the FULL rental_applications and
+-- offers rows on their own properties through the API (applicant NIN,
+-- ID document link, both phone numbers, guarantor ID and confirmation
+-- token, buyer phone), even though the screens no longer show them.
+-- The old access is intentionally left in place until this release is
+-- deployed and the owner screens are confirmed working, because the
+-- previously deployed owner screens read the raw tables and would go
+-- blank the moment it is removed. After confirming, run:
+--
+--   drop policy if exists rental_applications_owner_read_on_own_property on rental_applications;
+--   drop policy if exists offers_owner_read_on_own_property on offers;
+--
+-- and re-check by reading an application as the property owner: the
+-- raw table must return nothing, the view must return the safe fields.
+-- ==================================================================

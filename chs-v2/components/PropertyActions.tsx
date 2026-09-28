@@ -56,7 +56,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   }
   useEffect(() => {
     if (isOwner) {
-      supabase.from("offers").select("id, amount, status, buyer_full_name, note")
+      supabase.from("owner_offers").select("id, amount, status, buyer_full_name, note")
         .eq("property_id", property.id)
         .in("status", ["awaiting_owner_decision", "owner_decided_pending_relay", "rejected"])
         .order("created_at", { ascending: false })

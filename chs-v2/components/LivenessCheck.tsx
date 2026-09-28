@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { uploadDocument } from "@/lib/storage";
 
 // A real, honest facial liveness walkthrough: real on-device camera
 // steps, a real captured photo, submitted for real human review. No
@@ -148,18 +149,20 @@ export default function LivenessCheck({ session, onSubmitted }: { session: Sessi
         return;
       }
       const file = new File([blob], "liveness-capture.jpg", { type: "image/jpeg" });
-      const path = `${session.user.id}/liveness/capture-${Date.now()}.jpg`;
-      const { error: uploadError } = await supabase.storage.from("property-media").upload(path, file);
-      if (uploadError) {
-        setError(`Could not save your picture: ${uploadError.message}`);
+      // Stored in the private bucket, with a time-limited link — the
+      // same protection an ID document gets. A photo of someone's face
+      // must never sit at a permanent public web address. (It
+      // previously went into the public property-photos bucket.)
+      const privateUrl = await uploadDocument(file, session.user.id, "liveness");
+      if (!privateUrl) {
+        setError("Could not save your picture. Please check your connection and try again.");
         setSubmitting(false);
         return;
       }
-      const { data: urlData } = supabase.storage.from("property-media").getPublicUrl(path);
 
       const { error: insertError } = await supabase.from("liveness_submissions").insert({
         user_id: session.user.id,
-        captured_photo_url: urlData.publicUrl,
+        captured_photo_url: privateUrl,
       });
       if (insertError) {
         setError(`Your picture was saved but could not be sent for review: ${insertError.message}`);

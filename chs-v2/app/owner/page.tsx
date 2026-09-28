@@ -276,9 +276,9 @@ export default function OwnerDashboard() {
     // property_id — same real data, a fraction of the round-trips.
     const propertyIds = ownedProperties.map((p) => p.id);
     const [allOffersRes, allInspectionsRes, allApplicationsRes, allMediaRequestsRes] = await Promise.all([
-      supabase.from("offers").select("*, buyer:profiles!offers_buyer_id_fkey(full_name, phone, valid_id_verified, residential_address)").in("property_id", propertyIds).neq("status", "awaiting_admin_review").order("created_at", { ascending: false }),
+      supabase.from("owner_offers").select("*").in("property_id", propertyIds).neq("status", "awaiting_admin_review").order("created_at", { ascending: false }),
       supabase.from("inspections").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
-      supabase.from("rental_applications").select("*, tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone, valid_id_verified)").in("property_id", propertyIds).order("created_at", { ascending: false }),
+      supabase.from("owner_rental_applications").select("*").in("property_id", propertyIds).order("created_at", { ascending: false }),
       supabase.from("media_requests").select("*").in("property_id", propertyIds).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
 
@@ -968,7 +968,7 @@ export default function OwnerDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-bold text-chs-charcoal">{offer.buyer_full_name || offer.buyer?.full_name || "Buyer"}</p>
-                          {offer.buyer?.valid_id_verified ? (
+                          {offer.buyer_verified ? (
                             <span className="text-[9px] font-bold text-green-700">✓ ID Verified<InfoTip text="CHS has checked this buyer's real government ID against their account — a genuine identity check, not just a claim they typed in themselves." /></span>
                           ) : (
                             <span className="text-[9px] font-bold text-chs-amber-dark">⚠ Not yet verified</span>
@@ -1107,7 +1107,7 @@ export default function OwnerDashboard() {
                       <div className="pb-2 border-b border-gray-200">
                         <div className="flex justify-between items-start">
                           <p className="font-bold text-chs-charcoal text-sm">{app.applicant_full_name || app.tenant?.full_name || "Applicant"}</p>
-                          {app.tenant?.valid_id_verified ? (
+                          {app.applicant_verified ? (
                             <span className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">✓ ID Verified</span>
                           ) : (
                             <span className="text-[9px] font-bold text-chs-amber-dark bg-chs-amber-light px-2 py-0.5 rounded-full whitespace-nowrap">⚠ Not yet verified</span>

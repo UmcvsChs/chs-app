@@ -25,6 +25,7 @@ export interface RentalApplication {
   owner_decision: "approved" | "owner_declined" | null;
   applicant_full_name: string | null;
   applicant_phone: string | null;
+  applicant_verified?: boolean;
   applicant_occupation: string | null;
   applicant_present_address: string | null;
   applicant_income_source: string | null;

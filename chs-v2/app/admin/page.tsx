@@ -65,6 +65,64 @@ interface PendingProperty {
 }
 
 export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+
+// Real, new for the fuller ID verification: what a person told us
+// about themselves when submitting their ID, shown to the admin
+// alongside an automatic comparison of the name they registered with
+// against the name they typed from their ID document. A mismatch is
+// exactly the thing an admin is there to catch.
+interface IdSubmissionDetails {
+  full_name_on_id: string | null; gender: string | null; age_bracket: string | null;
+  state_of_residence: string | null; residential_address: string | null; occupation: string | null;
+  contact_email: string | null; contact_phone: string | null; id_already_used_elsewhere: boolean | null;
+}
+
+function nameMatch(registered?: string | null, onId?: string | null): "match" | "partial" | "differ" {
+  const tokens = (v?: string | null) => (v || "").toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+  const a = tokens(registered);
+  const b = tokens(onId);
+  if (!a.length || !b.length) return "differ";
+  const aSet = new Set(a);
+  const bSet = new Set(b);
+  if (a.every((t) => bSet.has(t)) || b.every((t) => aSet.has(t))) return "match";
+  return a.some((t) => bSet.has(t)) ? "partial" : "differ";
+}
+
+function IdSubmissionDetailsBlock({ sub }: { sub: { id_type: string; id_number: string; profiles: { full_name: string; phone?: string } | null } & Partial<IdSubmissionDetails> }) {
+  const status = nameMatch(sub.profiles?.full_name, sub.full_name_on_id);
+  return (
+    <div className="mb-2 space-y-1.5">
+      {sub.id_already_used_elsewhere && (
+        <p className="text-[11px] font-bold text-chs-red bg-red-50 rounded-lg px-2 py-1.5">
+          🚩 This ID number is already verified on a different account. Check carefully before approving.
+        </p>
+      )}
+      {sub.full_name_on_id ? (
+        <>
+          <div className="bg-white rounded-lg border border-gray-100 p-2 text-[11px] space-y-0.5">
+            <p><span className="text-gray-400">Registered as:</span> <b>{sub.profiles?.full_name}</b>{sub.profiles?.phone ? ` · ${sub.profiles.phone}` : ""}</p>
+            <p><span className="text-gray-400">Name on ID:</span> <b>{sub.full_name_on_id}</b></p>
+            {status === "match" && <p className="text-green-700 font-semibold">✓ The registered name matches the name on the ID</p>}
+            {status === "partial" && <p className="text-chs-amber-dark font-semibold">⚠ Only part of the name matches — check the document carefully</p>}
+            {status === "differ" && <p className="text-chs-red font-semibold">⚠ The registered name and the name on the ID do not match</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[11px] text-gray-600">
+            <p><span className="text-gray-400">Gender:</span> <span className="capitalize">{sub.gender}</span></p>
+            <p><span className="text-gray-400">Age bracket:</span> {sub.age_bracket}</p>
+            <p><span className="text-gray-400">State:</span> {sub.state_of_residence}</p>
+            <p><span className="text-gray-400">Occupation:</span> {sub.occupation}</p>
+            <p className="col-span-2"><span className="text-gray-400">Address:</span> {sub.residential_address}</p>
+            <p className="col-span-2"><span className="text-gray-400">Contact phone:</span> <b>{sub.contact_phone}</b>{sub.contact_phone && sub.profiles?.phone && sub.contact_phone.replace(/\D/g, "").slice(-10) !== sub.profiles.phone.replace(/\D/g, "").slice(-10) ? " (different from the number they registered with)" : ""}</p>
+            <p className="col-span-2"><span className="text-gray-400">Email:</span> {sub.contact_email}</p>
+          </div>
+        </>
+      ) : (
+        <p className="text-[10px] text-gray-400">Submitted before the fuller verification form existed — only the ID type and number were collected.</p>
+      )}
+      <p className="text-xs text-gray-500 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
+    </div>
+  );
+}
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
@@ -198,18 +256,18 @@ function AdminDashboardInner() {
     setRecentlyHandledSaleApprovals((prev) => prev.filter((x) => x.id !== id));
   }
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
-  const [pendingBuyerIds, setPendingBuyerIds] = useState<{ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string } | null }[]>([]);
+  const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
   // Real, direct fix per explicit, repeated client feedback: nothing
   // an admin acts on should vanish — it should move here, stay fully
   // re-viewable, and only ever leave when admin deliberately archives
   // it. Same real, already-proven pattern as Offers and Engage CHS,
   // now extended to ID Verification and Face Verification.
-  const [recentlyHandledBuyerIds, setRecentlyHandledBuyerIds] = useState<{ id: string; status: string; id_type: string; id_number: string; id_document_url: string; admin_last_read_at: string | null; profiles: { full_name: string } | null }[]>([]);
+  const [recentlyHandledBuyerIds, setRecentlyHandledBuyerIds] = useState<({ id: string; status: string; id_type: string; id_number: string; id_document_url: string; admin_last_read_at: string | null; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
   const [recentlyHandledLiveness, setRecentlyHandledLiveness] = useState<{ id: string; status: string; captured_photo_url: string; admin_last_read_at: string | null; profiles: { full_name: string } | null }[]>([]);
   function loadRecentlyHandledVerifications() {
     const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     supabase.from("buyer_id_verifications")
-      .select("id, status, id_type, id_number, id_document_url, admin_last_read_at, profiles!buyer_id_verifications_user_id_fkey(full_name)")
+      .select("id, status, id_type, id_number, id_document_url, admin_last_read_at, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)")
       .not("status", "eq", "pending").is("archived_at", null)
       .or(`admin_last_read_at.is.null,admin_last_read_at.gt.${cutoff}`)
       .order("admin_last_read_at", { ascending: false }).limit(200)
@@ -317,9 +375,14 @@ function AdminDashboardInner() {
     total_registered: number; active_count: number;
     users: { reference_number: string; full_name: string; phone: string; role: string; created_at: string; last_sign_in_at: string | null; is_active: boolean | null }[];
   } | null>(null);
+  // Real, new per a direct client request: know how many real users
+  // there are in each state — sourced from the state each person
+  // confirmed and CHS verified at identity verification, not guessed.
+  const [usersByState, setUsersByState] = useState<{ state: string; total_users: number; verified_users: number }[]>([]);
   function loadUserRegistry() {
     supabase.rpc("get_user_registry", { p_active_days: 30, p_search: registrySearch.trim() || null })
       .then(({ data }) => setRegistryData(data));
+    supabase.rpc("get_users_by_state").then(({ data }) => setUsersByState((data as typeof usersByState) || []));
   }
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (activeTab === "userregistry") loadUserRegistry(); }, [activeTab]);
@@ -1105,7 +1168,7 @@ function AdminDashboardInner() {
       supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url").eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null),
       supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url").eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null),
       supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: false }),
-      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, profiles!buyer_id_verifications_user_id_fkey(full_name)").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("transaction_commissions").select("commission_amount").eq("status", "paid"),
       supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: false }),
       supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: false }),
@@ -2901,7 +2964,7 @@ function AdminDashboardInner() {
               pendingBuyerIds.map((sub) => (
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
-                  <p className="text-xs text-gray-500 mb-2 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
+                  <IdSubmissionDetailsBlock sub={sub} />
                   {/* Real, direct fix: the real upload form explicitly
                       accepts a PDF as well as an image
                       (image/*,application/pdf), but a bare <img> tag
@@ -2948,7 +3011,7 @@ function AdminDashboardInner() {
                         {sub.status}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-2 capitalize">{sub.id_type?.replace(/_/g, " ")} — {sub.id_number}</p>
+                    <IdSubmissionDetailsBlock sub={sub} />
                     {/\.pdf($|\?)/i.test(sub.id_document_url) ? (
                       <a href={sub.id_document_url} target="_blank" rel="noreferrer"
                         className="block w-full text-center py-2.5 rounded-lg bg-white border border-gray-200 text-xs font-semibold text-chs-red mb-2">
@@ -4743,6 +4806,26 @@ function AdminDashboardInner() {
                     <p className="text-2xl font-bold text-chs-charcoal mt-0.5">{registryData.active_count}</p>
                   </div>
                 </div>
+                {usersByState.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-100 p-3 mb-3">
+                    <p className="text-xs font-bold text-chs-charcoal mb-0.5">📍 Users by state</p>
+                    <p className="text-[10px] text-gray-400 mb-2">Total registered, with how many have a CHS-verified identity. &quot;Not stated&quot; are accounts that never gave a state.</p>
+                    {(() => {
+                      const max = Math.max(...usersByState.map((r) => Number(r.total_users)), 1);
+                      return usersByState.map((r) => (
+                        <div key={r.state} className="mb-1.5">
+                          <div className="flex justify-between text-[11px] text-chs-charcoal">
+                            <span className="font-semibold">{r.state}</span>
+                            <span>{r.total_users} <span className="text-gray-400">· {r.verified_users} verified</span></span>
+                          </div>
+                          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-chs-red rounded-full" style={{ width: `${(Number(r.total_users) / max) * 100}%` }} />
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                )}
                 <div className="flex gap-2 mb-3">
                   <input type="text" value={registrySearch} onChange={(e) => setRegistrySearch(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && loadUserRegistry()}

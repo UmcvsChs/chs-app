@@ -18,4 +18,5 @@ export interface Offer {
   buyer_occupation?: string | null;
   buyer_source_of_funds?: string | null;
   buyer?: { full_name: string; phone: string; valid_id_verified: boolean; residential_address: string | null } | null;
+  buyer_verified?: boolean;
 }

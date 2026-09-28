@@ -20,11 +20,12 @@ interface RentalApp {
   applicant_occupation: string | null; applicant_income_source: string | null;
   employer_business_name: string | null; employer_business_address: string | null;
   applicant_present_address: string | null; applicant_id_type: string | null;
-  guarantor_name: string | null; guarantor_phone: string | null; guarantor_relationship: string | null;
+  guarantor_name: string | null; guarantor_relationship: string | null;
   guarantor_occupation: string | null; guarantor_address: string | null; guarantor_id_type: string | null;
   move_in_date: string | null;
+  property_id: string;
   properties: { title: string; location_area: string; owner_id: string }[] | null;
-  tenant: { full_name: string; phone: string; valid_id_verified: boolean }[] | null;
+  applicant_verified: boolean;
 }
 
 export default function OwnerApplicationsPage() {
@@ -41,9 +42,17 @@ export default function OwnerApplicationsPage() {
     const propIds = (myProps || []).map((p) => p.id);
     if (propIds.length === 0) { setRentalApps([]); setLoading(false); return; }
 
-    const { data } = await supabase.from("rental_applications")
-      .select("id, status, created_at, applicant_full_name, applicant_occupation, applicant_income_source, employer_business_name, employer_business_address, applicant_present_address, applicant_id_type, guarantor_name, guarantor_phone, guarantor_relationship, guarantor_occupation, guarantor_address, guarantor_id_type, move_in_date, properties(title, location_area, owner_id), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone, valid_id_verified)")
-      .in("property_id", propIds).order("created_at", { ascending: false });
+    // Reads the protected owner view, not the raw table: the raw table
+    // also holds the applicant's NIN, ID document, both phone numbers
+    // and the guarantor's ID — none of which an owner is ever meant to
+    // receive, on screen or otherwise. This view contains only what
+    // this page actually shows.
+    const { data: apps } = await supabase.from("owner_rental_applications")
+      .select("id, property_id, status, created_at, applicant_full_name, applicant_occupation, applicant_income_source, employer_business_name, employer_business_address, applicant_present_address, applicant_id_type, guarantor_name, guarantor_relationship, guarantor_occupation, guarantor_address, guarantor_id_type, move_in_date, applicant_verified")
+      .order("created_at", { ascending: false });
+    const { data: props } = await supabase.from("properties").select("id, title, location_area, owner_id").in("id", propIds);
+    const propById = new Map((props || []).map((pr) => [pr.id, pr]));
+    const data = (apps || []).map((a) => ({ ...a, properties: propById.get(a.property_id) ? [propById.get(a.property_id)] : null }));
     setRentalApps((data as unknown as RentalApp[]) || []);
     setLoading(false);
   }
@@ -104,14 +113,13 @@ export default function OwnerApplicationsPage() {
                 </div>
 
                 <div className="flex justify-between items-start">
-                  <p className="font-bold text-chs-charcoal">{app.applicant_full_name || app.tenant?.[0]?.full_name || "Applicant"}</p>
-                  {app.tenant?.[0]?.valid_id_verified ? (
+                  <p className="font-bold text-chs-charcoal">{app.applicant_full_name || "Applicant"}</p>
+                  {app.applicant_verified ? (
                     <span className="text-[9px] font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-full whitespace-nowrap">✓ ID Verified</span>
                   ) : (
                     <span className="text-[9px] font-bold text-chs-amber-dark bg-chs-amber-light px-2 py-0.5 rounded-full whitespace-nowrap">⚠ Not yet verified</span>
                   )}
                 </div>
-                <p className="text-gray-500">{app.tenant?.[0]?.phone}</p>
 
                 <div>
                   <p className="text-gray-400 text-[10px] font-bold uppercase">Occupation &amp; income</p>
