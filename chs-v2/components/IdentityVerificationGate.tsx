@@ -88,7 +88,7 @@ export default function IdentityVerificationGate({
       <div className="bg-white rounded-xl border-2 border-chs-amber-dark p-3 mb-3">
         <p className="text-xs font-bold text-chs-amber-dark mb-1">⏳ Identity verification pending review</p>
         <p className="text-[10px] text-gray-500">
-          Your ID has been submitted to CHS for real review — you&apos;ll be notified once it&apos;s approved, and can then make real offers.
+          Your ID has been submitted to CHS for real review — you&apos;ll be notified once it&apos;s approved, and can then continue with what you were doing.
         </p>
       </div>
     );
@@ -98,7 +98,7 @@ export default function IdentityVerificationGate({
     <div className="bg-white rounded-xl border-2 border-chs-red p-3 mb-3">
       <p className="text-xs font-bold text-chs-red mb-1">🪪 Identity verification required</p>
       <p className="text-[10px] text-gray-500 mb-2">
-        Serious offers require a real, verified identity on file — this is checked once and reused for every future offer you make.
+        Before you make an offer, apply to rent, or book a stay, CHS needs a real, verified identity on file. You do this once — after CHS approves it, it covers everything you do on the platform from then on.
       </p>
       <div className="space-y-2">
         <select value={idType} onChange={(e) => setIdType(e.target.value)}

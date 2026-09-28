@@ -14,6 +14,7 @@ import RentalApplicationForm from "./RentalApplicationForm";
 import ShortletBookingForm from "./ShortletBookingForm";
 import HireBookingForm from "./HireBookingForm";
 import IdentityVerificationGate from "./IdentityVerificationGate";
+import VerifiedOnly from "./VerifiedOnly";
 import OfferMessageThread from "./OfferMessageThread";
 
 type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet" | "hire";
@@ -764,13 +765,15 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   if (activeForm === "inspection" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <InspectionBookingForm
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <InspectionBookingForm
           propertyId={property.id}
           propertyLocation={`${property.location_area || ""} ${property.location_lga || ""} ${property.location_state || ""}`}
           session={session}
           hasRoomVideos={hasRoomVideos}
           onSuccess={() => setInspectionSuccess(true)}
         />
+        </VerifiedOnly>
       </div>
     );
   }
@@ -778,11 +781,13 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   if (activeForm === "rentalApplication" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <RentalApplicationForm
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <RentalApplicationForm
           propertyId={property.id}
           session={session}
           onSuccess={() => setRentalApplicationSuccess(true)}
         />
+        </VerifiedOnly>
       </div>
     );
   }
@@ -790,12 +795,14 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   if (activeForm === "shortlet" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <ShortletBookingForm
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <ShortletBookingForm
           propertyId={property.id}
           pricePerNight={property.price_per_night || property.price}
           session={session}
           onSuccess={() => setShortletSuccess(true)}
         />
+        </VerifiedOnly>
       </div>
     );
   }
@@ -803,13 +810,15 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   if (activeForm === "hire" && session && property.price) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <HireBookingForm
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <HireBookingForm
           propertyId={property.id}
           pricePerDay={property.price}
           hireCategoryLabel={property.property_type || "venue"}
           session={session}
           onSuccess={() => setShortletSuccess(true)}
         />
+        </VerifiedOnly>
       </div>
     );
   }

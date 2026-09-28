@@ -461,20 +461,6 @@ function AdminDashboardInner() {
     await supabase.rpc("release_rent_to_landlord", { p_rent_payment_id: id, p_reason: "admin_override" });
     setHeldRent((prev) => prev.filter((r) => r.id !== id));
   }
-  const [heldHireDeposits, setHeldHireDeposits] = useState<{ id: string; security_deposit_amount: number; properties: { title: string }[] | null }[]>([]);
-  useEffect(() => {
-    // Real, new fix per a direct client question: no single, real
-    // place existed to see every real naira actually held in escrow
-    // across the platform at once — property sale escrow, marketplace
-    // escrow, and shortlet/hire deposits each lived in their own
-    // separate tab with no combined real total anywhere. Shortlet
-    // deposits already had a real query elsewhere (heldDeposits,
-    // reused directly below); this adds the matching real one for
-    // hire bookings specifically, which had none.
-    supabase.from("hire_bookings").select("id, security_deposit_amount, properties(title)")
-      .eq("security_deposit_status", "held")
-      .then(({ data }) => setHeldHireDeposits((data as unknown as typeof heldHireDeposits) || []));
-  }, []);
 
   useEffect(() => {
     supabase.from("service_quote_requests")
@@ -4114,7 +4100,7 @@ function AdminDashboardInner() {
             {(() => {
               const saleTotal = pendingLegalTransfers.reduce((s, t) => s + Number(t.amount), 0);
               const marketplaceTotal = marketplaceQueue.filter((q) => q.payment_status === "held_escrow").reduce((s, q) => s + Number(q.quoted_amount || 0), 0);
-              const depositsTotal = heldDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0) + heldHireDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0);
+              const depositsTotal = heldDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0);
               const rentTotal = heldRent.reduce((s, r) => s + Number(r.amount), 0);
               const grandTotal = saleTotal + marketplaceTotal + depositsTotal + rentTotal;
               return (
@@ -4178,20 +4164,14 @@ function AdminDashboardInner() {
               ))
             )}
 
-            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">🏨 Shortlet/hire deposits ({heldDeposits.length + heldHireDeposits.length})</p>
-            {(heldDeposits.length + heldHireDeposits.length) === 0 ? (
+            <p className="text-xs font-bold text-chs-charcoal mb-2 mt-4">🏨 Shortlet/hire deposits ({heldDeposits.length})</p>
+            {heldDeposits.length === 0 ? (
               <p className="text-[11px] text-gray-400">No real deposits currently held.</p>
             ) : (
               <>
                 {heldDeposits.map((d) => (
                   <div key={`s-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                    <p className="text-xs text-chs-charcoal">Shortlet — {d.properties?.[0]?.title}</p>
-                    <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
-                  </div>
-                ))}
-                {heldHireDeposits.map((d) => (
-                  <div key={`h-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                    <p className="text-xs text-chs-charcoal">Hire — {d.properties?.[0]?.title}</p>
+                    <p className="text-xs text-chs-charcoal">Booking — {d.properties?.[0]?.title}</p>
                     <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
                   </div>
                 ))}

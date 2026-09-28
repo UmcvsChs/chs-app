@@ -1,0 +1,25 @@
+-- Real fixes, per direct client instructions. The database change
+-- itself was applied live as migration 399_enforce_identity_verification_everywhere.
+--
+-- 1) Identity verification first, for everyone. Found and confirmed:
+--    the rental application path had no verification check anywhere
+--    (an unverified tenant account had already applied), and even the
+--    buyer's gate existed only in the browser -- nothing in the
+--    database enforced it. One shared check now sits at the database
+--    level on offers, rental applications, shortlet/hire bookings and
+--    inspections (admins exempt). Tested live and rolled back:
+--    an unverified tenant is refused with a clear message; a verified
+--    account goes through; a tenant can submit their ID for review.
+--
+-- 2) Face verification camera, rebuilt after a report from a real
+--    phone (steps ran, no camera picture, no error). The step buttons
+--    now stay locked until the camera proves it is showing a picture;
+--    playback is started explicitly with the attributes phones
+--    require; a phone that wants a tap gets a visible button; every
+--    failure (permission blocked, camera busy, no picture, failed
+--    save) now states what happened instead of failing silently.
+--
+-- 3) Correction of an earlier mistake: the Escrow Oversight tab
+--    queried a "hire_bookings" table that does not exist. Hire
+--    bookings live in shortlet_bookings, which the existing deposit
+--    query already covers. The incorrect addition was removed.
