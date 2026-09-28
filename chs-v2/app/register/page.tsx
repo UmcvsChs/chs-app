@@ -7,7 +7,9 @@ import TermsContent from "@/components/TermsContent";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
-import { validateIdNumberFormat, ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import { validatePhone, validateNin, validateIdNumber, validateFullName } from "@/lib/validators";
+import ValidatedInput from "@/components/ValidatedInput";
 import FileUploadBox from "@/components/FileUploadBox";
 
 import { NIGERIAN_STATES, LGA_BY_STATE } from "@/lib/geoData";
@@ -82,16 +84,20 @@ function RegisterPageContent() {
   const [invalidFieldId, setInvalidFieldId] = useState<string | null>(null);
 
   function validate(): { message: string; fieldId: string } | null {
-    if (!name.trim()) return { message: "Please enter your full name.", fieldId: "field-name" };
-    if (!/^\d{11}$/.test(phone.trim())) return { message: "Please enter a valid 11-digit Nigerian phone number.", fieldId: "field-phone" };
-    if (!/^\d{11}$/.test(nin.trim())) return { message: "Please enter a valid 11-digit NIN.", fieldId: "field-nin" };
+    const nameCheck = validateFullName(name, "full name");
+    if (!nameCheck.valid) return { message: nameCheck.message || "Please enter your full name.", fieldId: "field-name" };
+    const phoneCheck = validatePhone(phone);
+    if (!phoneCheck.valid) return { message: phoneCheck.message || "Please enter a valid phone number.", fieldId: "field-phone" };
+    const ninCheck = validateNin(nin);
+    if (!ninCheck.valid) return { message: ninCheck.message || "Please enter a valid 11-digit NIN.", fieldId: "field-nin" };
 
     // Real, critical fix — a typed NIN number alone proves nothing; a
     // real, uploaded ID document is what's actually checked.
     if (role !== "agent" && role !== "manager") {
       if (!idType) return { message: "Please select which type of ID you're uploading.", fieldId: "field-reg-id-type" };
-      if (idType !== "National ID (NIN slip)" && !idNumber.trim()) {
-        return { message: `Please enter your real ${idType} number.`, fieldId: "field-reg-id-number" };
+      if (idType !== "National ID (NIN slip)") {
+        const idCheck = validateIdNumber(idType, idNumber);
+        if (!idCheck.valid) return { message: idCheck.message || `Please enter your real ${idType} number.`, fieldId: "field-reg-id-number" };
       }
       if (!idFile) return { message: "Please upload a real photo or scan of your ID — a typed NIN number alone cannot be verified.", fieldId: "field-reg-id-file" };
     }
@@ -104,8 +110,9 @@ function RegisterPageContent() {
         return { message: `Please enter your ${association} membership ID/registration number.`, fieldId: "field-membership-id" };
       }
       if (!idType) return { message: "Please select which type of ID you're providing.", fieldId: "field-id-type" };
-      if (!validateIdNumberFormat(idType, idNumber)) {
-        return { message: idType === "National ID (NIN slip)" ? "Please enter a valid 11-digit NIN." : `Please enter your ${idType} number.`, fieldId: "field-id-number" };
+      const agentIdCheck = validateIdNumber(idType, idNumber);
+      if (!agentIdCheck.valid) {
+        return { message: agentIdCheck.message || `Please enter your ${idType} number.`, fieldId: "field-id-number" };
       }
       if (!idFile) return { message: `Please upload a photo or scan of your ${idType}.`, fieldId: "field-id-file" };
     }
@@ -424,7 +431,7 @@ function RegisterPageContent() {
             <>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Type of ID you&apos;re uploading <span className="text-chs-red">*</span></label>
-                <select id="field-reg-id-type" value={idType} onChange={(e) => setIdType(e.target.value)}
+                <select id="field-reg-id-type" value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }}
                   className={fieldClass("field-reg-id-type", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white")}>
                   <option value="">Select ID type</option>
                   {ID_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -439,10 +446,11 @@ function RegisterPageContent() {
               {idType && idType !== "National ID (NIN slip)" && (
                 <div>
                   <label className="text-xs font-semibold text-gray-600">Your real {idType} number <span className="text-chs-red">*</span></label>
-                  <input id="field-reg-id-number" type="text" value={idNumber}
-                    onChange={(e) => { setIdNumber(e.target.value); setError(null); }}
+                  <ValidatedInput id="field-reg-id-number" kind="idNumber" idType={idType} value={idNumber}
+                    onChange={(v) => { setIdNumber(v); setError(null); }}
                     placeholder={`The real number on your ${idType}`}
-                    className={fieldClass("field-reg-id-number", "w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm")} />
+                    highlighted={invalidFieldId === "field-reg-id-number"}
+                    className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
                 </div>
               )}
               <div>
@@ -543,7 +551,7 @@ function RegisterPageContent() {
               )}
               <div>
                 <label className="text-xs font-semibold text-gray-600">Valid ID type</label>
-                <select id="field-id-type" value={idType} onChange={(e) => setIdType(e.target.value)}
+                <select id="field-id-type" value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }}
                   className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                   <option value="">Select an ID type</option>
                   {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
@@ -551,9 +559,10 @@ function RegisterPageContent() {
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">ID number</label>
-                <input id="field-id-number" type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
+                <ValidatedInput id="field-id-number" kind="idNumber" idType={idType} value={idNumber} onChange={setIdNumber}
                   placeholder={ID_TYPE_PLACEHOLDERS[idType] || "Select an ID type above first"}
-                  className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  highlighted={invalidFieldId === "field-id-number"}
+                  className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Upload the ID selected above</label>

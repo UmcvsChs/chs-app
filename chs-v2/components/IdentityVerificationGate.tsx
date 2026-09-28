@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
-import { ID_TYPE_PLACEHOLDERS, validateIdNumberFormat } from "@/lib/idValidation";
+import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
+import { validateIdNumber, validatePhone, validateFullName, validateEmail } from "@/lib/validators";
+import ValidatedInput from "@/components/ValidatedInput";
 import { NIGERIAN_STATES } from "@/lib/geoData";
 import FileUploadBox from "@/components/FileUploadBox";
 
@@ -122,24 +124,20 @@ export default function IdentityVerificationGate({
   }, [error]);
 
   async function handleSubmit() {
-    if (fullNameOnId.trim().split(/\s+/).filter(Boolean).length < 2) {
-      setError("Please enter your full name exactly as printed on your ID — first name and surname at least.");
-      return;
-    }
+    const nameCheck = validateFullName(fullNameOnId, "full name exactly as printed on your ID");
+    if (!nameCheck.valid) { setError(nameCheck.message); return; }
     if (!gender) { setError("Please select your gender."); return; }
     if (!ageBracket) { setError("Please select your age bracket."); return; }
     if (!stateOfResidence) { setError("Please select your state of residence."); return; }
     if (residentialAddress.trim().length < 10) { setError("Please enter your full residential address — house number, street and area."); return; }
     if (!occupation.trim()) { setError("Please enter your occupation."); return; }
-    if (!/^\S+@\S+\.\S+$/.test(contactEmail.trim())) { setError("Please enter a valid email address."); return; }
-    if (!/^(\+?234|0)\d{10}$/.test(contactPhone.replace(/[\s\-()]/g, ""))) { setError("Please enter a valid phone number CHS can reach you on, for example 08012345678."); return; }
+    const emailCheck = validateEmail(contactEmail);
+    if (!emailCheck.valid) { setError(emailCheck.message); return; }
+    const phoneCheck = validatePhone(contactPhone, { international: true });
+    if (!phoneCheck.valid) { setError(phoneCheck.message); return; }
     if (!idType) { setError("Please select the type of ID you are submitting."); return; }
-    if (!validateIdNumberFormat(idType, idNumber)) {
-      setError(idType === "National ID (NIN slip)"
-        ? "A National ID (NIN) number is exactly 11 digits. Please check the number on your slip."
-        : "Please enter the ID number exactly as it appears on your document.");
-      return;
-    }
+    const idCheck = validateIdNumber(idType, idNumber);
+    if (!idCheck.valid) { setError(idCheck.message); return; }
     if (!idFile) { setError("Please upload a clear photo or scan of the ID you are submitting."); return; }
     if (!consent) { setError("Please tick the box to confirm your details are true and that you consent to CHS keeping them for verification."); return; }
 
@@ -158,7 +156,7 @@ export default function IdentityVerificationGate({
     // everything ready to resume.
     const { error: rpcError } = await supabase.rpc("submit_buyer_id_verification", {
       p_id_type: idType,
-      p_id_number: idNumber.trim(),
+      p_id_number: validateIdNumber(idType, idNumber).value,
       p_id_document_url: idDocumentUrl,
       p_full_name_on_id: fullNameOnId.trim(),
       p_gender: gender,
@@ -167,7 +165,7 @@ export default function IdentityVerificationGate({
       p_residential_address: residentialAddress.trim(),
       p_occupation: occupation.trim(),
       p_contact_email: contactEmail.trim(),
-      p_contact_phone: contactPhone.trim(),
+      p_contact_phone: validatePhone(contactPhone, { international: true }).value,
       p_consent: consent,
       p_return_property_id: propertyId || null,
       p_draft_offer: draftOffer || null,
@@ -250,7 +248,7 @@ export default function IdentityVerificationGate({
         </div>
         <div>
           <label className={labelClass}>Phone number</label>
-          <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
+          <ValidatedInput kind="phoneIntl" value={contactPhone} onChange={setContactPhone}
             placeholder="08012345678 — the best number to reach you on" className={`${inputClass} mt-1`} />
         </div>
         <div>
@@ -260,12 +258,12 @@ export default function IdentityVerificationGate({
         </div>
 
         <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">Your ID</p>
-        <select value={idType} onChange={(e) => setIdType(e.target.value)} className={inputClass}>
+        <select value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }} className={inputClass}>
           <option value="">Select ID type</option>
           {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
         </select>
         {idType && (
-          <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
+          <ValidatedInput kind="idNumber" idType={idType} value={idNumber} onChange={setIdNumber}
             placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"} className={inputClass} />
         )}
         <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />

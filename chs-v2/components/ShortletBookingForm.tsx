@@ -5,8 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import { ShortletBooking } from "@/types/shortletBooking";
 import { formatNaira } from "@/lib/format";
-import { uploadDocument } from "@/lib/storage";
-import FileUploadBox from "@/components/FileUploadBox";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone, validateFullName } from "@/lib/validators";
 
 interface ShortletBookingFormProps {
   propertyId: string;
@@ -47,7 +47,6 @@ export default function ShortletBookingForm({
   const [guests, setGuests] = useState(1);
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
@@ -61,6 +60,13 @@ export default function ShortletBookingForm({
     // could be uploaded by a host, but were never actually shown to
     // the guest anywhere in the real booking flow.
     supabase.rpc("get_house_rules_for_property", { p_property_id: propertyId }).then(({ data }) => setHouseRulesUrl(data));
+    // Prefill the guest's name and phone from their own verified
+    // profile — only where they haven't already typed something.
+    supabase.from("profiles").select("full_name, phone").eq("id", session.user.id).single().then(({ data }) => {
+      if (!data) return;
+      if (data.full_name) setGuestName((cur) => cur || data.full_name);
+      if (data.phone) setGuestPhone((cur) => cur || data.phone);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -90,10 +96,10 @@ export default function ShortletBookingForm({
       setError("Please choose your check-in and check-out dates.");
       return;
     }
-    if (!guestName.trim() || !guestPhone.trim() || !idFile) {
-      setError("Please provide your name, phone number, and a valid ID for guest verification.");
-      return;
-    }
+    const guestNameCheck = validateFullName(guestName, "full name");
+    if (!guestNameCheck.valid) { setError(guestNameCheck.message); return; }
+    const guestPhoneCheck = validatePhone(guestPhone, { international: true });
+    if (!guestPhoneCheck.valid) { setError(`Your phone number: ${guestPhoneCheck.message}`); return; }
     if (houseRulesUrl && !rulesAcknowledged) {
       setError("Please read and acknowledge the real house rules before requesting to book.");
       return;
@@ -110,16 +116,18 @@ export default function ShortletBookingForm({
     setError(null);
     setSubmitting(true);
 
-    const idDocumentUrl = await uploadDocument(idFile, session.user.id, "shortlet-guest-id");
-
     const { data: bookingId, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
       p_check_in: checkIn,
       p_check_out: checkOut,
       p_guests: guests,
       p_guest_full_name: guestName.trim(),
-      p_guest_phone: guestPhone.trim(),
-      p_guest_id_document_url: idDocumentUrl,
+      p_guest_phone: validatePhone(guestPhone, { international: true }).value,
+      // Deliberately null: the guest's identity is already verified by
+      // CHS (required before this form even appears), and the ID
+      // document itself is not passed on to hosts — the gate promises
+      // guests that their ID is never shown to other users.
+      p_guest_id_document_url: null,
       p_house_rules_acknowledged: rulesAcknowledged,
     });
 
@@ -169,14 +177,13 @@ export default function ShortletBookingForm({
       </div>
 
       <div className="border-t border-gray-200 pt-3">
-        <p className="text-xs font-bold text-chs-charcoal mb-1">Guest verification</p>
-        <p className="text-[10px] text-gray-400 mb-2">A real, valid ID is reviewed by the host as part of your booking request — this protects both you and the host.</p>
+        <p className="text-xs font-bold text-chs-charcoal mb-1">Guest details</p>
+        <p className="text-[10px] text-green-700 mb-2">✓ Your identity is already verified by CHS — the host is told so, and you don&apos;t need to upload your ID again.</p>
         <div className="space-y-2">
           <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
             placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-          <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)}
-            placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-          <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
+          <ValidatedInput kind="phoneIntl" value={guestPhone} onChange={setGuestPhone}
+            placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg text-sm" />
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
@@ -8,6 +8,7 @@ import { formatNaira } from "@/lib/format";
 import InfoTip from "./InfoTip";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import IdentityVerificationGate from "./IdentityVerificationGate";
 
 const CATEGORY_TABS: { value: MarketplaceCategory | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -37,6 +38,29 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [boughtFor, setBoughtFor] = useState<string | null>(null);
 
+  // Buying, and asking for a quote, are commitments — they now sit
+  // behind the same one-time identity verification as every other
+  // commitment on the platform. Browsing stays completely free: the
+  // verification step only appears at the moment an unverified person
+  // actually tries to buy or request a quote.
+  const [identityVerified, setIdentityVerified] = useState<boolean | null>(null);
+  const [showGate, setShowGate] = useState(false);
+  const gateRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!session) return;
+    supabase.from("profiles").select("valid_id_verified").eq("id", session.user.id).single()
+      .then(({ data }) => setIdentityVerified(!!data?.valid_id_verified));
+  }, [session]);
+  useEffect(() => {
+    if (showGate && gateRef.current) gateRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showGate]);
+  function requireVerified(): boolean {
+    if (identityVerified) return true;
+    setShowGate(true);
+    setError("Before you can buy or request a quote, CHS needs to verify your identity once. Please complete the step at the top of the page.");
+    return false;
+  }
+
   // Real, new feature per direct client request: a genuine, admin-
   // editable link to CHS's sister buying-and-selling platform, for
   // procurement CHS's own marketplace doesn't yet cover (automobiles,
@@ -60,6 +84,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
       setError("Please log in first to buy directly.");
       return;
     }
+    if (!requireVerified()) return;
     setBuyingId(productId);
     setError(null);
     const { data, error: buyError } = await supabase.rpc("buy_product_direct", { p_product_id: productId });
@@ -81,6 +106,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
       setError("Please log in first to request a quote.");
       return;
     }
+    if (!requireVerified()) return;
     setError(null);
     setSubmitting(true);
 
@@ -135,6 +161,15 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           </button>
         ))}
       </nav>
+
+      {showGate && session && !identityVerified && (
+        <div ref={gateRef} className="px-4 pt-3">
+          <IdentityVerificationGate
+            session={session}
+            onVerified={() => { setIdentityVerified(true); setShowGate(false); setError(null); }}
+          />
+        </div>
+      )}
 
       <div className="px-4 pt-2">
         <button

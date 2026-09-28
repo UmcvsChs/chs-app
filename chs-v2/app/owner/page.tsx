@@ -60,7 +60,7 @@ export default function OwnerDashboard() {
   const [tenanciesWithPriorPayment, setTenanciesWithPriorPayment] = useState<Set<string>>(new Set());
   const [rentCollected, setRentCollected] = useState(0);
   const [engageRequests, setEngageRequests] = useState<EngageRequest[]>([]);
-  const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; guest_phone: string; guest_id_document_url: string | null; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
+  const [shortletBookings, setShortletBookings] = useState<{ id: string; guest_full_name: string; guest_phone: string; guest_id_document_url: string | null; guest_verified: boolean; check_in: string; check_out: string; status: string; properties: { title: string }[] | null }[]>([]);
   const [faultReports, setFaultReports] = useState<{ id: string; category: string; description: string; status: string; approved_vendor: string | null; approved_amount: number | null; properties: { title: string }[] | null; fault_quotations: { vendor_name: string; amount: number; artisans: { user_id: string; trade: string } | null }[] | null }[]>([]);
   const [sisterLink, setSisterLink] = useState<{ sister_marketplace_name: string; sister_marketplace_url: string } | null>(null);
   useEffect(() => {
@@ -198,7 +198,7 @@ export default function OwnerDashboard() {
 
     supabase
       .from("shortlet_bookings")
-      .select("id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, properties!inner(title, owner_id)")
+      .select("id, guest_full_name, guest_phone, guest_id_document_url, guest_verified, check_in, check_out, status, properties!inner(title, owner_id)")
       .eq("properties.owner_id", session.user.id)
       .in("status", ["confirmed", "active"])
       .then(({ data }) => setShortletBookings((data as unknown as typeof shortletBookings) || []));
@@ -1304,9 +1304,11 @@ export default function OwnerDashboard() {
                   always being collected at booking, but no host or
                   admin screen anywhere ever showed it, defeating the
                   actual, stated purpose of collecting it at all. */}
-              {b.guest_id_document_url && (
+              {b.guest_id_document_url ? (
                 <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
-              )}
+              ) : b.guest_verified ? (
+                <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>
+              ) : null}
               <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
             </div>

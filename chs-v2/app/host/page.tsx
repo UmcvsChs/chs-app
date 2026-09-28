@@ -37,6 +37,7 @@ interface HostBooking {
   guest_full_name: string;
   guest_phone: string;
   guest_id_document_url: string | null;
+  guest_verified: boolean;
   check_in: string;
   check_out: string;
   status: string;
@@ -71,7 +72,7 @@ export default function HostDashboardPage() {
         .eq("owner_id", session.user.id)
         .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)"),
       supabase.from("shortlet_bookings")
-        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
+        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
         .in("status", ["pending_host_review", "confirmed", "active"]),
     ]).then(([listingsRes, bookingsRes]) => {
@@ -144,9 +145,11 @@ export default function HostDashboardPage() {
                         {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
                       </div>
                     )}
-                    {b.guest_id_document_url && (
+                    {b.guest_id_document_url ? (
                       <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
-                    )}
+                    ) : b.guest_verified ? (
+                      <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>
+                    ) : null}
                     <HostBookingDecision bookingId={b.id} onDecided={() => setBookings((prev) => prev.filter((x) => x.id !== b.id))} />
                   </div>
                 ))}
@@ -169,9 +172,11 @@ export default function HostDashboardPage() {
                         {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
                       </div>
                     )}
-                    {b.guest_id_document_url && (
+                    {b.guest_id_document_url ? (
                       <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
-                    )}
+                    ) : b.guest_verified ? (
+                      <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>
+                    ) : null}
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
                     {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate this real guest" />}

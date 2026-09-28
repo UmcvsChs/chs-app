@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { validateIdNumber } from "@/lib/validators";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
@@ -3261,6 +3262,11 @@ function AdminDashboardInner() {
                     <p className="text-[11px] text-gray-500">{app.guarantor_relationship} · {app.guarantor_occupation}</p>
                     <p className="text-[11px] text-gray-500">{app.guarantor_address}</p>
                     <p className="text-[11px] text-gray-500">{app.guarantor_id_type} — {app.guarantor_id_number}</p>
+                    {app.guarantor_id_number && app.guarantor_id_type && !validateIdNumber(app.guarantor_id_type, app.guarantor_id_number).valid && (
+                      <p className="text-[11px] font-bold text-chs-red bg-red-50 rounded-lg px-2 py-1 mt-0.5">
+                        🚩 This ID number is not in a valid format — {validateIdNumber(app.guarantor_id_type, app.guarantor_id_number).message} Ask the guarantor to re-enter it correctly before you relay this application.
+                      </p>
+                    )}
                     {app.guarantor_id_document_url && (
                       <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View guarantor&apos;s real, uploaded ID</a>
                     )}

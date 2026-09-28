@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
-import { uploadDocument } from "@/lib/storage";
-import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 import InfoTip from "@/components/InfoTip";
-import FileUploadBox from "@/components/FileUploadBox";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone, validateFullName } from "@/lib/validators";
 
 interface RentalApplicationFormProps {
   propertyId: string;
@@ -14,7 +13,6 @@ interface RentalApplicationFormProps {
   onSuccess: () => void;
 }
 
-const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
 // Real, complete rework per a direct, serious client concern: a
 // guarantor's own occupation, address, relationship, and consent were
@@ -36,9 +34,12 @@ export default function RentalApplicationForm({
   const [incomeSource, setIncomeSource] = useState("");
   const [employerBusinessName, setEmployerBusinessName] = useState("");
   const [employerBusinessAddress, setEmployerBusinessAddress] = useState("");
-  const [idType, setIdType] = useState("");
-  const [idNumber, setIdNumber] = useState("");
-  const [idFile, setIdFile] = useState<File | null>(null);
+  // The applicant's ID is NOT asked for again here. They were already
+  // verified by CHS at the identity step (which is required before this
+  // form even appears), so the verified ID details are read from their
+  // own profile and attached for the admin's review. Owners never
+  // receive them.
+  const [verifiedId, setVerifiedId] = useState<{ type: string; number: string; docUrl: string | null }>({ type: "", number: "", docUrl: null });
   const [guarantorName, setGuarantorName] = useState("");
   const [guarantorPhone, setGuarantorPhone] = useState("");
   const [moveInDate, setMoveInDate] = useState("");
@@ -70,6 +71,27 @@ export default function RentalApplicationForm({
   // anywhere; it only ever lives in this browser until the real
   // application is actually submitted, at which point it's cleared.
   const draftKey = `chs_rental_draft_${propertyId}`;
+
+  // Read the person's own verified details. The ID is attached for the
+  // admin's review; phone, occupation and address are prefilled only
+  // where the person hasn't already typed something (or restored a
+  // draft), so nothing they entered is ever overwritten.
+  useEffect(() => {
+    supabase.from("profiles")
+      .select("phone, profession, residential_address, valid_id_type, valid_id_number, valid_id_document_url, id_type, id_number, id_document_url")
+      .eq("id", session.user.id).single()
+      .then(({ data }) => {
+        if (!data) return;
+        setVerifiedId({
+          type: data.valid_id_type || data.id_type || "",
+          number: data.valid_id_number || data.id_number || "",
+          docUrl: data.valid_id_document_url || data.id_document_url || null,
+        });
+        if (data.phone) setApplicantPhone((cur) => cur || data.phone);
+        if (data.profession) setOccupation((cur) => cur || data.profession);
+        if (data.residential_address) setPresentAddress((cur) => cur || data.residential_address);
+      });
+  }, [session.user.id]);
   useEffect(() => {
     try {
       const saved = localStorage.getItem(draftKey);
@@ -83,8 +105,6 @@ export default function RentalApplicationForm({
         if (d.incomeSource) setIncomeSource(d.incomeSource);
         if (d.employerBusinessName) setEmployerBusinessName(d.employerBusinessName);
         if (d.employerBusinessAddress) setEmployerBusinessAddress(d.employerBusinessAddress);
-        if (d.idType) setIdType(d.idType);
-        if (d.idNumber) setIdNumber(d.idNumber);
         if (d.guarantorName) setGuarantorName(d.guarantorName);
         if (d.guarantorPhone) setGuarantorPhone(d.guarantorPhone);
         if (d.moveInDate) setMoveInDate(d.moveInDate);
@@ -97,18 +117,19 @@ export default function RentalApplicationForm({
     try {
       localStorage.setItem(draftKey, JSON.stringify({
         applicantFullName, applicantPhone, occupation, presentAddress, incomeSource,
-        employerBusinessName, employerBusinessAddress, idType, idNumber,
+        employerBusinessName, employerBusinessAddress,
         guarantorName, guarantorPhone, moveInDate,
       }));
     } catch { /* private-browsing or full storage should never break typing */ }
   }, [draftKey, applicantFullName, applicantPhone, occupation, presentAddress, incomeSource,
-      employerBusinessName, employerBusinessAddress, idType, idNumber,
+      employerBusinessName, employerBusinessAddress,
       guarantorName, guarantorPhone, moveInDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!applicantFullName.trim()) {
-      setError("Please enter your real, full name — this is what the owner will see you as.");
+    const applicantNameCheck = validateFullName(applicantFullName, "full name — this is what the owner will see you as");
+    if (!applicantNameCheck.valid) {
+      setError(applicantNameCheck.message);
       return;
     }
     // Real, direct fix per a specific, direct client question: admin
@@ -116,8 +137,9 @@ export default function RentalApplicationForm({
     // the phone tied to whichever account was logged in, which isn't
     // always the applicant's own real number. Required here, exactly
     // like the guarantor's own phone already is.
-    if (!applicantPhone.trim()) {
-      setError("Please provide your own, real phone number — CHS may need to reach you directly.");
+    const applicantPhoneCheck = validatePhone(applicantPhone);
+    if (!applicantPhoneCheck.valid) {
+      setError(`Your phone number: ${applicantPhoneCheck.message}`);
       return;
     }
     if (!occupation.trim() || !presentAddress.trim() || !incomeSource.trim()) {
@@ -128,12 +150,18 @@ export default function RentalApplicationForm({
       setError("Please tell us where you work or the real location of your business — this helps the owner genuinely verify who you are.");
       return;
     }
-    if (!idType || !idNumber.trim()) {
-      setError("Please provide a real means of identification.");
-      return;
-    }
     if (!guarantorName.trim() || !guarantorPhone.trim()) {
       setError("Please enter your guarantor's name and phone number — they'll confirm everything else about themselves directly.");
+      return;
+    }
+    const guarantorNameCheck = validateFullName(guarantorName, "guarantor's full name");
+    if (!guarantorNameCheck.valid) {
+      setError(guarantorNameCheck.message);
+      return;
+    }
+    const guarantorPhoneCheck = validatePhone(guarantorPhone);
+    if (!guarantorPhoneCheck.valid) {
+      setError(`Your guarantor's phone number: ${guarantorPhoneCheck.message}`);
       return;
     }
     // Real, direct fix per explicit client instruction: a spouse,
@@ -157,23 +185,20 @@ export default function RentalApplicationForm({
     setError(null);
     setSubmitting(true);
 
-    let idDocumentUrl: string | null = null;
-    if (idFile) idDocumentUrl = await uploadDocument(idFile, session.user.id, "rental-applicant-id");
-
     const { data, error: rpcError } = await supabase.rpc("submit_rental_application", {
       p_property_id: propertyId,
       p_applicant_full_name: applicantFullName.trim(),
-      p_applicant_phone: applicantPhone.trim(),
+      p_applicant_phone: validatePhone(applicantPhone).value,
       p_occupation: occupation.trim(),
       p_present_address: presentAddress.trim(),
       p_income_source: incomeSource.trim(),
       p_employer_business_name: employerBusinessName.trim(),
       p_employer_business_address: employerBusinessAddress.trim(),
-      p_id_type: idType,
-      p_id_number: idNumber.trim(),
-      p_id_document_url: idDocumentUrl,
+      p_id_type: verifiedId.type || "Verified by CHS",
+      p_id_number: verifiedId.number || "On file with CHS",
+      p_id_document_url: verifiedId.docUrl,
       p_guarantor_name: guarantorName.trim(),
-      p_guarantor_phone: guarantorPhone.trim(),
+      p_guarantor_phone: validatePhone(guarantorPhone).value,
       p_move_in_date: moveInDate,
     });
 
@@ -263,8 +288,8 @@ export default function RentalApplicationForm({
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Your phone number</label>
-        <input type="tel" value={applicantPhone} onChange={(e) => setApplicantPhone(e.target.value)}
-          placeholder="08XXXXXXXXX — CHS may need to reach you directly" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+        <ValidatedInput kind="phone" value={applicantPhone} onChange={setApplicantPhone}
+          placeholder="08XXXXXXXXX — CHS may need to reach you directly" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Occupation</label>
@@ -291,20 +316,9 @@ export default function RentalApplicationForm({
         <input type="text" value={incomeSource} onChange={(e) => setIncomeSource(e.target.value)}
           placeholder="e.g. Salary from XYZ Ltd, Business owner" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
-      <div>
-        <label className="text-xs font-semibold text-gray-600">Means of identification</label>
-        <select value={idType} onChange={(e) => setIdType(e.target.value)}
-          className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
-          <option value="">Select ID type</option>
-          {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
-        </select>
-      </div>
-      {idType && (
-        <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
-          placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"}
-          className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-      )}
-      <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
+      <p className="text-[11px] text-green-700 bg-green-50 rounded-lg px-3 py-2">
+        ✓ Your identity is already verified by CHS — there is no need to upload your ID again.
+      </p>
 
       <div className="border-t border-gray-200 pt-3">
         <p className="text-[10px] font-bold text-gray-400 uppercase mb-1">Your guarantor<InfoTip text="A real person who agrees to stand behind you — if you genuinely can't pay rent, your guarantor is who the landlord can turn to. Most landlords require one; it's a standard part of renting, not a sign of distrust in you specifically." /></p>
@@ -318,8 +332,8 @@ export default function RentalApplicationForm({
         </div>
         <div className="mt-2">
           <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s phone number</label>
-          <input type="tel" value={guarantorPhone} onChange={(e) => setGuarantorPhone(e.target.value)}
-            placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          <ValidatedInput kind="phone" value={guarantorPhone} onChange={setGuarantorPhone}
+            placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
         </div>
       </div>
 

@@ -4,6 +4,8 @@ import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { ID_TYPE_PLACEHOLDERS } from "@/lib/idValidation";
 import FileUploadBox from "@/components/FileUploadBox";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validateIdNumber, validateFullName } from "@/lib/validators";
 
 const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
@@ -99,6 +101,14 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       setError("Please provide your own, real means of identification.");
       return;
     }
+    // The ID number must match the real format of the ID chosen — a
+    // 10-digit NIN used to slip through here because only "not empty"
+    // was checked.
+    const idCheck = validateIdNumber(idType, idNumber);
+    if (!idCheck.valid) {
+      setError(idCheck.message);
+      return;
+    }
     // Real, critical fix following a direct, confirmed client report
     // with a fresh, reproduced example: this form asked for an ID
     // type and number, but never actually required the document
@@ -132,8 +142,9 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       setError("Please confirm you understand what standing as a guarantor means before continuing.");
       return;
     }
-    if (!signatureFullName.trim()) {
-      setError("Please type your real, full name as your signature to confirm.");
+    const nameCheck = validateFullName(signatureFullName, "full name as your signature");
+    if (!nameCheck.valid) {
+      setError(nameCheck.message);
       return;
     }
 
@@ -206,7 +217,7 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
       p_address: address.trim(),
       p_occupation: occupation.trim(),
       p_id_type: idType,
-      p_id_number: idNumber.trim(),
+      p_id_number: validateIdNumber(idType, idNumber).value,
       p_id_document_url: idDocumentUrl,
       p_signature_full_name: signatureFullName.trim(),
       p_address_proof_url: addressProofUrl,
@@ -281,16 +292,16 @@ export default function GuarantorConfirmPage({ params }: { params: Promise<{ tok
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Your means of identification</label>
-            <select value={idType} onChange={(e) => setIdType(e.target.value)}
+            <select value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }}
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
               <option value="">Select ID type</option>
               {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
             </select>
           </div>
           {idType && (
-            <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
+            <ValidatedInput kind="idNumber" idType={idType} value={idNumber} onChange={setIdNumber}
               placeholder={ID_TYPE_PLACEHOLDERS[idType] || "ID number"}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              className="w-full px-3 py-2.5 rounded-lg text-sm" />
           )}
           <p className="text-[10px] font-semibold text-chs-charcoal">Upload a real photo or scan of this ID *</p>
           <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />

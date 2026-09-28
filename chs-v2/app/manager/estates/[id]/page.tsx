@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { validatePhone } from "@/lib/validators";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -192,10 +193,17 @@ export default function EstateDetailPage() {
 
   async function handleSetOwnerOccupier(propertyId: string) {
     if (!occupantPhone.trim()) return;
+    // A mistyped number would otherwise come back as "no account found",
+    // which is misleading — say what is actually wrong with it.
+    const occupantPhoneCheck = validatePhone(occupantPhone);
+    if (!occupantPhoneCheck.valid) {
+      setOccupantResult(`That phone number can't be right: ${occupantPhoneCheck.message}`);
+      return;
+    }
     setSettingOccupant(true);
     setOccupantResult(null);
 
-    const { data: occupantProfile } = await supabase.from("profiles").select("id, full_name").eq("phone", occupantPhone.trim()).maybeSingle();
+    const { data: occupantProfile } = await supabase.from("profiles").select("id, full_name").eq("phone", occupantPhoneCheck.value).maybeSingle();
     if (!occupantProfile) {
       setOccupantResult("No real, registered CHS account found with that phone number. They need a real account first.");
       setSettingOccupant(false);

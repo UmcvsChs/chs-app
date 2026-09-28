@@ -6,8 +6,8 @@ import { Session } from "@supabase/supabase-js";
 import InfoTip from "./InfoTip";
 import { ShortletBooking } from "@/types/shortletBooking";
 import { formatNaira } from "@/lib/format";
-import FileUploadBox from "@/components/FileUploadBox";
-import { uploadDocument } from "@/lib/storage";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone, validateFullName } from "@/lib/validators";
 
 // Real, new component completing a genuine, comprehensive fix: Hotel,
 // Event Centre, Hall, Car Park, Cinema, and Recreational/Sports
@@ -58,7 +58,6 @@ export default function HireBookingForm({
   const [additionalEventRequests, setAdditionalEventRequests] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [idFile, setIdFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
@@ -99,12 +98,10 @@ export default function HireBookingForm({
   async function handleSubmitEventBooking() {
     if (!selectedTierId) { setError("Please select a real capacity tier."); return; }
     if (!eventDate) { setError("Please choose your real event date."); return; }
-    if (!guestName.trim() || !guestPhone.trim()) { setError("Please provide your real name and phone number."); return; }
+    { const n = validateFullName(guestName, "full name"); if (!n.valid) { setError(n.message); return; }
+      const ph = validatePhone(guestPhone, { international: true }); if (!ph.valid) { setError(`Your phone number: ${ph.message}`); return; } }
     setError(null);
     setSubmitting(true);
-    let idDocumentUrl: string | null = null;
-    if (idFile) idDocumentUrl = await uploadDocument(idFile, session.user.id, "shortlet-guest-id");
-
     const selected = facilities.filter((f) => selectedFacilityIds.includes(f.id));
     const { data, error: rpcError } = await supabase.rpc("request_event_booking", {
       p_property_id: propertyId,
@@ -114,8 +111,8 @@ export default function HireBookingForm({
       p_facility_ids: selected.map((f) => f.id),
       p_facility_quantities: selected.map((f) => (f.per_guest ? selectedTier?.max_guests || 0 : 1)),
       p_guest_full_name: guestName.trim(),
-      p_guest_phone: guestPhone.trim(),
-      p_guest_id_document_url: idDocumentUrl,
+      p_guest_phone: validatePhone(guestPhone, { international: true }).value,
+      p_guest_id_document_url: null, // identity is already CHS-verified; the document is never passed on to hosts
       p_house_rules_acknowledged: rulesAcknowledged,
     });
     setSubmitting(false);
@@ -129,6 +126,12 @@ export default function HireBookingForm({
   useEffect(() => {
     loadExistingBookings();
     supabase.rpc("get_house_rules_for_property", { p_property_id: propertyId }).then(({ data }) => setHouseRulesUrl(data));
+    // Prefill from the guest's own profile — never over anything typed.
+    supabase.from("profiles").select("full_name, phone").eq("id", session.user.id).single().then(({ data }) => {
+      if (!data) return;
+      if (data.full_name) setGuestName((cur) => cur || data.full_name);
+      if (data.phone) setGuestPhone((cur) => cur || data.phone);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -177,10 +180,10 @@ export default function HireBookingForm({
       setError("Please read and acknowledge the real house rules before requesting to book.");
       return;
     }
-    if (!guestName.trim() || !guestPhone.trim() || !idFile) {
-      setError("Please provide your name, phone number, and a valid ID for guest verification.");
-      return;
-    }
+    const guestNameCheck = validateFullName(guestName, "full name");
+    if (!guestNameCheck.valid) { setError(guestNameCheck.message); return; }
+    const guestPhoneCheck = validatePhone(guestPhone, { international: true });
+    if (!guestPhoneCheck.valid) { setError(`Your phone number: ${guestPhoneCheck.message}`); return; }
 
     const hasClientSideConflict = existingBookings.some((b) =>
       rangesOverlap(startDate, endDate, b.check_in, b.check_out)
@@ -193,16 +196,14 @@ export default function HireBookingForm({
     setError(null);
     setSubmitting(true);
 
-    const idDocumentUrl = await uploadDocument(idFile, session.user.id, "hire-guest-id");
-
     const { data: bookingId, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
       p_check_in: startDate,
       p_check_out: endDate,
       p_guests: attendees,
       p_guest_full_name: guestName.trim(),
-      p_guest_phone: guestPhone.trim(),
-      p_guest_id_document_url: idDocumentUrl,
+      p_guest_phone: validatePhone(guestPhone, { international: true }).value,
+      p_guest_id_document_url: null, // identity is already CHS-verified; the document is never passed on to hosts
       p_house_rules_acknowledged: rulesAcknowledged,
       p_wants_music_band: isEventVenue ? wantsMusicBand : false,
       p_wants_caterer: isEventVenue ? wantsCaterer : false,
@@ -285,13 +286,12 @@ export default function HireBookingForm({
         )}
 
         <div className="border-t border-gray-200 pt-3">
-          <p className="text-xs font-bold text-chs-charcoal mb-1">Booking contact verification</p>
+          <p className="text-xs font-bold text-chs-charcoal mb-1">Booking contact</p>
+          <p className="text-[10px] text-green-700 mb-2">✓ Your identity is already verified by CHS — no need to upload your ID again.</p>
           <div className="space-y-2">
             <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
               placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-            <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)}
-              placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-            <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
+            <ValidatedInput kind="phoneIntl" value={guestPhone} onChange={setGuestPhone} placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg text-sm" />
           </div>
         </div>
 
@@ -370,14 +370,12 @@ export default function HireBookingForm({
       )}
 
       <div className="border-t border-gray-200 pt-3">
-        <p className="text-xs font-bold text-chs-charcoal mb-1">Booking contact verification</p>
-        <p className="text-[10px] text-gray-400 mb-2">A valid ID is required before booking details are released. This protects both you and the host.</p>
+        <p className="text-xs font-bold text-chs-charcoal mb-1">Booking contact</p>
+        <p className="text-[10px] text-green-700 mb-2">✓ Your identity is already verified by CHS — no need to upload your ID again.</p>
         <div className="space-y-2">
           <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
             placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-          <input type="tel" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)}
-            placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-          <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
+          <ValidatedInput kind="phoneIntl" value={guestPhone} onChange={setGuestPhone} placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg text-sm" />
         </div>
       </div>
 

@@ -1,0 +1,34 @@
+-- Applied live: 404_booking_guest_verified_snapshot,
+--               405_identity_check_on_remaining_commitments,
+--               406_complete_details_for_verified_accounts.
+--
+-- Making identity verification uniform across the platform.
+--
+-- 404  shortlet_bookings.guest_verified, recorded when the booking is
+--      made. Guests no longer upload a separate ID per booking; hosts see
+--      "Guest identity verified by CHS" instead of a raw ID document
+--      (the verification gate promises guests their ID is never shown to
+--      other users). Older bookings that already carry an uploaded ID
+--      still show it.
+-- 405  The shared identity check now also guards rent_to_own_agreements,
+--      marketplace_direct_orders, service_quote_requests and
+--      engage_chs_requests (admins exempt), in addition to offers, rental
+--      applications, shortlet/hire bookings and inspections. Tested:
+--      an unverified account is blocked on all four; a verified account
+--      passes the identity check on all four.
+-- 406  complete_verified_details(): lets a person verified on the old
+--      short form supply gender, age bracket, state, address, occupation
+--      and email without re-uploading their ID. Recorded as self-declared
+--      (profiles.details_self_declared_at). Never alters the verified ID,
+--      the NIN lock, or the login phone. Refused for unverified accounts.
+--
+-- Front end: rental application and shortlet/hire booking forms no
+-- longer ask for an ID (they read the verified ID from the person's own
+-- profile; hosts and owners never receive it). Rent-to-own, Engage CHS,
+-- marketplace buy-now and quote requests sit behind the same gate.
+-- A "Complete your details" prompt appears for verified accounts with
+-- missing details (on the profile page and above forms they use).
+--
+-- STILL PENDING from the earlier round (see 401_403 notes): removal of
+-- the old direct owner access to the raw rental_applications and offers
+-- tables, after the owner screens are confirmed working on this release.

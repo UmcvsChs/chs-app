@@ -9,6 +9,9 @@ import { uploadDocument } from "@/lib/storage";
 import FileUploadBox from "@/components/FileUploadBox";
 import { ENGAGE_SERVICE_TYPES, ENGAGE_CATEGORY_FIELDS, ENGAGE_NEXT_STEPS, ENGAGE_SPECIFICATION_FIELDS } from "@/types/engageCategoryFields";
 import ServiceTncGate from "@/components/ServiceTncGate";
+import VerifiedOnly from "@/components/VerifiedOnly";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone } from "@/lib/validators";
 import CurrencyInput from "@/components/CurrencyInput";
 
 function generateReference(): string {
@@ -97,8 +100,9 @@ export default function EngageChsPage() {
       setError("Please tell us a bit more before we submit this.");
       return;
     }
-    if (!contactPhone.trim()) {
-      setError("Please provide an active phone number — so CHS can call you directly if anything needs quick clarification.");
+    const contactPhoneCheck = validatePhone(contactPhone, { international: true });
+    if (!contactPhoneCheck.valid) {
+      setError(`Active phone number: ${contactPhoneCheck.message} CHS needs a working number to reach you directly.`);
       return;
     }
     if (!contactEmail.trim()) {
@@ -144,7 +148,7 @@ export default function EngageChsPage() {
         location: location.trim() || null,
         category_details: categoryDetails,
         property_id: selectedPropertyId || null,
-        contact_phone: contactPhone.trim(),
+        contact_phone: validatePhone(contactPhone, { international: true }).value,
         contact_email: contactEmail.trim(),
         budget: budgetMin === "" ? "Not specified"
           : budgetMax === "" || budgetMax === budgetMin ? `₦${budgetMin.toLocaleString("en-NG")}`
@@ -248,6 +252,9 @@ export default function EngageChsPage() {
     <div className="min-h-screen zone-owner bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">Engage CHS</h1>
+        {/* Engaging CHS is a commitment — it now sits behind the same
+            one-time identity verification as every other one. */}
+        <VerifiedOnly session={session}>
         <div className="flex gap-1.5 mb-6">
           {["service", "requirements", "details"].map((s) => (
             <div key={s} className={`h-1 flex-1 rounded-full ${
@@ -409,8 +416,8 @@ export default function EngageChsPage() {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-xs font-semibold text-gray-600">Active phone number</label>
-                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="080..." className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white text-chs-charcoal" />
+                <ValidatedInput kind="phoneIntl" value={contactPhone} onChange={setContactPhone}
+                  placeholder="080..." className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm bg-white text-chs-charcoal" />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-600">Email</label>
@@ -514,6 +521,7 @@ export default function EngageChsPage() {
             </div>
           </div>
         )}
+        </VerifiedOnly>
       </div>
     </div>
   );

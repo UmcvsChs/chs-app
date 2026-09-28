@@ -1,0 +1,47 @@
+-- Applied live as migration 407_one_rulebook_for_numbers.
+--
+-- Trigger: a guarantor's 10-digit NIN was accepted. The form only checked
+-- the field was not empty, and the database checked nothing. Auditing
+-- showed the same gap everywhere: ~22 phone inputs, ~9 ID-number inputs
+-- and the bank account field each had their own check, or none. Two real
+-- profiles already held wrong phone numbers (10 and 12 digits).
+--
+-- ONE RULEBOOK, in two matching places:
+--   front end : lib/validators.ts  (+ components/ValidatedInput.tsx)
+--   database  : chs_phone_error / chs_nin_error / chs_account_error /
+--               chs_id_number_error, applied by the single trigger
+--               function chs_enforce_formats() on every table that stores
+--               such a number.
+-- Verified identical: 30 test values run through both, 30/30 agree.
+--
+--   Nigerian mobile   0[789][01] + 8 digits (11 total). +234 / 234 forms
+--                     accepted and STORED in the standard 0-prefixed form.
+--   International     '+' and 8-15 digits, only where a person may be abroad
+--                     (buyers, guests, contact numbers, vendors).
+--   NIN               exactly 11 digits
+--   Bank account      exactly 10 digits (NUBAN)
+--   Passport          1 letter + 8 digits
+--   Voter's card      19 letters/digits   (least certain: adjust if a real card is refused)
+--   Driver's licence  10-15 letters/digits (least certain: same)
+--
+-- Tables covered: rental_applications, buyer_id_verifications, offers,
+-- shortlet_bookings, engage_chs_requests, concierge_requests,
+-- document_dispatch_requests, agent_change_requests, marketplace_vendors,
+-- tenant_register, linked_bank_accounts, pending_bank_account_changes,
+-- profiles (on change only).
+--
+-- Only values being ENTERED OR CHANGED are checked, so an old record can
+-- never block an unrelated edit (tested against the existing bad record).
+-- Not enforced in the database: profile INSERT at signup (so a rule can
+-- never become a cryptic "database error" during registration; the
+-- registration screen enforces it up front), CAC numbers, and names.
+--
+-- Existing bad data found (NOT changed by this migration):
+--   * 1 guarantor NIN with 10 digits (the client's own test application)
+--   * 2 profile phone numbers: an agent (10 digits, starts 0000) and an
+--     owner (12 digits). Phone is the login identity, so correcting these
+--     needs the account holder's confirmation.
+--
+-- Also still pending from the earlier data-protection round: removal of
+-- the old direct owner access to the raw rental_applications and offers
+-- tables, once the owner screens are confirmed working.

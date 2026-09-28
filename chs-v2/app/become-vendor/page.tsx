@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone } from "@/lib/validators";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -52,6 +54,10 @@ export default function BecomeVendorPage() {
     }
     if (!session) return;
 
+    if (phone.trim()) {
+      const vendorPhoneCheck = validatePhone(phone, { international: true });
+      if (!vendorPhoneCheck.valid) { setError(`Phone number: ${vendorPhoneCheck.message}`); return; }
+    }
     setError(null);
     setSubmitting(true);
 
@@ -65,7 +71,7 @@ export default function BecomeVendorPage() {
       category,
       cac_number: cacNumber.trim() || null,
       description: description.trim() || null,
-      phone: phone.trim() || null,
+      phone: phone.trim() ? validatePhone(phone, { international: true }).value : null,
       location_state: state,
       location_lga: lga.trim() || null,
       service_states: isServiceCategory ? serviceStates.split(",").map((s) => s.trim()).filter(Boolean) : null,
@@ -126,8 +132,8 @@ export default function BecomeVendorPage() {
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number</label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <ValidatedInput kind="phoneIntl" value={phone} onChange={setPhone}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">State</label>

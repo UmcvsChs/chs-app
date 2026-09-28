@@ -1,12 +1,11 @@
-// Same real validation already tested in the original app — genuine
-// format checking for the well-established NIN format, and requiring a
-// real number for other ID types without pretending to validate formats
-// that don't have one universal standard (that would risk blocking a
-// legitimate real ID over guessed formatting rules).
+// Kept for the screens that already call it. It now delegates to the
+// single rulebook in lib/validators.ts, so every ID type — not just
+// the NIN — is checked against its real format, and the rule is the
+// same as everywhere else in the app and in the database.
+import { validateIdNumber } from "@/lib/validators";
+
 export function validateIdNumberFormat(idType: string, idNumber: string): boolean {
-  if (!idNumber || idNumber.trim().length < 5) return false;
-  if (idType === "National ID (NIN slip)") return /^\d{11}$/.test(idNumber.trim());
-  return true;
+  return validateIdNumber(idType, idNumber).valid;
 }
 
 export const ID_TYPE_PLACEHOLDERS: Record<string, string> = {

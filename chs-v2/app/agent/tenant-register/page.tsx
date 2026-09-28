@@ -9,6 +9,10 @@ import { uploadDocument } from "@/lib/storage";
 import FileUploadBox from "@/components/FileUploadBox";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone, validateFullName, validateIdNumber } from "@/lib/validators";
+
+const ID_TYPES = ["National ID (NIN slip)", "Voter's Card", "International Passport", "Driver's Licence"];
 
 // Real, new page per direct client request: a genuine, comprehensive
 // tenant register for agents/managers with tenants spread across many
@@ -94,6 +98,19 @@ export default function TenantRegisterPage() {
       setError("Please fill in the tenant's name, phone, location, property type, and annual rent.");
       return;
     }
+    const tenantNameCheck = validateFullName(fullName, "tenant's full name");
+    if (!tenantNameCheck.valid) { setError(tenantNameCheck.message); return; }
+    const tenantPhoneCheck = validatePhone(phone);
+    if (!tenantPhoneCheck.valid) { setError(`Tenant's phone: ${tenantPhoneCheck.message}`); return; }
+    if (emergencyPhone.trim()) {
+      const emergencyCheck = validatePhone(emergencyPhone);
+      if (!emergencyCheck.valid) { setError(`Emergency contact phone: ${emergencyCheck.message}`); return; }
+    }
+    if (idNumber.trim() && !idType.trim()) { setError("Please choose the type of ID that number belongs to."); return; }
+    if (idNumber.trim()) {
+      const idCheck = validateIdNumber(idType, idNumber);
+      if (!idCheck.valid) { setError(`Tenant's ID number: ${idCheck.message}`); return; }
+    }
     setSubmitting(true);
     setError(null);
 
@@ -104,17 +121,17 @@ export default function TenantRegisterPage() {
 
     const { error: rpcError } = await supabase.rpc("add_tenant_register_entry", {
       p_full_name: fullName.trim(),
-      p_phone: phone.trim(),
+      p_phone: validatePhone(phone).value,
       p_location_area: locationArea.trim(),
       p_street_address: streetAddress.trim() || null,
       p_property_type: propertyType.trim(),
       p_bedrooms: bedrooms ? Number(bedrooms) : null,
       p_annual_rent: Number(annualRent),
       p_emergency_contact_name: emergencyName.trim() || null,
-      p_emergency_contact_phone: emergencyPhone.trim() || null,
+      p_emergency_contact_phone: emergencyPhone.trim() ? validatePhone(emergencyPhone).value : null,
       p_occupation: occupation.trim() || null,
       p_id_type: idType.trim() || null,
-      p_id_number: idNumber.trim() || null,
+      p_id_number: idNumber.trim() ? validateIdNumber(idType, idNumber).value : null,
       p_id_document_url: idDocUrl,
       p_selfie_url: selfieUrl,
       p_notes: notes.trim() || null,
@@ -152,8 +169,8 @@ export default function TenantRegisterPage() {
             <p className="text-xs font-bold text-chs-charcoal">Tenant details</p>
             <input type="text" placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            <input type="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            <ValidatedInput kind="phone" placeholder="Phone number" value={phone} onChange={setPhone}
+              className="w-full px-3 py-2 rounded-lg text-sm" />
             <input type="text" placeholder="Location area (e.g. Asokoro)" value={locationArea} onChange={(e) => setLocationArea(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
             <input type="text" placeholder="Street address / house number" value={streetAddress} onChange={(e) => setStreetAddress(e.target.value)}
@@ -170,16 +187,21 @@ export default function TenantRegisterPage() {
             <p className="text-xs font-bold text-chs-charcoal pt-2">Emergency contact (optional)</p>
             <input type="text" placeholder="Emergency contact name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            <input type="tel" placeholder="Emergency contact phone" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            <ValidatedInput kind="phone" placeholder="Emergency contact phone" value={emergencyPhone} onChange={setEmergencyPhone}
+              className="w-full px-3 py-2 rounded-lg text-sm" />
             <input type="text" placeholder="Occupation" value={occupation} onChange={(e) => setOccupation(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
 
             <p className="text-xs font-bold text-chs-charcoal pt-2">Real verification — so no tenant is a ghost</p>
-            <input type="text" placeholder="ID type (e.g. National ID, Voter's Card)" value={idType} onChange={(e) => setIdType(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            <input type="text" placeholder="ID number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+            <select value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
+              <option value="">Select ID type</option>
+              {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
+            </select>
+            {idType && (
+              <ValidatedInput kind="idNumber" idType={idType} placeholder="ID number" value={idNumber} onChange={setIdNumber}
+                className="w-full px-3 py-2 rounded-lg text-sm" />
+            )}
             <div>
               <label className="text-[11px] text-gray-500 mb-1 block">Soft copy of ID (photo/scan)</label>
               <FileUploadBox onFileSelect={setIdFile} accept="image/*,.pdf" label="the ID" selectedFileName={idFile?.name} />

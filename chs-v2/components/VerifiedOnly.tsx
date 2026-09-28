@@ -3,6 +3,7 @@
 import { useState, ReactNode } from "react";
 import { Session } from "@supabase/supabase-js";
 import IdentityVerificationGate from "@/components/IdentityVerificationGate";
+import CompleteDetailsPrompt from "@/components/CompleteDetailsPrompt";
 
 // One shared rule, per a direct client instruction: identity
 // verification comes first, for anyone doing anything that commits
@@ -16,6 +17,11 @@ import IdentityVerificationGate from "@/components/IdentityVerificationGate";
 // automatically, and this step never shows again. The database
 // enforces the same rule independently, so this screen is a courtesy
 // to the user, not the only lock on the door.
+// Remembered for this browser session only, so a form that remounts
+// between steps does not flash blank while the check runs again. The
+// database still enforces verification independently every time.
+const verifiedThisSession = new Set<string>();
+
 export default function VerifiedOnly({
   session,
   propertyId,
@@ -25,11 +31,16 @@ export default function VerifiedOnly({
   propertyId?: string;
   children: ReactNode;
 }) {
-  const [verified, setVerified] = useState(false);
+  const [verified, setVerified] = useState(() => verifiedThisSession.has(session.user.id));
 
   return (
     <>
-      <IdentityVerificationGate session={session} propertyId={propertyId} onVerified={() => setVerified(true)} />
+      <IdentityVerificationGate
+        session={session}
+        propertyId={propertyId}
+        onVerified={() => { verifiedThisSession.add(session.user.id); setVerified(true); }}
+      />
+      {verified && <CompleteDetailsPrompt session={session} />}
       {verified ? children : null}
     </>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validateIdNumber } from "@/lib/validators";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
@@ -129,6 +131,10 @@ export default function LinkAccountPage() {
       setError("Please complete your ID verification details.");
       return;
     }
+    if (newRole === "agent" || newRole === "manager") {
+      const idCheck = validateIdNumber(idType, idNumber);
+      if (!idCheck.valid) { setError(idCheck.message); return; }
+    }
     if ((newRole === "agent" || newRole === "manager") && idType && !validateIdNumberFormat(idType, idNumber)) {
       setError("Please enter a valid ID number for the selected ID type.");
       return;
@@ -153,7 +159,7 @@ export default function LinkAccountPage() {
       body.operatingLgas = lgas.trim() || null;
       body.yearsExperience = experience;
       body.validIdType = idType;
-      body.validIdNumber = idNumber.trim();
+      body.validIdNumber = validateIdNumber(idType, idNumber).value;
       body.validIdDocumentUrl = validIdDocumentUrl;
     } else if (newRole === "manager") {
       body.profession = profession;
@@ -341,14 +347,14 @@ export default function LinkAccountPage() {
 
             {(newRole === "agent" || newRole === "manager") && (
               <>
-                <select value={idType} onChange={(e) => setIdType(e.target.value)}
+                <select value={idType} onChange={(e) => { setIdType(e.target.value); setIdNumber(""); }}
                   className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
                   <option value="">Select valid ID type</option>
                   {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
                 </select>
-                <input type="text" value={idNumber} onChange={(e) => setIdNumber(e.target.value)}
+                <ValidatedInput kind="idNumber" idType={idType} value={idNumber} onChange={setIdNumber}
                   placeholder={idType ? ID_TYPE_PLACEHOLDERS[idType] : "ID number"}
-                  className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                  className="w-full px-3 py-2.5 rounded-lg text-sm" />
                 <FileUploadBox onFileSelect={setIdFile} accept="image/*,application/pdf" label="your ID" selectedFileName={idFile?.name} />
               </>
             )}

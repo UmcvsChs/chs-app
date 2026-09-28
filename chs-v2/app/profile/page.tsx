@@ -10,6 +10,9 @@ import LivenessCheck from "@/components/LivenessCheck";
 import BiometricSetup from "@/components/BiometricSetup";
 import InfoTip from "@/components/InfoTip";
 import BankAccountSecurity from "@/components/BankAccountSecurity";
+import CompleteDetailsPrompt from "@/components/CompleteDetailsPrompt";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone } from "@/lib/validators";
 import { formatNaira } from "@/lib/format";
 
 // A real profile picture / avatar — genuinely useful as a means of
@@ -67,11 +70,22 @@ export default function ProfilePage() {
 
   async function handleSaveProfileDetails() {
     if (!session) return;
-    setSavingProfile(true);
     setProfileSaveMessage(null);
+    // Only a phone number that is being CHANGED is checked: an older
+    // number already on the account must never stop someone saving
+    // their address or name.
+    const phoneChanged = editPhone.trim() !== (phone || "").trim();
+    if (phoneChanged && editPhone.trim()) {
+      const phoneCheck = validatePhone(editPhone);
+      if (!phoneCheck.valid) {
+        setProfileSaveMessage(`Phone number: ${phoneCheck.message}`);
+        return;
+      }
+    }
+    setSavingProfile(true);
     const { error: rpcError } = await supabase.rpc("update_profile_details", {
       p_full_name: editName.trim() || null,
-      p_phone: editPhone.trim() || null,
+      p_phone: phoneChanged && editPhone.trim() ? validatePhone(editPhone).value : (editPhone.trim() || null),
       p_residential_address: editAddress.trim() || null,
       p_state: editState.trim() || null,
     });
@@ -80,7 +94,7 @@ export default function ProfilePage() {
       setProfileSaveMessage(rpcError.message);
       return;
     }
-    setPhone(editPhone.trim());
+    setPhone(phoneChanged && editPhone.trim() ? validatePhone(editPhone).value : editPhone.trim());
     setResidentialAddress(editAddress.trim());
     setProfileState(editState.trim());
     setEditingProfile(false);
@@ -233,6 +247,8 @@ export default function ProfilePage() {
           {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mt-3 w-full text-center">{error}</p>}
         </div>
 
+        {session && <div className="mt-4"><CompleteDetailsPrompt session={session} /></div>}
+
         <div className="mt-4">
           {!checkingLiveness && session && (
             livenessStatus === "approved" ? (
@@ -298,8 +314,8 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label className="text-[10px] font-semibold text-gray-500">Phone number</label>
-                <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                <ValidatedInput kind="phone" value={editPhone} onChange={setEditPhone}
+                  className="w-full mt-1 px-3 py-2 rounded-lg text-sm" />
               </div>
               <div>
                 <label className="text-[10px] font-semibold text-gray-500">Residential address</label>

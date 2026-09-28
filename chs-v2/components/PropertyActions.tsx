@@ -15,9 +15,12 @@ import ShortletBookingForm from "./ShortletBookingForm";
 import HireBookingForm from "./HireBookingForm";
 import IdentityVerificationGate from "./IdentityVerificationGate";
 import VerifiedOnly from "./VerifiedOnly";
+import CompleteDetailsPrompt from "./CompleteDetailsPrompt";
 import OfferMessageThread from "./OfferMessageThread";
+import ValidatedInput from "./ValidatedInput";
+import { validatePhone, validateFullName } from "@/lib/validators";
 
-type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet" | "hire";
+type ActiveForm = "none" | "offer" | "inspection" | "rentalApplication" | "shortlet" | "hire" | "rentToOwn";
 
 export default function PropertyActions({ property, isOwner }: { property: Property; isOwner?: boolean }) {
   const router = useRouter();
@@ -278,11 +281,16 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       setDispatchError("Please provide a real delivery address and a real contact phone number.");
       return;
     }
+    const deliveryPhoneCheck = validatePhone(deliveryPhone, { international: true });
+    if (!deliveryPhoneCheck.valid) {
+      setDispatchError(`Contact phone number: ${deliveryPhoneCheck.message}`);
+      return;
+    }
     setRequestingDispatch(true);
     const { error } = await supabase.rpc("request_document_dispatch", {
       p_offer_id: myPaidOffer.id,
       p_delivery_address: deliveryAddress.trim(),
-      p_delivery_phone: deliveryPhone.trim(),
+      p_delivery_phone: validatePhone(deliveryPhone, { international: true }).value,
       p_preferred_method: preferredMethod,
       p_delivery_note: deliveryNote.trim() || null,
     });
@@ -412,6 +420,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       return;
     }
     setRentToOwnSuccess(true);
+    setActiveForm("none");
   }
 
   async function handleSubmitOffer(e: React.FormEvent) {
@@ -420,8 +429,14 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       setError("Please enter a valid offer amount.");
       return;
     }
-    if (!buyerFullName.trim() || !buyerPhone.trim()) {
-      setError("Please enter your real, full name and phone number — the seller needs to know who is making this offer.");
+    const buyerNameCheck = validateFullName(buyerFullName, "full name — the seller needs to know who is making this offer");
+    if (!buyerNameCheck.valid) {
+      setError(buyerNameCheck.message);
+      return;
+    }
+    const buyerPhoneCheck = validatePhone(buyerPhone, { international: true });
+    if (!buyerPhoneCheck.valid) {
+      setError(`Your phone number: ${buyerPhoneCheck.message}`);
       return;
     }
     if (!buyerOccupation.trim() || !buyerSourceOfFunds.trim()) {
@@ -447,7 +462,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       amount,
       note: note.trim() || null,
       buyer_full_name: buyerFullName.trim(),
-      buyer_phone: buyerPhone.trim(),
+      buyer_phone: validatePhone(buyerPhone, { international: true }).value,
       buyer_occupation: buyerOccupation.trim(),
       buyer_source_of_funds: buyerSourceOfFunds.trim(),
     });
@@ -533,8 +548,8 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
             <input type="text" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)}
               placeholder="Where should the documents be delivered?" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
             <label className="text-[10px] font-semibold text-gray-600">Your real contact phone number</label>
-            <input type="tel" value={deliveryPhone} onChange={(e) => setDeliveryPhone(e.target.value)}
-              placeholder="A real number the seller/courier can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+            <ValidatedInput kind="phoneIntl" value={deliveryPhone} onChange={setDeliveryPhone}
+              placeholder="A real number the seller/courier can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg text-[11px]" />
             <label className="text-[10px] font-semibold text-gray-600">Preferred delivery method</label>
             <select value={preferredMethod} onChange={(e) => setPreferredMethod(e.target.value)}
               className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
@@ -712,8 +727,10 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
         <IdentityVerificationGate session={session} onVerified={() => setIdentityVerified(true)}
           propertyId={property.id}
           draftOffer={{ buyer_full_name: buyerFullName, buyer_phone: buyerPhone, buyer_occupation: buyerOccupation, buyer_source_of_funds: buyerSourceOfFunds }} />
+        <CompleteDetailsPrompt session={session} />
         <form onSubmit={handleSubmitOffer} className="space-y-3">
-          <p className="text-[10px] font-bold text-gray-400 uppercase">About you (shown to the seller)</p>
+          <p className="text-[10px] font-bold text-gray-400 uppercase">About you</p>
+          <p className="text-[10px] text-gray-400 -mt-2">CHS reviews all of this. The seller sees your name, occupation and source of funds — never your phone number.</p>
           <div>
             <label className="text-xs font-semibold text-gray-600">Your full name</label>
             <input type="text" value={buyerFullName} onChange={(e) => setBuyerFullName(e.target.value)}
@@ -721,8 +738,8 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Your phone number</label>
-            <input type="tel" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)}
-              placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <ValidatedInput kind="phoneIntl" value={buyerPhone} onChange={setBuyerPhone}
+              placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Your occupation</label>
@@ -773,6 +790,28 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           hasRoomVideos={hasRoomVideos}
           onSuccess={() => setInspectionSuccess(true)}
         />
+        </VerifiedOnly>
+      </div>
+    );
+  }
+
+  // Rent-to-own was a single tap with no identity check at all. It now
+  // sits behind the same verification gate as every other commitment;
+  // once verified, the person confirms and sends the request.
+  if (activeForm === "rentToOwn" && session) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <p className="text-sm font-semibold text-chs-charcoal">Request Mortgage (Rent to Own)</p>
+          <p className="text-xs text-gray-500">The owner will review your request and, if they approve, CHS will guide you through the next steps.</p>
+          {error && <p className="text-xs text-chs-red">{error}</p>}
+          <button
+            onClick={handleRequestRentToOwn}
+            disabled={rentToOwnSubmitting}
+            className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+          >
+            {rentToOwnSubmitting ? "Sending request..." : "Send my request"}
+          </button>
         </VerifiedOnly>
       </div>
     );
@@ -915,7 +954,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
         ) : (
           <>
             <button
-              onClick={() => requireLoginThen(handleRequestRentToOwn)}
+              onClick={() => requireLoginThen(() => setActiveForm("rentToOwn"))}
               disabled={rentToOwnSubmitting}
               className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
             >

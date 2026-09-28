@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
+import ValidatedInput from "@/components/ValidatedInput";
+import { validatePhone } from "@/lib/validators";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -63,9 +65,12 @@ export default function ConciergePage() {
       setError("Please tell us what you're looking for — a few sentences is enough.");
       return;
     }
-    if (!session && !contactPhone.trim()) {
-      setError("Please leave a phone number so our team can reach you back.");
-      return;
+    if ((!session || contactPhone.trim()) ) {
+      const conciergePhoneCheck = validatePhone(contactPhone, { international: true });
+      if (!conciergePhoneCheck.valid) {
+        setError(`Phone number: ${conciergePhoneCheck.message} Our team needs a working number to reach you back.`);
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -75,7 +80,7 @@ export default function ConciergePage() {
       p_raw_message: message.trim(),
       p_input_method: inputMethod,
       p_contact_name: contactName.trim() || null,
-      p_contact_phone: contactPhone.trim() || null,
+      p_contact_phone: contactPhone.trim() ? validatePhone(contactPhone, { international: true }).value : null,
     });
 
     setSubmitting(false);
@@ -139,8 +144,8 @@ export default function ConciergePage() {
                 </p>
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)}
                   placeholder="Your name" className="w-full mb-2 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="Phone number" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+                <ValidatedInput kind="phoneIntl" value={contactPhone} onChange={setContactPhone}
+                  placeholder="Phone number" className="w-full px-3 py-2.5 rounded-lg text-sm" />
               </div>
             </>
           )}
