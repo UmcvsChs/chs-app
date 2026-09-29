@@ -88,7 +88,8 @@ function AcceptTermsContent() {
             onChange={(e) => setChecked(e.target.checked)}
             className="mt-0.5 shrink-0"
           />
-          I have read and accept the CHS Terms &amp; Conditions.
+          I have read and accept the CHS Terms &amp; Conditions and the{" "}
+          <a href="/privacy" target="_blank" rel="noreferrer" className="underline text-chs-red">Privacy Policy</a>.
         </label>
         {!hasScrolledToBottom && (
           <p className="text-[10px] text-gray-400 mb-3">Scroll to the bottom of the terms above to continue.</p>

@@ -433,6 +433,7 @@ export default function HomePageClient({ properties, platformStats, promotedTick
         <Link href="/about" className="underline">About CHS</Link>
         <Link href="/blog" className="underline">CHS Insights</Link>
         <Link href="/terms" className="underline">Terms & Conditions</Link>
+        <Link href="/privacy" className="underline">Privacy Policy</Link>
       </footer>
 
       <div className="h-16" />

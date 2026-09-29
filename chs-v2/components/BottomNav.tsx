@@ -23,6 +23,7 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
     { icon: "📖", label: "Latest insights", href: "/blog" },
     { icon: "🏢", label: "About Us", href: "/about" },
     { icon: "📜", label: "Terms & Conditions", href: "/terms" },
+    { icon: "🔒", label: "Privacy Policy", href: "/privacy" },
     { icon: "📘", label: "Users Guide", href: "/guide" },
     { icon: "🏠", label: "My Shortlet Bookings", href: "/my-bookings" },
     { icon: "📝", label: "Property request", href: "/concierge" },

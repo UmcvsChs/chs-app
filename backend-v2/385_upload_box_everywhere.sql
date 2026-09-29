@@ -1,26 +1,6 @@
--- No schema change. Real, direct fix per explicit client confirmation
--- ("yes") to extend the new upload box design everywhere, not just
--- the handful of places done in the previous round.
---
--- Applied to every remaining genuine case: vendor photo upload, house
--- rules upload, Engage CHS documents, hire and shortlet booking ID
--- uploads, link-account certificate and ID uploads, agent tenant
--- registration ID and selfie uploads, the register page's four real
--- uploads (preserving its existing scroll-to-and-highlight-in-red
--- validation mechanism by extending it into the new component rather
--- than losing it), become-artisan's certificate, equipment photo, and
--- receipt uploads, and the full list-property page — the labeled
--- photo-slot grid that is the actual virtual-inspection checklist,
--- the video upload, and every verification and sale document loop.
---
--- Two real, deliberate exceptions, not oversights: profile's avatar
--- upload and edit-listing's video upload already used a clear,
--- unambiguous button or dashed drag-drop label — genuinely not
--- exhibiting the reported problem, so left alone rather than churned
--- for its own sake. List-property's multi-file "additional photos"
--- field was also left as a plain input, since it needs multiple-file
--- selection, which the new single-file box doesn't yet support --
--- stated directly rather than silently worked around.
---
--- Verified with a full production build, including strict TypeScript
--- checking, across every file touched.
+-- No SQL. Frontend-only: rolled the FileUploadBox component (built in
+-- 384) out to every remaining raw <input type="file"> across the app
+-- — vendor, house rules, Engage CHS, hire/shortlet bookings,
+-- link-account, agent tenant registration, registration, become an
+-- artisan, and the full list-property form (including the labeled
+-- photo-slot grid).

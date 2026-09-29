@@ -150,6 +150,26 @@ export default function TermsContent() {
         <p className="mt-2">Attempting to conclude a real marketplace deal outside CHS, or to exchange contact information to do so, is treated the same as circumventing any other real transaction on this platform — see term 2.</p>
       </div>
 
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">32. Identity verification is required before any commitment</p>
+        <p>Before making an offer, applying to rent, booking a shortlet or hire, requesting an inspection, requesting rent-to-own, or engaging CHS for a professional service, you must complete identity verification: your name as printed on a real, valid ID, gender, age bracket, state and address of residence, occupation, phone number, and email, alongside the ID itself. This is done once and covers every future action on your account. A National Identification Number (NIN), once verified on an account, is permanently linked to that account — one real person may hold only one CHS account under one NIN. Your ID number and uploaded document are never shown to another user; where a counterparty needs to know you are verified, they see only a confirmation that you are, not your ID details themselves.</p>
+      </div>
+
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">33. Guarantor confirmation is independent</p>
+        <p>A rental applicant provides only their guarantor&apos;s name and phone number. The guarantor themselves — not the applicant — completes every other real field about themselves directly, through a private, single-use link: their relationship to the applicant, address, occupation, their own ID, a real proof of address no older than 90 days, and a typed-name signature confirming their consent. A guarantor may not share the applicant&apos;s surname. The application does not reach the owner until this independent confirmation is complete.</p>
+      </div>
+
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">34. Rent is held in escrow, the same real protection a buyer gets</p>
+        <p>When a tenant pays rent, it is not released to the landlord immediately. It is held by CHS and released to the landlord only when the tenant files a genuinely clean move-in condition report (every item confirmed in good condition), or after a real 14-day grace period passes with nothing unresolved raised — whichever happens first. If a fault is reported, or the move-in report flags a real issue, release is paused and CHS reviews the tenancy directly before deciding. CHS may also release held rent early at its own discretion.</p>
+      </div>
+
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">35. Your data</p>
+        <p>The personal details CHS collects at identity verification — your name, gender, age bracket, address, occupation, email, phone number, and government ID — are used to verify who you genuinely are, to protect every other user you transact with, and to let CHS reach you directly where needed (including the alternative service of notice described in term 30). CHS does not sell this information. See the separate CHS Privacy Policy for the complete, current statement of what is collected, how it is used, and your rights over it.</p>
+      </div>
+
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
         This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support at <a href="mailto:support@completehousingsolutions.com" className="underline">support@completehousingsolutions.com</a>.
       </p>

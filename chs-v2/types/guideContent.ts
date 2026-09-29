@@ -15,6 +15,7 @@ export const ROLE_GUIDES: Record<string, { title: string; sections: GuideSection
     title: "Quick-start for Property Owners",
     sections: [
       { title: "Listing a property", body: "From your Owner dashboard, use \"List a property\" — photos, location, price, purpose (rent/sale/shortlet), and any special terms. A new listing starts unverified and isn't publicly visible until CHS confirms it." },
+      { title: "Identity verification", body: "Before you can act on most things — approving an application, accepting an offer, listing an Urgent Sale — CHS needs to verify who you are: your name as printed on a real ID, along with your state, occupation, and contact details. This is done once, from any property page or your profile, and covers everything afterward." },
       { title: "Getting verified", body: "CHS reviews every new listing before it goes live. You'll be notified the moment a decision is made, and everyone who'd already expressed interest is notified too, the moment it goes live." },
       { title: "Promoting a listing", body: "Two ways: a one-off Fixed Boost (7/30/90 days, debited from your wallet), or reusable Credits. Important: credits are ONE shared balance across all your listings — each listing you turn on is charged separately, every day it stays on, from that same balance. Turn off any day for free; never charged for a day it's off. Full details, including your real total daily cost, are always shown on the promote screen before you pay." },
       { title: "Urgent & Emergency Sale", body: "For a genuine urgent sale need — requires the listing already verified and your ID verified. Set a real original price and deadline; CHS is notified immediately to help fast-track buyer interest." },
@@ -25,7 +26,10 @@ export const ROLE_GUIDES: Record<string, { title: string; sections: GuideSection
     title: "Quick-start for Tenants",
     sections: [
       { title: "Searching", body: "Use the Rent tab and the search tool to filter by state, LGA, area, price range, and bedrooms." },
+      { title: "Identity verification", body: "Before you can apply to rent, CHS needs to verify who you are — your name exactly as printed on your ID, gender, age bracket, state, address, occupation, and phone number, alongside your ID itself. This is done once and covers every future application." },
       { title: "Rental applications", body: "Submit a rental application — CHS staff screen it first before it's passed to the owner. The owner never sees an application CHS hasn't reviewed." },
+      { title: "Your guarantor", body: "You provide only your guarantor's name and phone number. CHS then sends your guarantor their own private link, where they independently confirm everything about themselves — address, occupation, their own ID, and a real proof of address — directly, without going through you. Your application only reaches the owner once this is complete." },
+      { title: "Your rent is protected", body: "When you pay rent, it isn't handed straight to the landlord. CHS holds it until you confirm — through your move-in condition report — that the property is genuinely as expected, or for 14 days if nothing is raised. If something is genuinely wrong, tell CHS before that window closes." },
       { title: "Inspections", body: "Book a real inspection with a transport fee split fairly between attendees. A few quick questions at booking help the owner prioritize genuinely ready tenants — this never blocks or charges you extra." },
       { title: "House Rules", body: "Some rentals include a House Rules document you'll be asked to acknowledge as part of your tenancy — a real, documented agreement both sides can refer back to." },
       { title: "Your wallet", body: "Every account gets a real wallet automatically. Fund it via Paystack, and you can send money directly to another CHS user by their phone or email." },
@@ -35,6 +39,7 @@ export const ROLE_GUIDES: Record<string, { title: string; sections: GuideSection
     title: "Quick-start for Buyers",
     sections: [
       { title: "Searching", body: "Use the Sale tab and search filters, or save a search to be matched automatically as new listings come in." },
+      { title: "Identity verification", body: "Before you can make an offer, CHS needs to verify who you are — your name as on your ID, state, occupation, and contact details. Done once, from any property page, and it covers every future offer, inspection, or booking." },
       { title: "Making an offer", body: "Propose a price directly to the owner. Once accepted, CHS reviews and clears the deal before anything moves to escrow — a real checkpoint protecting both sides." },
       { title: "Urgent & Emergency Sale listings", body: "Marked 🚨 on the homepage — a genuine, discounted, time-boxed sale with a real deadline. Shows a direct CHS hotline for faster processing." },
       { title: "Talk to an Agent", body: "Not sure exactly what to search for? Use \"Property request\" in the bottom navigation to describe what you need in your own words — CHS follows up personally." },

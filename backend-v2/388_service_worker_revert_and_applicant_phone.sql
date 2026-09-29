@@ -27,3 +27,8 @@
 -- the client -- the same exact class of bug that caused a real,
 -- confirmed failure earlier this session, checked for immediately
 -- rather than discovered later.
+--
+-- No new SQL in this file: the service worker fix is frontend-only
+-- (public/sw.js, components/ServiceWorkerRegistration.tsx). The
+-- applicant_phone field and the overload fix are the real SQL of
+-- migrations 386 and 387 respectively -- see those files.

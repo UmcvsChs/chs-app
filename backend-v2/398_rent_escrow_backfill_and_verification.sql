@@ -15,3 +15,9 @@
 -- refuses to release an already-released real payment, confirmed by
 -- testing it directly against one of the client's own real, existing
 -- payments.
+--
+-- The real, one-off backfill (run directly, not as a repeatable
+-- migration, since it only ever needed to run once against the real
+-- data that existed at that moment):
+--
+--   update rent_payments set released_at = created_at where released_at is null;

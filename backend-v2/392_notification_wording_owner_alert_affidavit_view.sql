@@ -23,3 +23,11 @@
 -- actual PDF the browser can display, ahead of the Download link for
 -- the real, editable Word copy -- on both the condition report page
 -- and My Rented Space.
+--
+-- No new SQL in this file: the notification-wording fix is the real
+-- SQL of migrations 389/390 (see those files); the condition-report
+-- notification fix is migration 391; the 431-days reading needed no
+-- change, only direct verification; the affidavit View link is a
+-- frontend-only change (a second <a> tag pointing at the existing
+-- PDF, in app/condition-report/[tenancyId]/page.tsx and
+-- app/my-rented-space/page.tsx).

@@ -22,4 +22,28 @@
 -- flagged as inappropriate to show the owner, removed from both real
 -- places it appeared -- the main owner dashboard and the
 -- owner-applications page -- leaving only their name, matching the
--- same real privacy principle already applied to ID numbers.
+-- same real privacy principle already applied to ID numbers. (That
+-- fix was a JSX display change only, no SQL -- see app/owner/page.tsx
+-- and app/owner-applications/page.tsx.)
+--
+-- The reset itself was a one-off data operation (run directly, not
+-- as a repeatable migration), reproduced here for the record:
+--
+--   update wallets set main_balance = main_balance + sub.total
+--   from (select tenant_id, sum(amount) as total from rent_payments group by tenant_id) sub
+--   where wallets.user_id = sub.tenant_id;
+--   update wallets set main_balance = main_balance - sub.total
+--   from (select landlord_id, sum(amount) as total from rent_payments group by landlord_id) sub
+--   where wallets.user_id = sub.landlord_id;
+--   update wallets set main_balance = main_balance + sub.total
+--   from (select payer_id, sum(commission_amount) as total from transaction_commissions
+--         where transaction_type in ('rental','agent_managed_rental') and status = 'paid' group by payer_id) sub
+--   where wallets.user_id = sub.payer_id;
+--   delete from wallet_transactions where description ilike '%rent payment%'
+--     or description ilike '%rent savings%'
+--     or (description ilike '%transaction commission%' and reference like 'COMM-%');
+--   delete from rent_payments;
+--   delete from transaction_commissions where transaction_type in ('rental','agent_managed_rental');
+--   delete from tenancies;
+--   delete from rental_applications;
+--   update properties set status = 'active' where status = 'rented';
