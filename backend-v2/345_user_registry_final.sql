@@ -15,3 +15,7 @@
 -- correctly assigned a real reference number in original registration
 -- order. Security confirmed both ways: the real super admin account
 -- can read it, and an ordinary buyer account is correctly blocked.
+--
+-- This describes the same real work as migration 344b
+-- (user_reference_numbers_and_registry) — an independent local note
+-- for the same change. See that file for the real, applied SQL.

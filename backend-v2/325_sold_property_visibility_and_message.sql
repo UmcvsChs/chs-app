@@ -31,3 +31,9 @@
 --
 -- (3) Promoted ticker slowed by 2 more seconds per direct request
 -- (47s -> 49s).
+--
+-- Items (1) and (2) describe the same real work as migrations 322,
+-- 323, and 324 (buyer_can_view_own_purchased_property,
+-- fix_properties_offers_rls_recursion, property_sold_status_check) —
+-- independent local notes for the same change. See those files for
+-- the real, applied SQL. Item (3) (ticker timing) is frontend-only.

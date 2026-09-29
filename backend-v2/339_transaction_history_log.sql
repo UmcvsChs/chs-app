@@ -26,3 +26,8 @@
 -- ₦123,000,000, 1 real transaction genuinely in escrow (₦17,500,000 —
 -- matches the Ikeja Bungalow), and ₦15,510,000 in real platform
 -- earnings, correctly broken down by payer role and transaction type.
+--
+-- This describes the same real work as migrations 337
+-- (transaction_history_log) and 338 (its immediate fix) —
+-- independent local notes for the same change. See those files for
+-- the real, applied SQL.

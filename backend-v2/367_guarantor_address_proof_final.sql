@@ -23,3 +23,7 @@
 --
 -- Verified directly: the real 90-day comparison correctly rejects an
 -- old document and correctly accepts a recent one.
+--
+-- Describes the same real work as migration 366
+-- (guarantor_address_proof) — see that file for the real, applied
+-- SQL.

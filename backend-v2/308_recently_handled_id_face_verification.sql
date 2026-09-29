@@ -23,3 +23,9 @@
 -- Registrations and the remaining approval queues still use the old,
 -- vanish-on-action pattern and are real, planned follow-up work, not
 -- yet done.
+--
+-- This describes the same real schema change as migration 307
+-- (recently_handled_pattern_verification_queues) — the two files
+-- appear to be independent local notes for the same real work,
+-- written at different times. See 307 for the real, applied SQL;
+-- not repeated here to avoid two conflicting versions in the repo.

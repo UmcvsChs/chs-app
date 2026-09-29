@@ -15,3 +15,9 @@
 -- Honestly incomplete: many other real actions (marketplace
 -- moderation, referral payouts, agent management) don't log yet.
 -- Continues as ongoing work, same as item 11.
+--
+-- No new SQL in this file: the real audit_log table and
+-- log_audit_event() function are the actual SQL of migration 253
+-- (audit_trail_foundation) and its follow-ups (254-255, 257, 259-260)
+-- — see those files for the real schema and wiring. This entry itself
+-- describes the admin UI work, which is frontend-only.

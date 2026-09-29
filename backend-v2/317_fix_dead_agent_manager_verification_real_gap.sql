@@ -18,3 +18,8 @@
 -- request: removed a leftover real offer and ID verification record
 -- from earlier testing, confirmed valid_id_verified is false and no
 -- records remain, ready for a genuinely clean end-to-end test.
+--
+-- No new SQL: the Verify/Dismiss actions reuse the existing
+-- apply_admin_action / admin_action_requests pipeline already built
+-- for every other approval queue, and the demo-buyer reset was a
+-- one-off data operation, not a repeatable migration.

@@ -30,3 +30,7 @@
 -- sent/read timestamps from the notification itself completely gone
 -- once clicked through. Now shows exactly when the owner's real
 -- decision landed, full date and time.
+--
+-- The pay_rent fix describes the same real work as migration 379
+-- (fix_first_rent_payment_blocked_bug) — see that file for the real,
+-- applied SQL. The timestamp display fix is frontend-only.

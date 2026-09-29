@@ -32,3 +32,9 @@
 -- directly and honestly about what happened and why. Verified
 -- directly afterward: one real payment remains, the lease date is
 -- correct, and both wallets reflect the correction.
+--
+-- The backend fix (pay_rent's 30-day check) describes the same real
+-- work as migration 357 -- see that file for the real, applied SQL.
+-- The frontend button change and the financial remediation above
+-- were, respectively, a UI change and a one-off data correction on
+-- one specific tenancy, neither a repeatable migration.

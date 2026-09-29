@@ -22,3 +22,10 @@
 -- the slowdown, not a vague one. Flagged as genuine, prioritized next
 -- work rather than risk a rushed, undertested change to this
 -- function today.
+--
+-- The signed-URL fix describes the same real work as migration 370
+-- (fix_guarantor_signed_url_permission); the surname rule describes
+-- the same real work as migration 371 (backend_guarantor_surname_check)
+-- -- independent local notes for the same changes. See those files
+-- for the real, applied SQL. The performance finding here was acted
+-- on in migration 373 (admin_loaddata_parallelized).

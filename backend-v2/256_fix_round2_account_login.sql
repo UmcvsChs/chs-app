@@ -10,3 +10,9 @@
 -- field, and the password re-hashed to match the same real bcrypt
 -- cost factor as working accounts. This is a live database fix --
 -- takes effect immediately, no deploy required.
+--
+-- This was a direct, one-off data correction (UPDATE statements
+-- against the five specific 0812... accounts), not a repeatable
+-- migration — it was never recorded in Supabase's own migration
+-- history, so there is no real SQL to reproduce here without
+-- guessing at exact field values.

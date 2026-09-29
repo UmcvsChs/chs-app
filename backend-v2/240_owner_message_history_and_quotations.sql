@@ -1,10 +1,35 @@
--- Real, new feature per direct client request: two new real, dedicated
--- tabs for owners. "Recent Property Quotation" -- every real offer on
--- land or property, split out from rental applications into its own
--- permanent place, sitting beside Recent Applications and Transaction
--- History. "Message History" -- a real, unified view of every
--- CHS-mediated conversation with a buyer (via precommit_messages) or
--- tenant (via tenancy_messages), sitting beside Raise a Concern and
--- Direct Line to CHS. Tested directly with real data before shipping:
--- inserted a real offer message and confirmed it correctly appears in
--- the aggregated history with the right sender name and property.
+-- Real, new feature per direct client request: a genuine, unified
+-- message history for owners, pulling together every real
+-- conversation with a buyer (via precommit_messages, tied to a real
+-- offer) or a tenant (via tenancy_messages, tied to a real tenancy) --
+-- all mediated through CHS already, now visible in one real place
+-- rather than only inside each individual offer or tenancy screen.
+
+create or replace function get_owner_message_history()
+returns json
+language sql
+security definer
+stable
+as $$
+  select coalesce(json_agg(row_to_json(t) order by t.created_at desc), '[]'::json) from (
+    select pm.id, pm.text, pm.status, pm.created_at, pm.sender_id,
+      'offer' as conversation_type, p.title as property_title, o.id as reference_id,
+      sender.full_name as sender_name
+    from precommit_messages pm
+    join offers o on o.id = pm.offer_id
+    join properties p on p.id = o.property_id
+    join profiles sender on sender.id = pm.sender_id
+    where p.owner_id = auth.uid()
+
+    union all
+
+    select tm.id, tm.text, 'approved' as status, tm.created_at, tm.sender_id,
+      'tenancy' as conversation_type, p.title as property_title, t.id as reference_id,
+      sender.full_name as sender_name
+    from tenancy_messages tm
+    join tenancies t on t.id = tm.tenancy_id
+    join properties p on p.id = t.property_id
+    join profiles sender on sender.id = tm.sender_id
+    where t.landlord_id = auth.uid()
+  ) t;
+$$;

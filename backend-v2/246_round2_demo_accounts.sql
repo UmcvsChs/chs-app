@@ -6,3 +6,12 @@
 -- tiers and facilities already seeded), and three fully-funded
 -- spending accounts (Buyer, Tenant, Guest) at a real ₦100,000,000
 -- each. All listings pre-verified so they're immediately usable.
+--
+-- This was a one-off data operation (creating specific demo accounts
+-- with real names, phone numbers, and seeded listings), run directly
+-- against the database rather than as a repeatable migration — it was
+-- never recorded in Supabase's own migration history, so there is no
+-- real SQL to reproduce here without guessing at exact values that
+-- were genuinely specific to this one request. The five real accounts
+-- themselves (phone range 0812..., PIN 123456) remain live in the
+-- database and are documented in CHS_PROGRESS_LOG.md.

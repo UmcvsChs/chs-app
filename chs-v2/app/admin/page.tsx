@@ -65,7 +65,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -76,6 +76,8 @@ interface IdSubmissionDetails {
   full_name_on_id: string | null; gender: string | null; age_bracket: string | null;
   state_of_residence: string | null; residential_address: string | null; occupation: string | null;
   contact_email: string | null; contact_phone: string | null; id_already_used_elsewhere: boolean | null;
+  avs_status?: string | null; avs_extracted_name?: string | null; avs_extracted_id_number?: string | null;
+  avs_name_match?: boolean | null; avs_id_number_match?: boolean | null; avs_notes?: string | null;
 }
 
 function nameMatch(registered?: string | null, onId?: string | null): "match" | "partial" | "differ" {
@@ -96,6 +98,43 @@ function IdSubmissionDetailsBlock({ sub }: { sub: { id_type: string; id_number: 
       {sub.id_already_used_elsewhere && (
         <p className="text-[11px] font-bold text-chs-red bg-red-50 rounded-lg px-2 py-1.5">
           🚩 This ID number is already verified on a different account. Check carefully before approving.
+        </p>
+      )}
+      {/* Real, new AVS (Automated Verification System) result block —
+          shows what Claude's real vision read directly off the
+          uploaded document image, compared against what the
+          applicant typed, so admin can see the specific discrepancy
+          rather than re-reading the whole document from scratch. This
+          is a text-matching first pass only — it does not confirm the
+          document is genuine or that the applicant's face matches;
+          that remains a human judgment call, or a future, separate
+          Phase 2 using a licensed identity-verification provider. */}
+      {sub.avs_status === "running" && (
+        <div className="bg-blue-50 rounded-lg border border-blue-100 p-2 text-[11px] flex items-center gap-1.5">
+          <span className="animate-pulse">🤖</span> Reading the document automatically…
+        </div>
+      )}
+      {sub.avs_status === "match" && (
+        <div className="bg-green-50 rounded-lg border border-green-200 p-2 text-[11px] space-y-0.5">
+          <p className="text-green-700 font-semibold">✓ Automated check: name and ID number on the document both match what was submitted</p>
+          {sub.avs_notes && <p className="text-gray-500">{sub.avs_notes}</p>}
+        </div>
+      )}
+      {sub.avs_status === "mismatch" && (
+        <div className="bg-red-50 rounded-lg border border-chs-red p-2 text-[11px] space-y-1">
+          <p className="text-chs-red font-bold">🚩 Automated check found a discrepancy — review before approving</p>
+          {sub.avs_name_match === false && (
+            <p><span className="text-gray-500">Name on document reads:</span> <b>{sub.avs_extracted_name || "(could not read)"}</b> <span className="text-gray-400">— submitted as</span> <b>{sub.full_name_on_id}</b></p>
+          )}
+          {sub.avs_id_number_match === false && (
+            <p><span className="text-gray-500">ID number on document reads:</span> <b>{sub.avs_extracted_id_number || "(could not read)"}</b> <span className="text-gray-400">— submitted as</span> <b>{sub.id_number}</b></p>
+          )}
+          {sub.avs_notes && <p className="text-gray-500">{sub.avs_notes}</p>}
+        </div>
+      )}
+      {sub.avs_status === "error" && (
+        <p className="text-[11px] text-gray-400 bg-gray-50 rounded-lg px-2 py-1.5">
+          ⚠ Automated check could not complete — {sub.avs_notes || "please review this document manually."}
         </p>
       )}
       {sub.full_name_on_id ? (
@@ -258,6 +297,7 @@ function AdminDashboardInner() {
   }
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
+  const [pendingShortletBookings, setPendingShortletBookings] = useState<{ id: string; status: string; payment_status: string; total_price: number; check_in: string; check_out: string; guest_full_name: string; guest_phone: string; created_at: string; property_title: string; host_name: string; host_phone: string }[]>([]);
   // Real, direct fix per explicit, repeated client feedback: nothing
   // an admin acts on should vanish — it should move here, stay fully
   // re-viewable, and only ever leave when admin deliberately archives
@@ -476,7 +516,11 @@ function AdminDashboardInner() {
     successful: { count: number; total_value: number };
     refunded: { count: number; total_value: number };
     in_escrow: { count: number; total_value: number };
-    platform_earnings: { total: number; by_payer_role: Record<string, number>; by_transaction_type: Record<string, number> };
+    platform_earnings: {
+      total: number; by_payer_role: Record<string, number>; by_transaction_type: Record<string, number>;
+      items: { id: string; paid_at: string; transaction_type: string; payer_role: string; commission_amount: number; base_amount: number; commission_percentage: number; reference: string | null; payer_name: string; property_title: string | null }[];
+      pending_items: { id: string; created_at: string; transaction_type: string; payer_role: string; commission_amount: number; base_amount: number; commission_percentage: number; payer_name: string; payer_phone: string; property_title: string | null }[];
+    };
     marketing_and_subscriptions: { promotions_total: number; team_subscriptions_total: number };
   } | null>(null);
   const [txLogLoading, setTxLogLoading] = useState(false);
@@ -1169,7 +1213,7 @@ function AdminDashboardInner() {
       supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url").eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null),
       supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url").eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null),
       supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: false }),
-      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, avs_status, avs_extracted_name, avs_extracted_id_number, avs_name_match, avs_id_number_match, avs_notes, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("transaction_commissions").select("commission_amount").eq("status", "paid"),
       supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: false }),
       supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: false }),
@@ -1192,6 +1236,13 @@ function AdminDashboardInner() {
     setPendingLiveness((livenessRes.data as unknown as typeof pendingLiveness) || []);
     if (buyerIdRes.error) console.error("Real error loading pending ID verifications:", buyerIdRes.error.message);
     setPendingBuyerIds((buyerIdRes.data as unknown as typeof pendingBuyerIds) || []);
+
+    // Real, new admin visibility into pending shortlet/hire bookings —
+    // these are decided by the host directly, not admin, but admin
+    // had no real way to see or track them at all before this.
+    supabase.rpc("get_pending_shortlet_bookings").then(({ data }) => {
+      setPendingShortletBookings((data as unknown as typeof pendingShortletBookings) || []);
+    });
     setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
     setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
     setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
@@ -1851,6 +1902,53 @@ function AdminDashboardInner() {
     loadRecentlyHandledVerifications();
   }
 
+  // Real, new AVS (Automated Verification System) trigger — Phase 1,
+  // built directly per the client's own request. Marks the
+  // submission as "running" immediately (a real, live loading state,
+  // not a fake spinner with no backing change), then calls the real
+  // verify-identity-document Edge Function, which reads the actual
+  // uploaded document with Claude's real vision and writes its
+  // verdict back to the database. Local state is updated from the
+  // function's own real response so the result shows immediately,
+  // without waiting on a full reload.
+  async function handleAutoVerifyId(verificationId: string) {
+    setActionError(null);
+    setPendingBuyerIds((prev) => prev.map((s) => (s.id === verificationId ? { ...s, avs_status: "running" } : s)));
+    await supabase.rpc("start_avs_check", { p_verification_id: verificationId });
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/verify-identity-document`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ verificationId }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        setActionError(result.error || "The automated check could not run right now.");
+        setPendingBuyerIds((prev) => prev.map((s) => (s.id === verificationId ? { ...s, avs_status: "error", avs_notes: result.error } : s)));
+        return;
+      }
+      setPendingBuyerIds((prev) => prev.map((s) => (s.id === verificationId ? {
+        ...s,
+        avs_status: result.status,
+        avs_extracted_name: result.extracted_full_name,
+        avs_extracted_id_number: result.extracted_id_number,
+        avs_name_match: result.name_match,
+        avs_id_number_match: result.id_number_match,
+        avs_notes: result.notes,
+      } : s)));
+    } catch {
+      setActionError("Could not reach the automated check right now. Please try again or review manually.");
+      setPendingBuyerIds((prev) => prev.map((s) => (s.id === verificationId ? { ...s, avs_status: "error", avs_notes: "Could not reach the automated check." } : s)));
+    }
+  }
+
   async function handleApprovePrecommitMessage(messageId: string) {
     setActionError(null);
     const { error } = await supabase.rpc("approve_precommit_message", { p_message_id: messageId });
@@ -2032,6 +2130,7 @@ function AdminDashboardInner() {
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${pendingShortletBookings.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup", group: "Verification" },
@@ -2957,7 +3056,7 @@ function AdminDashboardInner() {
         {activeTab === "buyerid" && (
           <div>
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
-              🪪 A real government-issued ID document and ID number submitted by a buyer before they can make offers. This is separate from Face Verification — review the actual document image below.
+              🪪 A real government-issued ID document and ID number submitted by a buyer before they can make offers. This is separate from Face Verification — review the actual document image below. Use 🤖 Verify Automatically for a real first-pass check of the name and ID number against the document itself; it flags a mismatch for you to review, it does not replace your own judgment.
             </p>
             {pendingBuyerIds.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No ID verifications pending review.</p>
@@ -2985,15 +3084,31 @@ function AdminDashboardInner() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={sub.id_document_url} alt="ID document" className="w-full rounded-lg mb-2" />
                   )}
-                  <div className="flex gap-2">
-                    <button onClick={() => handleBuyerIdReview(sub.id, true)}
-                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                      Approve
+                  <div className="border border-gray-200 rounded-xl p-2.5 mb-2 bg-gray-50">
+                    <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5">Option 1 — Automatic</p>
+                    <button onClick={() => handleAutoVerifyId(sub.id)} disabled={sub.avs_status === "running"}
+                      className="block w-full py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">
+                      {sub.avs_status === "running" ? "🤖 Checking…" : "🤖 Verify Automatically"}
                     </button>
-                    <button onClick={() => handleBuyerIdReview(sub.id, false)}
-                      className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
-                      Reject
-                    </button>
+                    {sub.avs_status === "match" && (
+                      <p className="text-[9px] text-green-700 mt-1.5">✓ Checked — the name and ID number both match. You can approve below with confidence, or still review the document yourself first.</p>
+                    )}
+                    {sub.avs_status === "mismatch" && (
+                      <p className="text-[9px] text-chs-red mt-1.5 font-semibold">🚩 A discrepancy was found (see above) — please review carefully before deciding below.</p>
+                    )}
+                  </div>
+                  <div className="border border-gray-200 rounded-xl p-2.5 bg-gray-50">
+                    <p className="text-[9px] font-bold text-gray-500 uppercase mb-1.5">Option 2 — Your Manual Decision</p>
+                    <div className="flex gap-2">
+                      <button onClick={() => handleBuyerIdReview(sub.id, true)}
+                        className={`flex-1 py-1.5 rounded-full text-white text-[10px] font-semibold ${sub.avs_status === "mismatch" ? "bg-red-300" : "bg-chs-red"}`}>
+                        {sub.avs_status === "match" ? "✓ Approve" : "Approve"}
+                      </button>
+                      <button onClick={() => handleBuyerIdReview(sub.id, false)}
+                        className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
@@ -4308,6 +4423,35 @@ function AdminDashboardInner() {
           </div>
         )}
 
+        {activeTab === "shortletbookings" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">
+              Real shortlet, hire, and event bookings genuinely go straight to the host to accept or decline — CHS does not gate this decision. This is a real, live view so you can see what&apos;s pending and step in if a host is genuinely slow to respond, not an approval queue.
+            </p>
+            {pendingShortletBookings.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real bookings currently awaiting a host decision.</p>
+            ) : (
+              pendingShortletBookings.map((b) => {
+                const daysWaiting = Math.floor((Date.now() - new Date(b.created_at).getTime()) / 86400000);
+                return (
+                  <div key={b.id} className={`rounded-xl border p-3 mb-2 ${daysWaiting >= 3 ? "bg-red-50 border-red-200" : "bg-[var(--zone-card)] border-gray-100"}`}>
+                    <div className="flex justify-between items-start">
+                      <p className="text-sm font-semibold text-chs-charcoal">{b.property_title}</p>
+                      {daysWaiting >= 3 && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-chs-red text-white">{daysWaiting}d, no host decision</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+                    <p className="text-[10px] text-gray-400 mb-1">Host: {b.host_name} · {b.host_phone}</p>
+                    <p className="text-sm font-bold text-chs-charcoal">{formatNaira(b.total_price)} — held in escrow</p>
+                    <p className="text-[9px] text-gray-400 mt-1">Requested {new Date(b.created_at).toLocaleString()}</p>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
         {activeTab === "marketplacemoderation" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
@@ -4483,7 +4627,60 @@ function AdminDashboardInner() {
                       <span className="font-semibold text-chs-charcoal">{formatNaira(amt as number)}</span>
                     </div>
                   ))}
+
+                  {/* Real, itemized list with a real date and time on
+                      every entry — the exact thing missing before,
+                      per direct, repeated client report. */}
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mt-3 mb-1">Every real, paid commission — with date &amp; time</p>
+                  {txLogData.platform_earnings.items.length === 0 ? (
+                    <p className="text-[10px] text-gray-400">None in this real date range.</p>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto space-y-1.5">
+                      {txLogData.platform_earnings.items.map((item) => (
+                        <div key={item.id} className="bg-[var(--zone-card)] rounded-lg px-2 py-1.5">
+                          <div className="flex justify-between">
+                            <span className="text-[11px] font-semibold text-chs-charcoal">{item.property_title || item.transaction_type.replace(/_/g, " ")}</span>
+                            <span className="text-[11px] font-bold text-chs-red">{formatNaira(item.commission_amount)}</span>
+                          </div>
+                          <p className="text-[9px] text-gray-500">
+                            {item.payer_name} ({item.payer_role}) · {item.commission_percentage}% of {formatNaira(item.base_amount)}
+                          </p>
+                          <p className="text-[9px] text-gray-400">
+                            {new Date(item.paid_at).toLocaleString()}{item.reference ? ` · ${item.reference}` : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
+
+                {/* Real, new visibility into invoiced-but-unpaid
+                    commissions — the exact real question the client
+                    asked about the Kakuri warehouse: this is genuinely
+                    still owed, not yet collected, and here is who owes
+                    it and since when. */}
+                {txLogData.platform_earnings.pending_items.length > 0 && (
+                  <div className="bg-amber-50 rounded-xl border-2 border-chs-amber p-3 mb-3">
+                    <p className="text-xs font-bold text-chs-amber-dark mb-1">⏳ Invoiced, Not Yet Paid</p>
+                    <p className="text-[10px] text-gray-500 mb-2">
+                      A real commission that has been billed but the payer has not yet settled — this is why it does not appear above. Nothing is wrong; they simply have not paid yet.
+                    </p>
+                    <div className="space-y-1.5">
+                      {txLogData.platform_earnings.pending_items.map((item) => (
+                        <div key={item.id} className="bg-white rounded-lg px-2 py-1.5">
+                          <div className="flex justify-between">
+                            <span className="text-[11px] font-semibold text-chs-charcoal">{item.property_title || item.transaction_type.replace(/_/g, " ")}</span>
+                            <span className="text-[11px] font-bold text-chs-amber-dark">{formatNaira(item.commission_amount)}</span>
+                          </div>
+                          <p className="text-[9px] text-gray-500">
+                            Owed by {item.payer_name} ({item.payer_role}) · {item.payer_phone}
+                          </p>
+                          <p className="text-[9px] text-gray-400">Invoiced {new Date(item.created_at).toLocaleString()}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="bg-[var(--zone-card)] rounded-xl p-3">
                   <p className="text-xs font-bold text-chs-charcoal mb-1">📣 Marketing & Subscriptions</p>
                   <div className="flex justify-between text-xs mb-0.5">

@@ -26,3 +26,8 @@
 -- The same principle could extend to shortlet guest-host messaging
 -- too, if wanted -- not yet built, and worth a direct answer on
 -- whether that's desired before doing it.
+--
+-- This describes the same real work as migration 331
+-- (tenancy_correspondence_oversight) plus its immediate security fix
+-- 332 — independent local notes for the same change. See 331/332 for
+-- the real, applied SQL.

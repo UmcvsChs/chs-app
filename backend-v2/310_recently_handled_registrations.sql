@@ -28,3 +28,7 @@
 -- function correctly returns every real, already-approved account,
 -- including the client's own just-verified buyer with the correct
 -- real document URL attached.
+--
+-- This describes the same real work as migration 309
+-- (recently_handled_registrations) — independent local notes for the
+-- same change. See 309 for the real, applied SQL.

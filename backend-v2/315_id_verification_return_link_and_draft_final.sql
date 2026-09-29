@@ -20,3 +20,8 @@
 -- the exact query the property page uses correctly returns the saved
 -- draft answers. Test data removed afterward; the real demo buyer
 -- reset again for a genuinely fresh test.
+--
+-- This describes the same real work as migration 314
+-- (id_verification_return_link_and_draft) — an independent local note
+-- for the same change, written under a slightly different name
+-- ("_final"). See 314 for the real, applied SQL.

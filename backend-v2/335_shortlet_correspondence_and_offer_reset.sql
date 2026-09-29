@@ -16,3 +16,9 @@
 -- test), confirmed zero messages remain, and confirmed the offer
 -- itself is still correctly in its rejected state, ready for a
 -- genuinely clean, complete test of reply through to admin approval.
+--
+-- The correspondence-overview function itself describes the same
+-- real work as migration 334 (shortlet_correspondence_oversight) —
+-- see that file for the real, applied SQL. The Lekki offer reset was
+-- a one-off data operation on a specific test record, not a
+-- repeatable migration, so there is no further real SQL to add here.

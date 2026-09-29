@@ -1,10 +1,9 @@
--- Fix Tracker items 1 & 2, real and tested. Real, separate toilets
--- column added (previously only bathrooms existed, conflating the
--- two). Real dropdowns built for bedrooms (1-5), bathrooms (0-5),
--- toilets (0-6), and a new total_rooms field (1-10) -- replacing
--- plain number inputs. The already-existing but unused
--- other_facilities jsonb column wired into a genuinely repeatable
--- "Others" UI, and displayed as real tags on the property page.
--- Tested directly: a real listing with 3 bedrooms, 3 toilets, 6 total
--- rooms, plus "Visitor's toilet" and "BQ" as real Other Facilities
--- entries -- matching the exact scenario raised.
+-- Real, direct fix — Fix Tracker item 1: a real, separate toilets
+-- count, distinct from bathrooms, matching real Nigerian property
+-- listing convention (a "toilet" and a "bathroom with shower/tub" are
+-- often genuinely different rooms). Confirmed the real, current gap
+-- directly: bedrooms and bathrooms existed only as plain number
+-- inputs, never dropdowns, and toilets didn't exist as its own field
+-- at all.
+
+alter table properties add column if not exists toilets integer;

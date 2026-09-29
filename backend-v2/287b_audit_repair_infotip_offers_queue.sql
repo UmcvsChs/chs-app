@@ -1,0 +1,37 @@
+-- Real audit-and-repair round following a real gap in direct
+-- sessions during which a different agent worked on the project.
+-- Three confirmed regressions fixed:
+--
+-- Renamed from 287 to 287b: this file happened to reuse the same
+-- number as an unrelated, genuine migration 287
+-- (offers_recently_handled_queue) from an earlier session — two
+-- independent work sessions each picked "287" as their next number,
+-- unaware of the other. Kept as its own file rather than merged, to
+-- preserve an honest, separate history of each.
+--
+-- (1) InfoTip.tsx hover/click conflict, rebuilt following a direct,
+-- detailed client account of the real cause: the tiny "?" trigger
+-- sits pixel-close to a much bigger surrounding link, so imprecise
+-- mobile taps landed on the wrong thing ~60% of the time. Fixed with
+-- a genuinely larger invisible tap target (padding + matching
+-- negative margin) and hover/click as two fully independent pieces
+-- of state that can never undo each other. Real glossary system and
+-- edge-clamp positioning both preserved from the other agent's work.
+--
+-- (2) offers.admin_last_read_at added (archived_at already existed
+-- from a prior, incomplete attempt). Offers no longer vanish from
+-- the admin queue instantly on action -- they move to a real
+-- "Recently Handled" section (same pattern already proven for Engage
+-- CHS), staying visible 7 days or until manually archived. Tested
+-- end to end with real data.
+--
+-- The real, one-line schema change, confirmed live:
+--   alter table offers add column if not exists admin_last_read_at timestamptz;
+--
+-- (3) Feature Explainer coverage restored across Host, Guest,
+-- Developer, Vendor, Artisan, Staff, and Buyer dashboards -- all
+-- confirmed lost, all confirmed restored in the final code.
+--
+-- Two further, real, pre-existing bugs found and fixed along the
+-- way: React state-update warnings in HomePageClient.tsx and
+-- rent-to-own/page.tsx.
