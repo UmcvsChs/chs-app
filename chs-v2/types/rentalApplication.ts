@@ -22,6 +22,13 @@ export interface RentalApplication {
   guarantor_address_proof_type: string | null;
   guarantor_address_proof_date: string | null;
   guarantor_confirmed_at: string | null;
+  guarantor_signature_full_name?: string | null;
+  guarantor_avs_status?: "not_run" | "running" | "match" | "mismatch" | "error" | null;
+  guarantor_avs_extracted_name?: string | null;
+  guarantor_avs_extracted_id_number?: string | null;
+  guarantor_avs_name_match?: boolean | null;
+  guarantor_avs_id_number_match?: boolean | null;
+  guarantor_avs_notes?: string | null;
   owner_decision: "approved" | "owner_declined" | null;
   applicant_full_name: string | null;
   applicant_phone: string | null;

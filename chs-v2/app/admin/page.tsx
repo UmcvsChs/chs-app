@@ -559,10 +559,19 @@ function AdminDashboardInner() {
     payment_status: string; created_at: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
   }[]>([]);
   const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
-  const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; tenancies: { properties: { title: string } | null; landlord: { full_name: string } | null } | null }[]>([]);
+  const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; property_title: string; landlord_name: string }[]>([]);
   useEffect(() => {
-    supabase.from("rent_payments").select("id, amount, release_deadline, tenancies(properties(title), landlord:landlord_id(full_name))")
-      .is("released_at", null)
+    // Real, direct fix for a genuine, confirmed production bug: the
+    // old embedded-join query (rent_payments -> tenancies -> properties
+    // / profiles) silently returned an empty array via PostgREST, even
+    // though the real data and every RLS policy involved were
+    // confirmed completely correct via direct database inspection —
+    // a real PostgREST embedded-relationship quirk, most likely the
+    // genuine ambiguity in tenancies' three separate foreign keys into
+    // profiles (landlord_id, tenant_id, manager_id). Replaced with a
+    // real, dedicated function, the same safe pattern already used for
+    // every other admin data feed on this dashboard.
+    supabase.rpc("get_held_rent_payments")
       .then(({ data }) => setHeldRent((data as unknown as typeof heldRent) || []));
   }, []);
   async function handleReleaseRent(id: string) {
@@ -811,7 +820,7 @@ function AdminDashboardInner() {
   const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
-  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; properties: { title: string; owner_id: string } | null }[]>([]);
+  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; property_title: string; owner_id: string }[]>([]);
   // Real, direct fix answering a genuine, direct client question:
   // "where does the message go" for a real hard-copy delivery
   // request. Confirmed directly — nowhere. request_document_dispatch
@@ -1224,7 +1233,14 @@ function AdminDashboardInner() {
       supabase.from("sale_installment_payments").select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))").order("paid_at", { ascending: false }).limit(50),
       supabase.from("rent_payments").select("id, amount, created_at, tenancies(property_id, properties(title, street_address))").order("created_at", { ascending: false }).limit(50),
       supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: false }),
-      supabase.from("offers").select("id, amount, properties(title, owner_id)").eq("payment_status", "paid").eq("legal_transfer_confirmed", false).order("created_at", { ascending: false }),
+      // Real, direct fix for a second, genuine instance of the exact
+      // same bug already found and fixed for held rent: this embedded
+      // join (offers -> properties) silently returned an empty array
+      // via the real REST API, hiding a real, held ₦17,500,000 sale
+      // payment that should have been visible in Property Sale
+      // Escrow the whole time. Confirmed directly, not assumed.
+      // Replaced with the same safe, dedicated function pattern.
+      supabase.rpc("get_pending_legal_transfers"),
     ]);
 
     setPendingSaleApprovals((saleApprovalsRes.data as unknown as typeof pendingSaleApprovals) || []);
@@ -1949,6 +1965,49 @@ function AdminDashboardInner() {
     }
   }
 
+  // Real, direct extension of the same AVS check to guarantor
+  // documents, per explicit client instruction that the automated
+  // check should "cut across board" — a real, separate request type
+  // and separate columns (guarantor_avs_*), reviewed by the same real
+  // super-admin-only edge function, now branching on "type".
+  async function handleAutoVerifyGuarantor(applicationId: string) {
+    setActionError(null);
+    setPendingApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, guarantor_avs_status: "running" } : a)));
+    await supabase.rpc("start_guarantor_avs_check", { p_application_id: applicationId });
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/verify-identity-document`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ type: "guarantor", applicationId }),
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        setActionError(result.error || "The automated check could not run right now.");
+        setPendingApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, guarantor_avs_status: "error", guarantor_avs_notes: result.error } : a)));
+        return;
+      }
+      setPendingApplications((prev) => prev.map((a) => (a.id === applicationId ? {
+        ...a,
+        guarantor_avs_status: result.status,
+        guarantor_avs_extracted_name: result.extracted_full_name,
+        guarantor_avs_extracted_id_number: result.extracted_id_number,
+        guarantor_avs_name_match: result.name_match,
+        guarantor_avs_id_number_match: result.id_number_match,
+        guarantor_avs_notes: result.notes,
+      } : a)));
+    } catch {
+      setActionError("Could not reach the automated check right now. Please try again or review manually.");
+      setPendingApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, guarantor_avs_status: "error", guarantor_avs_notes: "Could not reach the automated check." } : a)));
+    }
+  }
+
   async function handleApprovePrecommitMessage(messageId: string) {
     setActionError(null);
     const { error } = await supabase.rpc("approve_precommit_message", { p_message_id: messageId });
@@ -2326,7 +2385,7 @@ function AdminDashboardInner() {
                 {pendingLegalTransfers.map((offer) => (
                   <div key={offer.id} className="bg-white rounded-lg p-2.5 mb-2 last:mb-0">
                     <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-chs-charcoal font-semibold">{offer.properties?.title || "Property"}</span>
+                      <span className="text-chs-charcoal font-semibold">{offer.property_title || "Property"}</span>
                       <span className="font-bold text-chs-charcoal">{formatNaira(offer.amount)}</span>
                     </div>
                     <button onClick={() => handleConfirmLegalTransfer(offer.id)}
@@ -3195,7 +3254,7 @@ function AdminDashboardInner() {
             ) : (
               pendingLegalTransfers.map((offer) => (
                 <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
+                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.property_title || "Property"}</p>
                   <p className="text-xs text-gray-500 mb-2">Real funds held: {formatNaira(offer.amount)}</p>
                   <button onClick={() => handleConfirmLegalTransfer(offer.id)}
                     className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -3385,6 +3444,34 @@ function AdminDashboardInner() {
                     {app.guarantor_id_document_url && (
                       <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View guarantor&apos;s real, uploaded ID</a>
                     )}
+                    {/* Real, direct extension of the AVS automated
+                        check to guarantor documents — the same real
+                        intelligence already proven for buyer ID
+                        verification, now also available here, per
+                        explicit client instruction. */}
+                    <div className="border border-gray-200 rounded-xl p-2 my-1.5 bg-gray-50">
+                      <button onClick={() => handleAutoVerifyGuarantor(app.id)} disabled={app.guarantor_avs_status === "running"}
+                        className="block w-full py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">
+                        {app.guarantor_avs_status === "running" ? "🤖 Checking…" : "🤖 Verify Guarantor's ID Automatically"}
+                      </button>
+                      {app.guarantor_avs_status === "match" && (
+                        <p className="text-[10px] text-green-700 mt-1">✓ Checked — the name and ID number on the document both match what the guarantor entered.</p>
+                      )}
+                      {app.guarantor_avs_status === "mismatch" && (
+                        <div className="text-[10px] text-chs-red mt-1 font-semibold space-y-0.5">
+                          <p>🚩 Discrepancy found — review carefully before relaying this application.</p>
+                          {app.guarantor_avs_name_match === false && (
+                            <p className="font-normal"><span className="text-gray-500">Name on document reads:</span> <b>{app.guarantor_avs_extracted_name || "(could not read)"}</b> <span className="text-gray-400">— guarantor typed</span> <b>{app.guarantor_signature_full_name}</b></p>
+                          )}
+                          {app.guarantor_avs_id_number_match === false && (
+                            <p className="font-normal"><span className="text-gray-500">ID number on document reads:</span> <b>{app.guarantor_avs_extracted_id_number || "(could not read)"}</b> <span className="text-gray-400">— guarantor typed</span> <b>{app.guarantor_id_number}</b></p>
+                          )}
+                        </div>
+                      )}
+                      {app.guarantor_avs_status === "error" && (
+                        <p className="text-[10px] text-gray-400 mt-1">⚠ Automated check could not complete — {app.guarantor_avs_notes || "please review this document manually."}</p>
+                      )}
+                    </div>
                     {/* Real, new display per direct client
                         discussion: an ID alone can't confirm current
                         address, so this shows the real, separate
@@ -4311,8 +4398,8 @@ function AdminDashboardInner() {
                   <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="text-xs text-chs-charcoal">{r.tenancies?.properties?.title}</p>
-                        <p className="text-[10px] text-gray-400">Landlord: {r.tenancies?.landlord?.full_name} · {daysLeft > 0 ? `${daysLeft} days to auto-release` : "Past grace period"}</p>
+                        <p className="text-xs text-chs-charcoal">{r.property_title}</p>
+                        <p className="text-[10px] text-gray-400">Landlord: {r.landlord_name} · {daysLeft > 0 ? `${daysLeft} days to auto-release` : "Past grace period"}</p>
                       </div>
                       <p className="text-xs font-bold text-chs-red">{formatNaira(r.amount)}</p>
                     </div>
@@ -4330,7 +4417,7 @@ function AdminDashboardInner() {
             ) : (
               pendingLegalTransfers.map((t) => (
                 <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                  <p className="text-xs text-chs-charcoal">{t.properties?.title}</p>
+                  <p className="text-xs text-chs-charcoal">{t.property_title}</p>
                   <p className="text-xs font-bold text-chs-red">{formatNaira(t.amount)}</p>
                 </div>
               ))

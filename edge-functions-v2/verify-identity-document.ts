@@ -1,22 +1,34 @@
 // CHS Edge Function: verify-identity-document
 //
-// Phase 1 of the AVS (Automated Verification System) discussed
-// directly with the client: an automated first-pass check on an ID
-// verification submission, reading the actual uploaded document image
-// with Claude's real vision capability and comparing what is printed
-// on it against what the applicant typed on the form (full name, ID
-// number). This is a text-matching check only -- it does not, and
-// cannot, confirm the ID itself is genuine, that it belongs to the
-// person who submitted it, or that a submitted face matches the
-// person on the document. That is a fundamentally different,
-// biometric/government-database problem, deliberately scoped out of
-// this phase and discussed directly with the client as Phase 2,
-// requiring a licensed third-party provider (Dojah / VerifyMe /
-// Youverify) and a separate real cost decision.
+// Phase 1 of the AVS (Automated Verification System): an automated
+// first-pass check reading an uploaded document image with Claude's
+// real vision capability, comparing what is printed on it against
+// what was typed on the form (full name, ID number). This is a
+// text-matching check only -- it does not, and cannot, confirm the
+// document is genuine, that it belongs to the person who submitted
+// it, or that a submitted face matches the person on the document.
+// That is a fundamentally different, biometric/government-database
+// problem, deliberately scoped out of this phase (Phase 2, a licensed
+// third-party provider, a separate real cost decision).
 //
-// Admin-only. Requires ANTHROPIC_API_KEY to be set as a real Supabase
-// secret -- this function cannot run without it, and fails with a
-// clear, honest error rather than silently pretending to work.
+// Real, direct extension per explicit client instruction ("the
+// intelligence built for ID verification does not cut across board"):
+// now covers two real, separate verification types -- a real buyer's
+// own ID (buyer_id_verifications) and a real rental guarantor's ID
+// (rental_applications) -- selected by the real "type" field in the
+// request body. Both write to their own, separate real columns; a
+// guarantor check never touches buyer_id_verifications and vice
+// versa.
+//
+// Super-admin-only for both types, correcting a real gap found while
+// building this: the database side was already restricted to the
+// super admin (migration 416), but this edge function's own internal
+// check had never been updated to match -- it still checked the old,
+// wider staff domain. Fixed here, for both verification types.
+//
+// Requires ANTHROPIC_API_KEY to be set as a real Supabase secret --
+// this function cannot run without it, and fails with a clear, honest
+// error rather than silently pretending to work.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -34,11 +46,6 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-// Real, deliberately forgiving normalization -- the same real
-// philosophy as the platform's own chs_enforce_formats trigger:
-// strip whitespace/punctuation noise before comparing, so a genuinely
-// matching value formatted slightly differently (extra space, a
-// hyphen) is not wrongly flagged as a mismatch.
 function normalizeName(s: string | null | undefined): string {
   return (s || '').toLowerCase().replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim()
 }
@@ -46,10 +53,6 @@ function normalizeIdNumber(s: string | null | undefined): string {
   return (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
-// A real, deliberately forgiving name match: every real word in the
-// shorter name must appear in the longer one. This tolerates a
-// missing middle name (very common between a registered name and a
-// printed ID) without tolerating a genuinely different name.
 function namesLikelyMatch(a: string, b: string): boolean {
   if (!a || !b) return false
   const wordsA = a.split(' ').filter(Boolean)
@@ -58,6 +61,8 @@ function namesLikelyMatch(a: string, b: string): boolean {
   if (shorter.length === 0) return false
   return shorter.every((w) => longer.includes(w))
 }
+
+type CheckType = 'buyer_id' | 'guarantor'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -70,9 +75,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'You must be signed in.' }, 401)
     }
 
-    // Real caller check, using the caller's own session -- not a
-    // blanket service-role bypass. Only real CHS registration staff
-    // (or a super admin) may trigger this.
     const callerClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -82,48 +84,85 @@ Deno.serve(async (req) => {
     if (userError || !userData?.user) {
       return jsonResponse({ error: 'Your sign-in could not be verified.' }, 401)
     }
-    const { data: canAccess, error: accessError } = await callerClient.rpc('staff_can_access', { p_domain: 'registration_setup' })
-    if (accessError || !canAccess) {
-      return jsonResponse({ error: 'Not authorised: ID verification is reviewed by CHS registration staff only.' }, 403)
+
+    // Real, corrected check -- super admin only, for both real
+    // verification types, matching the database-level restriction.
+    const adminClientForCheck = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+    const { data: callerProfile } = await adminClientForCheck
+      .from('profiles')
+      .select('is_super_admin')
+      .eq('id', userData.user.id)
+      .single()
+    if (!callerProfile?.is_super_admin) {
+      return jsonResponse({ error: 'Not authorised: identity documents are reviewed by the super admin only.' }, 403)
     }
 
-    const { verificationId } = await req.json()
-    if (!verificationId) {
-      return jsonResponse({ error: 'A real verification ID is required.' }, 400)
+    const body = await req.json()
+    const checkType: CheckType = body.type === 'guarantor' ? 'guarantor' : 'buyer_id'
+    const recordId: string | undefined = checkType === 'guarantor' ? body.applicationId : body.verificationId
+    if (!recordId) {
+      return jsonResponse({ error: 'A real record ID is required.' }, 400)
     }
 
     const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
     if (!anthropicKey) {
-      // Real, honest failure -- never pretend a check ran when the
-      // one real ingredient it depends on was never configured.
       return jsonResponse({ error: 'Automated verification is not yet configured — an ANTHROPIC_API_KEY secret has not been set for this project. Contact your developer to add one before this button will work.' }, 500)
     }
 
-    // Service-role client for the real, privileged parts: reading the
-    // private document and writing the result back.
-    const adminClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    const adminClient = adminClientForCheck
 
-    const { data: sub, error: subError } = await adminClient
-      .from('buyer_id_verifications')
-      .select('id, id_document_url, full_name_on_id, id_number, id_type')
-      .eq('id', verificationId)
-      .single()
+    let submittedName: string | null = null
+    let submittedIdNumber: string | null = null
+    let documentUrl: string | null = null
 
-    if (subError || !sub) {
-      return jsonResponse({ error: 'This verification submission could not be found.' }, 404)
+    if (checkType === 'buyer_id') {
+      const { data: sub, error: subError } = await adminClient
+        .from('buyer_id_verifications')
+        .select('id, id_document_url, full_name_on_id, id_number')
+        .eq('id', recordId)
+        .single()
+      if (subError || !sub) {
+        return jsonResponse({ error: 'This verification submission could not be found.' }, 404)
+      }
+      submittedName = sub.full_name_on_id
+      submittedIdNumber = sub.id_number
+      documentUrl = sub.id_document_url
+    } else {
+      const { data: app, error: appError } = await adminClient
+        .from('rental_applications')
+        .select('id, guarantor_id_document_url, guarantor_signature_full_name, guarantor_id_number')
+        .eq('id', recordId)
+        .single()
+      if (appError || !app) {
+        return jsonResponse({ error: 'This rental application could not be found.' }, 404)
+      }
+      submittedName = app.guarantor_signature_full_name
+      submittedIdNumber = app.guarantor_id_number
+      documentUrl = app.guarantor_id_document_url
     }
-    if (!sub.id_document_url) {
+
+    if (!documentUrl) {
       return jsonResponse({ error: 'This submission has no real document image to check.' }, 400)
     }
 
-    // Extract the real storage path from the stored URL (the same
-    // real pattern lib/storage.ts already uses on the frontend) and
-    // download the actual file directly, bypassing the fragility of
-    // any previously-generated signed URL.
-    const pathMatch = sub.id_document_url.match(/private-documents\/(.+?)(?:\?|$)/)
+    async function recordResult(status: string, extractedName: string | null, extractedIdNumber: string | null, nameMatch: boolean | null, idNumberMatch: boolean | null, notes: string | null) {
+      if (checkType === 'buyer_id') {
+        await adminClient.rpc('record_avs_result', {
+          p_verification_id: recordId, p_status: status, p_extracted_name: extractedName, p_extracted_id_number: extractedIdNumber,
+          p_name_match: nameMatch, p_id_number_match: idNumberMatch, p_notes: notes,
+        })
+      } else {
+        await adminClient.rpc('record_guarantor_avs_result', {
+          p_application_id: recordId, p_status: status, p_extracted_name: extractedName, p_extracted_id_number: extractedIdNumber,
+          p_name_match: nameMatch, p_id_number_match: idNumberMatch, p_notes: notes,
+        })
+      }
+    }
+
+    const pathMatch = documentUrl.match(/private-documents\/(.+?)(?:\?|$)/)
     if (!pathMatch) {
       return jsonResponse({ error: 'Could not locate the real document file for this submission.' }, 400)
     }
@@ -133,23 +172,15 @@ Deno.serve(async (req) => {
       .from('private-documents')
       .download(filePath)
     if (downloadError || !fileBlob) {
-      await adminClient.rpc('record_avs_result', {
-        p_verification_id: verificationId, p_status: 'error', p_extracted_name: null, p_extracted_id_number: null,
-        p_name_match: null, p_id_number_match: null, p_notes: 'Could not download the real document file to check it.',
-      })
+      await recordResult('error', null, null, null, null, 'Could not download the real document file to check it.')
       return jsonResponse({ error: 'Could not download the real document file to check it.' }, 500)
     }
 
     const isPdf = filePath.toLowerCase().endsWith('.pdf')
     if (isPdf) {
-      // A PDF cannot be read as an image by the vision call directly.
-      // Rather than fail silently, this is recorded as a real,
-      // honest outcome an admin can see, not a false negative.
-      await adminClient.rpc('record_avs_result', {
-        p_verification_id: verificationId, p_status: 'error', p_extracted_name: null, p_extracted_id_number: null,
-        p_name_match: null, p_id_number_match: null, p_notes: 'This submission is a PDF, not an image — automated reading is not yet supported for PDFs. Please review it manually.',
-      })
-      return jsonResponse({ status: 'error', notes: 'This submission is a PDF, not an image — automated reading is not yet supported for PDFs. Please review it manually.' })
+      const note = 'This submission is a PDF, not an image — automated reading is not yet supported for PDFs. Please review it manually.'
+      await recordResult('error', null, null, null, null, note)
+      return jsonResponse({ status: 'error', notes: note })
     }
 
     const arrayBuffer = await fileBlob.arrayBuffer()
@@ -191,10 +222,7 @@ Return ONLY a JSON object, no other text, in exactly this shape:
 
     if (!anthropicRes.ok) {
       const errText = await anthropicRes.text()
-      await adminClient.rpc('record_avs_result', {
-        p_verification_id: verificationId, p_status: 'error', p_extracted_name: null, p_extracted_id_number: null,
-        p_name_match: null, p_id_number_match: null, p_notes: 'The automated check could not run right now. Please review this manually or try again shortly.',
-      })
+      await recordResult('error', null, null, null, null, 'The automated check could not run right now. Please review this manually or try again shortly.')
       console.error('Anthropic API error:', errText)
       return jsonResponse({ error: 'The automated check could not run right now. Please review this manually or try again shortly.' }, 502)
     }
@@ -206,33 +234,22 @@ Return ONLY a JSON object, no other text, in exactly this shape:
       const raw = (textBlock?.text || '').trim().replace(/^```json\s*|\s*```$/g, '')
       parsed = JSON.parse(raw)
     } catch {
-      await adminClient.rpc('record_avs_result', {
-        p_verification_id: verificationId, p_status: 'error', p_extracted_name: null, p_extracted_id_number: null,
-        p_name_match: null, p_id_number_match: null, p_notes: 'Could not read a clear result from the automated check. Please review this manually.',
-      })
+      await recordResult('error', null, null, null, null, 'Could not read a clear result from the automated check. Please review this manually.')
       return jsonResponse({ error: 'Could not read a clear result from the automated check. Please review this manually.' }, 500)
     }
 
     const nameMatch = parsed.extracted_full_name
-      ? namesLikelyMatch(normalizeName(parsed.extracted_full_name), normalizeName(sub.full_name_on_id))
+      ? namesLikelyMatch(normalizeName(parsed.extracted_full_name), normalizeName(submittedName))
       : null
     const idNumberMatch = parsed.extracted_id_number
-      ? normalizeIdNumber(parsed.extracted_id_number) === normalizeIdNumber(sub.id_number)
+      ? normalizeIdNumber(parsed.extracted_id_number) === normalizeIdNumber(submittedIdNumber)
       : null
 
     const genuinelyClean = parsed.document_looks_genuine && nameMatch === true && idNumberMatch === true
     const anyMismatch = nameMatch === false || idNumberMatch === false || parsed.document_looks_genuine === false
     const status = genuinelyClean ? 'match' : (anyMismatch ? 'mismatch' : 'error')
 
-    await adminClient.rpc('record_avs_result', {
-      p_verification_id: verificationId,
-      p_status: status,
-      p_extracted_name: parsed.extracted_full_name,
-      p_extracted_id_number: parsed.extracted_id_number,
-      p_name_match: nameMatch,
-      p_id_number_match: idNumberMatch,
-      p_notes: parsed.notes || null,
-    })
+    await recordResult(status, parsed.extracted_full_name, parsed.extracted_id_number, nameMatch, idNumberMatch, parsed.notes || null)
 
     return jsonResponse({
       status,
