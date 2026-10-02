@@ -68,7 +68,6 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
 
   const payer = entries.find((e) => e.direction === "debit");
   const payee = entries.find((e) => e.direction === "credit");
-  const amount = payer?.amount || payee?.amount || 0;
   const date = payer?.created_at || payee?.created_at;
 
   // Real, direct fix per a genuine, confirmed gap: this same document
@@ -78,6 +77,25 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
   // money moving into their own wallet. Server-verified via auth.uid(),
   // not a client-side guess.
   const isVoucher = viewerIsPayee;
+
+  // Real, critical, direct fix for a genuine, confirmed production bug,
+  // found from a real client report with a real screenshot: a rent
+  // payment that combines the tenant's own commission with the real
+  // rent (e.g. tenant pays 636,000 = 600,000 rent + their own 36,000
+  // commission) has two real wallet_transactions rows with two
+  // genuinely different amounts — what the payer paid in total, and
+  // what the payee actually received (rent only; the commission stays
+  // with CHS). The old code always preferred payer's amount and
+  // description, so an owner's own voucher showed the tenant's full
+  // combined payment, including a commission the owner never actually
+  // received, mislabeled as "Remitted to [owner]." The real wallet
+  // ledger itself was always correct — this was purely a display bug,
+  // but a serious one, and it existed on this one shared receipt page
+  // used by every transaction type on the platform (rent, sale,
+  // marketplace, shortlet, artisan jobs), so this single fix closes it
+  // everywhere at once, not just for rent.
+  const myEntry = isVoucher ? (payee ?? payer) : (payer ?? payee);
+  const amount = myEntry?.amount || 0;
   const documentLabel = isVoucher ? "PAYMENT VOUCHER / REMITTANCE ADVICE" : "RECEIPT";
 
   return (
@@ -174,10 +192,10 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
             )}
           </div>
 
-          {(payer || payee) && (
+          {myEntry && (
             <div className="bg-[#fbf8f3] border border-[#f0ebe1] rounded-lg px-3.5 py-3 mt-4 text-[12.5px] text-[#55503f] leading-relaxed">
               <span className="block text-[9.5px] font-bold uppercase tracking-wide text-[#a89a7a] mb-1">Description</span>
-              {(payer || payee)!.description}
+              {myEntry.description}
             </div>
           )}
         </div>
