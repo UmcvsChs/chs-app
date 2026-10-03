@@ -65,7 +65,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -298,6 +298,28 @@ function AdminDashboardInner() {
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
   const [pendingShortletBookings, setPendingShortletBookings] = useState<{ id: string; status: string; payment_status: string; total_price: number; check_in: string; check_out: string; guest_full_name: string; guest_phone: string; created_at: string; property_title: string; host_name: string; host_phone: string }[]>([]);
+  // Real, new feature per direct client request: a real buyer accepted
+  // an offer and simply never paid, with no real way for admin to see
+  // it, remind them, or free the property back up — exactly the real,
+  // 25-day-old Lekki land deal that prompted this. Tested directly
+  // against that real deal before being trusted.
+  const [stalePendingOffers, setStalePendingOffers] = useState<{ id: string; amount: number; pending_since: string; days_pending: number; property_title: string; property_id: string; buyer_name: string; buyer_phone: string; seller_name: string; seller_phone: string }[]>([]);
+  const [staleOfferReasons, setStaleOfferReasons] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.rpc("get_stale_pending_offers", { p_grace_days: 7 })
+      .then(({ data }) => setStalePendingOffers((data as unknown as typeof stalePendingOffers) || []));
+  }, []);
+  async function handleSendStaleReminder(offerId: string) {
+    await supabase.rpc("send_offer_payment_reminder", { p_offer_id: offerId });
+    setActionError(null);
+  }
+  async function handleReleaseStaleOffer(offerId: string) {
+    const reason = (staleOfferReasons[offerId] || "").trim();
+    if (!reason) { setActionError("Please state a real reason before releasing this offer."); return; }
+    const { error } = await supabase.rpc("release_stale_offer", { p_offer_id: offerId, p_reason: reason });
+    if (error) { setActionError(error.message); return; }
+    setStalePendingOffers((prev) => prev.filter((o) => o.id !== offerId));
+  }
   // Real, direct fix per explicit, repeated client feedback: nothing
   // an admin acts on should vanish — it should move here, stay fully
   // re-viewable, and only ever leave when admin deliberately archives
@@ -445,7 +467,7 @@ function AdminDashboardInner() {
   const [tenantRegisterLoading, setTenantRegisterLoading] = useState(false);
   const [heldDeposits, setHeldDeposits] = useState<{
     id: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
-    security_deposit_amount: number; properties: { title: string; owner_id: string }[] | null;
+    security_deposit_amount: number; property_title: string; owner_id: string;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
   const [pendingOfferReview, setPendingOfferReview] = useState<{
@@ -556,7 +578,7 @@ function AdminDashboardInner() {
   const [marketplaceQueue, setMarketplaceQueue] = useState<{
     id: string; reference_number: string; property_details: string; moderation_status: string;
     vendor_response: string | null; response_moderation_status: string | null; quoted_amount: number | null;
-    payment_status: string; created_at: string; marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
+    payment_status: string; created_at: string; product_name: string | null; vendor_name: string | null;
   }[]>([]);
   const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
   const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; property_title: string; landlord_name: string }[]>([]);
@@ -580,9 +602,15 @@ function AdminDashboardInner() {
   }
 
   useEffect(() => {
-    supabase.from("service_quote_requests")
-      .select("id, reference_number, property_details, moderation_status, vendor_response, response_moderation_status, quoted_amount, payment_status, created_at, marketplace_products(name, marketplace_vendors(business_name))")
-      .or("moderation_status.eq.pending_review,response_moderation_status.eq.pending_review,payment_status.eq.held_escrow")
+    // Real, direct fix for the same class of bug already found and
+    // fixed for held rent and sale escrow: this embedded join
+    // (service_quote_requests -> marketplace_products -> marketplace_
+    // vendors) carried the same real structural risk — and unlike
+    // the other two, this one drives real moderation actions, not
+    // just a read-only display. Replaced with a real, dedicated
+    // function, tested directly with real inserted test data before
+    // being trusted, not assumed safe from code inspection alone.
+    supabase.rpc("get_marketplace_queue")
       .then(({ data }) => setMarketplaceQueue((data as unknown as typeof marketplaceQueue) || []));
   }, []);
 
@@ -614,14 +642,15 @@ function AdminDashboardInner() {
   // confirmed release or refund before any money moves again.
   const [directOrderQueue, setDirectOrderQueue] = useState<{
     id: string; reference_number: string; amount: number; payment_status: string;
-    marketplace_products: { name: string; marketplace_vendors: { business_name: string }[] }[] | null;
+    product_name: string | null; vendor_name: string | null;
   }[]>([]);
   const [directOrderReasons, setDirectOrderReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    supabase.from("marketplace_direct_orders")
-      .select("id, reference_number, amount, payment_status, marketplace_products(name, marketplace_vendors(business_name))")
-      .eq("payment_status", "held_escrow")
+    // Real, direct fix for a third, related instance of the same
+    // embedded-join bug found auditing rent, sale, and the marketplace
+    // quote queue. Tested directly with real inserted test data.
+    supabase.rpc("get_direct_order_queue")
       .then(({ data }) => setDirectOrderQueue((data as unknown as typeof directOrderQueue) || []));
   }, []);
 
@@ -646,9 +675,12 @@ function AdminDashboardInner() {
   // CHS-mediated pattern used everywhere else: a claim isn't just the
   // host's word against the guest's.
   useEffect(() => {
-    supabase.from("shortlet_bookings")
-      .select("id, guest_full_name, guest_phone, check_in, check_out, security_deposit_amount, properties(title, owner_id)")
-      .eq("security_deposit_status", "held")
+    // Real, direct fix for the same class of bug already found and
+    // fixed for held rent, sale escrow, and the marketplace queue:
+    // this embedded join (shortlet_bookings -> properties) carried
+    // the same real structural risk. Replaced with a real, dedicated
+    // function, tested directly with real inserted test data.
+    supabase.rpc("get_held_shortlet_deposits")
       .then(({ data }) => setHeldDeposits((data as unknown as typeof heldDeposits) || []));
   }, []);
 
@@ -2190,6 +2222,7 @@ function AdminDashboardInner() {
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletbookings", label: `Shortlet/Hire Bookings (${pendingShortletBookings.length})`, domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "staleoffers", label: `⚠️ Pending/Inconclusive Deals (${stalePendingOffers.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
           { key: "registrations", label: `Registrations (${pendingRegistrationsFull.length})`, domain: "registration_setup", group: "Verification" },
@@ -2241,7 +2274,12 @@ function AdminDashboardInner() {
           <button
             onClick={() => setActiveTab(tab.key)}
             className={`text-xs font-semibold px-3 py-3 border-b-2 whitespace-nowrap ${
-              activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
+              /* Real, direct request: a real deal that's gone stale
+                 should always show as a red alert in the sidebar
+                 itself, not just once you're already inside the tab. */
+              tab.key === "staleoffers" && stalePendingOffers.length > 0
+                ? "border-chs-red text-chs-red bg-red-50 rounded-t-lg"
+                : activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
             }`}
           >
             {tab.label}
@@ -4429,7 +4467,7 @@ function AdminDashboardInner() {
             ) : (
               marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => (
                 <div key={q.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                  <p className="text-xs text-chs-charcoal">{q.marketplace_products?.[0]?.name || "Marketplace order"}</p>
+                  <p className="text-xs text-chs-charcoal">{q.product_name || "Marketplace order"}</p>
                   <p className="text-xs font-bold text-chs-red">{formatNaira(q.quoted_amount || 0)}</p>
                 </div>
               ))
@@ -4442,7 +4480,7 @@ function AdminDashboardInner() {
               <>
                 {heldDeposits.map((d) => (
                   <div key={`s-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                    <p className="text-xs text-chs-charcoal">Booking — {d.properties?.[0]?.title}</p>
+                    <p className="text-xs text-chs-charcoal">Booking — {d.property_title}</p>
                     <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
                   </div>
                 ))}
@@ -4484,7 +4522,7 @@ function AdminDashboardInner() {
             ) : (
               heldDeposits.map((d) => (
                 <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">{d.properties?.[0]?.title || "Property"}</p>
+                  <p className="text-sm font-semibold text-chs-charcoal">{d.property_title || "Property"}</p>
                   <p className="text-xs text-gray-500">{d.guest_full_name} · {d.guest_phone} · {d.check_in} → {d.check_out}</p>
                   <p className="text-sm font-bold text-chs-charcoal mt-1">Real deposit held: {formatNaira(d.security_deposit_amount)}</p>
                   <input
@@ -4539,6 +4577,48 @@ function AdminDashboardInner() {
           </div>
         )}
 
+        {activeTab === "staleoffers" && (
+          <div>
+            <p className="text-xs text-gray-500 mb-3">
+              A real accepted offer whose buyer has not paid within 7 real days. Send a direct reminder, or — if there is genuinely no real response — release the property back to other interested buyers. This is exactly the kind of oversight that shows an owner CHS has their real interest at heart, not just the buyer&apos;s.
+            </p>
+            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
+            {stalePendingOffers.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No real deals currently stalled beyond 7 days. Good sign.</p>
+            ) : (
+              stalePendingOffers.map((o) => (
+                <div key={o.id} className="bg-red-50 rounded-xl border-2 border-chs-red p-3 mb-2">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-sm font-semibold text-chs-charcoal">{o.property_title}</p>
+                    <span className="text-[9px] font-bold text-white bg-chs-red px-1.5 py-0.5 rounded-full whitespace-nowrap">{o.days_pending} real days pending</span>
+                  </div>
+                  <p className="text-sm font-bold text-chs-charcoal mb-1">{formatNaira(o.amount)}</p>
+                  <p className="text-[11px] text-gray-600">Buyer: {o.buyer_name} · {o.buyer_phone}</p>
+                  <p className="text-[11px] text-gray-500 mb-2">Seller: {o.seller_name} · {o.seller_phone}</p>
+                  <p className="text-[9px] text-gray-400 mb-2">Accepted {new Date(o.pending_since).toLocaleDateString()} — buyer never completed payment</p>
+                  <div className="flex gap-2 mb-2">
+                    <button onClick={() => handleSendStaleReminder(o.id)}
+                      className="flex-1 py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
+                      ⏰ Send reminder to buyer
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Real reason for releasing this deal (e.g. no response after 2 reminders)"
+                    value={staleOfferReasons[o.id] || ""}
+                    onChange={(e) => setStaleOfferReasons({ ...staleOfferReasons, [o.id]: e.target.value })}
+                    className="w-full px-2.5 py-2 rounded-lg border border-gray-200 text-[11px] mb-2"
+                  />
+                  <button onClick={() => handleReleaseStaleOffer(o.id)}
+                    className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
+                    Release property back to the market
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {activeTab === "marketplacemoderation" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
@@ -4551,10 +4631,10 @@ function AdminDashboardInner() {
                 {directOrderQueue.map((o) => (
                   <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                     <div className="flex justify-between items-start mb-1">
-                      <p className="text-sm font-semibold text-chs-charcoal">{o.marketplace_products?.[0]?.name || "Product"}</p>
+                      <p className="text-sm font-semibold text-chs-charcoal">{o.product_name || "Product"}</p>
                       <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mb-1">Vendor: {o.marketplace_products?.[0]?.marketplace_vendors?.[0]?.business_name}</p>
+                    <p className="text-xs text-gray-500 mb-1">Vendor: {o.vendor_name}</p>
                     <p className="text-sm font-bold text-chs-charcoal mb-2">Real amount held: {formatNaira(o.amount)}</p>
                     <input type="text" placeholder="If refunding: real reason"
                       value={directOrderReasons[o.id] || ""} onChange={(e) => setDirectOrderReasons({ ...directOrderReasons, [o.id]: e.target.value })}
@@ -4574,13 +4654,13 @@ function AdminDashboardInner() {
               marketplaceQueue.map((q) => (
                 <div key={q.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start mb-1">
-                    <p className="text-sm font-semibold text-chs-charcoal">{q.marketplace_products?.[0]?.name || "Product"}</p>
+                    <p className="text-sm font-semibold text-chs-charcoal">{q.product_name || "Product"}</p>
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{q.reference_number}</span>
                       <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(q.created_at).toLocaleString()}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">Vendor: {q.marketplace_products?.[0]?.marketplace_vendors?.[0]?.business_name}</p>
+                  <p className="text-xs text-gray-500 mb-1">Vendor: {q.vendor_name}</p>
 
                   {q.moderation_status === "pending_review" && (
                     <>
@@ -4748,9 +4828,26 @@ function AdminDashboardInner() {
                     it and since when. */}
                 {txLogData.platform_earnings.pending_items.length > 0 && (
                   <div className="bg-amber-50 rounded-xl border-2 border-chs-amber p-3 mb-3">
-                    <p className="text-xs font-bold text-chs-amber-dark mb-1">⏳ Invoiced, Not Yet Paid</p>
+                    {/* Real, direct rewording per a direct, well-founded
+                        client objection: CHS does not operate on a
+                        real invoice-and-wait billing model — every
+                        real commission is collected automatically, at
+                        the exact real moment the underlying payment
+                        happens, never as a separate bill sent
+                        afterward. Confirmed directly before rewording:
+                        every real item that can still land here is one
+                        of exactly two genuine situations — (1) a real
+                        deal that was cleared to proceed but the actual
+                        payment was never made (nothing has moved; the
+                        deal simply never completed), or (2) a real
+                        host/landlord's share that is correctly, still
+                        held pending a scheduled release, with the
+                        commission collected automatically the instant
+                        that release happens — not something anyone is
+                        separately "waiting to be paid." */}
+                    <p className="text-xs font-bold text-chs-amber-dark mb-1">⏳ Not Yet Collected — Transaction Incomplete</p>
                     <p className="text-[10px] text-gray-500 mb-2">
-                      A real commission that has been billed but the payer has not yet settled — this is why it does not appear above. Nothing is wrong; they simply have not paid yet.
+                      CHS never bills separately — every commission is collected automatically the moment the real payment happens. If something shows here, it means one of two real things: either the underlying deal was never actually paid for (nothing moved), or this is a host/landlord&apos;s share still correctly held pending a scheduled payout, which will be collected automatically at that point. Nothing is wrong; there is simply no real payment to collect against yet.
                     </p>
                     <div className="space-y-1.5">
                       {txLogData.platform_earnings.pending_items.map((item) => (
@@ -4760,9 +4857,9 @@ function AdminDashboardInner() {
                             <span className="text-[11px] font-bold text-chs-amber-dark">{formatNaira(item.commission_amount)}</span>
                           </div>
                           <p className="text-[9px] text-gray-500">
-                            Owed by {item.payer_name} ({item.payer_role}) · {item.payer_phone}
+                            Real share due from {item.payer_name} ({item.payer_role}) · {item.payer_phone}
                           </p>
-                          <p className="text-[9px] text-gray-400">Invoiced {new Date(item.created_at).toLocaleString()}</p>
+                          <p className="text-[9px] text-gray-400">Deal recorded {new Date(item.created_at).toLocaleString()}</p>
                         </div>
                       ))}
                     </div>

@@ -15,6 +15,7 @@ import { supabase } from "@/lib/supabase";
 interface Profile {
   id: string;
   full_name: string;
+  phone: string;
   role: string;
   state: string;
   secondary_roles: string[] | null;
@@ -72,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, role, state, secondary_roles, status, suspension_reason, membership_verified, valid_id_verified, avatar_url, is_super_admin, staff_role, terms_accepted_at, guide_roles_seen, chs_agent_id, gender")
+      .select("id, full_name, phone, role, state, secondary_roles, status, suspension_reason, membership_verified, valid_id_verified, avatar_url, is_super_admin, staff_role, terms_accepted_at, guide_roles_seen, chs_agent_id, gender")
       .eq("id", userId)
       .single();
     if (data) {
