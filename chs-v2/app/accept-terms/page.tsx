@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import TermsContent from "@/components/TermsContent";
+import { CURRENT_TERMS_VERSION, TERMS_UPDATED_LABEL, TERMS_WHATS_NEW, termsAcceptanceRequired } from "@/lib/termsVersion";
 
 // The real, legally-meaningful gate: the checkbox only becomes
 // clickable once the person has genuinely scrolled to the bottom of
@@ -23,8 +24,16 @@ function AcceptTermsContent() {
   const [hasScrolledToBottom, setHasScrolledToBottom] = useState(false);
   const [checked, setChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const redirectTo = searchParams.get("redirect") || "/";
+  // Only ever send the person on to a page inside CHS — never an
+  // external address smuggled in through the redirect parameter.
+  const rawRedirect = searchParams.get("redirect") || "/";
+  const redirectTo = rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/";
+
+  // Someone who accepted an earlier version is being asked to accept an
+  // update — they should be told what changed, not asked blind.
+  const isUpdate = !!profile?.terms_accepted_at;
 
   useEffect(() => {
     if (authLoading) return;
@@ -32,8 +41,9 @@ function AcceptTermsContent() {
       router.push("/login");
       return;
     }
-    // Already accepted — nothing to do here, send them straight on.
-    if (profile?.terms_accepted_at) {
+    // Already accepted the CURRENT version — nothing to do here. (An
+    // older acceptance no longer counts once the Terms have changed.)
+    if (profile && !termsAcceptanceRequired(profile)) {
       router.push(redirectTo);
     }
   }, [authLoading, session, profile, router, redirectTo]);
@@ -51,12 +61,19 @@ function AcceptTermsContent() {
 
   async function handleAccept() {
     setSubmitting(true);
-    const { error } = await supabase.rpc("accept_terms");
+    setErrorMessage(null);
+    const { error } = await supabase.rpc("accept_terms", { p_version: CURRENT_TERMS_VERSION });
     setSubmitting(false);
-    if (!error) {
-      await refreshProfile();
-      router.push(redirectTo);
+    if (error) {
+      setErrorMessage(
+        error.message.startsWith("terms_version_outdated")
+          ? "The Terms & Conditions were updated while this page was open. Please refresh the page, read the latest version, and accept again."
+          : "Your acceptance could not be saved just now. Please check your connection and try again."
+      );
+      return;
     }
+    await refreshProfile();
+    router.push(redirectTo);
   }
 
   if (authLoading) {
@@ -67,9 +84,20 @@ function AcceptTermsContent() {
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] px-4 py-8 flex flex-col">
       <div className="max-w-md mx-auto w-full flex flex-col flex-1">
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">📜 Terms & Conditions</h1>
-        <p className="text-xs text-gray-400 mb-4">
-          Please read through before continuing — scroll to the bottom to unlock the checkbox below.
-        </p>
+        <p className="text-[10px] text-gray-400 mb-1">Version {CURRENT_TERMS_VERSION} · Updated {TERMS_UPDATED_LABEL}</p>
+        {isUpdate ? (
+          <div className="bg-amber-50 border border-chs-amber rounded-lg px-3 py-2 mb-3">
+            <p className="text-[11px] font-bold text-chs-amber-dark mb-0.5">Our Terms & Conditions have been updated</p>
+            <p className="text-[11px] text-gray-700 leading-relaxed">{TERMS_WHATS_NEW} Please read the updated Terms below and accept to continue — you will only be asked once.</p>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 mb-4">
+            Please read through before continuing — scroll to the bottom to unlock the checkbox below.
+          </p>
+        )}
+        {isUpdate && !hasScrolledToBottom && (
+          <p className="text-[10px] text-gray-400 mb-2">Scroll to the bottom to unlock the checkbox below. Term 36 is the last one.</p>
+        )}
 
         <div
           ref={scrollRef}
@@ -93,6 +121,9 @@ function AcceptTermsContent() {
         </label>
         {!hasScrolledToBottom && (
           <p className="text-[10px] text-gray-400 mb-3">Scroll to the bottom of the terms above to continue.</p>
+        )}
+        {errorMessage && (
+          <p className="text-[11px] text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{errorMessage}</p>
         )}
 
         <button

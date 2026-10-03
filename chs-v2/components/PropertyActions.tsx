@@ -17,6 +17,7 @@ import IdentityVerificationGate from "./IdentityVerificationGate";
 import VerifiedOnly from "./VerifiedOnly";
 import CompleteDetailsPrompt from "./CompleteDetailsPrompt";
 import OfferMessageThread from "./OfferMessageThread";
+import RefundPolicyNotice from "./RefundPolicyNotice";
 import ValidatedInput from "./ValidatedInput";
 import { validatePhone, validateFullName } from "@/lib/validators";
 
@@ -492,7 +493,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     if (refundSuccess) {
       return (
         <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
-          <p className="text-sm font-bold text-green-700">✓ Refund issued — your full payment is back in your wallet.</p>
+          <p className="text-sm font-bold text-green-700">✓ Refund issued — your payment is back in your wallet, with CHS&apos;s commission returned in full, less only the small real bank processing fee. The exact amount is in your wallet history and notifications.</p>
         </div>
       );
     }
@@ -515,7 +516,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           </Link>
         )}
         <p className="text-xs text-gray-500 mb-3">
-          Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a full refund below.
+          Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a refund below — your full payment back, including CHS&apos;s commission, less only a small real bank processing fee (never more than ₦2,000).
         </p>
         {/* Real, new fix — the actual verified legal documents,
             uploaded and confirmed by CHS at listing time, made
@@ -645,7 +646,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
             <input type="number" placeholder="Amount to pay now" value={installmentAmount}
               onChange={(e) => setInstallmentAmount(e.target.value ? Number(e.target.value) : "")}
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" />
-            <p className="text-[10px] text-gray-500 mb-3">After your final installment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered within 14 working days — if not, you can request a full refund.</p>
+            <p className="text-[10px] text-gray-500 mb-3">After your final installment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered within 14 working days — if not, you can request a refund: your full payment back, including CHS&apos;s commission, less only a small real bank processing fee (never more than ₦2,000).</p>
             {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
             <button onClick={handlePaySaleInstallment} disabled={paying || !installmentAmount}
               className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
@@ -661,9 +662,10 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
               )}
               <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
             </div>
-            <p className="text-[10px] text-gray-500 mb-3">
-              After payment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered to you within 14 working days. If they haven&apos;t arrived by then, you can request a full refund and cancel this deal, right from your dashboard.
+            <p className="text-[10px] text-gray-500 mb-2">
+              After payment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered to you within 14 working days. If they haven&apos;t arrived by then, you can request a refund and cancel this deal, right from your dashboard.
             </p>
+            <RefundPolicyNotice className="mb-3" />
             {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
             <button onClick={handlePayForProperty} disabled={paying}
               className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">

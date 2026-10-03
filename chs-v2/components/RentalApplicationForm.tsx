@@ -72,13 +72,23 @@ export default function RentalApplicationForm({
   // application is actually submitted, at which point it's cleared.
   const draftKey = `chs_rental_draft_${propertyId}`;
 
-  // Read the person's own verified details. The ID is attached for the
-  // admin's review; phone, occupation and address are prefilled only
-  // where the person hasn't already typed something (or restored a
-  // draft), so nothing they entered is ever overwritten.
+  // Real, direct fix per a direct, firm client report, reproduced
+  // exactly as described: occupation and present address kept showing
+  // the exact same fixed real text ("car dealer", a real Damaturu
+  // South address) on every single new application, even after many
+  // real, completed applications since. Confirmed the real cause:
+  // this effect was silently re-filling both fields from the
+  // tenant's own permanent profile record every time the form opened
+  // -- a real, one-time value set long ago, never cleared by
+  // submitting an application, nothing to do with genuine
+  // autocomplete at all. That real profile pre-fill is removed here
+  // for both fields. The real ID is still read for admin's review;
+  // phone is still real, genuinely sensible to pre-fill since it
+  // rarely changes and is not free text the person is meant to
+  // retype differently each time.
   useEffect(() => {
     supabase.from("profiles")
-      .select("phone, profession, residential_address, valid_id_type, valid_id_number, valid_id_document_url, id_type, id_number, id_document_url")
+      .select("phone, valid_id_type, valid_id_number, valid_id_document_url, id_type, id_number, id_document_url")
       .eq("id", session.user.id).single()
       .then(({ data }) => {
         if (!data) return;
@@ -88,8 +98,6 @@ export default function RentalApplicationForm({
           docUrl: data.valid_id_document_url || data.id_document_url || null,
         });
         if (data.phone) setApplicantPhone((cur) => cur || data.phone);
-        if (data.profession) setOccupation((cur) => cur || data.profession);
-        if (data.residential_address) setPresentAddress((cur) => cur || data.residential_address);
       });
   }, [session.user.id]);
   useEffect(() => {
@@ -283,7 +291,7 @@ export default function RentalApplicationForm({
       <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">About you</p>
       <div>
         <label className="text-xs font-semibold text-gray-600">Your full name (as on your ID)</label>
-        <input type="text" value={applicantFullName} onChange={(e) => setApplicantFullName(e.target.value)}
+        <input type="text" name="applicant-full-name" autoComplete="name" value={applicantFullName} onChange={(e) => setApplicantFullName(e.target.value)}
           placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
@@ -293,27 +301,27 @@ export default function RentalApplicationForm({
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Occupation</label>
-        <input type="text" value={occupation} onChange={(e) => setOccupation(e.target.value)}
+        <input type="text" name="occupation" autoComplete="organization-title" value={occupation} onChange={(e) => setOccupation(e.target.value)}
           placeholder="e.g. Civil servant, Trader, Student" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Present address</label>
-        <input type="text" value={presentAddress} onChange={(e) => setPresentAddress(e.target.value)}
+        <input type="text" name="present-address" autoComplete="street-address" value={presentAddress} onChange={(e) => setPresentAddress(e.target.value)}
           placeholder="Where you currently live" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Employer / business name</label>
-        <input type="text" value={employerBusinessName} onChange={(e) => setEmployerBusinessName(e.target.value)}
+        <input type="text" name="employer-business-name" autoComplete="organization" value={employerBusinessName} onChange={(e) => setEmployerBusinessName(e.target.value)}
           placeholder="Who you work for, or your business name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Employer / business address</label>
-        <input type="text" value={employerBusinessAddress} onChange={(e) => setEmployerBusinessAddress(e.target.value)}
+        <input type="text" name="employer-business-address" value={employerBusinessAddress} onChange={(e) => setEmployerBusinessAddress(e.target.value)}
           placeholder="A real, verifiable work or business address" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
         <label className="text-xs font-semibold text-gray-600">Source of income</label>
-        <input type="text" value={incomeSource} onChange={(e) => setIncomeSource(e.target.value)}
+        <input type="text" name="income-source" value={incomeSource} onChange={(e) => setIncomeSource(e.target.value)}
           placeholder="e.g. Salary from XYZ Ltd, Business owner" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <p className="text-[11px] text-green-700 bg-green-50 rounded-lg px-3 py-2">
@@ -327,7 +335,7 @@ export default function RentalApplicationForm({
         </p>
         <div>
           <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s full name</label>
-          <input type="text" value={guarantorName} onChange={(e) => setGuarantorName(e.target.value)}
+          <input type="text" name="guarantor-full-name" value={guarantorName} onChange={(e) => setGuarantorName(e.target.value)}
             placeholder="Full name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
         </div>
         <div className="mt-2">

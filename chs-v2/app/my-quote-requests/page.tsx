@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -118,7 +119,7 @@ export default function MyQuoteRequestsPage() {
                 <p className="text-sm font-bold text-chs-charcoal">{formatNaira(o.amount + o.buyer_commission_amount)}</p>
                 {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Paid — held in escrow, pending confirmed delivery.<InfoTip text="CHS holds your real payment safely and does not release a single naira to the vendor until you confirm you've genuinely received what you paid for." /></p>}
                 {o.payment_status === "released" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Deal complete — funds released to the vendor.</p>}
-                {o.payment_status === "refunded" && <p className="text-[10px] text-gray-500 font-semibold mt-1">↩ Refunded in full to your wallet.</p>}
+                {o.payment_status === "refunded" && <p className="text-[10px] text-gray-500 font-semibold mt-1">↩ Refunded to your wallet — your full payment back, less only a small real bank processing fee (see your wallet entry).</p>}
               </div>
             ))}
             <p className="text-xs font-bold text-chs-charcoal mb-1.5 mt-4">💬 My Quote Requests</p>
@@ -156,10 +157,13 @@ export default function MyQuoteRequestsPage() {
                   <p className="text-xs text-chs-charcoal mb-1">{r.vendor_response}</p>
                   {r.quoted_amount && <p className="text-sm font-bold text-chs-charcoal">Quoted: {formatNaira(r.quoted_amount)}</p>}
                   {r.payment_status === "unpaid" && (
+                    <>
+                    <RefundPolicyNotice className="mt-2" />
                     <button onClick={() => handleAcceptAndPay(r.id)} disabled={payingId === r.id}
                       className="w-full mt-2 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
                       {payingId === r.id ? "Processing..." : "Accept & Pay (price + 6% real commission)"}
                     </button>
+                    </>
                   )}
                   {r.payment_status === "held_escrow" && (
                     <p className="text-[10px] text-green-700 font-semibold mt-2">✓ Paid — held in escrow, pending confirmed delivery.</p>
@@ -168,7 +172,7 @@ export default function MyQuoteRequestsPage() {
                     <p className="text-[10px] text-green-700 font-semibold mt-2">✓ Deal complete — funds released to the vendor.</p>
                   )}
                   {r.payment_status === "refunded" && (
-                    <p className="text-[10px] text-gray-500 font-semibold mt-2">↩ Refunded in full to your wallet.</p>
+                    <p className="text-[10px] text-gray-500 font-semibold mt-2">↩ Refunded to your wallet — your full payment back, less only a small real bank processing fee (see your wallet entry).</p>
                   )}
                 </div>
               )}

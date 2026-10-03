@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import TermsContent from "@/components/TermsContent";
+import { CURRENT_TERMS_VERSION, TERMS_UPDATED_LABEL } from "@/lib/termsVersion";
 
 // Real Terms & Conditions content, restored exactly from the original
 // app — the same real commission rates the client explicitly finalised
@@ -15,7 +16,7 @@ export default function TermsPage() {
       <div className="max-w-md mx-auto">
         <button onClick={() => router.back()} className="text-xs text-gray-400 mb-4 inline-block">← Back</button>
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">📜 Terms & Conditions</h1>
-        <p className="text-xs text-gray-400 mb-6">Summary of key terms</p>
+        <p className="text-xs text-gray-400 mb-6">Summary of key terms · Version {CURRENT_TERMS_VERSION}, updated {TERMS_UPDATED_LABEL}</p>
         <TermsContent />
       </div>
     </div>

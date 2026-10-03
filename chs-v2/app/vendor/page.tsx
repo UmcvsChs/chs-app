@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,7 +73,7 @@ export default function VendorDashboard() {
       router.push("/login");
       return;
     }
-    if (profile && !profile.terms_accepted_at) {
+    if (profile && termsAcceptanceRequired(profile)) {
       router.push("/accept-terms?redirect=/vendor");
       return;
     }

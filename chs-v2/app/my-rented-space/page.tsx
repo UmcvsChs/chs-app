@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
@@ -182,6 +183,7 @@ export default function MyRentedSpacePage() {
           {payMessage && <p className="text-xs text-gray-600 mt-1">{payMessage}</p>}
           {paymentUrgent && (
             <div className="mt-2 space-y-1.5">
+              <RefundPolicyNotice />
               <button onClick={() => handlePayRent("main")} disabled={payingRent}
                 className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
                 {payingRent ? "Processing…" : `Pay from Main Wallet — ${formatNaira(tenancy.annual_rent + pendingCommission)}`}

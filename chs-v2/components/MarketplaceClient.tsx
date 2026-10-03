@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import RefundPolicyNotice from "./RefundPolicyNotice";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import { formatNaira } from "@/lib/format";
@@ -224,6 +225,9 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         </main>
       ) : (
       <main className="px-4 py-4 grid grid-cols-2 gap-3">
+        {/* One page-level notice rather than one per product card —
+            the same real policy applies to every "Buy now" below. */}
+        <div className="col-span-2"><RefundPolicyNotice /></div>
         {filtered.length === 0 ? (
           <p className="col-span-full text-center text-sm text-gray-400 py-12">
             No listings found for this category yet.

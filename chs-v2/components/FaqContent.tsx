@@ -26,11 +26,31 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does CHS protect my money?",
-    a: "All funds are held in escrow until the real conditions for release are met. For a sale specifically, a seller's proceeds appear in their wallet immediately but stay locked until CHS confirms the real legal documents have genuinely been transferred to the buyer. For a shortlet or hire booking, your payment is held until the host actually accepts your request — if they decline, you're automatically, fully refunded.",
+    a: "All funds are held in escrow until the real conditions for release are met. For a sale specifically, a seller's proceeds appear in their wallet immediately but stay locked until CHS confirms the real legal documents have genuinely been transferred to the buyer. For a shortlet or hire booking, your payment is held until the host actually accepts your request — if they decline, you're automatically, fully refunded. And if the other side of your deal later fails to deliver, you are entitled to your full payment back, including CHS's own commission, less only a small real bank processing fee — see the next questions for exactly how.",
   },
   {
     q: "Can I cancel a shortlet or hire booking, and will I get a refund?",
     a: "Yes — a real, stated policy applies: a full refund if you cancel 48 or more hours before check-in, 50% if you cancel within 48 hours, and no refund once check-in has passed. This is calculated and enforced automatically, not left to a manual decision.",
+  },
+  {
+    q: "What if the seller, landlord, host or vendor doesn't deliver — do I get my money back?",
+    a: "Yes. This applies to every tenant, buyer and guest, and it is written into term 36 of the Terms & Conditions. Because your money is held in escrow, it is still with CHS — it has not reached the other side. If they fail to do what they agreed, you get back the full price you paid, plus CHS's own commission from you, less only a small real bank processing fee. The refund opens at different points: for a sale, once the document-delivery window has passed without the legal transfer being confirmed; for rent, once the grace period has passed with no clean move-in report; for marketplace goods and for shortlet or hire bookings, once CHS has reviewed what went wrong. A host who simply declines your request at the start refunds you in full with nothing deducted at all. The refund is credited to your CHS Wallet and you are told the exact amount and the exact fee.",
+  },
+  {
+    q: "How do I actually ask for a refund?",
+    a: "For a sale, once the document window has passed you will see a 'Request refund & cancel this deal' button on the property page. For a shortlet or hire booking you can cancel from My Bookings (see the cancellation policy above), and if the host fails to honour a confirmed booking, contact CHS and the team will review it. For rent and marketplace purchases, contact CHS support and give the property or order reference — the CHS team reviews it and, if the other side failed to deliver, processes the refund for you. In every case a real reason is recorded.",
+  },
+  {
+    q: "Is CHS keeping my commission if the deal fails? What is the bank fee I'm charged?",
+    a: "No — CHS does not keep a commission on a deal that failed because of the other side. The only amount kept is a real bank processing fee: when your original payment moved, CHS's payment provider charged a transfer fee that cannot be recovered. It is worked out as 1.5% of CHS's commission from you plus ₦100, and is never more than ₦2,000, however large the deal. For example, if CHS's commission from you was ₦100,000, the fee is ₦1,600 and you receive the full price plus ₦98,400 back. The commission CHS would have charged the other side is cancelled too.",
+  },
+  {
+    q: "I'm an owner, landlord, host or vendor — what happens to my side if the buyer or tenant is refunded?",
+    a: "The deal is reversed. The money CHS was holding for you on that deal is removed from your held balance (only that deal's share — your other held amounts are untouched), CHS's commission from you on that deal is cancelled, and you are told the reason. For a sale or a first-year rent, your property is listed as available again. A refund only happens after the agreed deadline has passed without you delivering, or after CHS has reviewed a failure, so delivering the documents, keys or service on time protects your payout.",
+  },
+  {
+    q: "Why was I asked to accept the Terms & Conditions again?",
+    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 2 it is term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again.",
   },
   {
     q: "What does a 'CHS Verified' or 'Verified Listing' label actually mean?",

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
+import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import HouseRulesAcknowledgment from "@/components/HouseRulesAcknowledgment";
 import RoleBadge from "@/components/RoleBadge";
 import { useRouter } from "next/navigation";
@@ -237,7 +239,7 @@ export default function TenantDashboard() {
       router.push("/");
       return;
     }
-    if (profile && !profile.terms_accepted_at) {
+    if (profile && termsAcceptanceRequired(profile)) {
       router.push("/accept-terms?redirect=/tenant");
       return;
     }
@@ -484,10 +486,13 @@ export default function TenantDashboard() {
                     );
                   }
                   return (
-                    <button onClick={() => handlePayRent(t.id, "main")} disabled={payingRentId === t.id}
-                      className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                      {payingRentId === t.id ? "Processing..." : `Pay from Main Wallet — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
-                    </button>
+                    <>
+                      <RefundPolicyNotice className="mt-1.5" />
+                      <button onClick={() => handlePayRent(t.id, "main")} disabled={payingRentId === t.id}
+                        className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                        {payingRentId === t.id ? "Processing..." : `Pay from Main Wallet — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
+                      </button>
+                    </>
                   );
                 })()}
                 {/* Real, direct fix matching the client's own original

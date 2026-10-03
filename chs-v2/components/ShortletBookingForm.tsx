@@ -1,5 +1,6 @@
 "use client";
 
+import RefundPolicyNotice from "./RefundPolicyNotice";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -244,6 +245,8 @@ export default function ShortletBookingForm({
           </label>
         </div>
       )}
+
+      <RefundPolicyNotice />
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 

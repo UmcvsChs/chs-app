@@ -27,6 +27,7 @@ interface Profile {
   is_super_admin: boolean;
   staff_role: string | null;
   terms_accepted_at: string | null;
+  terms_version_accepted: number | null;
   guide_roles_seen: string[];
   chs_agent_id: string | null;
   gender: "male" | "female" | null;
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("id, full_name, phone, role, state, secondary_roles, status, suspension_reason, membership_verified, valid_id_verified, avatar_url, is_super_admin, staff_role, terms_accepted_at, guide_roles_seen, chs_agent_id, gender")
+      .select("id, full_name, phone, role, state, secondary_roles, status, suspension_reason, membership_verified, valid_id_verified, avatar_url, is_super_admin, staff_role, terms_accepted_at, terms_version_accepted, guide_roles_seen, chs_agent_id, gender")
       .eq("id", userId)
       .single();
     if (data) {

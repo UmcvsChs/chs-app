@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -177,7 +178,7 @@ export default function OwnerDashboard() {
     // Real T&Cs gate — per direct instruction, a genuine scroll-to-
     // accept, not a passive link. Checked before the dashboard loads
     // at all.
-    if (profile && !profile.terms_accepted_at) {
+    if (profile && termsAcceptanceRequired(profile)) {
       router.push("/accept-terms?redirect=/owner");
       return;
     }

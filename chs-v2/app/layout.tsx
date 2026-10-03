@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import AccountStatusGate from "@/components/AccountStatusGate";
+import TermsGate from "@/components/TermsGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SplashScreen from "@/components/SplashScreen";
 import TestModeBanner from "@/components/TestModeBanner";
@@ -72,7 +73,7 @@ export default function RootLayout({
           <SplashScreen />
           <AuthProvider>
             <TestModeBanner />
-            <AccountStatusGate>{children}</AccountStatusGate>
+            <AccountStatusGate><TermsGate>{children}</TermsGate></AccountStatusGate>
           </AuthProvider>
         </ThemeProvider>
       </body>

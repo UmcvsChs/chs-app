@@ -1,5 +1,6 @@
 "use client";
 
+import RefundPolicyNotice from "./RefundPolicyNotice";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -302,6 +303,7 @@ export default function HireBookingForm({
           </label>
         )}
 
+        <RefundPolicyNotice />
         {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
         <button onClick={handleSubmitEventBooking} disabled={submitting}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
@@ -425,6 +427,8 @@ export default function HireBookingForm({
           </label>
         </div>
       )}
+
+      <RefundPolicyNotice />
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 

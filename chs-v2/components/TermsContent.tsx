@@ -170,6 +170,19 @@ export default function TermsContent() {
         <p>The personal details CHS collects at identity verification — your name, gender, age bracket, address, occupation, email, phone number, and government ID — are used to verify who you genuinely are, to protect every other user you transact with, and to let CHS reach you directly where needed (including the alternative service of notice described in term 30). CHS does not sell this information. See the separate CHS Privacy Policy for the complete, current statement of what is collected, how it is used, and your rights over it.</p>
       </div>
 
+      <div className="border-t-2 border-chs-red pt-4 mt-2 bg-chs-amber-light rounded-lg p-3">
+        <p className="font-bold text-chs-red mb-2">36. Refunds when the other party defaults</p>
+        <p>This applies to every Tenant, Buyer, and Guest on CHS. If the other side of your transaction fails to do what they agreed — a Seller who does not deliver the legal documents within the agreed window, a Landlord whose grace period passes with no clean move-in report, a Host who does not honour or respond to a confirmed booking, or a Vendor who does not deliver — you may ask CHS for a refund, and CHS may also issue one after its own review. Your money is then refunded as follows:</p>
+        <ul className="list-disc pl-5 space-y-1 mt-2">
+          <li><strong className="text-chs-charcoal">The price in full.</strong> Everything you paid for the property, rent, booking, or goods is returned to you, with nothing deducted.</li>
+          <li><strong className="text-chs-charcoal">CHS&apos;s own commission from you, returned in full.</strong> CHS does not keep a commission on a deal that failed because of the other side.</li>
+          <li><strong className="text-chs-charcoal">One deduction only: a real bank processing fee.</strong> When your original payment moved, CHS&apos;s payment provider charged a real transfer fee that neither you nor CHS can recover. That, and nothing else, is what CHS keeps. It is calculated as 1.5% of CHS&apos;s commission from you plus ₦100, and is never more than ₦2,000, however large the transaction. For example, if CHS&apos;s commission from you was ₦100,000, the fee is ₦1,600, and you receive back the full price plus ₦98,400.</li>
+          <li><strong className="text-chs-charcoal">The commission charged to the party who defaulted is cancelled too.</strong> CHS does not collect its fee from the Owner, Seller, Host, or Vendor on a deal that is reversed.</li>
+          <li>The refund is credited to your CHS Wallet, and you are notified of the exact amount and the exact processing fee.</li>
+        </ul>
+        <p className="mt-2"><strong className="text-chs-charcoal">When a refund becomes available.</strong> For a Sale, once the agreed document-delivery window has passed without the legal transfer being confirmed. For Rent, once the grace period has passed with no clean move-in report. For Marketplace goods and for Shortlet or Hire bookings, once CHS has reviewed the failure. A Host who declines your request at the outset refunds you in full with no deduction at all (see term 11), and a refund you request by cancelling your own booking follows the cancellation policy in term 11, not this term.</p>
+      </div>
+
       <p className="text-xs text-gray-400 bg-[var(--zone-card)] rounded-lg p-3 mt-4">
         This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support at <a href="mailto:support@completehousingsolutions.com" className="underline">support@completehousingsolutions.com</a>.
       </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import { validateIdNumber } from "@/lib/validators";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -61,6 +62,7 @@ interface PendingProperty {
   primary_document_type: string | null;
   acquisition_method: string | null;
   owner_id: string;
+  created_at: string;
   property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[];
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
@@ -296,7 +298,7 @@ function AdminDashboardInner() {
     setRecentlyHandledSaleApprovals((prev) => prev.filter((x) => x.id !== id));
   }
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
-  const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
+  const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; created_at: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
   const [pendingShortletBookings, setPendingShortletBookings] = useState<{ id: string; status: string; payment_status: string; total_price: number; check_in: string; check_out: string; guest_full_name: string; guest_phone: string; created_at: string; property_title: string; host_name: string; host_phone: string }[]>([]);
   // Real, new feature per direct client request: a real buyer accepted
   // an offer and simply never paid, with no real way for admin to see
@@ -470,6 +472,18 @@ function AdminDashboardInner() {
     security_deposit_amount: number; created_at: string; property_title: string; owner_id: string;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
+  // Real, new: the main money for a shortlet/hire booking (not just the
+  // security deposit) held in escrow — previously invisible on this screen.
+  const [heldShortletBookings, setHeldShortletBookings] = useState<{
+    id: string; guest_full_name: string; guest_phone: string; total_price: number; guest_commission_amount: number;
+    host_commission_amount: number; status: string; check_in: string; check_out: string; created_at: string;
+    property_title: string; owner_id: string; host_name: string;
+  }[]>([]);
+  // Real refund controls on the Escrow Oversight screen.
+  const [refundOpenKey, setRefundOpenKey] = useState<string | null>(null);
+  const [refundReasons, setRefundReasons] = useState<Record<string, string>>({});
+  const [refundBusyKey, setRefundBusyKey] = useState<string | null>(null);
+  const [escrowNotice, setEscrowNotice] = useState<string | null>(null);
   const [pendingOfferReview, setPendingOfferReview] = useState<{
     id: string; amount: number; note: string | null; buyer_full_name: string | null; buyer_phone: string | null; buyer_occupation: string | null;
     buyer_source_of_funds: string | null; created_at: string;
@@ -605,20 +619,52 @@ function AdminDashboardInner() {
   // page reload. One real, shared refresh for every real held
   // category at once, callable any time, not just on first load.
   async function loadEscrowData() {
-    const [rentRes, saleRes, marketRes, depositRes] = await Promise.all([
+    const [rentRes, saleRes, marketRes, depositRes, directRes, bookingRes] = await Promise.all([
       supabase.rpc("get_held_rent_payments"),
       supabase.rpc("get_pending_legal_transfers"),
       supabase.rpc("get_marketplace_queue"),
       supabase.rpc("get_held_shortlet_deposits"),
+      supabase.rpc("get_direct_order_queue"),
+      supabase.rpc("get_held_shortlet_bookings"),
     ]);
     setHeldRent((rentRes.data as unknown as typeof heldRent) || []);
     setPendingLegalTransfers((saleRes.data as unknown as typeof pendingLegalTransfers) || []);
     setMarketplaceQueue((marketRes.data as unknown as typeof marketplaceQueue) || []);
     setHeldDeposits((depositRes.data as unknown as typeof heldDeposits) || []);
+    setDirectOrderQueue((directRes.data as unknown as typeof directOrderQueue) || []);
+    setHeldShortletBookings((bookingRes.data as unknown as typeof heldShortletBookings) || []);
   }
   async function handleReleaseRent(id: string) {
-    await supabase.rpc("release_rent_to_landlord", { p_rent_payment_id: id, p_reason: "admin_override" });
+    const { error } = await supabase.rpc("release_rent_to_landlord", { p_rent_payment_id: id, p_reason: "admin_override" });
+    if (error) { setActionError(error.message); return; }
     setHeldRent((prev) => prev.filter((r) => r.id !== id));
+  }
+  async function handleReleaseShortletBooking(id: string) {
+    setEscrowNotice(null);
+    const { error } = await supabase.rpc("release_shortlet_funds_to_host", { p_booking_id: id });
+    if (error) { setActionError(error.message); return; }
+    setEscrowNotice("Released to the host. They have been notified of the exact amount and the commission deducted.");
+    await loadEscrowData();
+  }
+  // Real, new: one shared refund action for every payer type (tenant,
+  // buyer, guest), each calling its own real, tested function. A
+  // written reason is always required — it is recorded in the audit
+  // trail and shown to the payer.
+  async function handleConfirmRefund(key: string, run: (reason: string) => PromiseLike<{ error: { message: string } | null }>) {
+    const reason = (refundReasons[key] || "").trim();
+    if (!reason) {
+      setActionError("Please write the real reason for this refund first — it is recorded permanently in the audit trail and shown to the payer.");
+      return;
+    }
+    setActionError(null);
+    setEscrowNotice(null);
+    setRefundBusyKey(key);
+    const { error } = await run(reason);
+    setRefundBusyKey(null);
+    if (error) { setActionError(error.message); return; }
+    setRefundOpenKey(null);
+    setEscrowNotice("Refund issued. The payer has been credited and notified of the exact amount and the exact processing fee, and the other party has been notified.");
+    await loadEscrowData();
   }
 
   useEffect(() => {
@@ -661,7 +707,7 @@ function AdminDashboardInner() {
   // path, held in the same real escrow, needing the same real,
   // confirmed release or refund before any money moves again.
   const [directOrderQueue, setDirectOrderQueue] = useState<{
-    id: string; reference_number: string; amount: number; payment_status: string;
+    id: string; reference_number: string; amount: number; payment_status: string; created_at: string;
     product_name: string | null; vendor_name: string | null;
   }[]>([]);
   const [directOrderReasons, setDirectOrderReasons] = useState<Record<string, string>>({});
@@ -871,8 +917,8 @@ function AdminDashboardInner() {
   const [activeMessageOwnerId, setActiveMessageOwnerId] = useState<string | null>(null);
   const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
-  const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
-  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; created_at: string; property_title: string; owner_id: string }[]>([]);
+  const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; created_at: string; properties: { title: string } | null }[]>([]);
+  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; created_at: string; document_deadline: string | null; property_title: string; owner_id: string }[]>([]);
   // Real, direct fix answering a genuine, direct client question:
   // "where does the message go" for a real hard-copy delivery
   // request. Confirmed directly — nowhere. request_document_dispatch
@@ -1170,7 +1216,7 @@ function AdminDashboardInner() {
       router.push("/");
       return;
     }
-    if (profile && !profile.terms_accepted_at) {
+    if (profile && termsAcceptanceRequired(profile)) {
       router.push("/accept-terms?redirect=/admin");
       return;
     }
@@ -1209,7 +1255,7 @@ function AdminDashboardInner() {
     const [profilesRes, applicationsRes, propertiesRes, disputesRes, feedbackRes, engageRes, handledEngageRes, vendorsRes, feeSettingsRes, owedFeesRes, faultsRes, artisansRes, inspectionsRes, developerAppsRes] = await Promise.all([
       supabase.from("profiles").select("id, full_name, phone, role, state, created_at").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
       supabase.from("rental_applications").select("*, properties(title, street_address, location_area, owner_id, profiles!properties_owner_id_fkey(full_name, phone)), tenant:profiles!rental_applications_tenant_id_fkey(full_name, phone)").in("status", ["pending", "awaiting_admin_review", "awaiting_owner_decision", "owner_decided_pending_relay"]).order("created_at", { ascending: false }).limit(200),
-      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
+      supabase.from("properties").select("id, title, location_area, purpose, price, primary_document_type, acquisition_method, owner_id, created_at, property_sale_documents(id, document_type, file_url, verification_status), profiles!properties_owner_id_fkey(full_name, phone, valid_id_verified, valid_id_type, valid_id_number)").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
       supabase.from("disputes").select("*").eq("status", "open").order("created_at", { ascending: false }).limit(200),
       supabase.from("community_feedback").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
       supabase.from("engage_chs_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }).limit(200),
@@ -1274,7 +1320,7 @@ function AdminDashboardInner() {
       supabase.from("profiles").select("id, full_name, phone, valid_id_type, valid_id_number, valid_id_document_url").eq("role", "agent").eq("valid_id_verified", false).not("valid_id_document_url", "is", null),
       supabase.from("profiles").select("id, full_name, phone, profession, professional_registration_number, certificate_document_url").eq("role", "manager").eq("professional_credentials_verified", false).not("certificate_document_url", "is", null),
       supabase.from("liveness_submissions").select("id, user_id, captured_photo_url, created_at, profiles!liveness_submissions_user_id_fkey(full_name)").eq("status", "pending_review").order("created_at", { ascending: false }),
-      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, avs_status, avs_extracted_name, avs_extracted_id_number, avs_name_match, avs_id_number_match, avs_notes, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("buyer_id_verifications").select("id, user_id, id_type, id_number, id_document_url, created_at, full_name_on_id, gender, age_bracket, state_of_residence, residential_address, occupation, contact_email, contact_phone, id_already_used_elsewhere, avs_status, avs_extracted_name, avs_extracted_id_number, avs_name_match, avs_id_number_match, avs_notes, profiles!buyer_id_verifications_user_id_fkey(full_name, phone)").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("transaction_commissions").select("commission_amount").eq("status", "paid"),
       supabase.from("owner_concerns").select("id, subject, message, profiles:owner_id(full_name)").eq("status", "open").order("created_at", { ascending: false }),
       supabase.from("agent_change_requests").select("id, requested_agent_name, requested_agent_phone, requested_agent_chs_id, properties(title)").eq("status", "pending").order("created_at", { ascending: false }),
@@ -1284,7 +1330,7 @@ function AdminDashboardInner() {
       supabase.from("transaction_commissions").select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, paid_at, properties(title, street_address), profiles:payer_id(full_name)").eq("status", "paid").order("paid_at", { ascending: false }).limit(50),
       supabase.from("sale_installment_payments").select("id, amount, buyer_commission, offers(amount, buyer_id, properties(title), profiles:buyer_id(full_name))").order("paid_at", { ascending: false }).limit(50),
       supabase.from("rent_payments").select("id, amount, created_at, tenancies(property_id, properties(title, street_address))").order("created_at", { ascending: false }).limit(50),
-      supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: false }),
+      supabase.from("property_sale_documents").select("id, property_id, document_type, file_url, created_at, properties(title)").eq("verification_status", "pending").order("created_at", { ascending: false }),
       // Real, direct fix for a second, genuine instance of the exact
       // same bug already found and fixed for held rent: this embedded
       // join (offers -> properties) silently returned an empty array
@@ -3149,6 +3195,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
                   <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
                   <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {new Date(doc.created_at).toLocaleString()}</p>
                   <div className="flex gap-2">
                     <button onClick={() => handleSaleDocReview(doc.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -3181,6 +3228,7 @@ function AdminDashboardInner() {
               pendingBuyerIds.map((sub) => (
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
+                  <p className="text-[9px] text-gray-400 mb-1">Submitted {new Date(sub.created_at).toLocaleString()}</p>
                   <IdSubmissionDetailsBlock sub={sub} />
                   {/* Real, direct fix: the real upload form explicitly
                       accepts a PDF as well as an image
@@ -3271,6 +3319,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
                   <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
                   <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
+                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {new Date(doc.created_at).toLocaleString()}</p>
                   <div className="flex gap-2">
                     <button onClick={() => handleSaleDocReview(doc.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -3297,6 +3346,7 @@ function AdminDashboardInner() {
                   <p className="text-xs text-chs-charcoal"><span className="font-semibold">Phone:</span> {d.delivery_phone}</p>
                   <p className="text-xs text-chs-charcoal"><span className="font-semibold">Preferred method:</span> {d.preferred_method}</p>
                   {d.delivery_note && <p className="text-xs text-gray-500 mt-1">&quot;{d.delivery_note}&quot;</p>}
+                  <p className="text-[9px] text-gray-400 mt-1">Requested {new Date(d.created_at).toLocaleString()}</p>
                   <button onClick={() => handleMarkDispatched(d.id, d.preferred_method)}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     ✓ Mark as dispatched
@@ -3612,6 +3662,7 @@ function AdminDashboardInner() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mb-2">{app.tenant?.full_name} — {app.tenant?.phone}</p>
+                <p className="text-[9px] text-gray-400 mb-2">{new Date(app.created_at).toLocaleString()}</p>
                 <button onClick={() => handleArchiveApplication(app.id)}
                   className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                   🗄️ Send to Archive
@@ -3793,6 +3844,7 @@ function AdminDashboardInner() {
               <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
                 <p className="text-xs text-gray-500">{prop.location_area} — {prop.purpose}</p>
+                <p className="text-[9px] text-gray-400">Listed {new Date(prop.created_at).toLocaleString()}</p>
                 {/* Real, direct fix per a genuine, confirmed client
                     concern: the same real bio-data rigor already
                     built for a buyer making an offer was never
@@ -4429,9 +4481,11 @@ function AdminDashboardInner() {
             {(() => {
               const saleTotal = pendingLegalTransfers.reduce((s, t) => s + Number(t.amount), 0);
               const marketplaceTotal = marketplaceQueue.filter((q) => q.payment_status === "held_escrow").reduce((s, q) => s + Number(q.quoted_amount || 0), 0);
+              const directOrderTotal = directOrderQueue.reduce((s, o) => s + Number(o.amount), 0);
               const depositsTotal = heldDeposits.reduce((s, d) => s + Number(d.security_deposit_amount), 0);
               const rentTotal = heldRent.reduce((s, r) => s + Number(r.amount), 0);
-              const grandTotal = saleTotal + marketplaceTotal + depositsTotal + rentTotal;
+              const bookingsTotal = heldShortletBookings.reduce((s, b) => s + Number(b.total_price), 0);
+              const grandTotal = saleTotal + marketplaceTotal + directOrderTotal + depositsTotal + rentTotal + bookingsTotal;
               return (
                 <div className="bg-chs-charcoal rounded-xl p-4 mb-4 text-white">
                   <div className="flex justify-between items-start">
@@ -4452,6 +4506,8 @@ function AdminDashboardInner() {
                     <span>Property sales: {formatNaira(saleTotal)}</span>
                     <span>Rent: {formatNaira(rentTotal)}</span>
                     <span>Marketplace: {formatNaira(marketplaceTotal)}</span>
+                    <span>Direct orders: {formatNaira(directOrderTotal)}</span>
+                    <span>Bookings: {formatNaira(bookingsTotal)}</span>
                     <span>Deposits: {formatNaira(depositsTotal)}</span>
                   </div>
                 </div>
@@ -4466,29 +4522,123 @@ function AdminDashboardInner() {
                 finding a specific real transaction never again
                 depends on guessing its category first. */}
             {(() => {
-              type UnifiedItem = { key: string; label: string; category: string; amount: number; date: string };
+              // Real, direct fix per a direct, firm client report: the
+              // unified summary only ever showed what was held — it
+              // had no real way to actually release anything, unlike
+              // the full category sections below it that always had.
+              // Every real item here now carries its own real,
+              // working release action, calling the exact same real
+              // function the detailed section below uses — nothing
+              // new invented, just made reachable from one place.
+              // Direct Orders is also added here for the first time —
+              // it existed as its own real category but was never
+              // included in this unified view at all.
+              type RefundRun = (reason: string) => PromiseLike<{ error: { message: string } | null }>;
+              type UnifiedItem = {
+                key: string; label: string; category: string; amount: number; date: string;
+                action: string; onRelease: () => void; releaseBlockedNote?: string;
+                refund?: { run: RefundRun; opensAt: string | null; defaulterLabel: string };
+              };
               const unified: UnifiedItem[] = [
-                ...heldRent.map((r) => ({ key: `rent-${r.id}`, label: r.property_title, category: "Rent", amount: Number(r.amount), date: r.created_at })),
-                ...pendingLegalTransfers.map((t) => ({ key: `sale-${t.id}`, label: t.property_title, category: "Property Sale", amount: Number(t.amount), date: t.created_at })),
-                ...marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => ({ key: `mkt-${q.id}`, label: q.product_name || "Marketplace order", category: "Marketplace", amount: Number(q.quoted_amount || 0), date: q.created_at })),
-                ...heldDeposits.map((d) => ({ key: `dep-${d.id}`, label: d.property_title, category: "Shortlet Deposit", amount: Number(d.security_deposit_amount), date: d.created_at })),
+                ...heldRent.map((r) => ({
+                  key: `rent-${r.id}`, label: r.property_title, category: "Rent", amount: Number(r.amount), date: r.created_at,
+                  action: "Release to landlord", onRelease: () => handleReleaseRent(r.id),
+                  refund: { run: (reason: string) => supabase.rpc("request_rent_refund", { p_rent_payment_id: r.id, p_admin_reason: reason }), opensAt: r.release_deadline, defaulterLabel: "landlord" },
+                })),
+                ...pendingLegalTransfers.map((t) => ({
+                  key: `sale-${t.id}`, label: t.property_title, category: "Property Sale", amount: Number(t.amount), date: t.created_at,
+                  action: "Confirm transfer & release", onRelease: () => handleConfirmLegalTransfer(t.id),
+                  refund: { run: (reason: string) => supabase.rpc("request_sale_refund", { p_offer_id: t.id, p_admin_reason: reason }), opensAt: t.document_deadline, defaulterLabel: "seller" },
+                })),
+                ...heldShortletBookings.map((b) => ({
+                  key: `booking-${b.id}`, label: `${b.property_title} — ${b.guest_full_name}`, category: b.status === "confirmed" ? "Booking (confirmed)" : "Booking (awaiting host)",
+                  amount: Number(b.total_price), date: b.created_at,
+                  action: "Release to host", onRelease: () => handleReleaseShortletBooking(b.id),
+                  releaseBlockedNote: b.status !== "confirmed" ? "Not releasable yet — the host has not accepted this booking." : undefined,
+                  refund: { run: (reason: string) => supabase.rpc("refund_shortlet_booking", { p_booking_id: b.id, p_reason: reason }), opensAt: null, defaulterLabel: "host" },
+                })),
+                ...marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => ({
+                  key: `mkt-${q.id}`, label: q.product_name || "Marketplace order", category: "Marketplace", amount: Number(q.quoted_amount || 0), date: q.created_at,
+                  action: "Release to vendor", onRelease: () => handleReleaseMarketplaceEscrow(q.id),
+                  refund: { run: (reason: string) => supabase.rpc("refund_marketplace_escrow_to_buyer", { p_request_id: q.id, p_reason: reason }), opensAt: null, defaulterLabel: "vendor" },
+                })),
+                ...directOrderQueue.map((o) => ({
+                  key: `direct-${o.id}`, label: o.product_name || "Direct order", category: "Direct Order", amount: Number(o.amount), date: o.created_at,
+                  action: "Release to vendor", onRelease: () => handleReleaseDirectOrder(o.id),
+                  refund: { run: (reason: string) => supabase.rpc("refund_direct_order_to_buyer", { p_order_id: o.id, p_reason: reason }), opensAt: null, defaulterLabel: "vendor" },
+                })),
+                // A security deposit already has its own two-way decision
+                // (release to guest / claim for host) — its "refund" is the
+                // existing Release to guest, so no separate refund button.
+                ...heldDeposits.map((d) => ({
+                  key: `dep-${d.id}`, label: d.property_title, category: "Shortlet Deposit", amount: Number(d.security_deposit_amount), date: d.created_at,
+                  action: "Release to guest", onRelease: () => handleResolveDeposit(d.id, "released_to_guest"),
+                })),
               ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
               return (
                 <div className="bg-amber-50 rounded-xl border border-chs-amber p-3 mb-4">
                   <p className="text-xs font-bold text-chs-amber-dark mb-2">📋 Every real held transaction, newest first — all categories together ({unified.length})</p>
+                  {escrowNotice && <p className="text-[11px] text-green-800 bg-green-50 border border-green-200 rounded-lg px-2.5 py-2 mb-2">{escrowNotice}</p>}
+                  {actionError && <p className="text-[11px] text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
                   {unified.length === 0 ? (
                     <p className="text-[11px] text-gray-400">Nothing currently held in any category.</p>
                   ) : (
-                    <div className="space-y-1">
-                      {unified.map((u) => (
-                        <div key={u.key} className="bg-white rounded-lg px-2.5 py-1.5 flex justify-between items-center">
-                          <div>
-                            <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full mr-1.5">{u.category}</span>
-                            <span className="text-[11px] text-chs-charcoal">{u.label}</span>
+                    <div className="space-y-1.5">
+                      {unified.map((u) => {
+                        const refundOpen = refundOpenKey === u.key;
+                        const refundNotYet = !!u.refund?.opensAt && new Date(u.refund.opensAt).getTime() > Date.now();
+                        return (
+                          <div key={u.key} className="bg-white rounded-lg px-2.5 py-1.5">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full mr-1.5">{u.category}</span>
+                                <span className="text-[11px] text-chs-charcoal">{u.label}</span>
+                                {u.date && <p className="text-[9px] text-gray-400 ml-0.5">{new Date(u.date).toLocaleString()}</p>}
+                              </div>
+                              <span className="text-[11px] font-bold text-chs-amber-dark whitespace-nowrap ml-2">{formatNaira(u.amount)}</span>
+                            </div>
+
+                            <div className="flex gap-1.5 mt-1.5">
+                              <button onClick={u.onRelease} disabled={!!u.releaseBlockedNote}
+                                className="flex-1 py-1 rounded-full bg-chs-charcoal text-white text-[9px] font-semibold disabled:opacity-40">
+                                ✓ {u.action}
+                              </button>
+                              {u.refund && (
+                                <button onClick={() => { setRefundOpenKey(refundOpen ? null : u.key); setActionError(null); }} disabled={refundNotYet}
+                                  className="flex-1 py-1 rounded-full bg-white border border-chs-red text-chs-red text-[9px] font-semibold disabled:opacity-40 disabled:border-gray-300 disabled:text-gray-400">
+                                  ↩ Refund payer
+                                </button>
+                              )}
+                            </div>
+                            {u.releaseBlockedNote && <p className="text-[8px] text-gray-400 mt-1">{u.releaseBlockedNote}</p>}
+                            {u.refund && refundNotYet && (
+                              <p className="text-[8px] text-gray-400 mt-1">Refund opens {new Date(u.refund.opensAt as string).toLocaleString()} — after the {u.refund.defaulterLabel}&apos;s deadline has passed.</p>
+                            )}
+                            {u.category === "Shortlet Deposit" && (
+                              <p className="text-[8px] text-gray-400 mt-1">For a disputed claim (host keeps the deposit), use the detailed Shortlet/Hire Deposits section below instead — it needs a written reason.</p>
+                            )}
+
+                            {u.refund && refundOpen && !refundNotYet && (
+                              <div className="mt-2 border-t border-gray-100 pt-2">
+                                <p className="text-[9px] text-gray-600 mb-1.5 leading-relaxed">
+                                  The payer receives their <b>full payment back, including CHS&apos;s commission</b>, less only the real bank processing fee (1.5% of CHS&apos;s commission + ₦100, never above ₦2,000). The commission charged to the {u.refund.defaulterLabel} is cancelled. Both parties are notified with exact figures. This cannot be undone.
+                                </p>
+                                <input
+                                  type="text"
+                                  placeholder={`Real reason (e.g. ${u.refund.defaulterLabel} failed to deliver after the deadline)`}
+                                  value={refundReasons[u.key] || ""}
+                                  onChange={(e) => setRefundReasons({ ...refundReasons, [u.key]: e.target.value })}
+                                  className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[10px] mb-1.5"
+                                />
+                                <button onClick={() => handleConfirmRefund(u.key, u.refund!.run)} disabled={refundBusyKey === u.key}
+                                  className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
+                                  {refundBusyKey === u.key ? "Processing refund…" : "Confirm refund to payer"}
+                                </button>
+                              </div>
+                            )}
                           </div>
-                          <span className="text-[11px] font-bold text-chs-amber-dark">{formatNaira(u.amount)}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -4507,6 +4657,7 @@ function AdminDashboardInner() {
                       <div>
                         <p className="text-xs text-chs-charcoal">{r.property_title}</p>
                         <p className="text-[10px] text-gray-400">Landlord: {r.landlord_name} · {daysLeft > 0 ? `${daysLeft} days to auto-release` : "Past grace period"}</p>
+                        <p className="text-[9px] text-gray-400">Paid {new Date(r.created_at).toLocaleString()}</p>
                       </div>
                       <p className="text-xs font-bold text-chs-red">{formatNaira(r.amount)}</p>
                     </div>
@@ -4524,7 +4675,10 @@ function AdminDashboardInner() {
             ) : (
               pendingLegalTransfers.map((t) => (
                 <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                  <p className="text-xs text-chs-charcoal">{t.property_title}</p>
+                  <div>
+                    <p className="text-xs text-chs-charcoal">{t.property_title}</p>
+                    <p className="text-[9px] text-gray-400">Paid {new Date(t.created_at).toLocaleString()}</p>
+                  </div>
                   <p className="text-xs font-bold text-chs-red">{formatNaira(t.amount)}</p>
                 </div>
               ))
@@ -4536,7 +4690,10 @@ function AdminDashboardInner() {
             ) : (
               marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => (
                 <div key={q.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                  <p className="text-xs text-chs-charcoal">{q.product_name || "Marketplace order"}</p>
+                  <div>
+                    <p className="text-xs text-chs-charcoal">{q.product_name || "Marketplace order"}</p>
+                    <p className="text-[9px] text-gray-400">Paid {new Date(q.created_at).toLocaleString()}</p>
+                  </div>
                   <p className="text-xs font-bold text-chs-red">{formatNaira(q.quoted_amount || 0)}</p>
                 </div>
               ))
@@ -4549,7 +4706,10 @@ function AdminDashboardInner() {
               <>
                 {heldDeposits.map((d) => (
                   <div key={`s-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                    <p className="text-xs text-chs-charcoal">Booking — {d.property_title}</p>
+                    <div>
+                      <p className="text-xs text-chs-charcoal">Booking — {d.property_title}</p>
+                      <p className="text-[9px] text-gray-400">Paid {new Date(d.created_at).toLocaleString()}</p>
+                    </div>
                     <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
                   </div>
                 ))}
@@ -4704,6 +4864,7 @@ function AdminDashboardInner() {
                       <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                     </div>
                     <p className="text-xs text-gray-500 mb-1">Vendor: {o.vendor_name}</p>
+                    <p className="text-[9px] text-gray-400 mb-1">Paid {new Date(o.created_at).toLocaleString()}</p>
                     <p className="text-sm font-bold text-chs-charcoal mb-2">Real amount held: {formatNaira(o.amount)}</p>
                     <input type="text" placeholder="If refunding: real reason"
                       value={directOrderReasons[o.id] || ""} onChange={(e) => setDirectOrderReasons({ ...directOrderReasons, [o.id]: e.target.value })}
