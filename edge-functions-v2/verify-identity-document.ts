@@ -1,8 +1,8 @@
 // CHS Edge Function: verify-identity-document
 //
 // Phase 1 of the AVS (Automated Verification System): an automated
-// first-pass check reading an uploaded document image with Claude's
-// real vision capability, comparing what is printed on it against
+// first-pass check reading an uploaded document with Claude's real
+// vision/document capability, comparing what is printed on it against
 // what was typed on the form (full name, ID number). This is a
 // text-matching check only -- it does not, and cannot, confirm the
 // document is genuine, that it belongs to the person who submitted
@@ -11,24 +11,27 @@
 // problem, deliberately scoped out of this phase (Phase 2, a licensed
 // third-party provider, a separate real cost decision).
 //
-// Real, direct extension per explicit client instruction ("the
-// intelligence built for ID verification does not cut across board"):
-// now covers two real, separate verification types -- a real buyer's
-// own ID (buyer_id_verifications) and a real rental guarantor's ID
+// Real, direct fix per a direct client question ("why can't PDF be
+// verified automatically???"): confirmed directly against Anthropic's
+// own current documentation before answering -- Claude's real API
+// genuinely does support PDF documents natively, reading both the
+// text and the visual layout of every page (including a scanned
+// photo saved as a PDF, exactly the real, common case here), via a
+// real "document" content block, not the "image" block this function
+// used exclusively before. The earlier "PDFs aren't supported yet"
+// behaviour was a real, honest limitation of how this function was
+// first built, not a real limitation of Claude itself -- corrected
+// here, not left as a permanent gap.
+//
+// Covers two real, separate verification types -- a real buyer's own
+// ID (buyer_id_verifications) and a real rental guarantor's ID
 // (rental_applications) -- selected by the real "type" field in the
-// request body. Both write to their own, separate real columns; a
-// guarantor check never touches buyer_id_verifications and vice
-// versa.
+// request body.
 //
-// Super-admin-only for both types, correcting a real gap found while
-// building this: the database side was already restricted to the
-// super admin (migration 416), but this edge function's own internal
-// check had never been updated to match -- it still checked the old,
-// wider staff domain. Fixed here, for both verification types.
-//
-// Requires ANTHROPIC_API_KEY to be set as a real Supabase secret --
-// this function cannot run without it, and fails with a clear, honest
-// error rather than silently pretending to work.
+// Super-admin-only for both types. Requires ANTHROPIC_API_KEY to be
+// set as a real Supabase secret -- this function cannot run without
+// it, and fails with a clear, honest error rather than silently
+// pretending to work.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -85,8 +88,6 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Your sign-in could not be verified.' }, 401)
     }
 
-    // Real, corrected check -- super admin only, for both real
-    // verification types, matching the database-level restriction.
     const adminClientForCheck = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -177,20 +178,23 @@ Deno.serve(async (req) => {
     }
 
     const isPdf = filePath.toLowerCase().endsWith('.pdf')
-    if (isPdf) {
-      const note = 'This submission is a PDF, not an image — automated reading is not yet supported for PDFs. Please review it manually.'
-      await recordResult('error', null, null, null, null, note)
-      return jsonResponse({ status: 'error', notes: note })
-    }
 
     const arrayBuffer = await fileBlob.arrayBuffer()
     const bytes = new Uint8Array(arrayBuffer)
     let binary = ''
     for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
     const base64 = btoa(binary)
-    const mediaType = filePath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg'
 
-    const prompt = `You are looking at a photo of a real, government-issued identity document from Nigeria. Read only what is genuinely, clearly printed or written on the document itself.
+    // Real, direct fix: PDFs are now sent as Claude's real "document"
+    // content block, which genuinely reads both the text and the
+    // visual layout of every page -- including a scanned photo saved
+    // as a PDF, the real, common case for a document uploaded from a
+    // phone. Only non-PDF files fall back to the "image" block.
+    const contentBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+      : { type: 'image', source: { type: 'base64', media_type: filePath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg', data: base64 } }
+
+    const prompt = `You are looking at a real, government-issued identity document from Nigeria. Read only what is genuinely, clearly printed or written on the document itself.
 
 Return ONLY a JSON object, no other text, in exactly this shape:
 {"extracted_full_name": string or null, "extracted_id_number": string or null, "document_looks_genuine": boolean, "notes": string}
@@ -213,7 +217,7 @@ Return ONLY a JSON object, no other text, in exactly this shape:
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+            contentBlock,
             { type: 'text', text: prompt },
           ],
         }],

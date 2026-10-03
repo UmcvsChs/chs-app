@@ -467,7 +467,7 @@ function AdminDashboardInner() {
   const [tenantRegisterLoading, setTenantRegisterLoading] = useState(false);
   const [heldDeposits, setHeldDeposits] = useState<{
     id: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
-    security_deposit_amount: number; property_title: string; owner_id: string;
+    security_deposit_amount: number; created_at: string; property_title: string; owner_id: string;
   }[]>([]);
   const [depositReasons, setDepositReasons] = useState<Record<string, string>>({});
   const [pendingOfferReview, setPendingOfferReview] = useState<{
@@ -581,7 +581,7 @@ function AdminDashboardInner() {
     payment_status: string; created_at: string; product_name: string | null; vendor_name: string | null;
   }[]>([]);
   const [marketplaceReasons, setMarketplaceReasons] = useState<Record<string, string>>({});
-  const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; property_title: string; landlord_name: string }[]>([]);
+  const [heldRent, setHeldRent] = useState<{ id: string; amount: number; release_deadline: string; created_at: string; property_title: string; landlord_name: string }[]>([]);
   useEffect(() => {
     // Real, direct fix for a genuine, confirmed production bug: the
     // old embedded-join query (rent_payments -> tenancies -> properties
@@ -593,9 +593,29 @@ function AdminDashboardInner() {
     // profiles (landlord_id, tenant_id, manager_id). Replaced with a
     // real, dedicated function, the same safe pattern already used for
     // every other admin data feed on this dashboard.
-    supabase.rpc("get_held_rent_payments")
-      .then(({ data }) => setHeldRent((data as unknown as typeof heldRent) || []));
+    loadEscrowData();
   }, []);
+
+  // Real, direct fix per a direct, confirmed source of confusion: a
+  // real, brand-new held payment (Felicia Babaranti's ₦1,166,000 rent)
+  // genuinely existed and was correctly held the entire time — traced
+  // and confirmed directly — but every section of Escrow Oversight
+  // only ever loads once, when the admin page first opens, with no
+  // real way to see anything that happened afterward without a full
+  // page reload. One real, shared refresh for every real held
+  // category at once, callable any time, not just on first load.
+  async function loadEscrowData() {
+    const [rentRes, saleRes, marketRes, depositRes] = await Promise.all([
+      supabase.rpc("get_held_rent_payments"),
+      supabase.rpc("get_pending_legal_transfers"),
+      supabase.rpc("get_marketplace_queue"),
+      supabase.rpc("get_held_shortlet_deposits"),
+    ]);
+    setHeldRent((rentRes.data as unknown as typeof heldRent) || []);
+    setPendingLegalTransfers((saleRes.data as unknown as typeof pendingLegalTransfers) || []);
+    setMarketplaceQueue((marketRes.data as unknown as typeof marketplaceQueue) || []);
+    setHeldDeposits((depositRes.data as unknown as typeof heldDeposits) || []);
+  }
   async function handleReleaseRent(id: string) {
     await supabase.rpc("release_rent_to_landlord", { p_rent_payment_id: id, p_reason: "admin_override" });
     setHeldRent((prev) => prev.filter((r) => r.id !== id));
@@ -852,7 +872,7 @@ function AdminDashboardInner() {
   const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; properties: { title: string } | null }[]>([]);
-  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; property_title: string; owner_id: string }[]>([]);
+  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; created_at: string; property_title: string; owner_id: string }[]>([]);
   // Real, direct fix answering a genuine, direct client question:
   // "where does the message go" for a real hard-copy delivery
   // request. Confirmed directly — nowhere. request_document_dispatch
@@ -4414,14 +4434,63 @@ function AdminDashboardInner() {
               const grandTotal = saleTotal + marketplaceTotal + depositsTotal + rentTotal;
               return (
                 <div className="bg-chs-charcoal rounded-xl p-4 mb-4 text-white">
-                  <p className="text-[10px] text-white/60 uppercase font-semibold">Total real funds currently held in escrow</p>
-                  <p className="text-2xl font-bold">{formatNaira(grandTotal)}</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-white/60 uppercase font-semibold">Total real funds currently held in escrow</p>
+                      <p className="text-2xl font-bold">{formatNaira(grandTotal)}</p>
+                    </div>
+                    {/* Real, direct fix: this whole screen only ever
+                        loaded once, on first open — a real, brand-new
+                        held payment could sit invisible until a full
+                        page reload. One real, manual refresh, for
+                        every held category at once. */}
+                    <button onClick={loadEscrowData} className="bg-white/15 hover:bg-white/25 text-white text-[10px] font-semibold px-3 py-1.5 rounded-full shrink-0">
+                      🔄 Refresh
+                    </button>
+                  </div>
                   <div className="flex gap-4 mt-2 text-[10px] text-white/70">
                     <span>Property sales: {formatNaira(saleTotal)}</span>
                     <span>Rent: {formatNaira(rentTotal)}</span>
                     <span>Marketplace: {formatNaira(marketplaceTotal)}</span>
                     <span>Deposits: {formatNaira(depositsTotal)}</span>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* Real, direct fix for the exact confusion just raised
+                directly: a real transaction existing somewhere in one
+                of four separate sections below, with nothing telling
+                admin which one to check. One real, unified list,
+                every held category together, newest first — so
+                finding a specific real transaction never again
+                depends on guessing its category first. */}
+            {(() => {
+              type UnifiedItem = { key: string; label: string; category: string; amount: number; date: string };
+              const unified: UnifiedItem[] = [
+                ...heldRent.map((r) => ({ key: `rent-${r.id}`, label: r.property_title, category: "Rent", amount: Number(r.amount), date: r.created_at })),
+                ...pendingLegalTransfers.map((t) => ({ key: `sale-${t.id}`, label: t.property_title, category: "Property Sale", amount: Number(t.amount), date: t.created_at })),
+                ...marketplaceQueue.filter((q) => q.payment_status === "held_escrow").map((q) => ({ key: `mkt-${q.id}`, label: q.product_name || "Marketplace order", category: "Marketplace", amount: Number(q.quoted_amount || 0), date: q.created_at })),
+                ...heldDeposits.map((d) => ({ key: `dep-${d.id}`, label: d.property_title, category: "Shortlet Deposit", amount: Number(d.security_deposit_amount), date: d.created_at })),
+              ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+              return (
+                <div className="bg-amber-50 rounded-xl border border-chs-amber p-3 mb-4">
+                  <p className="text-xs font-bold text-chs-amber-dark mb-2">📋 Every real held transaction, newest first — all categories together ({unified.length})</p>
+                  {unified.length === 0 ? (
+                    <p className="text-[11px] text-gray-400">Nothing currently held in any category.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {unified.map((u) => (
+                        <div key={u.key} className="bg-white rounded-lg px-2.5 py-1.5 flex justify-between items-center">
+                          <div>
+                            <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full mr-1.5">{u.category}</span>
+                            <span className="text-[11px] text-chs-charcoal">{u.label}</span>
+                          </div>
+                          <span className="text-[11px] font-bold text-chs-amber-dark">{formatNaira(u.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })()}
