@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 // Real, new component completing the request-to-book flow — the
 // host's actual, genuine decision, with a real note captured either
 // way (why declined, or a real welcome note for an accepted guest).
-export default function HostBookingDecision({ bookingId, onDecided }: { bookingId: string; onDecided: () => void }) {
+export default function HostBookingDecision({ bookingId, onDecided, unpaid = false }: { bookingId: string; onDecided: () => void; unpaid?: boolean }) {
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState<"confirmed" | "declined" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,11 +44,11 @@ export default function HostBookingDecision({ bookingId, onDecided }: { bookingI
       <div className="flex gap-2">
         <button onClick={() => handleDecision("confirmed")} disabled={!!submitting}
           className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
-          {submitting === "confirmed" ? "Accepting..." : "Accept"}
+          {submitting === "confirmed" ? "Confirming..." : unpaid ? "Confirm — dates are free" : "Accept"}
         </button>
         <button onClick={() => handleDecision("declined")} disabled={!!submitting}
           className="flex-1 py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold disabled:opacity-50">
-          {submitting === "declined" ? "Declining..." : "Decline (real refund)"}
+          {submitting === "declined" ? "Declining..." : unpaid ? "Decline (nothing was charged)" : "Decline (real refund)"}
         </button>
       </div>
     </div>

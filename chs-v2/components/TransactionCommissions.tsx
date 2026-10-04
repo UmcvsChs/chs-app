@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
@@ -81,7 +82,7 @@ export default function TransactionCommissions({ session }: { session: Session }
           const realTotal = isFirstRentalPayment ? c.base_amount + c.commission_amount : c.commission_amount;
           return (
             <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-3">
-              <p className="text-xs font-semibold text-chs-charcoal">{c.properties?.[0]?.title || "Property"}</p>
+              <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(c.properties)?.title || "Property"}</p>
               {isFirstRentalPayment ? (
                 <p className="text-[10px] text-gray-400">
                   Your first year&apos;s rent ({formatNaira(c.base_amount)}) plus your real CHS commission ({c.commission_percentage}% — {formatNaira(c.commission_amount)}), paid together

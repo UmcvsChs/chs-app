@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { Suspense, useEffect, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import { validateIdNumber } from "@/lib/validators";
@@ -299,7 +300,41 @@ function AdminDashboardInner() {
   }
   const [pendingLiveness, setPendingLiveness] = useState<{ id: string; user_id: string; captured_photo_url: string; created_at: string; profiles: { full_name: string } | null }[]>([]);
   const [pendingBuyerIds, setPendingBuyerIds] = useState<({ id: string; user_id: string; id_type: string; id_number: string; id_document_url: string; created_at: string; profiles: { full_name: string; phone?: string } | null } & IdSubmissionDetails)[]>([]);
-  const [pendingShortletBookings, setPendingShortletBookings] = useState<{ id: string; status: string; payment_status: string; total_price: number; check_in: string; check_out: string; guest_full_name: string; guest_phone: string; created_at: string; property_title: string; host_name: string; host_phone: string }[]>([]);
+  // Hotels, lodges and venues whose availability calendar nobody has
+  // confirmed lately. Guests book on what a calendar shows, so a stale one
+  // is where "I booked and they cancelled" comes from.
+  const [staleCalendars, setStaleCalendars] = useState<{ id: string; title: string; owner_name: string; owner_phone: string; calendar_confirmed_at: string | null; days_since: number | null; rooms: number; pending_requests: number }[]>([]);
+  // The live queue of hotel / lodge / venue requests that are still in flight:
+  // waiting for CHS to relay them, with the host, or waiting for the guest to pay.
+  const [bookingQueue, setBookingQueue] = useState<{
+    id: string; stage: "awaiting_admin_relay" | "pending_host_review" | "awaiting_payment"; lane: string; property_title: string;
+    host_name: string; host_phone: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
+    expected_arrival_time: string | null; amount_if_confirmed: number; payment_status: string; hold_expires_at: string | null;
+    created_at: string; admin_relay_note: string | null; relay_mode: string | null; minutes_left: number | null;
+  }[]>([]);
+  const [relayNotes, setRelayNotes] = useState<Record<string, string>>({});
+  const [bookingRejectReasons, setBookingRejectReasons] = useState<Record<string, string>>({});
+  const [queueBusy, setQueueBusy] = useState<string | null>(null);
+  async function loadBookingQueue() {
+    const { data } = await supabase.rpc("get_admin_booking_queue");
+    setBookingQueue((data as unknown as typeof bookingQueue) || []);
+  }
+  async function handleRelayBooking(id: string) {
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("admin_relay_booking", { p_booking_id: id, p_note: (relayNotes[id] || "").trim() || null });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadBookingQueue();
+  }
+  async function handleRejectBooking(id: string) {
+    const reason = (bookingRejectReasons[id] || "").trim();
+    if (!reason) { setActionError("Please write a real reason before declining a booking request."); return; }
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("admin_reject_booking", { p_booking_id: id, p_reason: reason });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadBookingQueue();
+  }
   // Real, new feature per direct client request: a real buyer accepted
   // an offer and simply never paid, with no real way for admin to see
   // it, remind them, or free the property back up — exactly the real,
@@ -1354,9 +1389,8 @@ function AdminDashboardInner() {
     // Real, new admin visibility into pending shortlet/hire bookings —
     // these are decided by the host directly, not admin, but admin
     // had no real way to see or track them at all before this.
-    supabase.rpc("get_pending_shortlet_bookings").then(({ data }) => {
-      setPendingShortletBookings((data as unknown as typeof pendingShortletBookings) || []);
-    });
+    supabase.rpc("get_stale_calendars", { p_stale_days: 3 }).then(({ data }) => setStaleCalendars((data as unknown as typeof staleCalendars) || []));
+    supabase.rpc("get_admin_booking_queue").then(({ data }) => setBookingQueue((data as unknown as typeof bookingQueue) || []));
     setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
     setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
     setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
@@ -2287,7 +2321,7 @@ function AdminDashboardInner() {
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
-          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${pendingShortletBookings.length})`, domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length})`, domain: "owner_buyer_tenant", group: "Financial" },
           { key: "staleoffers", label: `⚠️ Pending/Inconclusive Deals (${stalePendingOffers.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
@@ -2343,7 +2377,8 @@ function AdminDashboardInner() {
               /* Real, direct request: a real deal that's gone stale
                  should always show as a red alert in the sidebar
                  itself, not just once you're already inside the tab. */
-              tab.key === "staleoffers" && stalePendingOffers.length > 0
+              (tab.key === "staleoffers" && stalePendingOffers.length > 0) ||
+              (tab.key === "shortletbookings" && bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express"))
                 ? "border-chs-red text-chs-red bg-red-50 rounded-t-lg"
                 : activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
             }`}
@@ -2939,7 +2974,7 @@ function AdminDashboardInner() {
                         <div className="mt-2 pt-2 border-t border-gray-100">
                           {traceData.promotions.map((p, i) => (
                             <p key={i} className="text-[10px] text-gray-500">
-                              {p.properties?.[0]?.title || "Untitled"} — {p.is_active ? "ON" : "OFF"}{p.rank_category && `, Category ${p.rank_category}`}
+                              {embeddedOne(p.properties)?.title || "Untitled"} — {p.is_active ? "ON" : "OFF"}{p.rank_category && `, Category ${p.rank_category}`}
                             </p>
                           ))}
                         </div>
@@ -3994,7 +4029,7 @@ function AdminDashboardInner() {
               conditionReports.map((r) => (
                 <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-3">
                   <div className="flex justify-between items-start">
-                    <p className="text-sm font-semibold text-chs-charcoal">{r.tenancies?.properties?.[0]?.title || "Property"}</p>
+                    <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(r.tenancies?.properties)?.title || "Property"}</p>
                     <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</span>
                   </div>
                   <p className="text-[10px] text-gray-500 capitalize mb-2">{r.report_type.replace(/_/g, " ")} · {r.status} · Ref: {r.reference}</p>
@@ -4780,25 +4815,97 @@ function AdminDashboardInner() {
         {activeTab === "shortletbookings" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
-              Real shortlet, hire, and event bookings genuinely go straight to the host to accept or decline — CHS does not gate this decision. This is a real, live view so you can see what&apos;s pending and step in if a host is genuinely slow to respond, not an approval queue.
+              Booking requests for hotels, lodges and venues. A guest sends a request (nothing is charged); CHS relays it to the host; the host confirms the dates are free; the guest then pays within a short window. Urgent requests (check-in today or within 3 days) go to the host instantly and are shown first, in red — phone any host who goes quiet.
             </p>
-            {pendingShortletBookings.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No real bookings currently awaiting a host decision.</p>
+            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
+            <div className={`rounded-xl border-2 p-3 mb-3 ${staleCalendars.length > 0 ? "bg-red-50 border-chs-red" : "bg-green-50 border-green-200"}`}>
+              <p className={`text-xs font-bold mb-1 ${staleCalendars.length > 0 ? "text-chs-red" : "text-green-700"}`}>
+                {staleCalendars.length > 0
+                  ? `📅 ${staleCalendars.length} listing${staleCalendars.length !== 1 ? "s have" : " has"} an availability calendar nobody has confirmed in 3+ days`
+                  : "📅 Every active hotel, lodge and venue calendar has been confirmed in the last 3 days"}
+              </p>
+              {staleCalendars.length > 0 && (
+                <>
+                  <p className="text-[10px] text-gray-500 mb-2">Guests book on these calendars. A host who hasn&apos;t confirmed lately may have walk-in guests the calendar doesn&apos;t show — phone them. Hosts get a daily reminder at 7am.</p>
+                  <div className="space-y-1">
+                    {staleCalendars.slice(0, 12).map((c) => (
+                      <div key={c.id} className="bg-white rounded-lg px-2.5 py-1.5 flex justify-between items-center gap-2">
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-semibold text-chs-charcoal truncate">{c.title}</p>
+                          <p className="text-[9px] text-gray-500">{c.owner_name} · {c.owner_phone} · {c.rooms} room{c.rooms !== 1 ? "s" : ""}{c.pending_requests > 0 ? ` · ${c.pending_requests} request(s) pending` : ""}</p>
+                        </div>
+                        <span className="text-[9px] font-bold text-white bg-chs-red px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                          {c.days_since === null ? "never confirmed" : `${c.days_since}d ago`}
+                        </span>
+                      </div>
+                    ))}
+                    {staleCalendars.length > 12 && <p className="text-[9px] text-gray-400 text-center pt-1">…and {staleCalendars.length - 12} more</p>}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-xs font-bold text-chs-charcoal">📋 Requests in progress ({bookingQueue.length})</p>
+              <button onClick={loadBookingQueue} className="text-[10px] font-semibold text-chs-red underline">🔄 Refresh</button>
+            </div>
+            {bookingQueue.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">No booking requests are in progress right now.</p>
             ) : (
-              pendingShortletBookings.map((b) => {
-                const daysWaiting = Math.floor((Date.now() - new Date(b.created_at).getTime()) / 86400000);
+              (["awaiting_admin_relay", "pending_host_review", "awaiting_payment"] as const).map((stage) => {
+                const rows = bookingQueue.filter((q) => q.stage === stage);
+                if (rows.length === 0) return null;
+                const heading = stage === "awaiting_admin_relay" ? "📨 Waiting for you to relay to the host"
+                  : stage === "pending_host_review" ? "⏳ With the host — waiting for them to confirm the dates"
+                  : "💳 Host confirmed — waiting for the guest to pay";
                 return (
-                  <div key={b.id} className={`rounded-xl border p-3 mb-2 ${daysWaiting >= 3 ? "bg-red-50 border-red-200" : "bg-[var(--zone-card)] border-gray-100"}`}>
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-semibold text-chs-charcoal">{b.property_title}</p>
-                      {daysWaiting >= 3 && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-chs-red text-white">{daysWaiting}d, no host decision</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
-                    <p className="text-[10px] text-gray-400 mb-1">Host: {b.host_name} · {b.host_phone}</p>
-                    <p className="text-sm font-bold text-chs-charcoal">{formatNaira(b.total_price)} — held in escrow</p>
-                    <p className="text-[9px] text-gray-400 mt-1">Requested {new Date(b.created_at).toLocaleString()}</p>
+                  <div key={stage} className="mb-4">
+                    <p className="text-[11px] font-bold text-chs-charcoal mb-1.5">{heading} ({rows.length})</p>
+                    {rows.map((q) => {
+                      const urgent = q.lane === "express" || q.lane === "soon";
+                      const mins = q.minutes_left ?? null;
+                      const left = mins === null ? null : mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins} min`;
+                      return (
+                        <div key={q.id} className={`rounded-xl border-2 p-3 mb-2 ${q.lane === "express" ? "bg-red-50 border-chs-red" : urgent ? "bg-chs-amber-light border-chs-amber" : "bg-[var(--zone-card)] border-gray-100"}`}>
+                          <div className="flex justify-between items-start gap-2">
+                            <p className="text-sm font-semibold text-chs-charcoal">{q.property_title}</p>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${q.lane === "express" ? "bg-chs-red text-white" : urgent ? "bg-chs-amber text-chs-charcoal" : q.lane === "legacy" ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-500"}`}>
+                              {q.lane === "express" ? "⚡ EXPRESS" : q.lane === "soon" ? "🕒 SOON" : q.lane === "legacy" ? "OLDER — PAID AT REQUEST" : "STANDARD"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600">{q.guest_full_name} · {q.guest_phone} · {q.check_in} → {q.check_out}{q.expected_arrival_time ? ` · arriving about ${q.expected_arrival_time}` : ""}</p>
+                          <p className="text-[11px] text-gray-500">Host: {q.host_name} · <b>{q.host_phone}</b></p>
+                          <p className="text-sm font-bold text-chs-charcoal mt-1">
+                            {formatNaira(q.amount_if_confirmed)}
+                            <span className="text-[10px] font-normal text-gray-500"> {q.payment_status === "held_escrow" ? "— already paid, held in escrow" : "— not paid yet (nothing is held)"}</span>
+                          </p>
+                          {left && (
+                            <p className={`text-[11px] font-semibold mt-0.5 ${mins !== null && mins <= 30 ? "text-chs-red" : "text-amber-700"}`}>
+                              ⏱ {left} left {stage === "awaiting_admin_relay" ? "before it relays automatically" : stage === "pending_host_review" ? "for the host to answer" : "for the guest to pay"}
+                            </p>
+                          )}
+                          {q.admin_relay_note && <p className="text-[10px] text-gray-500 italic mt-0.5">CHS note to host: “{q.admin_relay_note}”</p>}
+                          {q.relay_mode === "auto" && stage !== "awaiting_admin_relay" && <p className="text-[9px] text-gray-400 mt-0.5">Relayed to the host automatically</p>}
+                          <p className="text-[9px] text-gray-400 mt-0.5">Requested {new Date(q.created_at).toLocaleString()}</p>
+
+                          {stage === "awaiting_admin_relay" && (
+                            <div className="mt-2">
+                              <input type="text" value={relayNotes[q.id] || ""} onChange={(e) => setRelayNotes({ ...relayNotes, [q.id]: e.target.value })}
+                                placeholder="Optional note to the host (e.g. guest is ID-verified)" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                              <button onClick={() => handleRelayBooking(q.id)} disabled={queueBusy === q.id}
+                                className="w-full py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">
+                                {queueBusy === q.id ? "Relaying…" : "✓ Relay to the host"}
+                              </button>
+                              <input type="text" value={bookingRejectReasons[q.id] || ""} onChange={(e) => setBookingRejectReasons({ ...bookingRejectReasons, [q.id]: e.target.value })}
+                                placeholder="Reason, if declining this request" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] mt-2 mb-1.5" />
+                              <button onClick={() => handleRejectBooking(q.id)} disabled={queueBusy === q.id}
+                                className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[11px] font-semibold disabled:opacity-50">
+                                Decline this request (guest pays nothing)
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })

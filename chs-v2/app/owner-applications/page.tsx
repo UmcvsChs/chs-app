@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -106,8 +107,8 @@ export default function OwnerApplicationsPage() {
               <div key={app.id} className={`rounded-xl border p-3 mb-2 text-xs space-y-2 ${needsAttention(app.status) ? "bg-chs-amber-light border-chs-red" : "bg-white border-gray-200"}`}>
                 <div className="flex justify-between items-start pb-2 border-b border-gray-200">
                   <div>
-                    <p className="font-bold text-chs-charcoal text-sm">{app.properties?.[0]?.title || "Property"}</p>
-                    <p className="text-gray-500">{app.properties?.[0]?.location_area}</p>
+                    <p className="font-bold text-chs-charcoal text-sm">{embeddedOne(app.properties)?.title || "Property"}</p>
+                    <p className="text-gray-500">{embeddedOne(app.properties)?.location_area}</p>
                   </div>
                   {needsAttention(app.status) && <span className="text-[9px] font-bold text-white bg-chs-red px-1.5 py-0.5 rounded-full whitespace-nowrap">Needs you</span>}
                 </div>

@@ -4,7 +4,9 @@ import RefundPolicyNotice from "./RefundPolicyNotice";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
-import { ShortletBooking } from "@/types/shortletBooking";
+import AvailabilityCalendar from "@/components/AvailabilityCalendar";
+import BookingFlowNotice from "@/components/BookingFlowNotice";
+import { BookingRequestResult, LaneInfo, friendlyBookingError } from "@/lib/bookingLane";
 import { formatNaira } from "@/lib/format";
 import ValidatedInput from "@/components/ValidatedInput";
 import { validatePhone, validateFullName } from "@/lib/validators";
@@ -13,11 +15,7 @@ interface ShortletBookingFormProps {
   propertyId: string;
   pricePerNight: number;
   session: Session;
-  onSuccess: () => void;
-}
-
-function rangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
-  return new Date(startA) < new Date(endB) && new Date(startB) < new Date(endA);
+  onSuccess: (result: BookingRequestResult) => void;
 }
 
 // Real, comprehensive rebuild per direct, serious client feedback —
@@ -29,6 +27,7 @@ function rangesOverlap(startA: string, endA: string, startB: string, endB: strin
 // instant booking.
 interface RealPricing {
   nights: number;
+  price_per_night: number;
   base_amount: number;
   guest_commission_amount: number;
   security_deposit_required: boolean;
@@ -42,7 +41,14 @@ export default function ShortletBookingForm({
   session,
   onSuccess,
 }: ShortletBookingFormProps) {
-  const [existingBookings, setExistingBookings] = useState<ShortletBooking[]>([]);
+  // Room types the host has set up (e.g. Executive, Standard). Guests choose
+  // a type; the system assigns a free room of that type.
+  const [roomOptions, setRoomOptions] = useState<{ id: string; name: string; price: number | null; maxGuests: number | null }[]>([]);
+  const [roomTypeId, setRoomTypeId] = useState("");
+  const [calendarKey, setCalendarKey] = useState(0);
+  // How soon the guest arrives decides how quickly each step must happen.
+  const [laneInfo, setLaneInfo] = useState<LaneInfo | null>(null);
+  const [arrivalTime, setArrivalTime] = useState("");
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
   const [guests, setGuests] = useState(1);
@@ -50,13 +56,25 @@ export default function ShortletBookingForm({
   const [guestPhone, setGuestPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [pricing, setPricing] = useState<RealPricing | null>(null);
   const [houseRulesUrl, setHouseRulesUrl] = useState<string | null>(null);
   const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
 
   useEffect(() => {
-    loadExistingBookings();
+    Promise.all([
+      supabase.from("room_types").select("id, name, max_guests, price_per_night, sort_order").eq("property_id", propertyId).eq("active", true).order("sort_order"),
+      supabase.from("property_units").select("room_type_id").eq("property_id", propertyId).eq("active", true),
+    ]).then(([typesRes, unitsRes]) => {
+      const units = unitsRes.data || [];
+      const options = (typesRes.data || [])
+        .filter((t) => units.some((u) => u.room_type_id === t.id))
+        .map((t) => ({ id: t.id as string, name: t.name as string, price: t.price_per_night as number | null, maxGuests: t.max_guests as number | null }));
+      if (units.some((u) => !u.room_type_id)) {
+        options.push({ id: "", name: options.length > 0 ? "Standard room" : "Whole property", price: null, maxGuests: null });
+      }
+      setRoomOptions(options);
+      if (options.length === 1) setRoomTypeId(options[0].id);
+    });
     // Real, direct fix for a genuine, confirmed gap: house rules
     // could be uploaded by a host, but were never actually shown to
     // the guest anywhere in the real booking flow.
@@ -73,23 +91,26 @@ export default function ShortletBookingForm({
 
   useEffect(() => {
     if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPricing(null);
       return;
     }
-    supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut, p_guest_id: session.user.id })
-      .then(({ data }) => setPricing(data));
-  }, [checkIn, checkOut, propertyId, session.user.id]);
+    supabase.rpc("get_real_shortlet_pricing", {
+      p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut,
+      p_guest_id: session.user.id, p_room_type_id: roomTypeId || null,
+    }).then(({ data }) => setPricing(data));
+  }, [checkIn, checkOut, propertyId, session.user.id, roomTypeId]);
+
+  useEffect(() => {
+    if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLaneInfo(null);
+      return;
+    }
+    supabase.rpc("booking_lane_info", { p_check_in: checkIn }).then(({ data }) => setLaneInfo((data as LaneInfo) || null));
+  }, [checkIn, checkOut]);
 
   const validDateRange = checkIn && checkOut && new Date(checkOut) > new Date(checkIn);
-
-  async function loadExistingBookings() {
-    const { data } = await supabase
-      .from("shortlet_bookings")
-      .select("*")
-      .eq("property_id", propertyId)
-      .eq("status", "confirmed");
-    setExistingBookings(data || []);
-    setLoadingAvailability(false);
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -106,18 +127,15 @@ export default function ShortletBookingForm({
       return;
     }
 
-    const hasClientSideConflict = existingBookings.some((b) =>
-      rangesOverlap(checkIn, checkOut, b.check_in, b.check_out)
-    );
-    if (hasClientSideConflict) {
-      setError("Those dates are already booked. Please choose a different range.");
+    if (laneInfo?.lane === "express" && !arrivalTime) {
+      setError("For a same-day booking, please tell the hotel roughly what time you will arrive.");
       return;
     }
 
     setError(null);
     setSubmitting(true);
 
-    const { data: bookingId, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
+    const { data: requestResult, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
       p_check_in: checkIn,
       p_check_out: checkOut,
@@ -130,45 +148,53 @@ export default function ShortletBookingForm({
       // guests that their ID is never shown to other users.
       p_guest_id_document_url: null,
       p_house_rules_acknowledged: rulesAcknowledged,
+      p_room_type_id: roomTypeId || null,
+      p_expected_arrival_time: arrivalTime || null,
     });
 
-    if (rpcError || !bookingId) {
-      if (rpcError?.message?.includes("insufficient_balance")) {
-        setError("Insufficient wallet balance for the real total (including CHS's commission). Please top up your wallet first.");
-      } else if (rpcError?.message?.includes("exclude") || rpcError?.code === "23P01") {
-        setError("Someone just booked those dates. Please choose a different range.");
-      } else {
-        setError("Could not complete this booking request. Please try again.");
-      }
+    if (rpcError || !requestResult) {
+      setError(friendlyBookingError(rpcError?.message, { lane: laneInfo?.lane, total: pricing.real_total_guest_pays }));
       setSubmitting(false);
-      loadExistingBookings();
+      setCalendarKey((k) => k + 1);
       return;
     }
 
-    onSuccess();
+    onSuccess(requestResult as BookingRequestResult);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {loadingAvailability ? (
-        <p className="text-xs text-gray-400">Checking availability...</p>
-      ) : existingBookings.length > 0 ? (
-        <p className="text-[10px] text-gray-400">
-          {existingBookings.length} date range{existingBookings.length !== 1 ? "s" : ""} already booked — pick dates outside those.
-        </p>
-      ) : null}
+      {roomOptions.length > 1 && (
+        <div>
+          <p className="text-xs font-bold text-chs-charcoal mb-1">Choose a room type</p>
+          <div className="space-y-1.5">
+            {roomOptions.map((o) => (
+              <label key={o.id || "any"} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 cursor-pointer ${roomTypeId === o.id ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
+                <span className="flex items-center gap-2">
+                  <input type="radio" name="room-type" checked={roomTypeId === o.id} onChange={() => setRoomTypeId(o.id)} />
+                  <span>
+                    <span className="block text-xs font-semibold text-chs-charcoal">{o.name}</span>
+                    {o.maxGuests && <span className="block text-[10px] text-gray-400">Up to {o.maxGuests} guests</span>}
+                  </span>
+                </span>
+                <span className="text-xs font-bold text-chs-charcoal whitespace-nowrap">{formatNaira(o.price ?? pricePerNight)}<span className="text-[9px] font-normal text-gray-400">/night</span></span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-xs font-semibold text-gray-600">Check-in</label>
-          <input type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)}
-            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-        </div>
-        <div className="flex-1">
-          <label className="text-xs font-semibold text-gray-600">Check-out</label>
-          <input type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)}
-            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-        </div>
+      <div>
+        <p className="text-xs font-bold text-chs-charcoal mb-1">Choose your dates</p>
+        <AvailabilityCalendar
+          key={`${roomTypeId}-${calendarKey}`}
+          propertyId={propertyId}
+          roomTypeId={roomTypeId || null}
+          mode="range"
+          checkIn={checkIn}
+          checkOut={checkOut}
+          onChange={(ci, co) => { setCheckIn(ci); setCheckOut(co); }}
+        />
       </div>
 
       <div>
@@ -192,7 +218,7 @@ export default function ShortletBookingForm({
         <div className="border-t border-gray-200 pt-3">
           <p className="text-xs font-bold text-chs-charcoal mb-1">Real price breakdown</p>
           <div className="flex justify-between text-xs text-gray-500">
-            <span>{formatNaira(pricePerNight)} × {pricing.nights} night{pricing.nights !== 1 ? "s" : ""}</span>
+            <span>{formatNaira(pricing.price_per_night ?? pricePerNight)} × {pricing.nights} night{pricing.nights !== 1 ? "s" : ""}</span>
             <span>{formatNaira(pricing.base_amount)}</span>
           </div>
           <div className="flex justify-between text-xs text-gray-500">
@@ -224,13 +250,20 @@ export default function ShortletBookingForm({
       )}
 
       {pricing && validDateRange && (
-        <div className="bg-chs-amber-light rounded-lg p-3">
-          <p className="text-xs font-bold text-chs-red">⏳ Request to book — not an instant charge</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
-            The real, full amount is held safely from your wallet the moment you request, but the host must genuinely
-            review and accept before your stay is confirmed. If they decline, you are automatically, fully refunded.
-          </p>
-        </div>
+        <>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">
+              Expected arrival time{" "}
+              {laneInfo?.lane === "express"
+                ? <span className="text-chs-red">(required for a same-day booking)</span>
+                : <span className="text-gray-400">(optional)</span>}
+            </label>
+            <input type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <p className="text-[10px] text-gray-400 mt-0.5">Helps the host have your room ready when you arrive.</p>
+          </div>
+          <BookingFlowNotice info={laneInfo} total={pricing.real_total_guest_pays} />
+        </>
       )}
 
       {houseRulesUrl && (
@@ -250,9 +283,9 @@ export default function ShortletBookingForm({
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
-      <button type="submit" disabled={submitting || loadingAvailability || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged)}
+      <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-        {submitting ? "Sending your real request..." : "Request to book"}
+        {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
       </button>
     </form>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -68,7 +69,7 @@ export default function OwnerQuotationsPage() {
           offers.map((o) => (
             <div key={o.id} className={`rounded-xl border p-3 mb-2 ${needsAttention(o.status) ? "bg-chs-amber-light border-chs-red" : "bg-white border-gray-200"}`}>
               <div className="flex justify-between items-start">
-                <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.[0]?.title || "Property"}</p>
+                <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(o.properties)?.title || "Property"}</p>
                 {needsAttention(o.status) && <span className="text-[9px] font-bold text-white bg-chs-red px-1.5 py-0.5 rounded-full">Needs you</span>}
               </div>
               <p className="text-[10px] text-gray-500">{o.buyer_full_name} · {new Date(o.created_at).toLocaleString()}</p>

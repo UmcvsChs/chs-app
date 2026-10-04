@@ -26,11 +26,19 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does CHS protect my money?",
-    a: "All funds are held in escrow until the real conditions for release are met. For a sale specifically, a seller's proceeds appear in their wallet immediately but stay locked until CHS confirms the real legal documents have genuinely been transferred to the buyer. For a shortlet or hire booking, your payment is held until the host actually accepts your request — if they decline, you're automatically, fully refunded. And if the other side of your deal later fails to deliver, you are entitled to your full payment back, including CHS's own commission, less only a small real bank processing fee — see the next questions for exactly how.",
+    a: "All funds are held in escrow until the real conditions for release are met. For a sale specifically, a seller's proceeds appear in their wallet immediately but stay locked until CHS confirms the real legal documents have genuinely been transferred to the buyer. For a shortlet, hotel or hire booking you pay nothing when you send the request; you pay only after the host confirms the dates are free, and your payment is then held until your stay begins. And if the other side of your deal later fails to deliver, you are entitled to your full payment back, including CHS's own commission, less only a small real bank processing fee — see the next questions for exactly how.",
+  },
+  {
+    q: "How does booking a hotel, lodge, shortlet or event centre work — and when do I pay?",
+    a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely and reaches the host only after your stay begins. The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
+  },
+  {
+    q: "Why am I asked what time I will arrive?",
+    a: "So the host can have your room ready. For a booking that starts today it is required, because the host has only 30 minutes to reply and needs to know when to expect you. For other bookings it is optional but helpful.",
   },
   {
     q: "Can I cancel a shortlet or hire booking, and will I get a refund?",
-    a: "Yes — a real, stated policy applies: a full refund if you cancel 48 or more hours before check-in, 50% if you cancel within 48 hours, and no refund once check-in has passed. This is calculated and enforced automatically, not left to a manual decision.",
+    a: "Yes. A request you haven't paid for yet can be withdrawn at any time at no cost. Once you have paid, a real, stated policy applies: a full refund if you cancel 48 or more hours before check-in, 50% if you cancel within 48 hours, and no refund once check-in has passed. This is calculated and enforced automatically, not left to a manual decision.",
   },
   {
     q: "What if the seller, landlord, host or vendor doesn't deliver — do I get my money back?",

@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
@@ -698,7 +699,7 @@ export default function TenantDashboard() {
               {serviceCharges.map((c) => (
                 <div key={c.id} className="bg-white rounded-lg border border-gray-100 p-3">
                   <p className="text-xs font-semibold text-chs-charcoal">{c.description}</p>
-                  <p className="text-[10px] text-gray-400">{c.properties?.[0]?.title} · Due {c.due_date}</p>
+                  <p className="text-[10px] text-gray-400">{embeddedOne(c.properties)?.title} · Due {c.due_date}</p>
                   <div className="flex justify-between items-center mt-1.5">
                     <p className="text-sm font-bold text-chs-charcoal">{formatNaira(c.amount)}</p>
                     {c.status === "paid" ? (

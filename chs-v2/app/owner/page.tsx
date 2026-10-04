@@ -1,5 +1,7 @@
 "use client";
 
+import PendingBookingRequests from "@/components/PendingBookingRequests";
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
@@ -581,6 +583,14 @@ export default function OwnerDashboard() {
             <Link href="/my-earnings" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               My Earnings<InfoTip text="Real income only — every real naira you've earned from rent, sales, or bookings, itemized by who paid and when. This is different from Transaction History, which also shows what you've paid out." />
             </Link>
+            {/* Hotels, lodges and venues are managed (rooms, availability
+                calendar, walk-ins) from the host dashboard — an owner who has
+                one needs to be able to find it from here. */}
+            {properties.some((p) => p.purpose === "shortlet" || p.purpose === "hire") && (
+              <Link href="/host" className="shrink-0 whitespace-nowrap bg-white/25 text-xs font-semibold px-3 py-1.5 rounded-full">
+                🏨 Rooms &amp; Calendar
+              </Link>
+            )}
             <Link href="/owner-applications" className="shrink-0 whitespace-nowrap bg-white/15 text-xs font-semibold px-3 py-1.5 rounded-full">
               Recent Applications
             </Link>
@@ -751,6 +761,11 @@ export default function OwnerDashboard() {
         )}
       </div>
 
+      {/* Paid hotel / lodge / venue booking requests waiting for this owner's
+          answer. Previously the owner was notified but could not see the
+          request anywhere on this dashboard. */}
+      <PendingBookingRequests />
+
       {actionError && (
         <p className="text-xs text-chs-red bg-chs-amber-light mx-4 mt-3 rounded-lg px-3 py-2">{actionError}</p>
       )}
@@ -760,7 +775,7 @@ export default function OwnerDashboard() {
           <p className="text-xs font-bold text-chs-amber-dark mb-2">🎥 Real video requests ({pendingVideoRequests.length})</p>
           {pendingVideoRequests.map((r) => (
             <div key={r.id} className="bg-white rounded-lg p-2 mb-1.5 text-xs">
-              <p className="font-semibold text-chs-charcoal">{r.properties?.[0]?.title} — {r.room_label}</p>
+              <p className="font-semibold text-chs-charcoal">{embeddedOne(r.properties)?.title} — {r.room_label}</p>
               <p className="text-[10px] text-gray-500">Requested by {r.profiles?.[0]?.full_name}{r.note ? `: "${r.note}"` : ""}</p>
               <Link href={`/edit-listing/${r.property_id}`} className="inline-block text-[10px] bg-chs-charcoal text-white font-semibold px-2.5 py-1 rounded-full mt-1.5 mr-1.5">
                 Add this real video now
@@ -1298,7 +1313,7 @@ export default function OwnerDashboard() {
           <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Shortlet & Venue Bookings</p>
           {shortletBookings.map((b) => (
             <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-              <p className="text-xs font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
+              <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
               <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
               {/* Real fix found during a systematic audit of every
                   document upload in the app — a guest's real ID was
@@ -1310,7 +1325,7 @@ export default function OwnerDashboard() {
               ) : b.guest_verified ? (
                 <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>
               ) : null}
-              <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.properties?.[0]?.title || "Property"} />
+              <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
             </div>
           ))}
@@ -1374,7 +1389,7 @@ export default function OwnerDashboard() {
           <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Mortgage (Rent to Own) Requests</p>
           {rentToOwnRequests.map((r) => (
             <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-              <p className="text-xs font-semibold text-chs-charcoal">{r.properties?.[0]?.title || "Property"}</p>
+              <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(r.properties)?.title || "Property"}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">
                 {formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} total
               </p>
@@ -1398,7 +1413,7 @@ export default function OwnerDashboard() {
           )}
           {faultReports.map((f) => (
             <div key={f.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-              <p className="text-xs font-semibold text-chs-charcoal">{f.properties?.[0]?.title || "Property"} — {f.category}</p>
+              <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(f.properties)?.title || "Property"} — {f.category}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">{f.description}</p>
               <span className="inline-block mt-1 text-[9px] font-bold uppercase text-chs-red bg-chs-amber-light px-2 py-1 rounded-full">
                 {f.status.replace(/_/g, " ")}

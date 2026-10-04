@@ -13,6 +13,8 @@ import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
 import ShortletBookingForm from "./ShortletBookingForm";
 import HireBookingForm from "./HireBookingForm";
+import BookingRequestSent from "./BookingRequestSent";
+import { BookingRequestResult } from "@/lib/bookingLane";
 import IdentityVerificationGate from "./IdentityVerificationGate";
 import VerifiedOnly from "./VerifiedOnly";
 import CompleteDetailsPrompt from "./CompleteDetailsPrompt";
@@ -140,6 +142,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   const [inspectionSuccess, setInspectionSuccess] = useState(false);
   const [rentalApplicationSuccess, setRentalApplicationSuccess] = useState(false);
   const [shortletSuccess, setShortletSuccess] = useState(false);
+  const [bookingResult, setBookingResult] = useState<BookingRequestResult | null>(null);
   const [identityVerified, setIdentityVerified] = useState(false);
   const [rentToOwnSuccess, setRentToOwnSuccess] = useState(false);
   const [rentToOwnSubmitting, setRentToOwnSubmitting] = useState(false);
@@ -715,12 +718,8 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   }
 
   if (shortletSuccess) {
-    return (
-      <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Booking confirmed</p>
-        <p className="text-xs text-gray-500">Your dates are genuinely secured — no one else can book over them.</p>
-      </div>
-    );
+    // A request was sent — not a confirmed booking. Say exactly what happens next.
+    return <BookingRequestSent result={bookingResult} />;
   }
 
   if (activeForm === "offer" && session) {
@@ -841,7 +840,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           propertyId={property.id}
           pricePerNight={property.price_per_night || property.price}
           session={session}
-          onSuccess={() => setShortletSuccess(true)}
+          onSuccess={(r) => { setBookingResult(r); setShortletSuccess(true); }}
         />
         </VerifiedOnly>
       </div>
@@ -857,7 +856,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           pricePerDay={property.price}
           hireCategoryLabel={property.property_type || "venue"}
           session={session}
-          onSuccess={() => setShortletSuccess(true)}
+          onSuccess={(r) => { setBookingResult(r); setShortletSuccess(true); }}
         />
         </VerifiedOnly>
       </div>

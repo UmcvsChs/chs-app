@@ -1,5 +1,6 @@
 "use client";
 
+import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -14,7 +15,7 @@ import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import ShortletRating from "@/components/ShortletRating";
-import CancelBookingButton from "@/components/CancelBookingButton";
+import BookingStageCard from "@/components/BookingStageCard";
 
 // Real, new dashboard completing the real symmetry the client
 // directly pointed out: Host just got its own real, dedicated
@@ -37,8 +38,16 @@ interface Booking {
   check_out: string;
   total_price: number;
   status: string;
+  payment_status: string | null;
+  hold_expires_at: string | null;
+  booking_lane: string | null;
+  expected_arrival_time: string | null;
+  guest_commission_amount: number | null;
+  security_deposit_amount: number | null;
   properties: { title: string; owner_id: string }[] | null;
 }
+
+const BOOKING_COLUMNS = "id, check_in, check_out, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, properties(title, owner_id)";
 
 const GUEST_CATEGORIES = [
   { key: "shortlet", label: "🏠 Shortlet Apartments", match: (p: Property) => p.purpose === "shortlet" },
@@ -53,6 +62,11 @@ export default function GuestDashboardPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  async function reloadBookings() {
+    if (!session) return;
+    const { data } = await supabase.from("shortlet_bookings").select(BOOKING_COLUMNS).eq("guest_id", session.user.id).order("check_in", { ascending: false });
+    setBookings((data as unknown as Booking[]) || []);
+  }
   const [disputingBookingId, setDisputingBookingId] = useState<string | null>(null);
   const [disputeSubmitted, setDisputeSubmitted] = useState<string | null>(null);
   const [listings, setListings] = useState<Property[]>([]);
@@ -67,7 +81,7 @@ export default function GuestDashboardPage() {
     Promise.all([
       supabase
         .from("shortlet_bookings")
-        .select("id, check_in, check_out, total_price, status, properties(title, owner_id)")
+        .select(BOOKING_COLUMNS)
         .eq("guest_id", session.user.id)
         .order("check_in", { ascending: false }),
       // Real, direct fetch of exactly the categories relevant to a
@@ -115,17 +129,12 @@ export default function GuestDashboardPage() {
             <p className="text-xs font-bold text-chs-charcoal">📋 My Real Bookings ({bookings.length})</p>
             {bookings.map((b) => (
               <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-                <p className="text-sm font-semibold text-chs-charcoal">{b.properties?.[0]?.title || "Property"}</p>
+                <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
                 <div className="flex justify-between items-center mt-1">
                   <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>
                   <p className="text-xs font-bold text-chs-charcoal">{formatNaira(b.total_price)}</p>
                 </div>
-                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full inline-block mt-1 ${b.status === "pending_host_review" ? "text-chs-red bg-chs-amber-light" : "text-gray-500 bg-gray-100"}`}>
-                  {b.status === "pending_host_review" ? "⏳ Awaiting host decision" : b.status}
-                </span>
-                {(b.status === "pending_host_review" || b.status === "confirmed") && (
-                  <CancelBookingButton bookingId={b.id} onCancelled={() => setBookings((prev) => prev.map((x) => x.id === b.id ? { ...x, status: "cancelled" } : x))} />
-                )}
+                <BookingStageCard booking={b} onChanged={reloadBookings} />
                 {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate your real stay with this host" />}
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
@@ -140,7 +149,7 @@ export default function GuestDashboardPage() {
                     <RaiseDisputeForm
                       session={session!}
                       shortletBookingId={b.id}
-                      againstUserId={b.properties?.[0]?.owner_id || null}
+                      againstUserId={embeddedOne(b.properties)?.owner_id || null}
                       onSuccess={() => { setDisputeSubmitted(b.id); setDisputingBookingId(null); }}
                       onCancel={() => setDisputingBookingId(null)}
                     />

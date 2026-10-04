@@ -5,7 +5,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
 import InfoTip from "./InfoTip";
-import { ShortletBooking } from "@/types/shortletBooking";
+import AvailabilityCalendar from "@/components/AvailabilityCalendar";
+import BookingFlowNotice from "@/components/BookingFlowNotice";
+import { BookingRequestResult, LaneInfo, friendlyBookingError } from "@/lib/bookingLane";
+import { addDays } from "@/lib/availability";
 import { formatNaira } from "@/lib/format";
 import ValidatedInput from "@/components/ValidatedInput";
 import { validatePhone, validateFullName } from "@/lib/validators";
@@ -25,11 +28,7 @@ interface HireBookingFormProps {
   pricePerDay: number;
   hireCategoryLabel: string;
   session: Session;
-  onSuccess: () => void;
-}
-
-function rangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
-  return new Date(startA) < new Date(endB) && new Date(startB) < new Date(endA);
+  onSuccess: (result: BookingRequestResult) => void;
 }
 
 function daysBetween(start: string, end: string): number {
@@ -48,7 +47,10 @@ export default function HireBookingForm({
   // caterer, or ushers request only makes sense for a real event-type
   // venue, never a hotel room or a car park slot.
   const isEventVenue = /event|hall/i.test(hireCategoryLabel);
-  const [existingBookings, setExistingBookings] = useState<ShortletBooking[]>([]);
+  const [calendarKey, setCalendarKey] = useState(0);
+  const [laneInfo, setLaneInfo] = useState<LaneInfo | null>(null);
+  const [eventLaneInfo, setEventLaneInfo] = useState<LaneInfo | null>(null);
+  const [arrivalTime, setArrivalTime] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [attendees, setAttendees] = useState(1);
@@ -61,7 +63,6 @@ export default function HireBookingForm({
   const [guestPhone, setGuestPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadingAvailability, setLoadingAvailability] = useState(true);
   const [pricing, setPricing] = useState<{ nights: number; base_amount: number; guest_commission_amount: number; security_deposit_required: boolean; security_deposit_amount: number; real_total_guest_pays: number } | null>(null);
   const [houseRulesUrl, setHouseRulesUrl] = useState<string | null>(null);
   const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
@@ -118,14 +119,14 @@ export default function HireBookingForm({
     });
     setSubmitting(false);
     if (rpcError || !data) {
-      setError(rpcError?.message?.includes("insufficient_balance") ? "Insufficient wallet balance for this real total." : "Could not submit this real booking request.");
+      setError(friendlyBookingError(rpcError?.message, { lane: eventLaneInfo?.lane, total: eventRealTotal }));
+      setCalendarKey((k) => k + 1);
       return;
     }
-    onSuccess();
+    onSuccess(data as BookingRequestResult);
   }
 
   useEffect(() => {
-    loadExistingBookings();
     supabase.rpc("get_house_rules_for_property", { p_property_id: propertyId }).then(({ data }) => setHouseRulesUrl(data));
     // Prefill from the guest's own profile — never over anything typed.
     supabase.from("profiles").select("full_name, phone").eq("id", session.user.id).single().then(({ data }) => {
@@ -141,27 +142,37 @@ export default function HireBookingForm({
   // real commission, fetched live rather than calculated locally so
   // it's genuinely the same number the backend will charge.
   useEffect(() => {
-    if (!startDate || !endDate || new Date(endDate) < new Date(startDate)) {
+    if (!startDate || !endDate || new Date(endDate) <= new Date(startDate)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPricing(null);
       return;
     }
     supabase.rpc("get_real_shortlet_pricing", { p_property_id: propertyId, p_check_in: startDate, p_check_out: endDate, p_guest_id: session.user.id })
       .then(({ data }) => setPricing(data));
   }, [startDate, endDate, propertyId, session.user.id]);
 
-  async function loadExistingBookings() {
-    const { data } = await supabase
-      .from("shortlet_bookings")
-      .select("*")
-      .eq("property_id", propertyId)
-      .eq("status", "confirmed");
-    setExistingBookings(data || []);
-    setLoadingAvailability(false);
-  }
-
-  const validDateRange = startDate && endDate && new Date(endDate) >= new Date(startDate);
+  const validDateRange = startDate && endDate && new Date(endDate) > new Date(startDate);
   // Real, honest minimum — even a same-day event genuinely bills as
   // 1 real day, never zero.
   const days = startDate && endDate ? Math.max(daysBetween(startDate, endDate), startDate === endDate ? 1 : 0) : 0;
+
+  useEffect(() => {
+    if (!eventDate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEventLaneInfo(null);
+      return;
+    }
+    supabase.rpc("booking_lane_info", { p_check_in: eventDate }).then(({ data }) => setEventLaneInfo((data as LaneInfo) || null));
+  }, [eventDate]);
+
+  useEffect(() => {
+    if (!startDate || !endDate || new Date(endDate) <= new Date(startDate)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLaneInfo(null);
+      return;
+    }
+    supabase.rpc("booking_lane_info", { p_check_in: startDate }).then(({ data }) => setLaneInfo((data as LaneInfo) || null));
+  }, [startDate, endDate]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,7 +181,7 @@ export default function HireBookingForm({
       return;
     }
     if (days <= 0) {
-      setError("The end date must be on or after the start date.");
+      setError("The end date must be after the start date — for a single day, choose that day and the day after.");
       return;
     }
     if (!pricing) {
@@ -186,18 +197,14 @@ export default function HireBookingForm({
     const guestPhoneCheck = validatePhone(guestPhone, { international: true });
     if (!guestPhoneCheck.valid) { setError(`Your phone number: ${guestPhoneCheck.message}`); return; }
 
-    const hasClientSideConflict = existingBookings.some((b) =>
-      rangesOverlap(startDate, endDate, b.check_in, b.check_out)
-    );
-    if (hasClientSideConflict) {
-      setError("Those dates are already booked. Please choose a different range.");
-      return;
-    }
-
     setError(null);
     setSubmitting(true);
 
-    const { data: bookingId, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
+    if (laneInfo?.lane === "express" && !arrivalTime) {
+      setError("For a same-day booking, please tell the venue roughly what time you will arrive.");
+      return;
+    }
+    const { data: requestResult, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
       p_check_in: startDate,
       p_check_out: endDate,
@@ -211,22 +218,17 @@ export default function HireBookingForm({
       p_wants_ushers: isEventVenue ? wantsUshers : false,
       p_number_of_ushers: isEventVenue && wantsUshers ? numberOfUshers : null,
       p_additional_event_requests: isEventVenue ? additionalEventRequests.trim() || null : null,
+      p_expected_arrival_time: arrivalTime || null,
     });
 
-    if (rpcError || !bookingId) {
-      if (rpcError?.message?.includes("insufficient_balance")) {
-        setError("Insufficient wallet balance for this booking. Please top up your wallet first.");
-      } else if (rpcError?.message?.includes("exclude") || rpcError?.code === "23P01") {
-        setError("Someone just booked those dates. Please choose a different range.");
-      } else {
-        setError("Could not complete this booking. Please try again.");
-      }
+    if (rpcError || !requestResult) {
+      setError(friendlyBookingError(rpcError?.message, { lane: laneInfo?.lane, total: pricing?.real_total_guest_pays }));
       setSubmitting(false);
-      loadExistingBookings();
+      setCalendarKey((k) => k + 1);
       return;
     }
 
-    onSuccess();
+    onSuccess(requestResult as BookingRequestResult);
   }
 
   // Real, richer event-booking experience — real capacity tiers,
@@ -272,8 +274,17 @@ export default function HireBookingForm({
 
         <div>
           <label className="text-xs font-semibold text-gray-600">4. Event date</label>
-          <input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)}
-            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          <div className="mt-1">
+            <AvailabilityCalendar
+              key={calendarKey}
+              propertyId={propertyId}
+              mode="single"
+              singleLabel="event date"
+              checkIn={eventDate}
+              checkOut={eventDate ? addDays(eventDate, 1) : ""}
+              onChange={(ci) => setEventDate(ci)}
+            />
+          </div>
         </div>
 
         {selectedTier && (
@@ -282,7 +293,7 @@ export default function HireBookingForm({
             <div className="flex justify-between text-xs text-gray-500"><span>{selectedTier.label}</span><span>{formatNaira(selectedTier.price)}</span></div>
             {facilitiesTotal > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Extra facilities</span><span>{formatNaira(facilitiesTotal)}</span></div>}
             <div className="flex justify-between text-xs text-gray-500"><span>CHS service fee (6%)</span><span>{formatNaira(eventGuestCommission)}</span></div>
-            <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1"><span>Real total you&apos;ll pay</span><span>{formatNaira(eventRealTotal)}</span></div>
+            <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1"><span>Real total (payable once the host confirms)</span><span>{formatNaira(eventRealTotal)}</span></div>
           </div>
         )}
 
@@ -303,11 +314,12 @@ export default function HireBookingForm({
           </label>
         )}
 
+        {selectedTier && <BookingFlowNotice info={eventLaneInfo} total={eventRealTotal} />}
         <RefundPolicyNotice />
         {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
         <button onClick={handleSubmitEventBooking} disabled={submitting}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-          {submitting ? "Submitting..." : "Submit booking request to CHS"}
+          {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
         </button>
       </div>
     );
@@ -315,25 +327,17 @@ export default function HireBookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {loadingAvailability ? (
-        <p className="text-xs text-gray-400">Checking real availability...</p>
-      ) : existingBookings.length > 0 ? (
-        <p className="text-[10px] text-gray-400">
-          {existingBookings.length} date range{existingBookings.length !== 1 ? "s" : ""} already booked — pick dates outside those.
-        </p>
-      ) : null}
-
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-xs font-semibold text-gray-600">Start date</label>
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-        </div>
-        <div className="flex-1">
-          <label className="text-xs font-semibold text-gray-600">End date</label>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-            className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
-        </div>
+      <div>
+        <p className="text-xs font-bold text-chs-charcoal mb-1">Choose your dates</p>
+        <p className="text-[10px] text-gray-400 mb-1.5">Tap your first day, then tap the day you finish (check-out). For a single day, tap that day and the day after.</p>
+        <AvailabilityCalendar
+          key={calendarKey}
+          propertyId={propertyId}
+          mode="range"
+          checkIn={startDate}
+          checkOut={endDate}
+          onChange={(ci, co) => { setStartDate(ci); setEndDate(co); }}
+        />
       </div>
 
       <div>
@@ -399,20 +403,26 @@ export default function HireBookingForm({
             </div>
           )}
           <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
-            <span>Real total you&apos;ll pay</span>
+            <span>Real total (payable once the host confirms)</span>
             <span>{formatNaira(pricing.real_total_guest_pays)}</span>
           </div>
         </div>
       )}
 
       {pricing && validDateRange && (
-        <div className="bg-chs-amber-light rounded-lg p-3">
-          <p className="text-xs font-bold text-chs-red">⏳ Request to book — not an instant charge</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
-            The real, full amount is held safely from your wallet the moment you request, but the host must genuinely
-            review and accept before it&apos;s confirmed. If they decline, you are automatically, fully refunded.
-          </p>
-        </div>
+        <>
+          <div>
+            <label className="text-xs font-semibold text-gray-600">
+              Expected arrival time{" "}
+              {laneInfo?.lane === "express"
+                ? <span className="text-chs-red">(required for a same-day booking)</span>
+                : <span className="text-gray-400">(optional)</span>}
+            </label>
+            <input type="time" value={arrivalTime} onChange={(e) => setArrivalTime(e.target.value)}
+              className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
+          <BookingFlowNotice info={laneInfo} total={pricing.real_total_guest_pays} />
+        </>
       )}
 
       {houseRulesUrl && (
@@ -432,9 +442,9 @@ export default function HireBookingForm({
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
-      <button type="submit" disabled={submitting || loadingAvailability || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged)}
+      <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-        {submitting ? "Sending your real request..." : "Request to book"}
+        {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
       </button>
     </form>
   );
