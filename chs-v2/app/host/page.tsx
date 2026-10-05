@@ -10,6 +10,8 @@ import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import InfoTip from "@/components/InfoTip";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
+import HostPayoutStatus from "@/components/HostPayoutStatus";
+import HouseRulesUpload from "@/components/HouseRulesUpload";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import PendingBookingRequests from "@/components/PendingBookingRequests";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
@@ -150,6 +152,8 @@ export default function HostDashboardPage() {
                 {formatNaira(l.price_per_night || l.price)}{l.price_per_night ? "/night" : ""} · {l.hire_category?.replace(/_/g, " ") || "Shortlet"}
               </p>
               <p className={`text-[10px] font-semibold mt-1 ${calendarFreshness(l.calendar_confirmed_at).className}`}>{calendarFreshness(l.calendar_confirmed_at).text}</p>
+              {/* House rules the guest must read and accept before requesting to book */}
+              {session && <div className="mt-2"><HouseRulesUpload propertyId={l.id} session={session} /></div>}
               <Link href={`/host/calendar/${l.id}`} className="mt-2 block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
                 Rooms &amp; calendar →
               </Link>
@@ -184,6 +188,7 @@ export default function HostDashboardPage() {
                       </div>
                     )}
                     {b.guest_verified && <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>}
+                    <HostPayoutStatus bookingId={b.id} />
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
                     {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate this real guest" />}

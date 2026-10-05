@@ -321,6 +321,25 @@ function AdminDashboardInner() {
     booking_stage: string; guest_full_name: string; is_paid: boolean;
   }[]>([]);
   const [msgReasons, setMsgReasons] = useState<Record<string, string>>({});
+  // Stays whose guest has arrived but whose payment is still held: a host asked for release, the guest
+  // reported a problem, or the guest has not confirmed yet (it releases itself 24h after check-in).
+  const [releaseItems, setReleaseItems] = useState<{
+    id: string; booking_ref: string; property_title: string; guest_full_name: string; guest_phone: string; host_name: string; host_phone: string;
+    check_in: string; check_out: string; amount_held: number; host_net: number; auto_release_at: string | null;
+    release_requested_at: string | null; release_request_note: string | null; move_in_issue_note: string | null; kind: "problem" | "host_requested" | "arrived_unconfirmed";
+  }[]>([]);
+  async function loadReleaseItems() {
+    const { data } = await supabase.rpc("get_shortlet_release_attention");
+    setReleaseItems(((data as unknown as { items: typeof releaseItems } | null)?.items) || []);
+  }
+  async function handleReleaseNow(id: string, kind: string) {
+    if (kind === "problem" && !window.confirm("The guest reported a problem on arrival. Release the host's payment anyway?")) return;
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("release_shortlet_funds_to_host", { p_booking_id: id });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadReleaseItems();
+  }
   async function loadPendingMsgs() {
     const { data } = await supabase.rpc("get_pending_shortlet_messages");
     setPendingMsgs((data as unknown as typeof pendingMsgs) || []);
@@ -1418,6 +1437,7 @@ function AdminDashboardInner() {
     supabase.rpc("get_stale_calendars", { p_stale_days: 3 }).then(({ data }) => setStaleCalendars((data as unknown as typeof staleCalendars) || []));
     supabase.rpc("get_admin_booking_queue").then(({ data }) => setBookingQueue((data as unknown as typeof bookingQueue) || []));
     supabase.rpc("get_pending_shortlet_messages").then(({ data }) => setPendingMsgs((data as unknown as typeof pendingMsgs) || []));
+    loadReleaseItems();
     setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
     setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
     setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
@@ -2348,7 +2368,7 @@ function AdminDashboardInner() {
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
-          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length + pendingMsgs.length})`, domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length + pendingMsgs.length + releaseItems.length})`, domain: "owner_buyer_tenant", group: "Financial" },
           { key: "staleoffers", label: `⚠️ Pending/Inconclusive Deals (${stalePendingOffers.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
@@ -2405,7 +2425,7 @@ function AdminDashboardInner() {
                  should always show as a red alert in the sidebar
                  itself, not just once you're already inside the tab. */
               (tab.key === "staleoffers" && stalePendingOffers.length > 0) ||
-              (tab.key === "shortletbookings" && (pendingMsgs.length > 0 || bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express")))
+              (tab.key === "shortletbookings" && (pendingMsgs.length > 0 || releaseItems.some((r) => r.kind !== "arrived_unconfirmed") || bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express")))
                 ? "border-chs-red text-chs-red bg-red-50 rounded-t-lg"
                 : activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
             }`}
@@ -4867,6 +4887,35 @@ function AdminDashboardInner() {
                     placeholder="Reason, if you are not delivering it" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
                   <button onClick={() => handleRejectMsg(m.id)} disabled={queueBusy === m.id}
                     className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[11px] font-semibold disabled:opacity-50">Do not deliver</button>
+                </div>
+              ))}
+            </div>
+            <div className={`rounded-xl border-2 p-3 mb-3 ${releaseItems.some((r) => r.kind !== "arrived_unconfirmed") ? "bg-chs-amber-light border-chs-amber" : "bg-green-50 border-green-200"}`}>
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-chs-charcoal">
+                  {releaseItems.length > 0 ? `💰 ${releaseItems.length} stay${releaseItems.length !== 1 ? "s" : ""} where the guest has arrived and the host's payment is still held` : "✓ No arrived stays are waiting for a payment release"}
+                </p>
+                <button onClick={loadReleaseItems} className="text-[10px] font-semibold text-chs-red underline">🔄 Refresh</button>
+              </div>
+              {releaseItems.length > 0 && <p className="text-[10px] text-gray-500 mb-2">The host is paid as soon as the guest confirms arrival, and automatically 24 hours after check-in if nobody reports a problem. Release early when a host has asked and the stay is clearly under way.</p>}
+              {releaseItems.map((r) => (
+                <div key={r.id} className={`rounded-lg border p-2.5 mb-2 bg-white ${r.kind === "problem" ? "border-chs-red" : "border-gray-200"}`}>
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="text-xs font-semibold text-chs-charcoal">{r.property_title} · {r.booking_ref}</p>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${r.kind === "problem" ? "bg-chs-red text-white" : r.kind === "host_requested" ? "bg-chs-amber text-chs-charcoal" : "bg-gray-100 text-gray-500"}`}>
+                      {r.kind === "problem" ? "⚠ GUEST REPORTED A PROBLEM" : r.kind === "host_requested" ? "HOST ASKED FOR RELEASE" : "GUEST HAS NOT CONFIRMED YET"}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600">{r.guest_full_name} · {r.guest_phone} · {r.check_in} → {r.check_out}</p>
+                  <p className="text-[11px] text-gray-500">Host: {r.host_name} · <b>{r.host_phone}</b></p>
+                  <p className="text-xs font-bold text-chs-charcoal mt-0.5">{formatNaira(r.host_net)} <span className="text-[10px] font-normal text-gray-500">to the host (net) · {formatNaira(r.amount_held)} held in all</span></p>
+                  {r.move_in_issue_note && <p className="text-[11px] text-chs-red mt-0.5">Guest says: “{r.move_in_issue_note}”</p>}
+                  {r.release_request_note && <p className="text-[11px] text-gray-600 mt-0.5">Host says: “{r.release_request_note}”</p>}
+                  {r.auto_release_at && r.kind !== "problem" && <p className="text-[10px] text-gray-400 mt-0.5">Releases automatically at {new Date(r.auto_release_at).toLocaleString()}</p>}
+                  <button onClick={() => handleReleaseNow(r.id, r.kind)} disabled={queueBusy === r.id}
+                    className={`w-full mt-1.5 py-1.5 rounded-full text-[11px] font-semibold disabled:opacity-50 ${r.kind === "problem" ? "bg-gray-200 text-gray-600" : "bg-chs-red text-white"}`}>
+                    {queueBusy === r.id ? "Releasing…" : "Release the host's payment now"}
+                  </button>
                 </div>
               ))}
             </div>

@@ -86,8 +86,8 @@ export default function PendingBookingRequests() {
         </p>
         <p className="text-[11px] text-gray-600 mt-0.5 mb-2">
           {requests.some((r) => !r.is_paid)
-            ? "Confirm that the dates are free. The guest has not paid yet — they pay once you confirm, and the money reaches you only after the stay. Answer before the deadline or the request lapses (nothing is charged)."
-            : "Each guest has already paid — the money is held safely in escrow and reaches you only after the stay. Answer before the deadline, or the request expires and the guest is refunded in full."}
+            ? "Confirm that the dates are free. The guest has not paid yet — they pay once you confirm, and the money is released to you as soon as the guest arrives and confirms everything is as described. Answer before the deadline or the request lapses (nothing is charged)."
+            : "Each guest has already paid — the money is held safely in escrow and released to you as soon as the guest arrives and confirms everything is as described. Answer before the deadline, or the request expires and the guest is refunded in full."}
           {requests.some((r) => r.is_paid) && requests.some((r) => !r.is_paid) ? " Requests marked “paid” were paid when sent, under the older order; the rest are unpaid." : ""}
         </p>
 
@@ -119,7 +119,7 @@ export default function PendingBookingRequests() {
                 {r.check_in} → {r.check_out} · {r.nights} night{r.nights !== 1 ? "s" : ""}{r.guests ? ` · ${r.guests} guest${r.guests !== 1 ? "s" : ""}` : ""}
               </p>
               <p className="text-[11px] text-gray-700 mt-1">
-                You receive <b>{formatNaira(r.net_if_accepted)}</b> {r.is_paid ? "if you accept" : "after the stay, once the guest has paid"}
+                You receive <b>{formatNaira(r.net_if_accepted)}</b> {r.is_paid ? "if you accept" : "as soon as the guest has paid, arrived and confirmed"}
                 <span className="text-gray-400"> (booking {formatNaira(r.total_price)} less CHS commission {formatNaira(r.host_commission_amount)})</span>
               </p>
 

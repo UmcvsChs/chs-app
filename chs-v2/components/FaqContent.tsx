@@ -30,11 +30,15 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does booking a hotel, lodge, shortlet or event centre work — and when do I pay?",
-    a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely and reaches the host only after your stay begins. The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
+    a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely and is released to the host as soon as you arrive and confirm, with a short checklist in the app, that everything is as described (or automatically 24 hours after check-in if you do not respond). The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
   },
   {
     q: "Can I contact the host (or the guest) directly?",
     a: "No — and that protects both sides. CHS relays every booking request and every message between a guest and a host. Your request goes to CHS first, and CHS passes it to the host. Until a booking is paid, CHS reviews each message before it is delivered, and phone numbers and email addresses are blocked at all times. A host sees only the guest's name and a CHS reference, never their phone number; a guest never sees who the host is. Once your booking is paid you can message through the booking itself, still without sharing contact details.",
+  },
+  {
+    q: "When does the host get paid for a hotel, lodge or shortlet stay?",
+    a: "As soon as you arrive. Booking is prepaid: you pay before your stay, CHS holds the money safely, and the moment you arrive and confirm in the app that the property is as described and each listed facility is present and working, the money is released to the host and both the host and CHS receive your confirmation. If you do not respond, it is released automatically 24 hours after check-in. If something is wrong, report a problem instead and the payment stays held while CHS looks into it. A host whose guest has arrived can also ask CHS to release it.",
   },
   {
     q: "Why am I asked what time I will arrive?",

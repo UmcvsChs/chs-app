@@ -54,7 +54,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     id: string; amount: number; status: string; buyer_full_name: string | null; note: string | null;
   }[]>([]);
   const [ownerRentToOwnRequests, setOwnerRentToOwnRequests] = useState<{
-    id: string; monthly_amount: number; status: string; buyer: { full_name: string; phone: string } | null;
+    id: string; monthly_amount: number; status: string; buyer: { full_name: string } | null;
   }[]>([]);
   async function handleApproveRentToOwn(id: string) {
     const { error } = await supabase.rpc("approve_rent_to_own_request", { p_agreement_id: id });
@@ -72,7 +72,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           if (active) setFinalizeAmount(active.amount);
         });
       if (property.purpose === "rent_to_own") {
-        supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name, phone)")
+        supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name)")
           .eq("property_id", property.id).eq("status", "requested")
           .then(({ data }) => setOwnerRentToOwnRequests((data as unknown as typeof ownerRentToOwnRequests) || []));
       }
@@ -923,7 +923,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-3 mt-2">
             <p className="text-xs font-bold text-chs-charcoal mb-1">🏠 A real Rent-to-Own request needs your approval</p>
             <p className="text-sm font-semibold text-chs-red">{formatNaira(r.monthly_amount)}/month</p>
-            <p className="text-xs text-gray-500 mb-2">from {r.buyer?.full_name} ({r.buyer?.phone})</p>
+            <p className="text-xs text-gray-500 mb-2">from {r.buyer?.full_name} · Ref RTO-{r.id.slice(0, 8)} (contact goes through CHS)</p>
             <button onClick={() => handleApproveRentToOwn(r.id)}
               className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
               Approve this real request

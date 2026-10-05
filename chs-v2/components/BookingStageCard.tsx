@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import CancelBookingButton from "@/components/CancelBookingButton";
+import ArrivalConfirmation from "@/components/ArrivalConfirmation";
 
 // Where a guest's booking stands, in plain words, with a live countdown — and,
 // when the host has confirmed the dates, the PAY button.
@@ -124,7 +125,7 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
           </p>
           <p className="text-[10px] text-gray-500 mt-0.5">
             {formatNaira(b.total_price)} stay + {formatNaira(b.guest_commission_amount || 0)} CHS service fee
-            {(b.security_deposit_amount || 0) > 0 ? ` + ${formatNaira(b.security_deposit_amount || 0)} refundable deposit` : ""}. Held safely by CHS; the host is paid only after your stay.
+            {(b.security_deposit_amount || 0) > 0 ? ` + ${formatNaira(b.security_deposit_amount || 0)} refundable deposit` : ""}. Held safely by CHS and released to the host as soon as you arrive and confirm everything is as described.
           </p>
           {error && (
             <p className="text-[11px] text-chs-red mt-1.5">
@@ -138,7 +139,8 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
         </div>
       )}
 
-      {b.status === "confirmed" && chip(b.payment_status === "released" ? "✓ Stay completed — host paid" : "✓ Confirmed & paid", "green")}
+      {b.status === "confirmed" && chip(b.payment_status === "released" ? "✓ Arrival confirmed — host paid" : "✓ Confirmed & paid", "green")}
+      {b.status === "confirmed" && <ArrivalConfirmation bookingId={b.id} onChanged={onChanged} />}
       {b.status === "declined" && (
         <>
           {chip("Not accepted", "red")}

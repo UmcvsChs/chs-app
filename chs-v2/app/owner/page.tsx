@@ -20,6 +20,7 @@ import GuidePrompt from "@/components/GuidePrompt";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentsList } from "@/components/EngageDocuments";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
+import HostPayoutStatus from "@/components/HostPayoutStatus";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import TransactionCommissions from "@/components/TransactionCommissions";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
@@ -971,7 +972,7 @@ export default function OwnerDashboard() {
                   ownership, there's no ongoing occupancy relationship
                   the way there is for a real tenant, shortlet guest,
                   or someone progressively paying toward ownership. */}
-              {session && ["rent", "lease", "shortlet", "rent_to_own"].includes(property.purpose) && (
+              {session && ["rent", "lease", "shortlet", "rent_to_own", "hire"].includes(property.purpose) && (
                 <HouseRulesUpload propertyId={property.id} session={session} />
               )}
 
@@ -1315,7 +1316,8 @@ export default function OwnerDashboard() {
               <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
               <p className="text-[10px] text-gray-400">{b.guest_full_name} · Ref REQ-{b.id.slice(0, 8)} · {b.check_in} → {b.check_out}</p>
               {b.guest_verified && <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>}
-              <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
+              <HostPayoutStatus bookingId={b.id} />
+                    <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
               <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
             </div>
           ))}
