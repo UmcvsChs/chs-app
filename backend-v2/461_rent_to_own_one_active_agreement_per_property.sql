@@ -1,0 +1,6 @@
+-- 461 — Rent-to-Own: a property can have only ONE active agreement (applied October 2026)
+-- FOUND BY A TRIAL: an owner could approve a second buyer on a property that already had an active agreement.
+-- approve_rent_to_own_request now refuses that, declines the property's other pending requests (telling those buyers
+-- nothing was charged) and gives a clear message for a request that is not waiting; request_rent_to_own refuses a
+-- property that is taken, and gives a plain message for a repeat request. The owner's approval screen shows the
+-- buyer's name and a CHS reference — no phone number. Verified (rolled back) end to end.

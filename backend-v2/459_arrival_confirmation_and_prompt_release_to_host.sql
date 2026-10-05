@@ -1,0 +1,23 @@
+-- 459 — the host is paid when the guest ARRIVES and confirms, not after the stay (applied October 2026)
+-- Prepaid principle, as with a Nigerian rental: CHS holds the money only until the guest has arrived and found
+-- the property as described, then releases it at once. Before, the only trigger was a condition report the HOST
+-- had to file first; a 900,000 event booking sat held long after its dates began, and messages told hosts they
+-- would be paid "after the stay".
+--  * confirm_shortlet_arrival(booking, checklist, note): from the check-in day the guest ticks arrived / matches the
+--    listing / each listed facility present and working (the facilities of the listing, or those booked for a venue).
+--    Releases the host's net payout AT ONCE and messages the host and CHS. Contact details in the note are refused.
+--  * report_shortlet_arrival_problem(booking, text): money stays held; CHS and the host are alerted.
+--  * request_shortlet_release(booking, note): the host asks CHS to release once the check-in day has arrived.
+--  * auto_release_arrived_bookings(): run by the 5-minute sweep; releases shortlet_auto_release_hours (default 24)
+--    after the 14:00 check-in time unless a problem was reported. Older pay-first bookings (no paid_at) are NOT
+--    auto-released — CHS releases those from its list.
+--  * get_arrival_state(booking): one view of where the payout stands, for guest, host or admin.
+--  * get_shortlet_release_attention(): admin's list of arrived stays whose payment is still held, as
+--    problem / host_requested / arrived_unconfirmed.
+--  * The two wrong messages ("after the stay") were corrected by checked text replacement.
+-- Verified (rolled back): refused before the check-in day; refused with a box or a facility unticked or a phone number
+-- in the message; a stranger refused; full confirmation pays the host 66,500 on a 70,000 stay at once and messages
+-- host, admin and guest; a second confirm refused; a reported problem blocks confirmation, host request and
+-- automatic release; the host's request reaches admin and the guest; admin's one-tap release works; a booking paid 4
+-- days ago and unconfirmed is auto-released while an older pay-first one is not; no server message says "after the stay".
+-- Full function bodies live in the database (see pg_get_functiondef).

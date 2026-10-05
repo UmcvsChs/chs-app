@@ -1,0 +1,8 @@
+-- 460 — Rent-to-Own: ownership is exact and the buyer can never overpay (applied October 2026)
+-- FOUND BY A TRIAL RUN: ownership was built by adding each payment's gain rounded to 3 decimals, so a 3-payment studio
+-- read 99.99% after the buyer had paid the FULL price and demanded a 4th instalment (a 121st on a 120-payment house).
+-- pay_rent_to_own_installment now sets ownership = total paid / price x portion, caps the last instalment at what is
+-- still owed (commissions follow), completes the agreement and marks the property sold when the price is fully paid,
+-- and gives plain messages for an agreement that is not active or already paid. Commission rates, payees, receipts
+-- and notifications are unchanged. Verified (rolled back): studio completes on exactly the 3rd payment; a 500,000
+-- instalment with 600,000 owed charges 500,000 then 100,000 and completes; payment 4 refused cleanly.
