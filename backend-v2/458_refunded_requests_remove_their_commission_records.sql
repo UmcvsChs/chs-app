@@ -1,0 +1,8 @@
+-- 458 — when a paid request is declined / expires and the guest is refunded in full, CHS earned
+-- nothing from it, so its commission records must go. system_decline_booking refunded the money
+-- but left the guest-commission record behind (found: a 12,600 record for a fully refunded request
+-- was still counted in Platform Earnings). It now deletes the booking's commission records before
+-- refunding — the same rule the cancel and admin-refund paths follow — and the stale record was
+-- removed. Applied as a checked text replacement on the stored definition.
+-- Verified (rolled back): an older paid request that the host never answered is refunded in full
+-- (74,900) and leaves 0 commission records; platform-wide, 0 records remain on declined/expired bookings.

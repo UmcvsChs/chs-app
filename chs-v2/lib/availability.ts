@@ -125,6 +125,22 @@ export function nextSelection(
     if (canStartStay(map, tapped, today)) return { checkIn: tapped, checkOut: "" }; // restart from here
     return null;
   }
-  // No dates yet, or a full range already chosen: start a new stay.
+  // A full stay is already chosen: tapping further dates ADJUSTS it, the way hotel
+  // sites do. (Before, any tap here silently threw the stay away and started a new
+  // one with only a check-in, so tapping several dates in a row left a single date
+  // highlighted and it looked as though the calendar refused to select more than one.)
+  if (checkIn && checkOut) {
+    if (tapped === checkIn) return { checkIn: "", checkOut: "" };          // tap the check-in again to clear
+    if (tapped === checkOut) return { checkIn, checkOut };                  // already the check-out
+    if (tapped > checkIn && tapped < checkOut) return { checkIn, checkOut: tapped };   // shorten the stay
+    if (tapped > checkOut) {
+      if (tapped <= maxCheckOut(map, checkIn)) return { checkIn, checkOut: tapped };   // extend the stay
+      return canStartStay(map, tapped, today) ? { checkIn: tapped, checkOut: "" } : null;   // a taken night is in the way: start afresh
+    }
+    // earlier than the check-in: move the check-in back if the whole stay is still free
+    if (!canStartStay(map, tapped, today)) return null;
+    return isValidStay(map, tapped, checkOut) ? { checkIn: tapped, checkOut } : { checkIn: tapped, checkOut: "" };
+  }
+  // No dates yet: start a stay.
   return canStartStay(map, tapped, today) ? { checkIn: tapped, checkOut: "" } : null;
 }

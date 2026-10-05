@@ -99,13 +99,15 @@ export default function AvailabilityCalendar({ propertyId, roomTypeId, mode, che
   const cells = useMemo(() => buildMonthCells(view.getFullYear(), view.getMonth()), [view]);
 
   const choosingOut = mode === "range" && !!checkIn && !checkOut;
-  const limit = choosingOut ? maxCheckOut(days, checkIn) : "";
+  // With a stay already chosen, later dates can still be tapped to extend it.
+  const adjusting = mode === "range" && !!checkIn && !!checkOut;
+  const limit = choosingOut || adjusting ? maxCheckOut(days, checkIn) : "";
 
   function tap(iso: string) {
     setHint(null);
     const next = nextSelection(days, today, mode, { checkIn, checkOut }, iso);
     if (!next) {
-      setHint(choosingOut
+      setHint(choosingOut || adjusting
         ? "That date can't be reached — a night in between is taken. Choose an earlier check-out, or a different start."
         : "That date isn't available.");
       return;
@@ -130,7 +132,7 @@ export default function AvailabilityCalendar({ propertyId, roomTypeId, mode, che
   function isEnabled(iso: string): boolean {
     const d = days[iso];
     if (!d || iso < today) return false;
-    if (choosingOut) {
+    if (choosingOut || adjusting) {
       if (iso === checkIn) return true;
       if (iso > checkIn && iso <= limit) return true;
     }
@@ -153,6 +155,20 @@ export default function AvailabilityCalendar({ propertyId, roomTypeId, mode, che
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3">
+      {mode === "range" && (
+        <div className="bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2.5 flex items-start justify-between gap-2">
+          <p className="text-[11px] font-semibold text-chs-charcoal">
+            {!checkIn
+              ? "Step 1 of 2 — tap the day you arrive (check-in)."
+              : !checkOut
+                ? `Step 2 of 2 — now tap the day you leave (check-out). Check-in: ${pretty(checkIn)}.`
+                : "Stay chosen. Tap a later date to extend it, or a date inside it to shorten it."}
+          </p>
+          {checkIn && (
+            <button type="button" onClick={() => { setHint(null); onChange("", ""); }} className="text-[10px] font-semibold text-chs-red underline whitespace-nowrap">Clear dates</button>
+          )}
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <button type="button" onClick={() => setMonthOffset((m) => Math.max(0, m - 1))} disabled={monthOffset === 0}
           className="w-8 h-8 rounded-full text-chs-charcoal disabled:opacity-25" aria-label="Previous month">‹</button>

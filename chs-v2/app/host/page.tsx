@@ -14,7 +14,6 @@ import ShortletMessageThread from "@/components/ShortletMessageThread";
 import PendingBookingRequests from "@/components/PendingBookingRequests";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import ShortletRating from "@/components/ShortletRating";
-import DocumentViewLink from "@/components/DocumentViewLink";
 
 // Real, new dashboard completing a direct, thorough client decision:
 // Host is a genuine, separate role from Owner — a real, different
@@ -47,8 +46,6 @@ interface HostBooking {
   id: string;
   guest_id: string;
   guest_full_name: string;
-  guest_phone: string;
-  guest_id_document_url: string | null;
   guest_verified: boolean;
   check_in: string;
   check_out: string;
@@ -97,7 +94,7 @@ export default function HostDashboardPage() {
         .eq("owner_id", session.user.id)
         .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)"),
       supabase.from("shortlet_bookings")
-        .select("id, guest_id, guest_full_name, guest_phone, guest_id_document_url, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
+        .select("id, guest_id, guest_full_name, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
         .in("status", ["confirmed", "active"]),
     ]).then(([listingsRes, bookingsRes]) => {
@@ -176,7 +173,7 @@ export default function HostDashboardPage() {
                 {bookings.filter((b) => b.status !== "pending_host_review").map((b) => (
                   <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                     <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
-                    <p className="text-[10px] text-gray-400">{b.guest_full_name} · {b.guest_phone} · {b.check_in} → {b.check_out}</p>
+                    <p className="text-[10px] text-gray-400">{b.guest_full_name} · Ref REQ-{b.id.slice(0, 8)} · {b.check_in} → {b.check_out}</p>
                     {(b.wants_music_band || b.wants_caterer || b.wants_ushers || b.additional_event_requests) && (
                       <div className="bg-gray-50 rounded-lg px-2 py-1.5 mt-1.5">
                         <p className="text-[9px] font-bold text-chs-charcoal uppercase mb-0.5">🎉 Real event-day requests</p>
@@ -186,11 +183,7 @@ export default function HostDashboardPage() {
                         {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
                       </div>
                     )}
-                    {b.guest_id_document_url ? (
-                      <DocumentViewLink url={b.guest_id_document_url} label="View guest's uploaded ID" />
-                    ) : b.guest_verified ? (
-                      <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>
-                    ) : null}
+                    {b.guest_verified && <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>}
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
                     {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate this real guest" />}

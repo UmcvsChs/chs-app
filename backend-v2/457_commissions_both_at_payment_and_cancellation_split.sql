@@ -1,0 +1,29 @@
+-- ============================================================================
+-- 457 — hotel / shortlet: both commissions at payment; late cancellations are split
+-- ============================================================================
+-- DECISIONS (client, October 2026): (1) shortlets match rent and sale — BOTH commissions are
+-- recorded as collected the moment the guest pays (before, the host's waited for payout);
+-- (2) the amount kept after a late cancellation is SPLIT between the host and CHS.
+--
+-- (1) generate_shortlet_commission now records the host's commission as 'paid' when created (at
+--     payment); the wording "collected at payout" became "collected at payment" in pay_for_booking,
+--     host_decide_shortlet_booking and release_booking_payout. Bookings already paid were
+--     corrected (the two existing host commissions, 82,000, moved from pending to paid). Done as
+--     checked text replacements on the stored definitions (the migration aborts if one fails).
+--
+-- (2) cancel_shortlet_booking was rewritten. For a PAID booking with price P, guest service fee G,
+--     host commission rate h and deposit D:
+--        refund percentage r = 100 if the host never confirmed, or check-in is 48h+ away;
+--                              50 inside 48h; 0 on or after check-in
+--        guest is refunded   (P + G) x r  + D                    (the deposit always comes back)
+--        kept price          P x (1 - r)  -> to the HOST as compensation for the dates held, less
+--                            the host commission on it; CHS may keep a share of it
+--                            (platform_settings shortlet_cancellation_host_share_pct, default 100)
+--        kept service fee    G x (1 - r)  -> stays with CHS
+--     CHS's commission records are rewritten to what CHS actually keeps; a full refund removes
+--     them. Refund + host net + CHS commissions = P + G + D, always (tested to the naira for 100%,
+--     50%, 0%, with a deposit, and with the host's share at 50% and 0%). Guest, host and admin are
+--     each told the exact amounts. Cancelling something already paid out, twice, or as another user,
+--     is refused. An unpaid request is still withdrawn at no cost.
+--
+-- Full function bodies live in the database (see pg_get_functiondef).

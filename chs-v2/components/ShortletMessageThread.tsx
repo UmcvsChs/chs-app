@@ -8,6 +8,8 @@ interface ShortletMessage {
   sender_role: "guest" | "host" | "admin";
   text: string;
   created_at: string;
+  status: "pending_review" | "approved" | "blocked";
+  block_reason: string | null;
 }
 
 // The real, missing feature confirmed by checking the code directly —
@@ -47,7 +49,7 @@ export default function ShortletMessageThread({
   async function loadMessages() {
     const { data } = await supabase
       .from("shortlet_messages")
-      .select("id, sender_role, text, created_at")
+      .select("id, sender_role, text, created_at, status, block_reason")
       .eq("shortlet_booking_id", bookingId)
       .order("created_at", { ascending: true });
     setMessages((data as ShortletMessage[]) || []);
@@ -79,7 +81,10 @@ export default function ShortletMessageThread({
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3 mt-2">
-      <p className="text-xs font-bold text-chs-charcoal mb-2">💬 Messages</p>
+      <p className="text-xs font-bold text-chs-charcoal mb-1">💬 Messages</p>
+      <p className="text-[10px] text-gray-400 mb-2">
+        Messages on a booking go through CHS: until the booking is paid, CHS reviews each one before it is delivered. Phone numbers and email addresses are not allowed and are blocked.
+      </p>
       <div ref={containerRef} className="max-h-56 overflow-y-auto space-y-1.5 mb-2">
         {messages.length === 0 ? (
           <p className="text-[10px] text-gray-400">No messages yet.</p>
@@ -90,6 +95,8 @@ export default function ShortletMessageThread({
             }`}>
               <p className="text-[9px] font-bold text-gray-400 mb-0.5">{labelFor(m.sender_role)}</p>
               <p className="text-chs-charcoal">{m.text}</p>
+              {m.status === "pending_review" && <p className="text-[9px] font-semibold text-amber-700 mt-0.5">⏳ Waiting for CHS review — not delivered yet</p>}
+              {m.status === "blocked" && <p className="text-[9px] font-semibold text-chs-red mt-0.5">🚫 Not delivered{m.block_reason ? `: ${m.block_reason}` : ""}</p>}
             </div>
           ))
         )}

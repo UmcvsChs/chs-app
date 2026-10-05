@@ -315,6 +315,32 @@ function AdminDashboardInner() {
   const [relayNotes, setRelayNotes] = useState<Record<string, string>>({});
   const [bookingRejectReasons, setBookingRejectReasons] = useState<Record<string, string>>({});
   const [queueBusy, setQueueBusy] = useState<string | null>(null);
+  // Guest <-> host messages waiting for CHS to review before they are delivered.
+  const [pendingMsgs, setPendingMsgs] = useState<{
+    id: string; sender_role: string; text: string; created_at: string; booking_ref: string; property_title: string;
+    booking_stage: string; guest_full_name: string; is_paid: boolean;
+  }[]>([]);
+  const [msgReasons, setMsgReasons] = useState<Record<string, string>>({});
+  async function loadPendingMsgs() {
+    const { data } = await supabase.rpc("get_pending_shortlet_messages");
+    setPendingMsgs((data as unknown as typeof pendingMsgs) || []);
+  }
+  async function handleApproveMsg(id: string) {
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("approve_shortlet_message", { p_message_id: id });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadPendingMsgs();
+  }
+  async function handleRejectMsg(id: string) {
+    const reason = (msgReasons[id] || "").trim();
+    if (!reason) { setActionError("Please give a short reason, so the sender knows what to change."); return; }
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("reject_shortlet_message", { p_message_id: id, p_reason: reason });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadPendingMsgs();
+  }
   async function loadBookingQueue() {
     const { data } = await supabase.rpc("get_admin_booking_queue");
     setBookingQueue((data as unknown as typeof bookingQueue) || []);
@@ -1391,6 +1417,7 @@ function AdminDashboardInner() {
     // had no real way to see or track them at all before this.
     supabase.rpc("get_stale_calendars", { p_stale_days: 3 }).then(({ data }) => setStaleCalendars((data as unknown as typeof staleCalendars) || []));
     supabase.rpc("get_admin_booking_queue").then(({ data }) => setBookingQueue((data as unknown as typeof bookingQueue) || []));
+    supabase.rpc("get_pending_shortlet_messages").then(({ data }) => setPendingMsgs((data as unknown as typeof pendingMsgs) || []));
     setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
     setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
     setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
@@ -2321,7 +2348,7 @@ function AdminDashboardInner() {
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
-          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length})`, domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length + pendingMsgs.length})`, domain: "owner_buyer_tenant", group: "Financial" },
           { key: "staleoffers", label: `⚠️ Pending/Inconclusive Deals (${stalePendingOffers.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
@@ -2378,7 +2405,7 @@ function AdminDashboardInner() {
                  should always show as a red alert in the sidebar
                  itself, not just once you're already inside the tab. */
               (tab.key === "staleoffers" && stalePendingOffers.length > 0) ||
-              (tab.key === "shortletbookings" && bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express"))
+              (tab.key === "shortletbookings" && (pendingMsgs.length > 0 || bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express")))
                 ? "border-chs-red text-chs-red bg-red-50 rounded-t-lg"
                 : activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
             }`}
@@ -4815,9 +4842,34 @@ function AdminDashboardInner() {
         {activeTab === "shortletbookings" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
-              Booking requests for hotels, lodges and venues. A guest sends a request (nothing is charged); CHS relays it to the host; the host confirms the dates are free; the guest then pays within a short window. Urgent requests (check-in today or within 3 days) go to the host instantly and are shown first, in red — phone any host who goes quiet.
+              Booking requests for hotels, lodges and venues. Every request and every message comes to CHS first — the guest and the host never deal with each other directly. A guest sends a request (nothing is charged); CHS relays it to the host; the host confirms the dates are free; the guest then pays within a short window. Urgent requests (check-in today or within 3 days) are shown first, in red, and relay to the host automatically only if no one on the team has acted within their short window (30 minutes, or 10 for same-day). Phone any host who goes quiet.
             </p>
             {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
+            <div className={`rounded-xl border-2 p-3 mb-3 ${pendingMsgs.length > 0 ? "bg-chs-amber-light border-chs-amber" : "bg-green-50 border-green-200"}`}>
+              <div className="flex justify-between items-center mb-1">
+                <p className={`text-xs font-bold ${pendingMsgs.length > 0 ? "text-chs-charcoal" : "text-green-700"}`}>
+                  {pendingMsgs.length > 0 ? `💬 ${pendingMsgs.length} guest/host message${pendingMsgs.length !== 1 ? "s" : ""} waiting for your review` : "✓ No guest/host messages waiting for review"}
+                </p>
+                <button onClick={loadPendingMsgs} className="text-[10px] font-semibold text-chs-red underline">🔄 Refresh</button>
+              </div>
+              {pendingMsgs.length > 0 && (
+                <p className="text-[10px] text-gray-500 mb-2">Until a booking is paid, no message reaches the other side until you approve it. Phone numbers and emails are already blocked automatically.</p>
+              )}
+              {pendingMsgs.map((m) => (
+                <div key={m.id} className="bg-white rounded-lg border border-gray-200 p-2.5 mb-2">
+                  <p className="text-[10px] text-gray-400">{m.property_title} · {m.booking_ref} · from the <b>{m.sender_role}</b>{m.sender_role === "host" ? ` to ${m.guest_full_name}` : ` (${m.guest_full_name})`} · {m.is_paid ? "booking paid" : "booking not paid yet"}</p>
+                  <p className="text-xs text-chs-charcoal my-1.5">“{m.text}”</p>
+                  <div className="flex gap-2 mb-1.5">
+                    <button onClick={() => handleApproveMsg(m.id)} disabled={queueBusy === m.id}
+                      className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">✓ Approve and deliver</button>
+                  </div>
+                  <input type="text" value={msgReasons[m.id] || ""} onChange={(e) => setMsgReasons({ ...msgReasons, [m.id]: e.target.value })}
+                    placeholder="Reason, if you are not delivering it" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                  <button onClick={() => handleRejectMsg(m.id)} disabled={queueBusy === m.id}
+                    className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[11px] font-semibold disabled:opacity-50">Do not deliver</button>
+                </div>
+              ))}
+            </div>
             <div className={`rounded-xl border-2 p-3 mb-3 ${staleCalendars.length > 0 ? "bg-red-50 border-chs-red" : "bg-green-50 border-green-200"}`}>
               <p className={`text-xs font-bold mb-1 ${staleCalendars.length > 0 ? "text-chs-red" : "text-green-700"}`}>
                 {staleCalendars.length > 0

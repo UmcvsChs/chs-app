@@ -33,12 +33,16 @@ const FAQ_ITEMS = [
     a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely and reaches the host only after your stay begins. The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
   },
   {
+    q: "Can I contact the host (or the guest) directly?",
+    a: "No — and that protects both sides. CHS relays every booking request and every message between a guest and a host. Your request goes to CHS first, and CHS passes it to the host. Until a booking is paid, CHS reviews each message before it is delivered, and phone numbers and email addresses are blocked at all times. A host sees only the guest's name and a CHS reference, never their phone number; a guest never sees who the host is. Once your booking is paid you can message through the booking itself, still without sharing contact details.",
+  },
+  {
     q: "Why am I asked what time I will arrive?",
     a: "So the host can have your room ready. For a booking that starts today it is required, because the host has only 30 minutes to reply and needs to know when to expect you. For other bookings it is optional but helpful.",
   },
   {
     q: "Can I cancel a shortlet or hire booking, and will I get a refund?",
-    a: "Yes. A request you haven't paid for yet can be withdrawn at any time at no cost. Once you have paid, a real, stated policy applies: a full refund if you cancel 48 or more hours before check-in, 50% if you cancel within 48 hours, and no refund once check-in has passed. This is calculated and enforced automatically, not left to a manual decision.",
+    a: "Yes. A request you haven't paid for yet can be withdrawn at any time at no cost. Once you have paid, a real, stated policy applies: a full refund if you cancel 48 or more hours before check-in, 50% if you cancel within 48 hours, and no refund once check-in has passed. This is calculated and enforced automatically, not left to a manual decision. The part that is not refunded compensates the host for the dates they held (less CHS's commission), and CHS keeps its service fee on it; a security deposit is always returned.",
   },
   {
     q: "What if the seller, landlord, host or vendor doesn't deliver — do I get my money back?",
@@ -58,7 +62,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Why was I asked to accept the Terms & Conditions again?",
-    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 2 it is term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again.",
+    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again.",
   },
   {
     q: "What does a 'CHS Verified' or 'Verified Listing' label actually mean?",

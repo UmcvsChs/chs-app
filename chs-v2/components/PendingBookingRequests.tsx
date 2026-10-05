@@ -23,7 +23,7 @@ interface Req {
   id: string;
   property_title: string;
   guest_full_name: string;
-  guest_phone: string;
+  booking_ref: string;
   guest_verified: boolean;
   check_in: string;
   check_out: string;
@@ -112,7 +112,7 @@ export default function PendingBookingRequests() {
               )}
               {r.booking_lane === "standard" && r.expected_arrival_time && <p className="text-[10px] text-gray-500 mt-1">Expected arrival about {r.expected_arrival_time}</p>}
               <p className="text-xs text-chs-charcoal mt-1.5">
-                {r.guest_full_name} · {r.guest_phone}
+                {r.guest_full_name} · Ref {r.booking_ref}
                 {r.guest_verified && <span className="ml-1.5 text-[10px] font-semibold text-green-700">✓ identity verified by CHS</span>}
               </p>
               <p className="text-[11px] text-gray-500">

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { formatNaira } from "@/lib/format";
 
 // Real, new component per direct client request — a genuine,
 // stated cancellation policy: full refund 48+ real hours before
@@ -25,7 +26,7 @@ export default function CancelBookingButton({ bookingId, onCancelled, mode = "ca
     }
     setResult(data.unpaid
       ? "Request withdrawn — nothing was charged, and the dates have been released."
-      : `Cancelled — ${data.refund_pct}% refunded to your wallet.`);
+      : `Cancelled — ${formatNaira(data.refund_amount)} refunded to your wallet (${data.refund_pct}% of your stay).`);
     onCancelled();
   }
 
@@ -37,7 +38,7 @@ export default function CancelBookingButton({ bookingId, onCancelled, mode = "ca
         <p className="text-[10px] text-chs-charcoal mb-1.5">
           {mode === "withdraw"
             ? "Withdraw this request? Nothing has been charged, and the dates will be released for other guests."
-            : "Real cancellation policy: full refund 48+ hours before check-in, 50% within 48 hours, none after check-in."}
+            : "Real cancellation policy: full refund 48+ hours before check-in, 50% within 48 hours, none after check-in. The part not refunded compensates the host for the dates they held; CHS keeps its service fee on it."}
         </p>
         {error && <p className="text-[10px] text-chs-red mb-1.5">{error}</p>}
         <div className="flex gap-2">
