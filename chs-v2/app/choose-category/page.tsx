@@ -20,8 +20,13 @@ export default function ChooseCategoryPage() {
         </Link>
 
         <Link href="/become-vendor" className="block bg-white rounded-xl border-2 border-gray-200 p-4 mb-3 hover:border-chs-red">
-          <p className="text-sm font-bold text-chs-charcoal">🛍️ I sell products or offer a service</p>
-          <p className="text-xs text-gray-500 mt-1">Bedding, furniture, electronics, cleaning, security, and other real marketplace categories.</p>
+          <p className="text-sm font-bold text-chs-charcoal">🛍️ I&apos;m a Vendor</p>
+          <p className="text-xs text-gray-500 mt-1">I sell goods: furniture, electronics and home appliances, bedding and textiles, kitchen items, building materials, interior design.</p>
+        </Link>
+
+        <Link href="/become-service-provider" className="block bg-white rounded-xl border-2 border-gray-200 p-4 mb-3 hover:border-chs-red">
+          <p className="text-sm font-bold text-chs-charcoal">🏢 I&apos;m a Service Provider</p>
+          <p className="text-xs text-gray-500 mt-1">I offer a service: security, cleaning, fumigation and pest control, facilities maintenance.</p>
         </Link>
 
         <Link href="/" className="block text-center text-xs text-gray-400 mt-4">

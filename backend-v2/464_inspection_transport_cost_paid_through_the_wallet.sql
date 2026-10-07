@@ -1,0 +1,13 @@
+-- 464 — the inspection transport cost is PAID THROUGH THE WALLET like every other payment (applied October 2026)
+-- RULE (client): every payment on CHS is made through the person's CHS Wallet; nobody pays a person or a bank account.
+-- FLOW: the requester books (nothing is taken) -> CHS assigns an AGENT and records the agent's takeoff point and the real
+-- distance (set_inspection_takeoff(id, point, km, agent)) -> status awaiting_payment, requester notified -> the requester
+-- pays FROM THEIR WALLET (pay_inspection_fee): debited, HELD, status confirmed -> after the visit (mark_inspection_attendance)
+-- the held money is credited to the agent's wallet — also if the requester did not attend, since the agent travelled.
+-- REFUNDS (cancel_inspection): cancelled by the owner or CHS -> full refund; by the requester at least 12 hours before ->
+-- full refund; by the requester inside 12 hours -> to the agent. An unpaid visit lapses 2 hours before it is due
+-- (lapse_unpaid_inspections, added to the 5-minute sweep) with nothing charged. CHS keeps nothing: a pure pass-through.
+-- New: inspections.status 'awaiting_payment'; inspections.payment_status (unpaid/held/released/refunded), paid_at, agent_id,
+-- settled_at; get_assignable_agents() for the admin. Verified (rolled back) to the naira: pay, hold, release, no-show,
+-- every refund rule, stranger refused, double pay refused, insufficient funds refused, lapse.
+-- Also: every approved user received the notification "Pay only through your CHS Wallet".

@@ -9,10 +9,12 @@ import PropertyTourModal from "@/components/PropertyTourModal";
 // and ShareButton are their own components on this same page too.
 export default function PropertyTourButton({
   photos,
+  labels,
   videoUrl,
   propertyTitle,
 }: {
   photos: string[];
+  labels?: string[];
   videoUrl?: string | null;
   propertyTitle: string;
 }) {
@@ -28,6 +30,7 @@ export default function PropertyTourButton({
       {showTour && (
         <PropertyTourModal
           photos={photos}
+          labels={labels}
           videoUrl={videoUrl}
           propertyTitle={propertyTitle}
           onClose={() => setShowTour(false)}

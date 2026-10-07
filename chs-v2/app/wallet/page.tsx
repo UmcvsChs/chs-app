@@ -1,5 +1,6 @@
 "use client";
 
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,8 @@ import { startWalletFunding } from "@/lib/paystack";
 import CurrencyInput from "@/components/CurrencyInput";
 import BankAccountSecurity, { checkWithdrawalAllowed } from "@/components/BankAccountSecurity";
 import TransactionCommissions from "@/components/TransactionCommissions";
+import { getDeviceId } from "@/lib/device";
+import WalletSecurityPanel, { ReportTransferLink, WalletSecurityStatus } from "@/components/WalletSecurityPanel";
 
 const WALLET_TYPE_LABELS: Record<string, string> = {
   main: "Main balance",
@@ -27,6 +30,15 @@ export default function WalletPage() {
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFundForm, setShowFundForm] = useState(false);
+  // The protection around money leaving this wallet: transaction PIN, limits, the pause on money just received, freeze.
+  const [sec, setSec] = useState<WalletSecurityStatus | null>(null);
+  const [transferPin, setTransferPin] = useState("");
+  const [withdrawPin, setWithdrawPin] = useState("");
+  // When CHS needs a code texted to the phone (a large amount, or an unfamiliar device) the answer comes back with need_otp.
+  const [transferOtp, setTransferOtp] = useState("");
+  const [transferNeedOtp, setTransferNeedOtp] = useState(false);
+  const [withdrawOtp, setWithdrawOtp] = useState("");
+  const [withdrawNeedOtp, setWithdrawNeedOtp] = useState(false);
   const [withdrawMessage, setWithdrawMessage] = useState<string | null>(null);
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState<number | "">("");
@@ -76,6 +88,8 @@ export default function WalletPage() {
 
     setWallet(walletRes.data);
     setTransactions(transactionsRes.data || []);
+    const { data: secData } = await supabase.rpc("get_wallet_security_status");
+    if (secData) setSec(secData as WalletSecurityStatus);
     setLoading(false);
   }
 
@@ -115,13 +129,22 @@ export default function WalletPage() {
     setTransferring(true);
     setTransferMessage(null);
 
-    const { error } = await supabase.rpc("transfer_wallet_funds", {
+    const { data: transferData, error } = await supabase.rpc("transfer_wallet_funds", {
       p_recipient_id: transferRecipient.id,
       p_amount: transferAmount,
       p_note: transferNote.trim() || null,
+      p_pin: transferPin || null,
+      p_device_id: getDeviceId(),
+      p_otp: transferOtp || null,
     });
 
     setTransferring(false);
+    // a PIN problem is returned (not raised) so that wrong guesses are counted
+    if (!error && transferData && transferData.ok === false) {
+      setTransferMessage(transferData.error);
+      if (transferData.need_otp) setTransferNeedOtp(true);
+      return;
+    }
     if (error) {
       // The real database function's own message — the same real,
       // specific reasons (insufficient balance, frozen wallet, self-
@@ -134,6 +157,9 @@ export default function WalletPage() {
     setTransferContact("");
     setTransferAmount("");
     setTransferNote("");
+    setTransferPin("");
+    setTransferOtp("");
+    setTransferNeedOtp(false);
     setTransferRecipient(null);
     setShowTransferForm(false);
     loadData(); // real, immediate balance refresh
@@ -168,7 +194,7 @@ export default function WalletPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionData.session?.access_token}`,
         },
-        body: JSON.stringify({ amount: withdrawAmount }),
+        body: JSON.stringify({ amount: withdrawAmount, pin: withdrawPin || null, deviceId: getDeviceId(), otp: withdrawOtp || null }),
       }
     );
     const result = await response.json();
@@ -176,11 +202,15 @@ export default function WalletPage() {
 
     if (!response.ok || result.error) {
       setWithdrawMessage(result.error || "Could not complete this withdrawal.");
+      if (result.need_otp) setWithdrawNeedOtp(true);
       return;
     }
 
     setWithdrawMessage("✓ Withdrawal submitted — funds reflect in your bank account shortly.");
     setWithdrawAmount("");
+    setWithdrawPin("");
+    setWithdrawOtp("");
+    setWithdrawNeedOtp(false);
     setShowWithdrawForm(false);
     loadData();
   }
@@ -228,6 +258,7 @@ export default function WalletPage() {
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href={{admin:"/admin",owner:"/owner",host:"/host",agent:"/agent",manager:"/manager",tenant:"/tenant",buyer:"/my-offers",guest:"/guest",developer:"/developer",staff:"/staff"}[profile?.role || ""] || "/"} className="text-xs text-white/70">← Back to Dashboard</Link>
         <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
+        <PaymentSafetyNotice variant="full" className="my-3" />
         <Link href="/my-receipts" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           🧾 My Real Receipts →
         </Link>
@@ -282,6 +313,15 @@ export default function WalletPage() {
             ) : (
               <form onSubmit={handleWithdrawSubmit} className="space-y-2">
                 <CurrencyInput value={withdrawAmount} onChange={setWithdrawAmount} placeholder="Amount to withdraw (₦)" />
+                {(sec?.has_pin || sec?.withdrawal_requires_pin) && (
+                  <input type="password" inputMode="numeric" autoComplete="off" value={withdrawPin} onChange={(e) => setWithdrawPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="Your 6-digit transaction PIN" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm tracking-widest" />
+                )}
+                {withdrawNeedOtp && (
+                  <input type="text" inputMode="numeric" autoComplete="one-time-code" value={withdrawOtp} onChange={(e) => setWithdrawOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="6-digit code we texted you" className="w-full px-3 py-2.5 rounded-lg border-2 border-chs-red text-sm tracking-widest" />
+                )}
+                {sec && sec.locked_amount > 0 && <p className="text-[10px] text-chs-amber-dark">You can withdraw {formatNaira(sec.withdrawable)} now; {formatNaira(sec.locked_amount)} received from another CHS user is paused for your protection.</p>}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setShowWithdrawForm(false)}
                     className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
@@ -296,6 +336,7 @@ export default function WalletPage() {
             )}
 
             {profile && <BankAccountSecurity session={session!} registeredName={profile.full_name} />}
+            <WalletSecurityPanel status={sec} onChanged={loadData} />
 
             {transferMessage && (
               <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{transferMessage}</p>
@@ -336,6 +377,9 @@ export default function WalletPage() {
                     <CurrencyInput value={transferAmount} onChange={setTransferAmount} placeholder="0.00" />
                   </div>
                 </div>
+                <p className="text-[10px] text-chs-red bg-red-50 rounded-lg px-2.5 py-1.5 leading-snug">
+                  Only send money to people you personally know and trust. CHS <b>never</b> asks you to transfer money for rent, bookings, inspections, purchases or fees — those are paid from your wallet inside the app. If anyone is pressuring you to send money, <b>stop</b>.
+                </p>
                 <div>
                   <label className="text-[10px] font-semibold text-gray-500">What&apos;s this for? (optional)</label>
                   <input
@@ -346,6 +390,22 @@ export default function WalletPage() {
                     className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm"
                   />
                 </div>
+                {(sec?.has_pin || sec?.transfer_requires_pin) && (
+                  <div>
+                    <label className="text-[10px] font-semibold text-gray-500">Transaction PIN</label>
+                    <input type="password" inputMode="numeric" autoComplete="off" value={transferPin} onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="Your 6-digit transaction PIN" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm tracking-widest" />
+                    {!sec?.has_pin && <p className="text-[10px] text-chs-red mt-1">Set your transaction PIN in Wallet security below first.</p>}
+                  </div>
+                )}
+                {transferNeedOtp && (
+                  <div>
+                    <label className="text-[10px] font-semibold text-chs-red">Confirmation code we texted to your phone</label>
+                    <input type="text" inputMode="numeric" autoComplete="one-time-code" value={transferOtp} onChange={(e) => setTransferOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="6-digit code" className="w-full mt-1 px-3 py-2.5 rounded-lg border-2 border-chs-red text-sm tracking-widest" />
+                    <p className="text-[10px] text-gray-500 mt-1">CHS will never ask you to read this code to anyone. If someone is asking for it, it is a scam.</p>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button type="button" onClick={() => { setShowTransferForm(false); setTransferRecipient(null); }}
                     className="flex-1 py-2 rounded-full bg-gray-200 text-gray-600 text-xs font-semibold">
@@ -376,6 +436,7 @@ export default function WalletPage() {
                 <div className="bg-chs-amber-light rounded-xl border border-chs-amber-dark p-3 col-span-2">
                   <p className="text-[10px] uppercase text-chs-amber-dark font-semibold">🔒 Held — pending legal document transfer</p>
                   <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(wallet.escrow_held)}</p>
+          <p className="text-[10px] text-gray-500 mt-1">Sold a property and handed over the documents? Open your Owner dashboard and tap <b>Request release of my money</b> — CHS verifies delivery and releases it.</p>
                   <p className="text-[10px] text-gray-500 mt-1">
                     This is real, confirmed sale proceeds — visible to you, but not yet withdrawable. CHS releases it to your main wallet once the real Certificate of Occupancy, Deed of Assignment, and every other legal document have been confirmed transferred to the buyer.
                   </p>
@@ -405,6 +466,7 @@ export default function WalletPage() {
                   <p className="text-[10px] text-gray-400">
                     {WALLET_TYPE_LABELS[tx.wallet_type]} · {new Date(tx.created_at).toLocaleDateString()}
                   </p>
+                  {tx.direction === "debit" && tx.reference?.startsWith("P2P-") && <ReportTransferLink reference={tx.reference} onDone={loadData} />}
                 </div>
                 <p className={`text-sm font-bold ${tx.direction === "credit" ? "text-chs-red" : "text-gray-400"}`}>
                   {tx.direction === "credit" ? "+" : "−"}{formatNaira(tx.amount)}

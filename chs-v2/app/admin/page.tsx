@@ -68,7 +68,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -323,6 +323,66 @@ function AdminDashboardInner() {
   const [msgReasons, setMsgReasons] = useState<Record<string, string>>({});
   // Stays whose guest has arrived but whose payment is still held: a host asked for release, the guest
   // reported a problem, or the guest has not confirmed yet (it releases itself 24h after check-in).
+  // Rent-to-Own (Mortgage) requests from verified buyers. Every request comes to CHS first: relay it to the owner, or
+  // reject it with a reason. Previously the request went straight to the owner and admin never saw it.
+  const [rtoQueue, setRtoQueue] = useState<{
+    id: string; ref: string; property_title: string; property_ref: string; location: string | null; total_price: number; monthly_amount: number; payments: number | null;
+    buyer_name: string; buyer_phone: string; buyer_id_verified: boolean; owner_name: string; owner_phone: string; requested_at: string; competing_requests: number;
+  }[]>([]);
+  const [rtoNotes, setRtoNotes] = useState<Record<string, string>>({});
+  // Transfers a user has reported as not authorised or a scam. The amount is already held in the recipient's wallet.
+  const [transferReports, setTransferReports] = useState<{
+    id: string; reference: string; amount: number; note: string | null; status: string; created_at: string;
+    reporter_name: string; reporter_phone: string; recipient_name: string; recipient_phone: string; recipient_balance: number | null; recipient_frozen: boolean | null; admin_note: string | null;
+  }[]>([]);
+  const [reportNotes, setReportNotes] = useState<Record<string, string>>({});
+  // Unusual wallet patterns found by the automatic scan (every 15 minutes). A flag changes nothing by itself; an admin decides.
+  const [riskFlags, setRiskFlags] = useState<{
+    id: string; kind: string; details: string; status: string; created_at: string; admin_note: string | null;
+    name: string; phone: string; account_created: string; balance: number | null; frozen: boolean | null;
+  }[]>([]);
+  async function loadRiskFlags() {
+    const { data } = await supabase.rpc("get_wallet_risk_flags");
+    setRiskFlags(Array.isArray(data) ? (data as unknown as typeof riskFlags) : []);
+  }
+  async function handleRiskFlag(id: string, action: "clear" | "freeze") {
+    const note = (reportNotes[id] || "").trim();
+    if (note.length < 5) { setActionError("Please record your finding first (a short sentence)."); return; }
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("admin_resolve_risk_flag", { p_flag_id: id, p_action: action, p_note: note });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadRiskFlags();
+  }
+  const walletSecurityOpen = transferReports.filter((r) => r.status === "open").length + riskFlags.filter((f) => f.status === "open").length;
+  async function loadTransferReports() {
+    const { data } = await supabase.rpc("get_transfer_reports");
+    setTransferReports(Array.isArray(data) ? (data as unknown as typeof transferReports) : []);
+  }
+  async function handleTransferReport(id: string, action: "reverse" | "dismiss" | "freeze_recipient") {
+    const note = (reportNotes[id] || "").trim();
+    if (note.length < 5) { setActionError("Please record your finding first (a short sentence)."); return; }
+    setQueueBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("admin_resolve_transfer_report", { p_report_id: id, p_action: action, p_note: note });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadTransferReports();
+  }
+  async function loadRtoQueue() {
+    const { data } = await supabase.rpc("get_rto_admin_queue");
+    setRtoQueue(Array.isArray(data) ? (data as unknown as typeof rtoQueue) : []);
+  }
+  async function handleRtoDecision(id: string, relay: boolean) {
+    const note = (rtoNotes[id] || "").trim();
+    if (!relay && note.length < 5) { setActionError("Please give the buyer a reason for rejecting (a short sentence)."); return; }
+    setQueueBusy(id); setActionError(null);
+    const { error } = relay
+      ? await supabase.rpc("admin_relay_rent_to_own", { p_agreement_id: id, p_note: note || null })
+      : await supabase.rpc("admin_reject_rent_to_own", { p_agreement_id: id, p_reason: note });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    await loadRtoQueue();
+  }
   const [releaseItems, setReleaseItems] = useState<{
     id: string; booking_ref: string; property_title: string; guest_full_name: string; guest_phone: string; host_name: string; host_phone: string;
     check_in: string; check_out: string; amount_held: number; host_net: number; auto_release_at: string | null;
@@ -998,7 +1058,25 @@ function AdminDashboardInner() {
   const [pendingPrecommitMessages, setPendingPrecommitMessages] = useState<{ id: string; text: string; sender_role: string; profiles: { full_name: string } | null; offers: { properties: { title: string } | null } | null }[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<{ id: string; transaction_type: string; payer_role: string; base_amount: number; commission_percentage: number | null; commission_amount: number; paid_at: string; properties: { title: string; street_address?: string | null } | null; profiles: { full_name: string } | null }[]>([]);
   const [pendingSaleDocs, setPendingSaleDocs] = useState<{ id: string; property_id: string; document_type: string; file_url: string; created_at: string; properties: { title: string } | null }[]>([]);
-  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{ id: string; amount: number; created_at: string; document_deadline: string | null; property_title: string; owner_id: string }[]>([]);
+  const [pendingLegalTransfers, setPendingLegalTransfers] = useState<{
+    id: string; amount: number; held_net: number; created_at: string; document_deadline: string | null; property_title: string; owner_id: string;
+    seller_name: string; seller_phone: string; buyer_name: string; buyer_phone: string;
+    dispatch_status: string | null; dispatch_method: string | null; tracking_reference: string | null; dispatched_at: string | null;
+    release_request_status: string | null; release_requested_at: string | null; release_request_note: string | null; release_decision_note: string | null;
+  }[]>([]);
+  const [saleNotes, setSaleNotes] = useState<Record<string, string>>({});
+  async function handleSaleRelease(offerId: string, method: "platform_records" | "phone_call") {
+    setActionError(null);
+    const { error } = await supabase.rpc("admin_release_sale_funds", { p_offer_id: offerId, p_method: method, p_note: (saleNotes[offerId] || "").trim() || null });
+    if (error) { setActionError(error.message); return; }
+    loadData();
+  }
+  async function handleSaleRejectRequest(offerId: string) {
+    setActionError(null);
+    const { error } = await supabase.rpc("admin_reject_sale_release", { p_offer_id: offerId, p_reason: (saleNotes[offerId] || "").trim() });
+    if (error) { setActionError(error.message); return; }
+    loadData();
+  }
   // Real, direct fix answering a genuine, direct client question:
   // "where does the message go" for a real hard-copy delivery
   // request. Confirmed directly — nowhere. request_document_dispatch
@@ -1148,6 +1226,21 @@ function AdminDashboardInner() {
     setRecentlyHandledArtisans((prev) => prev.filter((x) => x.id !== id));
   }
   const [upcomingInspections, setUpcomingInspections] = useState<(Inspection & { properties: { title: string; location_area: string } | null })[]>([]);
+  // The agent's takeoff point and the real one-way distance, which fix an inspection's final transport cost.
+  // The WHOLE cost is paid by the person who asked for the visit — never split with the owner, never carried by CHS.
+  const [takeoffForm, setTakeoffForm] = useState<Record<string, { point: string; km: string; agent?: string }>>({});
+  const [assignableAgents, setAssignableAgents] = useState<{ id: string; full_name: string; phone: string }[]>([]);
+  const [takeoffBusy, setTakeoffBusy] = useState<string | null>(null);
+  async function handleSetTakeoff(id: string) {
+    const f = takeoffForm[id] || { point: "", km: "" };
+    if (!f.point.trim() || !(parseFloat(f.km) > 0) || !f.agent) { setActionError("Please choose the agent, and enter where they set off from and the one-way distance in km."); return; }
+    setTakeoffBusy(id); setActionError(null);
+    const { error } = await supabase.rpc("set_inspection_takeoff", { p_inspection_id: id, p_takeoff_point: f.point.trim(), p_one_way_km: parseFloat(f.km), p_agent_id: f.agent });
+    setTakeoffBusy(null);
+    if (error) { setActionError(error.message); return; }
+    const { data } = await supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "awaiting_payment", "confirmed"]).order("requested_date", { ascending: true }).limit(200);
+    setUpcomingInspections((data as typeof upcomingInspections) || []);
+  }
   const [developerApplications, setDeveloperApplications] = useState<DeveloperApplication[]>([]);
   const [recentlyHandledDevelopers, setRecentlyHandledDevelopers] = useState<{ id: string; company_name: string; status: string }[]>([]);
   function loadRecentlyHandledDevelopers() {
@@ -1354,7 +1447,7 @@ function AdminDashboardInner() {
       supabase.from("referral_fees_owed").select("*").order("created_at", { ascending: false }).limit(200),
       supabase.from("fault_reports").select("*, tenancies(management_delegated, landlord_id, manager_id)").in("status", ["reported", "assigned", "converted_to_quote", "gathering_quotes"]).order("created_at", { ascending: false }).limit(200),
       supabase.from("artisans").select("*").eq("verification_status", "pending").order("created_at", { ascending: false }).limit(200),
-      supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
+      supabase.from("inspections").select("*, properties(title, location_area)").in("status", ["pending", "awaiting_payment", "confirmed"]).order("requested_date", { ascending: true }).limit(200),
       supabase.from("developer_applications").select("*").in("status", ["pending", "reviewed"]).order("created_at", { ascending: false }).limit(200),
     ]);
     setPendingProfiles(profilesRes.data || []);
@@ -1438,6 +1531,9 @@ function AdminDashboardInner() {
     supabase.rpc("get_admin_booking_queue").then(({ data }) => setBookingQueue((data as unknown as typeof bookingQueue) || []));
     supabase.rpc("get_pending_shortlet_messages").then(({ data }) => setPendingMsgs((data as unknown as typeof pendingMsgs) || []));
     loadReleaseItems();
+    loadRtoQueue();
+    loadTransferReports();
+    loadRiskFlags();
     setTotalCommissionEarnings((commissionRes.data || []).reduce((sum, r) => sum + Number(r.commission_amount), 0));
     setOpenOwnerConcerns((concernsRes.data as unknown as typeof openOwnerConcerns) || []);
     setAgentChangeRequests((agentChangeRes.data as unknown as typeof agentChangeRequests) || []);
@@ -2394,6 +2490,8 @@ function AdminDashboardInner() {
           // Oversight
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "walletsecurity", label: `Wallet Security (${walletSecurityOpen})`, domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "rtorequests", label: `Rent-to-Own Requests (${rtoQueue.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only", group: "Oversight" },
 
@@ -2425,6 +2523,10 @@ function AdminDashboardInner() {
                  should always show as a red alert in the sidebar
                  itself, not just once you're already inside the tab. */
               (tab.key === "staleoffers" && stalePendingOffers.length > 0) ||
+              (tab.key === "walletsecurity" && walletSecurityOpen > 0) ||
+              (tab.key === "rtorequests" && rtoQueue.length > 0) ||
+              (tab.key === "vendors" && pendingVendors.length > 0) ||
+              (tab.key === "artisans" && pendingArtisans.length > 0) ||
               (tab.key === "shortletbookings" && (pendingMsgs.length > 0 || releaseItems.some((r) => r.kind !== "arrived_unconfirmed") || bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express")))
                 ? "border-chs-red text-chs-red bg-red-50 rounded-t-lg"
                 : activeTab === tab.key ? "border-chs-red text-chs-charcoal" : "border-transparent text-gray-400"
@@ -3436,23 +3538,6 @@ function AdminDashboardInner() {
                 </div>
               ))
             )}
-
-            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🔒 Real Held Funds — Confirm Legal Transfer ({pendingLegalTransfers.length})</p>
-            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
-            {pendingLegalTransfers.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">No sales awaiting legal transfer confirmation.</p>
-            ) : (
-              pendingLegalTransfers.map((offer) => (
-                <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.property_title || "Property"}</p>
-                  <p className="text-xs text-gray-500 mb-2">Real funds held: {formatNaira(offer.amount)}</p>
-                  <button onClick={() => handleConfirmLegalTransfer(offer.id)}
-                    className="w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                    ✓ Confirm real legal documents transferred — release funds
-                  </button>
-                </div>
-              ))
-            )}
           </div>
         )}
 
@@ -4407,9 +4492,98 @@ function AdminDashboardInner() {
           </>
         )}
 
+        {activeTab === "walletsecurity" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🚩 First, patterns the automatic scan found unusual (it runs every 15 minutes and changes nothing by itself). Then, transfers a user has reported as not authorised, or as a scam. 🚨 Reported transfers:  The reported amount is already held in the recipient&apos;s wallet and cannot be withdrawn to a bank. Reverse it while the money is still there, dismiss the report if it was a genuine payment, or freeze the recipient and escalate.
+            </p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">🚩 Unusual wallet patterns ({riskFlags.filter((f) => f.status === "open").length} open)</p>
+            {riskFlags.length === 0 ? (
+              <p className="text-[11px] text-gray-400 mb-4">Nothing flagged by the automatic scan.</p>
+            ) : riskFlags.map((f) => (
+              <div key={f.id} className={`bg-white rounded-xl border-2 p-3 mb-2 ${f.status === "open" ? "border-chs-amber" : "border-gray-100"}`}>
+                <div className="flex justify-between items-start gap-2">
+                  <p className="text-xs font-bold text-chs-charcoal">{({ fan_in: "Many senders to one wallet", new_account: "New account receiving a lot", round_trip: "Money going in circles", rapid_outflow: "Rapid outflow", pin_attack: "Transaction PIN locked after wrong guesses" } as Record<string, string>)[f.kind] || f.kind}</p>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${f.status === "open" ? "bg-chs-amber text-chs-charcoal" : "bg-gray-100 text-gray-500"}`}>{f.status.toUpperCase()}</span>
+                </div>
+                <p className="text-[11px] text-gray-600 mt-0.5"><b>{f.name}</b> · {f.phone} · wallet {f.balance !== null ? formatNaira(f.balance) : "?"}{f.frozen ? " · FROZEN" : ""}</p>
+                <p className="text-[11px] text-gray-600">{f.details}</p>
+                {f.admin_note && <p className="text-[10px] text-gray-500 mt-1">Finding: {f.admin_note}</p>}
+                {f.status === "open" && (
+                  <>
+                    <input type="text" value={reportNotes[f.id] || ""} onChange={(e) => setReportNotes({ ...reportNotes, [f.id]: e.target.value })} maxLength={300}
+                      placeholder="Record your finding (required)" className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                    <div className="grid grid-cols-2 gap-1.5 mt-2">
+                      <button onClick={() => handleRiskFlag(f.id, "clear")} disabled={queueBusy === f.id} className="py-1.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-semibold disabled:opacity-50">Looks fine — clear</button>
+                      <button onClick={() => handleRiskFlag(f.id, "freeze")} disabled={queueBusy === f.id} className="py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">🧊 Freeze the wallet</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+
+            <p className="text-xs font-bold text-chs-charcoal mt-4 mb-2">🚨 Transfers reported by users</p>
+            {transferReports.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">✓ No transfer reports.</p>
+            ) : transferReports.map((r) => (
+              <div key={r.id} className={`bg-white rounded-xl border-2 p-3 mb-3 ${r.status === "open" ? "border-chs-red" : "border-gray-100"}`}>
+                <div className="flex justify-between items-start gap-2">
+                  <p className="text-sm font-bold text-chs-charcoal">{formatNaira(r.amount)}</p>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${r.status === "open" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>{r.status === "open" ? "OPEN" : r.status.toUpperCase()}</span>
+                </div>
+                <p className="text-[11px] text-gray-600">Ref {r.reference} · reported {new Date(r.created_at).toLocaleString()}</p>
+                <p className="text-[11px] text-gray-600 mt-1">Sent by (reporting): <b>{r.reporter_name}</b> · {r.reporter_phone}</p>
+                <p className="text-[11px] text-gray-600">Received by: <b>{r.recipient_name}</b> · {r.recipient_phone} — wallet holds {r.recipient_balance !== null ? formatNaira(r.recipient_balance) : "?"}{r.recipient_frozen ? " · FROZEN" : ""}</p>
+                {r.note && <p className="text-[11px] text-chs-red mt-1">Reporter says: “{r.note}”</p>}
+                {r.admin_note && <p className="text-[10px] text-gray-500 mt-1">Finding: {r.admin_note}</p>}
+                {r.status === "open" && (
+                  <>
+                    <input type="text" value={reportNotes[r.id] || ""} onChange={(e) => setReportNotes({ ...reportNotes, [r.id]: e.target.value })} maxLength={300}
+                      placeholder="Record your finding (required)" className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
+                      <button onClick={() => handleTransferReport(r.id, "reverse")} disabled={queueBusy === r.id} className="py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">↩ Reverse it</button>
+                      <button onClick={() => handleTransferReport(r.id, "dismiss")} disabled={queueBusy === r.id} className="py-1.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-semibold disabled:opacity-50">Genuine — dismiss</button>
+                      <button onClick={() => handleTransferReport(r.id, "freeze_recipient")} disabled={queueBusy === r.id} className="py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">🧊 Freeze recipient</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "rtorequests" && (
+          <div>
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
+              🏠 Mortgage (Rent to Own) requests from verified buyers. Every request comes to CHS first: relay it to the owner, or reject it with a reason. The owner never sees the buyer&apos;s phone number, and the buyer is not charged anything at this stage.
+            </p>
+            {rtoQueue.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-8">✓ No Rent-to-Own requests are waiting for CHS.</p>
+            ) : rtoQueue.map((r) => (
+              <div key={r.id} className="bg-white rounded-xl border-2 border-chs-amber p-3 mb-3">
+                <div className="flex justify-between items-start gap-2">
+                  <p className="text-sm font-semibold text-chs-charcoal">{r.property_title}</p>
+                  <span className="text-[9px] font-bold bg-chs-amber text-chs-charcoal px-2 py-0.5 rounded-full whitespace-nowrap">{r.ref}</span>
+                </div>
+                <p className="text-[11px] text-gray-500">{r.property_ref} · {r.location} · requested {new Date(r.requested_at).toLocaleString()}</p>
+                <p className="text-xs font-bold text-chs-charcoal mt-1">{formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} <span className="font-normal text-gray-500">({r.payments ?? "?"} payments)</span></p>
+                <p className="text-[11px] text-gray-600 mt-1">Buyer: <b>{r.buyer_name}</b> · {r.buyer_phone} {r.buyer_id_verified ? <span className="text-green-700">· ID and liveness verified ✓</span> : <span className="text-chs-red">· NOT fully verified</span>}</p>
+                <p className="text-[11px] text-gray-600">Owner: <b>{r.owner_name}</b> · {r.owner_phone}</p>
+                {r.competing_requests > 0 && <p className="text-[11px] text-chs-red mt-1">⚠ {r.competing_requests} other request(s) are also pending on this property. Approving one will decline the rest.</p>}
+                <input type="text" value={rtoNotes[r.id] || ""} onChange={(e) => setRtoNotes({ ...rtoNotes, [r.id]: e.target.value })} maxLength={300}
+                  placeholder="Note to the buyer (required to reject; optional when relaying)" className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => handleRtoDecision(r.id, true)} disabled={queueBusy === r.id} className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">{queueBusy === r.id ? "Working…" : "Relay to the owner"}</button>
+                  <button onClick={() => handleRtoDecision(r.id, false)} disabled={queueBusy === r.id} className="flex-1 py-2 rounded-full bg-gray-200 text-gray-700 text-xs font-semibold disabled:opacity-50">Reject</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {activeTab === "inspections" && (
           <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
-            🚗 Real physical property inspections already booked, including the transport fee split between whoever requested it.
+            🚗 Physical property inspections already booked. The whole transport cost is paid by the person who asked for the visit — never split with the owner and never carried by CHS. Enter where the agent sets off from and the real one-way distance to fix the final cost; the requester and the owner are told.
           </p>
         )}
         {activeTab === "inspections" && (
@@ -4426,8 +4600,33 @@ function AdminDashboardInner() {
                   <p className="text-xs text-gray-500 mt-1">{insp.properties?.location_area}</p>
                   <p className="text-xs text-gray-500 mt-1">📅 {insp.requested_date} at {insp.requested_time}</p>
                   <p className="text-xs text-gray-500">📍 {insp.meeting_point}</p>
-                  {insp.transport_fee != null && (
-                    <p className="text-xs text-gray-500">🚗 Transport: {formatNaira(insp.transport_fee)} (per person)</p>
+                  {insp.transport_fee != null ? (
+                    <p className="text-xs text-gray-500">🚗 Transport cost, paid 100% by the requester: <b>{formatNaira(insp.transport_fee)}</b> — {insp.fee_final ? `final (agent from ${insp.takeoff_point}, ${insp.distance_km} km each way) · ${insp.payment_status === "held" ? "PAID — held until the visit" : "awaiting the requester's wallet payment"}` : "an estimate until the agent's takeoff point is set"}</p>
+                  ) : (
+                    <p className="text-xs text-gray-500">🚗 Transport cost: not yet quoted — paid 100% by the requester</p>
+                  )}
+                  {(insp.status === "pending" || insp.status === "confirmed") && (
+                    <div className="mt-2 bg-white rounded-lg border border-gray-200 p-2">
+                      <p className="text-[10px] font-bold text-gray-500 mb-1">{insp.fee_final ? "Change" : "Set"} the agent, their takeoff and the final cost</p>
+                      <select value={takeoffForm[insp.id]?.agent ?? insp.agent_id ?? ""} onFocus={() => { if (assignableAgents.length === 0) supabase.rpc("get_assignable_agents").then(({ data }) => setAssignableAgents((data as typeof assignableAgents) || [])); }}
+                        onChange={(e) => setTakeoffForm({ ...takeoffForm, [insp.id]: { point: takeoffForm[insp.id]?.point ?? insp.takeoff_point ?? "", km: takeoffForm[insp.id]?.km ?? "", agent: e.target.value } })}
+                        className="w-full mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
+                        <option value="">Choose the CHS agent who will go…</option>
+                        {assignableAgents.map((a) => <option key={a.id} value={a.id}>{a.full_name} · {a.phone}</option>)}
+                      </select>
+                      <div className="flex gap-1.5">
+                        <input type="text" placeholder="Agent sets off from (e.g. Barnawa)" value={takeoffForm[insp.id]?.point ?? insp.takeoff_point ?? ""}
+                          onChange={(e) => setTakeoffForm({ ...takeoffForm, [insp.id]: { point: e.target.value, km: takeoffForm[insp.id]?.km ?? "", agent: takeoffForm[insp.id]?.agent ?? insp.agent_id ?? "" } })}
+                          className="flex-1 min-w-0 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                        <input type="number" min="0" step="0.1" placeholder="km one way" value={takeoffForm[insp.id]?.km ?? ""}
+                          onChange={(e) => setTakeoffForm({ ...takeoffForm, [insp.id]: { point: takeoffForm[insp.id]?.point ?? insp.takeoff_point ?? "", km: e.target.value, agent: takeoffForm[insp.id]?.agent ?? insp.agent_id ?? "" } })}
+                          className="w-24 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                      </div>
+                      <button onClick={() => handleSetTakeoff(insp.id)} disabled={takeoffBusy === insp.id}
+                        className="w-full mt-1.5 py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">
+                        {takeoffBusy === insp.id ? "Saving…" : "Confirm — ask the requester to pay the final cost from their wallet"}
+                      </button>
+                    </div>
                   )}
                   <p className="text-[10px] text-gray-400 mt-1">Ref {insp.reference}</p>
                 </div>
@@ -4751,17 +4950,38 @@ function AdminDashboardInner() {
               })
             )}
 
-            <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Property sale escrow ({pendingLegalTransfers.length})</p>
+            <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Property sale escrow — verify delivery, then release ({pendingLegalTransfers.length})</p>
+            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
             {pendingLegalTransfers.length === 0 ? (
-              <p className="text-[11px] text-gray-400 mb-4">No real property sale funds currently held.</p>
+              <p className="text-center text-sm text-gray-400 py-8">No real property sale funds currently held.</p>
             ) : (
-              pendingLegalTransfers.map((t) => (
-                <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-chs-charcoal">{t.property_title}</p>
-                    <p className="text-[9px] text-gray-400">Paid {new Date(t.created_at).toLocaleString()}</p>
+              pendingLegalTransfers.map((offer) => (
+                <div key={offer.id} className={`bg-[var(--zone-card)] rounded-xl border-2 p-3 mb-2 ${offer.release_request_status === "pending" ? "border-chs-amber" : "border-gray-100"}`}>
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{offer.property_title || "Property"}</p>
+                    {offer.release_request_status === "pending" && <span className="text-[9px] font-bold bg-chs-amber text-chs-charcoal px-2 py-0.5 rounded-full whitespace-nowrap">SELLER ASKED FOR RELEASE</span>}
                   </div>
-                  <p className="text-xs font-bold text-chs-red">{formatNaira(t.amount)}</p>
+                  <p className="text-xs text-gray-500">Sold for {formatNaira(offer.amount)} · <b>to be released to the seller: {formatNaira(offer.held_net)}</b> (net of CHS commission)</p>
+                  <p className="text-[11px] text-gray-600 mt-1">Seller: <b>{offer.seller_name}</b> · {offer.seller_phone}</p>
+                  <p className="text-[11px] text-gray-600">Buyer: <b>{offer.buyer_name}</b> · {offer.buyer_phone} <span className="text-gray-400">(call to verify delivery)</span></p>
+                  <p className="text-[11px] text-gray-600 mt-1">
+                    Delivery on the platform: {offer.dispatch_status === "received" ? "✓ buyer confirmed receipt" : offer.dispatch_status === "dispatched" ? `📦 seller marked dispatched${offer.dispatch_method ? ` via ${offer.dispatch_method}` : ""}${offer.tracking_reference ? ` (tracking ${offer.tracking_reference})` : ""}` : offer.dispatch_status === "requested" ? "⏳ buyer requested the documents; not yet marked dispatched" : "nothing recorded yet"}
+                  </p>
+                  {offer.release_request_status === "pending" && (
+                    <p className="text-[11px] bg-chs-amber-light text-chs-charcoal rounded-lg px-2.5 py-1.5 mt-1.5">
+                      The seller asked for release{offer.release_requested_at ? ` on ${new Date(offer.release_requested_at).toLocaleString()}` : ""}.{offer.release_request_note ? ` Seller says: “${offer.release_request_note}”` : ""}
+                    </p>
+                  )}
+                  {offer.release_request_status === "rejected" && offer.release_decision_note && <p className="text-[10px] text-gray-500 mt-1">Last request declined: {offer.release_decision_note}</p>}
+                  <input type="text" value={saleNotes[offer.id] || ""} onChange={(e) => setSaleNotes({ ...saleNotes, [offer.id]: e.target.value })} maxLength={300}
+                    placeholder="Your note — required for a phone check (who, when, what the buyer said) and to decline" className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                  <div className="grid grid-cols-2 gap-1.5 mt-2">
+                    <button onClick={() => handleSaleRelease(offer.id, "platform_records")} className="py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">✓ Verified from platform records — release</button>
+                    <button onClick={() => handleSaleRelease(offer.id, "phone_call")} className="py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">📞 Verified by phoning the buyer — release</button>
+                  </div>
+                  {offer.release_request_status === "pending" && (
+                    <button onClick={() => handleSaleRejectRequest(offer.id)} className="w-full mt-1.5 py-1.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-semibold">Decline the seller&apos;s request (reason required)</button>
+                  )}
                 </div>
               ))
             )}
@@ -5577,6 +5797,8 @@ function AdminDashboardInner() {
                   { group: "Oversight", items: [
                     { key: "tenantregisteroversight" as Tab, label: "Tenant Register Oversight" },
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
+                    { key: "walletsecurity" as Tab, label: `Wallet Security (${walletSecurityOpen})` },
+                    { key: "rtorequests" as Tab, label: `Rent-to-Own Requests (${rtoQueue.length})` },
                     { key: "inspections" as Tab, label: `Inspections (${upcomingInspections.length})` },
                     { key: "engage" as Tab, label: `Engage CHS (${pendingEngage.length})` },
                   ] },

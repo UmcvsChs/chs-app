@@ -10,6 +10,7 @@ import { useState } from "react";
 // choice, rather than one static photo with no way to see more.
 export default function PropertyTourModal({
   photos,
+  labels = [],
   videoUrl,
   propertyTitle,
   onClose,
@@ -17,6 +18,7 @@ export default function PropertyTourModal({
   onNotSatisfied,
 }: {
   photos: string[];
+  labels?: string[];
   videoUrl?: string | null;
   propertyTitle: string;
   onClose: () => void;
@@ -53,9 +55,12 @@ export default function PropertyTourModal({
               <video controls autoPlay className="max-h-full max-w-full rounded-lg" src={slides[index]} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={slides[index]} alt={`${propertyTitle} — ${index + 1}`} className="max-h-full max-w-full object-contain rounded-lg" />
+              <img src={slides[index]} alt={labels[index] || `${propertyTitle} — ${index + 1}`} className="max-h-full max-w-full object-contain rounded-lg" />
             )}
           </div>
+          {!isVideo && labels[index] && (
+            <p className="text-center text-sm font-semibold text-white mt-2">{labels[index]} <span className="text-white/50 font-normal">· {index + 1} of {photos.length}</span></p>
+          )}
           <div className="flex justify-between items-center px-4 py-4">
             <button onClick={prev} disabled={index === 0}
               className="px-4 py-2 rounded-full bg-white/15 text-white text-xs font-semibold disabled:opacity-30">

@@ -1,5 +1,6 @@
 "use client";
 
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import { formatNaira } from "@/lib/format";
 import { LaneInfo, durationText } from "@/lib/bookingLane";
 
@@ -23,6 +24,7 @@ export default function BookingFlowNotice({ info, total }: { info: LaneInfo | nu
           Then you pay <b>{formatNaira(total)}</b> within {durationText(info.pay_minutes)} to secure your stay. Until you pay, no money leaves your wallet — and if the host can&apos;t take you, you pay nothing.
         </li>
       </ol>
+      <PaymentSafetyNotice variant="compact" className="mt-2" />
       {urgent && (
         <p className="text-[11px] text-chs-red font-semibold mt-2">
           {info.lane === "express" ? "⚡ Same-day booking" : "🕒 Your stay starts soon"}: your wallet must already hold {formatNaira(total)} when you send this request, so a host is never asked to hold a room for someone who can&apos;t pay.

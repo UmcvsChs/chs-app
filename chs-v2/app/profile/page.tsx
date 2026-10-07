@@ -1,5 +1,6 @@
 "use client";
 
+import { Req, Opt, RequiredLegend } from "@/components/FormMarks";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -74,6 +75,8 @@ export default function ProfilePage() {
     // Only a phone number that is being CHANGED is checked: an older
     // number already on the account must never stop someone saving
     // their address or name.
+    if (!editName.trim()) { setProfileSaveMessage("Your full name is required."); return; }
+    if (!editPhone.trim()) { setProfileSaveMessage("Your phone number is required."); return; }
     const phoneChanged = editPhone.trim() !== (phone || "").trim();
     if (phoneChanged && editPhone.trim()) {
       const phoneCheck = validatePhone(editPhone);
@@ -307,23 +310,24 @@ export default function ProfilePage() {
               <p className="text-[10px] text-chs-amber-dark bg-chs-amber-light rounded-lg px-2 py-1.5">
                 ⚠️ Changing your name will reset your ID/liveness verification — you&apos;ll need to re-verify.
               </p>
+              <RequiredLegend />
               <div>
-                <label className="text-[10px] font-semibold text-gray-500">Full name</label>
+                <label className="text-[10px] font-semibold text-gray-500">Full name <Req /></label>
                 <input type="text" value={editName} onChange={(e) => setEditName(e.target.value)}
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-gray-500">Phone number</label>
+                <label className="text-[10px] font-semibold text-gray-500">Phone number <Req /></label>
                 <ValidatedInput kind="phone" value={editPhone} onChange={setEditPhone}
                   className="w-full mt-1 px-3 py-2 rounded-lg text-sm" />
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-gray-500">Residential address</label>
+                <label className="text-[10px] font-semibold text-gray-500">Residential address <Opt /></label>
                 <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)}
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
               </div>
               <div>
-                <label className="text-[10px] font-semibold text-gray-500">State</label>
+                <label className="text-[10px] font-semibold text-gray-500">State <Opt /></label>
                 <input type="text" value={editState} onChange={(e) => setEditState(e.target.value)}
                   className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
               </div>

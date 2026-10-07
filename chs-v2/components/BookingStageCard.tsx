@@ -1,5 +1,6 @@
 "use client";
 
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -127,6 +128,7 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
             {formatNaira(b.total_price)} stay + {formatNaira(b.guest_commission_amount || 0)} CHS service fee
             {(b.security_deposit_amount || 0) > 0 ? ` + ${formatNaira(b.security_deposit_amount || 0)} refundable deposit` : ""}. Held safely by CHS and released to the host as soon as you arrive and confirm everything is as described.
           </p>
+          <PaymentSafetyNotice variant="compact" className="mt-1.5" />
           {error && (
             <p className="text-[11px] text-chs-red mt-1.5">
               {error} {error.includes("wallet") && <Link href="/wallet" className="font-semibold underline">Top up →</Link>}

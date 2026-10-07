@@ -1,0 +1,11 @@
+-- 465 / 465b — Rent-to-Own requests go through CHS (admin) first (applied October 2026)
+-- RULE (client): CHS relays every request between parties in every category. Rent-to-own was the exception: the request
+-- notified only the owner, no admin screen read it, and the owner's approval block sat at the bottom of their dashboard.
+-- NOW: request_rent_to_own -> status 'awaiting_admin_relay'; ADMINS are alerted and the buyer gets a receipt (the owner is not
+-- told). Admin (get_rto_admin_queue, new "Rent-to-Own Requests" tab) sees the buyer's name, phone and verification, the owner
+-- and any competing requests, and either relays it (admin_relay_rent_to_own -> 'requested'; the owner is told with a CHS
+-- reference and no phone number) or rejects it with a required reason (admin_reject_rent_to_own -> 'declined'; buyer told,
+-- nothing charged). approve_rent_to_own_request refuses a request CHS has not relayed ("CHS is still reviewing this request")
+-- and, on approval, declines the property's other pending requests of either stage. The request already made for the QUICK-TEST
+-- studio was moved back to 'awaiting_admin_relay' so it appears in the admin queue. 465b: the queue reads started_at (the table
+-- has no created_at). Verified (rolled back) end to end.

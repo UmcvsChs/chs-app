@@ -1,0 +1,8 @@
+-- 470 — pattern scanner, rent-to-own decline, Terms Version 4 (applied October 2026)
+-- scan_wallet_risk() runs every 15 minutes (cron 'chs-scan-wallet-risk') over the last day of wallet-to-wallet activity and writes wallet_risk_flags:
+--   fan_in (4+ senders to one wallet), new_account (an account under 7 days old receiving 200,000+), round_trip (50,000+ each way between two users),
+--   rapid_outflow (4+ transfers in an hour), pin_attack (a transaction PIN locked by wrong guesses). One open flag per user and kind; admins are alerted;
+--   a flag changes nothing by itself — get_wallet_risk_flags / admin_resolve_risk_flag let an admin clear it or freeze the wallet (a finding is required).
+-- decline_rent_to_own_request(agreement, reason): the owner of a request CHS has relayed can decline it; a reason with no contact details is required;
+--   the buyer is told; refused before CHS has relayed it.
+-- platform_settings.terms_current_version = 4 (the app compares each person's accepted version with the version in the app, so the old screens lock nobody out).

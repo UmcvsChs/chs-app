@@ -1,5 +1,6 @@
 "use client";
 
+import { Req, RequiredLegend } from "@/components/FormMarks";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -548,13 +549,14 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-2">
             <p className="text-xs font-bold text-chs-charcoal mb-1">📮 Tell the seller how to get your real hard copies to you</p>
             <p className="text-[10px] text-gray-500 mb-2">The seller will see exactly what you enter here, so they know precisely how and where to send your real documents.</p>
-            <label className="text-[10px] font-semibold text-gray-600">Your real delivery address</label>
+            <RequiredLegend className="mb-1" />
+            <label className="text-[10px] font-semibold text-gray-600">Your real delivery address <Req /></label>
             <input type="text" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)}
               placeholder="Where should the documents be delivered?" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
-            <label className="text-[10px] font-semibold text-gray-600">Your real contact phone number</label>
+            <label className="text-[10px] font-semibold text-gray-600">Your real contact phone number <Req /></label>
             <ValidatedInput kind="phoneIntl" value={deliveryPhone} onChange={setDeliveryPhone}
               placeholder="A real number the seller/courier can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg text-[11px]" />
-            <label className="text-[10px] font-semibold text-gray-600">Preferred delivery method</label>
+            <label className="text-[10px] font-semibold text-gray-600">Preferred delivery method <Req /></label>
             <select value={preferredMethod} onChange={(e) => setPreferredMethod(e.target.value)}
               className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
               <option value="courier">Courier / dispatch rider</option>
@@ -697,10 +699,11 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   if (inspectionSuccess) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4 text-center">
-        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Inspection requested</p>
+        <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Inspection requested — nothing has been charged</p>
         <p className="text-xs text-gray-500">
-          CHS and the owner will confirm your requested time shortly.
+          CHS will assign your agent and confirm the final transport cost. You will be asked to pay it from your CHS Wallet — the whole cost is yours, and you pay it nowhere else.
         </p>
+        <a href="/my-inspections" className="inline-block mt-2 text-xs font-semibold text-chs-red underline">Track it in My Inspections →</a>
       </div>
     );
   }
@@ -733,29 +736,30 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           <p className="text-[10px] font-bold text-gray-400 uppercase">About you</p>
           <p className="text-[10px] text-gray-400 -mt-2">CHS reviews all of this. The seller sees your name, occupation and source of funds — never your phone number.</p>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Your full name</label>
+            <RequiredLegend className="mb-1.5" />
+            <label className="text-xs font-semibold text-gray-600">Your full name <Req /></label>
             <input type="text" value={buyerFullName} onChange={(e) => setBuyerFullName(e.target.value)}
               placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Your phone number</label>
+            <label className="text-xs font-semibold text-gray-600">Your phone number <Req /></label>
             <ValidatedInput kind="phoneIntl" value={buyerPhone} onChange={setBuyerPhone}
               placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Your occupation</label>
+            <label className="text-xs font-semibold text-gray-600">Your occupation <Req /></label>
             <input type="text" value={buyerOccupation} onChange={(e) => setBuyerOccupation(e.target.value)}
               placeholder="e.g. Business owner, Civil servant" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Source of funds for this purchase</label>
+            <label className="text-xs font-semibold text-gray-600">Source of funds for this purchase <Req /></label>
             <input type="text" value={buyerSourceOfFunds} onChange={(e) => setBuyerSourceOfFunds(e.target.value)}
               placeholder="e.g. Personal savings, Business proceeds, Loan" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
           </div>
 
           <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">Your offer</p>
           <div>
-            <label className="text-xs font-semibold text-gray-600">Your offer amount (₦)</label>
+            <label className="text-xs font-semibold text-gray-600">Your offer amount (₦) <Req /></label>
             <CurrencyInput value={amount} onChange={setAmount} placeholder="e.g. 42,000,000" />
           </div>
           <div>
@@ -951,7 +955,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       )}
       {property.purpose === "rent_to_own" && (
         rentToOwnSuccess ? (
-          <p className="text-sm text-green-600 font-semibold text-center py-2">✓ Request sent — the owner will review and approve it.</p>
+          <p className="text-sm text-green-600 font-semibold text-center py-2">✓ Request sent — CHS will review it and pass it to the owner. Nothing has been charged.</p>
         ) : (
           <>
             <button

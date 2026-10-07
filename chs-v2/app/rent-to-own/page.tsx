@@ -26,7 +26,7 @@ interface RtoAgreement {
   portion_pct: number;
   total_paid: number;
   ownership_pct: number;
-  status: "requested" | "active" | "completed" | "defaulted" | "cancelled" | "declined";
+  status: "awaiting_admin_relay" | "requested" | "active" | "completed" | "defaulted" | "cancelled" | "declined";
   started_at: string | null;
   completed_at: string | null;
   properties: { title: string; location_area: string; street_address: string | null } | null;
@@ -34,12 +34,13 @@ interface RtoAgreement {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  requested: "Waiting for the owner's approval",
+  awaiting_admin_relay: "CHS is reviewing your request — nothing has been charged",
+  requested: "CHS has passed your request to the owner — waiting for their approval",
   active: "Active",
   completed: "Completed — you own this property",
   defaulted: "Defaulted",
   cancelled: "Cancelled",
-  declined: "Declined by the owner",
+  declined: "Not taken forward",
 };
 
 export default function RentToOwnPage() {

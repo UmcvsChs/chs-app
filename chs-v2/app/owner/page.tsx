@@ -105,10 +105,19 @@ export default function OwnerDashboard() {
   }
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
-  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string; delivery_address: string | null; delivery_phone: string | null; preferred_method: string | null; delivery_note: string | null }[] }[]>([]);
+  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; held_amount: number | null; release_request_status: string | null; release_requested_at: string | null; release_decision_note: string | null; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string; delivery_address: string | null; delivery_phone: string | null; preferred_method: string | null; delivery_note: string | null }[] }[]>([]);
   const [dispatchMethod, setDispatchMethod] = useState<Record<string, string>>({});
   const [dispatchTracking, setDispatchTracking] = useState<Record<string, string>>({});
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
+  // The seller asks CHS to release the sale money once the documents have been handed over. CHS then verifies delivery
+  // (from the platform's records, or by phoning the buyer) and approves or declines; the buyer is told, so a false claim can be disputed.
+  const [releaseNote, setReleaseNote] = useState<Record<string, string>>({});
+  const [requestingReleaseId, setRequestingReleaseId] = useState<string | null>(null);
+  // Declining a Mortgage (Rent to Own) request: a short reason is required and goes to the buyer through CHS.
+  const [declineReason, setDeclineReason] = useState<Record<string, string>>({});
+  const [decliningId, setDecliningId] = useState<string | null>(null);
+  const [declineError, setDeclineError] = useState<Record<string, string>>({});
+  const [releaseError, setReleaseError] = useState<Record<string, string>>({});
   const [portfolioSummary, setPortfolioSummary] = useState<{ total_properties: number; active_listings: number; occupied_or_sold: number; total_real_earnings: number; pending_offers: number; open_fault_reports: number } | null>(null);
   const [showConcernForm, setShowConcernForm] = useState(false);
   const [concernSubject, setConcernSubject] = useState("");
@@ -229,7 +238,7 @@ export default function OwnerDashboard() {
     // real documents as sent.
     supabase
       .from("offers")
-      .select("id, amount, properties!inner(title, owner_id), document_dispatch_requests(id, status, delivery_address, delivery_phone, preferred_method, delivery_note)")
+      .select("id, amount, held_amount, release_request_status, release_requested_at, release_decision_note, properties!inner(title, owner_id), document_dispatch_requests(id, status, delivery_address, delivery_phone, preferred_method, delivery_note)")
       .eq("properties.owner_id", session.user.id)
       .eq("payment_status", "paid")
       .eq("legal_transfer_confirmed", false)
@@ -438,6 +447,28 @@ export default function OwnerDashboard() {
     }
     setLinkingAgentPropertyId(null);
     setPostListingAgentId("");
+    loadData();
+  }
+
+  async function handleDeclineRentToOwn(agreementId: string) {
+    if ((declineReason[agreementId] || "").trim().length < 5) {
+      setDeclineError((e) => ({ ...e, [agreementId]: "Please give the buyer a short reason first." }));
+      return;
+    }
+    setDecliningId(agreementId);
+    setDeclineError((e) => ({ ...e, [agreementId]: "" }));
+    const { error } = await supabase.rpc("decline_rent_to_own_request", { p_agreement_id: agreementId, p_reason: (declineReason[agreementId] || "").trim() });
+    setDecliningId(null);
+    if (error) { setDeclineError((e) => ({ ...e, [agreementId]: error.message })); return; }
+    loadData();
+  }
+
+  async function handleRequestRelease(offerId: string) {
+    setRequestingReleaseId(offerId);
+    setReleaseError((e) => ({ ...e, [offerId]: "" }));
+    const { error } = await supabase.rpc("request_sale_release", { p_offer_id: offerId, p_note: (releaseNote[offerId] || "").trim() || null });
+    setRequestingReleaseId(null);
+    if (error) { setReleaseError((e) => ({ ...e, [offerId]: error.message })); return; }
     loadData();
   }
 
@@ -765,6 +796,36 @@ export default function OwnerDashboard() {
           answer. Previously the owner was notified but could not see the
           request anywhere on this dashboard. */}
       <PendingBookingRequests />
+
+      {/* Mortgage (Rent to Own) requests CHS has reviewed and passed to this owner — at the TOP, with the other
+          requests waiting for the owner's answer, not buried under the property lists. */}
+      {rentToOwnRequests.length > 0 && (
+        <div className="px-4 pb-3">
+          <div className="bg-chs-amber-light border-2 border-chs-amber rounded-xl p-3">
+            <p className="text-xs font-bold text-chs-charcoal">🏠 {rentToOwnRequests.length} Mortgage (Rent to Own) request{rentToOwnRequests.length !== 1 ? "s" : ""} waiting for your approval</p>
+            <p className="text-[10px] text-gray-500 mb-2">CHS has reviewed the buyer and passed their request to you. Contact with the buyer goes through CHS.</p>
+            {rentToOwnRequests.map((r) => (
+              <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
+                <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(r.properties)?.title || "Property"}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  {formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} total · Ref RTO-{r.id.slice(0, 8)}
+                </p>
+                <button onClick={() => handleApproveRentToOwn(r.id)} disabled={approvingRtoId === r.id}
+                  className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
+                  {approvingRtoId === r.id ? "Approving..." : "✓ Approve this request"}
+                </button>
+                <input type="text" value={declineReason[r.id] || ""} onChange={(e) => setDeclineReason((prev) => ({ ...prev, [r.id]: e.target.value }))} maxLength={200}
+                  placeholder="Or decline — a short reason for the buyer (required)" className="w-full mt-2 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                {declineError[r.id] && <p className="text-[11px] text-chs-red mt-1">{declineError[r.id]}</p>}
+                <button onClick={() => handleDeclineRentToOwn(r.id)} disabled={decliningId === r.id}
+                  className="mt-1.5 w-full py-1.5 rounded-full bg-gray-200 text-gray-700 text-[11px] font-semibold disabled:opacity-50">
+                  {decliningId === r.id ? "Declining..." : "Decline this request"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {actionError && (
         <p className="text-xs text-chs-red bg-chs-amber-light mx-4 mt-3 rounded-lg px-3 py-2">{actionError}</p>
@@ -1335,7 +1396,7 @@ export default function OwnerDashboard() {
             return (
               <div key={offer.id} className="bg-white rounded-xl border-2 border-chs-red p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
-                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — real proceeds held pending document transfer.<InfoTip text="CHS holds your real sale proceeds safely until the buyer confirms they've genuinely received all legal documents — this protects you both, and releases to your main wallet the moment that's confirmed." /></p>
+                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — <b>{formatNaira(offer.held_amount ?? offer.amount)}</b> (your proceeds, net of CHS commission) is held until the documents are confirmed delivered.<InfoTip text="CHS holds your real sale proceeds safely until the buyer confirms they've genuinely received all legal documents — this protects you both, and releases to your main wallet the moment that's confirmed." /></p>
                 {!dispatchReq && (
                   <p className="text-[10px] text-gray-400 mb-2">Waiting on the buyer to request their documents, or you can send them proactively below.</p>
                 )}
@@ -1370,27 +1431,34 @@ export default function OwnerDashboard() {
                     </button>
                   </>
                 )}
+
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <p className="text-[10px] font-bold text-chs-charcoal uppercase mb-1">💰 Your money: {formatNaira(offer.held_amount ?? offer.amount)}</p>
+                  {offer.release_request_status === "pending" ? (
+                    <p className="text-[11px] bg-chs-amber-light text-chs-amber-dark rounded-lg px-2.5 py-2">
+                      ⏳ You asked CHS to release this{offer.release_requested_at ? ` on ${new Date(offer.release_requested_at).toLocaleDateString()}` : ""}. CHS is verifying that the documents were delivered — from its records, or by contacting the buyer — and will update you.
+                    </p>
+                  ) : (
+                    <>
+                      {offer.release_request_status === "rejected" && offer.release_decision_note && (
+                        <p className="text-[11px] bg-red-50 text-chs-red rounded-lg px-2.5 py-2 mb-1.5">CHS could not release it yet: {offer.release_decision_note}</p>
+                      )}
+                      <p className="text-[10px] text-gray-500 mb-1.5">
+                        Once the buyer has the documents, the money is released when they confirm receipt in the app. If they have not confirmed, you can ask CHS to release it: CHS will verify delivery first.
+                      </p>
+                      <input type="text" value={releaseNote[offer.id] || ""} onChange={(e) => setReleaseNote((prev) => ({ ...prev, [offer.id]: e.target.value }))} maxLength={300}
+                        placeholder="Optional: how and when the documents were delivered (no phone numbers)" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] mb-1.5" />
+                      {releaseError[offer.id] && <p className="text-[11px] text-chs-red mb-1">{releaseError[offer.id]}</p>}
+                      <button onClick={() => handleRequestRelease(offer.id)} disabled={requestingReleaseId === offer.id}
+                        className="w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
+                        {requestingReleaseId === offer.id ? "Sending…" : "Request release of my money"}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             );
           })}
-        </div>
-      )}
-
-      {rentToOwnRequests.length > 0 && (
-        <div className="px-4 pb-4">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">🏠 Mortgage (Rent to Own) Requests</p>
-          {rentToOwnRequests.map((r) => (
-            <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
-              <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(r.properties)?.title || "Property"}</p>
-              <p className="text-[10px] text-gray-500 mt-0.5">
-                {formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} total
-              </p>
-              <button onClick={() => handleApproveRentToOwn(r.id)} disabled={approvingRtoId === r.id}
-                className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                {approvingRtoId === r.id ? "Approving..." : "✓ Approve this request"}
-              </button>
-            </div>
-          ))}
         </div>
       )}
 

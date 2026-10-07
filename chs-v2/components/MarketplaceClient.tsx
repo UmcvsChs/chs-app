@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { VENDOR_CATEGORIES, SERVICE_CATEGORIES } from "@/lib/marketplaceCategories";
+import ProductDetailSheet from "@/components/ProductDetailSheet";
+import { Fragment, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import RefundPolicyNotice from "./RefundPolicyNotice";
 import { MarketplaceProduct, MarketplaceCategory } from "@/types/marketplace";
@@ -13,16 +15,8 @@ import IdentityVerificationGate from "./IdentityVerificationGate";
 
 const CATEGORY_TABS: { value: MarketplaceCategory | "all"; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "interior_design", label: "Interior Design" },
-  { value: "furniture", label: "Furniture" },
-  { value: "bedding_textiles", label: "Bedding & Textiles" },
-  { value: "home_equipment", label: "Electronics & Home Appliances" },
-  { value: "kitchen_supplies", label: "Kitchen" },
-  { value: "building_materials", label: "Building Materials" },
-  { value: "security_services", label: "Security" },
-  { value: "cleaning_services", label: "Cleaning" },
-  { value: "fumigation_pest_control", label: "Fumigation & Pest Control" },
-  { value: "facilities_maintenance", label: "Facilities Maintenance" },
+  ...VENDOR_CATEGORIES.map((c) => ({ value: c.value, label: c.short })),
+  ...SERVICE_CATEGORIES.map((c) => ({ value: c.value, label: c.short })),
 ];
 
 export default function MarketplaceClient({ products, bundles }: { products: MarketplaceProduct[]; bundles: MarketplaceBundle[] }) {
@@ -36,8 +30,8 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   const [submittedFor, setSubmittedFor] = useState<string | null>(null);
 
   const [sortCheapest, setSortCheapest] = useState(false);
-  const [buyingId, setBuyingId] = useState<string | null>(null);
   const [boughtFor, setBoughtFor] = useState<string | null>(null);
+  const [detailFor, setDetailFor] = useState<string | null>(null);
 
   // Buying, and asking for a quote, are commitments — they now sit
   // behind the same one-time identity verification as every other
@@ -80,22 +74,15 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   // product's own real, current price plus commission immediately, no
   // negotiation, no messages to moderate, since nothing is being
   // negotiated. The vendor only ever sees a real CHS reference number.
-  async function handleBuyNow(productId: string) {
-    if (!session) {
-      setError("Please log in first to buy directly.");
-      return;
-    }
-    if (!requireVerified()) return;
-    setBuyingId(productId);
-    setError(null);
-    const { data, error: buyError } = await supabase.rpc("buy_product_direct", { p_product_id: productId });
-    setBuyingId(null);
-    if (buyError) {
-      setError(buyError.message.includes("insufficient_balance") ? "Insufficient wallet balance for this real purchase." : buyError.message);
-      return;
-    }
+  // Buying: quantity, the options chosen (colour, size …) and the delivery address are sent with the order; the server
+  // takes stock off and refuses more than is in stock. Returns an error message to show, or null on success.
+  async function handleBuyNow(productId: string, quantity: number, options: Record<string, string>, address: string): Promise<string | null> {
+    if (!session) return "Please log in first to buy directly.";
+    if (!requireVerified()) return "Before you can buy, CHS needs to verify your identity once — please complete the step at the top of the page.";
+    const { error: buyError } = await supabase.rpc("buy_product_direct", { p_product_id: productId, p_quantity: quantity, p_options: options, p_delivery_address: address });
+    if (buyError) return buyError.message.includes("insufficient_balance") ? "Insufficient wallet balance for this purchase. Top up your wallet and try again." : buyError.message;
     setBoughtFor(productId);
-    void data;
+    return null;
   }
 
   async function handleRequestQuote(productId: string) {
@@ -140,7 +127,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
               My Requests
             </Link>
           )}
-          <Link href="/become-vendor" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
+          <Link href="/choose-category" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
             Sell here →
           </Link>
           <Link href="/vendor" className="bg-chs-red text-[10px] font-semibold px-3 py-1.5 rounded-full">
@@ -151,8 +138,10 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
 
       <nav className="flex gap-2 overflow-x-auto px-4 py-3 bg-white border-b border-gray-100">
         {CATEGORY_TABS.map((tab) => (
+          <Fragment key={tab.value}>
+            {tab.value === VENDOR_CATEGORIES[0].value && <span className="shrink-0 self-center text-[10px] font-bold uppercase text-gray-400 pl-1">Vendors</span>}
+            {tab.value === SERVICE_CATEGORIES[0].value && <span className="shrink-0 self-center text-[10px] font-bold uppercase text-gray-400 pl-3 border-l border-gray-200">Service providers</span>}
           <button
-            key={tab.value}
             onClick={() => setActiveCategory(tab.value)}
             className={`shrink-0 px-4 py-2 rounded-full text-xs font-semibold transition-colors ${
               activeCategory === tab.value ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
@@ -160,6 +149,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           >
             {tab.label}
           </button>
+          </Fragment>
         ))}
       </nav>
 
@@ -245,6 +235,9 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
               </div>
               <div className="p-2.5">
                 <p className="text-xs font-semibold text-chs-charcoal leading-tight">{product.name}</p>
+                {(product.brand || product.condition) && (
+                  <p className="text-[9px] text-gray-500 mt-0.5">{[product.brand, product.condition ? product.condition.charAt(0).toUpperCase() + product.condition.slice(1) : null].filter(Boolean).join(" · ")}</p>
+                )}
 
                 {product.listing_type === "service" ? (
                   <>
@@ -290,14 +283,11 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                     </p>
                     {product.status !== "sold_out" && (
                       boughtFor === product.id ? (
-                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.<InfoTip text="CHS holds your real payment safely until you confirm the item has genuinely arrived — the vendor is only paid once you're satisfied." /></p>
+                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.</p>
                       ) : (
-                        <button
-                          onClick={() => handleBuyNow(product.id)}
-                          disabled={buyingId === product.id}
-                          className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50"
-                        >
-                          {buyingId === product.id ? "Processing..." : "🛒 Buy now (price + 6%)"}<InfoTip term="marketplace_real_direct_buy_now" />
+                        <button onClick={() => { setDetailFor(product.id); setError(null); }}
+                          className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                          View details &amp; buy
                         </button>
                       )
                     )}
@@ -315,6 +305,10 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         )}
       </main>
       )}
+      {detailFor && (() => {
+        const product = products.find((p) => p.id === detailFor);
+        return product ? <ProductDetailSheet product={product} onClose={() => setDetailFor(null)} onBuy={handleBuyNow} bought={boughtFor === product.id} /> : null;
+      })()}
     </div>
   );
 }

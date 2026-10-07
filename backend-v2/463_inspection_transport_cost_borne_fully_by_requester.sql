@@ -1,0 +1,7 @@
+-- 463 — a physical inspection's transport cost is borne 100% by the person who asked for the visit (applied October 2026)
+-- RULE: photographs, room videos and requests for more of either are free. If a buyer or tenant still insists on a physical
+-- visit, the WHOLE round-trip cost is theirs — not split with the owner, not carried by CHS — at inspection_rate_per_km (150)
+-- each way, calculated from where the CHS agent actually sets off (not a fixed office). Before: the cost was stored as the
+-- requester's "half" and measured from the CHS office. Columns added: takeoff_point, fee_final, fee_set_at. The one existing
+-- booking was restated from half to the full round trip (1,200 -> 2,400). set_inspection_takeoff (admin) was superseded in
+-- 464, which adds the assigned agent and moves the payment into the wallet.

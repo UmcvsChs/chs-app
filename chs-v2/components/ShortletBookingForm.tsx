@@ -1,5 +1,6 @@
 "use client";
 
+import { Req, RequiredLegend } from "@/components/FormMarks";
 import RefundPolicyNotice from "./RefundPolicyNotice";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
@@ -198,17 +199,20 @@ export default function ShortletBookingForm({
       </div>
 
       <div>
-        <label className="text-xs font-semibold text-gray-600">Guests</label>
+        <label className="text-xs font-semibold text-gray-600">Guests <Req /></label>
         <input type="number" min={1} value={guests} onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
 
       <div className="border-t border-gray-200 pt-3">
         <p className="text-xs font-bold text-chs-charcoal mb-1">Guest details</p>
+        <RequiredLegend className="mb-1.5" />
         <p className="text-[10px] text-green-700 mb-2">✓ Your identity is already verified by CHS — the host is told so, and you don&apos;t need to upload your ID again.</p>
         <div className="space-y-2">
+          <label className="text-[10px] font-semibold text-gray-500">Full name <Req /></label>
           <input type="text" value={guestName} onChange={(e) => setGuestName(e.target.value)}
             placeholder="Full name, as shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          <label className="text-[10px] font-semibold text-gray-500">Phone number <Req /></label>
           <ValidatedInput kind="phoneIntl" value={guestPhone} onChange={setGuestPhone}
             placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg text-sm" />
         </div>

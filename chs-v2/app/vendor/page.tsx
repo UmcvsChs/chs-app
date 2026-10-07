@@ -6,19 +6,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { uploadPropertyPhoto } from "@/lib/storage";
-import FileUploadBox from "@/components/FileUploadBox";
-import { MarketplaceVendor, MarketplaceProduct, ListingType } from "@/types/marketplace";
+import VendorListingForm from "@/components/VendorListingForm";
+import { categoryKind, categoryLabel, KIND_LABEL } from "@/lib/marketplaceCategories";
+import { MarketplaceVendor, MarketplaceProduct } from "@/types/marketplace";
 import { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 import InfoTip from "@/components/InfoTip";
-import { BUILDING_MATERIALS_CATALOG, MATERIAL_SECTIONS } from "@/types/buildingMaterials";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import GuidePrompt from "@/components/GuidePrompt";
 import { formatNaira } from "@/lib/format";
-
-const SERVICE_CATEGORIES = [
-  "security_services", "cleaning_services", "fumigation_pest_control", "facilities_maintenance",
-];
 
 interface ProductWithQuotes extends MarketplaceProduct {
   quoteRequests: ServiceQuoteRequest[];
@@ -52,20 +47,8 @@ export default function VendorDashboard() {
   const [showGuide, setShowGuide] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
-  const [listingType, setListingType] = useState<ListingType>("product");
-  const [price, setPrice] = useState<number | "">("");
-  const [priceUnit, setPriceUnit] = useState("per unit");
-  const [description, setDescription] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const [materialSection, setMaterialSection] = useState(MATERIAL_SECTIONS[0]);
-  const [selectedMaterial, setSelectedMaterial] = useState("");
-  const [othersMaterialName, setOthersMaterialName] = useState("");
-  const [othersUnit, setOthersUnit] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
@@ -102,10 +85,6 @@ export default function VendorDashboard() {
     // genuinely almost always services, not physical goods. Set here,
     // alongside the vendor data itself, rather than in a separate effect
     // reacting to it a render later.
-    if (vendorData && SERVICE_CATEGORIES.includes(vendorData.category)) {
-      setListingType("service");
-    }
-
     if (vendorData) {
       const { data: productsData } = await supabase
         .from("marketplace_products")
@@ -148,67 +127,17 @@ export default function VendorDashboard() {
     setLoading(false);
   }
 
-  const isBuildingMaterials = vendor?.category === "building_materials";
-  const currentMaterialEntry = BUILDING_MATERIALS_CATALOG[materialSection]?.find((m) => m.name === selectedMaterial);
-  const isOthersMaterial = currentMaterialEntry?.unit === null;
-
-  async function handleAddProduct(e: React.FormEvent) {
-    e.preventDefault();
-
-    // For building materials specifically, the real name and unit come
-    // from the real, standardised catalog — never free text — since
-    // that's what actually makes genuine price comparison between
-    // vendors possible in the first place.
-    const finalName = isBuildingMaterials
-      ? (isOthersMaterial ? othersMaterialName.trim() : selectedMaterial)
-      : name.trim();
-    const finalUnit = isBuildingMaterials
-      ? (isOthersMaterial ? othersUnit.trim() : currentMaterialEntry?.unit || "")
-      : priceUnit;
-
-    if (!finalName || !vendor) {
-      setError(isBuildingMaterials ? "Please select a material." : "Please enter a name.");
-      return;
-    }
-    // A real product genuinely needs a real price — a service
-    // deliberately doesn't, since real pricing depends on the specific
-    // property, not a fixed shelf price.
-    if (listingType === "product" && !price) {
-      setError("Please enter a price for this product.");
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-
-    const { data: newProduct, error: insertError } = await supabase
-      .from("marketplace_products")
-      .insert({
-        vendor_id: vendor.id,
-        name: finalName,
-        category: vendor.category,
-        listing_type: listingType,
-        price: listingType === "service" ? null : price,
-        price_unit: listingType === "service" ? null : finalUnit,
-        description: description.trim() || null,
-        photos: [],
-      })
-      .select()
-      .single();
-
-    if (insertError || !newProduct) {
-      setError("Could not add this listing. Please try again.");
-      setSubmitting(false);
-      return;
-    }
-
-    if (photo && session) {
-      const url = await uploadPropertyPhoto(photo, session.user.id, newProduct.id, 0);
-      if (url) await supabase.from("marketplace_products").update({ photos: [url] }).eq("id", newProduct.id);
-    }
-
-    setName(""); setPrice(""); setDescription(""); setPhoto(null); setShowForm(false);
+  // Stock drives "sold out" by itself (a database rule): at 0 the listing is marked sold out, and it reopens when restocked.
+  const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
+  async function saveStock(productId: string) {
+    const raw = stockEdits[productId];
+    const n = parseInt(raw, 10);
+    if (raw === undefined || raw === "" || !Number.isInteger(n) || n < 0) { setActionError("Please enter the number in stock (0 or more)."); return; }
+    setActionError(null);
+    const { error: stockError } = await supabase.from("marketplace_products").update({ stock_quantity: n }).eq("id", productId);
+    if (stockError) { setActionError("Could not update the stock. Please try again."); return; }
+    setStockEdits((e) => { const next = { ...e }; delete next[productId]; return next; });
     loadData();
-    setSubmitting(false);
   }
 
   async function handleCreateBundle(e: React.FormEvent) {
@@ -283,9 +212,9 @@ export default function VendorDashboard() {
   if (!vendor) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-center px-6">
-        <p className="text-sm text-gray-500 mb-4">You&apos;re not registered as a Marketplace vendor yet.</p>
-        <Link href="/become-vendor" className="text-sm font-semibold text-white bg-chs-red px-5 py-2.5 rounded-full">
-          Register as a vendor
+        <p className="text-sm text-gray-500 mb-4">You&apos;re not registered on the Marketplace yet.</p>
+        <Link href="/choose-category" className="text-sm font-semibold text-white bg-chs-red px-5 py-2.5 rounded-full">
+          Register as a Vendor or Service Provider
         </Link>
       </div>
     );
@@ -296,7 +225,10 @@ export default function VendorDashboard() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold">{vendor.business_name}</h1>
+          <div>
+            <h1 className="font-serif text-lg font-bold">{vendor.business_name}</h1>
+            <p className="text-[10px] text-white/70">{KIND_LABEL[categoryKind(vendor.category)]} · {categoryLabel(vendor.category)}</p>
+          </div>
           <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
             vendor.verification_status === "verified" ? "bg-chs-red" : "bg-white/15"
           }`}>
@@ -308,7 +240,7 @@ export default function VendorDashboard() {
       <div className="px-4 py-4">
         {vendor.verification_status !== "verified" && (
           <div className="bg-chs-amber-light text-chs-amber-dark text-xs font-semibold px-3 py-2 rounded-lg mb-4">
-            CHS is reviewing your vendor registration — your listings won&apos;t be publicly visible until you&apos;re verified, but you can add them now.
+            CHS is reviewing your {KIND_LABEL[categoryKind(vendor.category)].toLowerCase()} registration — your listings won&apos;t be publicly visible until you&apos;re verified, but you can add them now.
           </div>
         )}
 
@@ -337,75 +269,8 @@ export default function VendorDashboard() {
           {showForm ? "Cancel" : "+ Add a listing"}
         </button>
 
-        {showForm && (
-          <form onSubmit={handleAddProduct} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 mb-4 space-y-2">
-            <div className="flex gap-2 mb-1">
-              <button type="button" onClick={() => setListingType("product")}
-                className={`flex-1 py-2 rounded-lg border-2 text-xs font-semibold ${listingType === "product" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
-                Product (fixed price)
-              </button>
-              <button type="button" onClick={() => setListingType("service")}
-                className={`flex-1 py-2 rounded-lg border-2 text-xs font-semibold ${listingType === "service" ? "border-chs-red bg-chs-amber-light" : "border-gray-200 bg-white"}`}>
-                Service (quote-based)
-              </button>
-            </div>
-            {isBuildingMaterials ? (
-              <>
-                <select value={materialSection} onChange={(e) => { setMaterialSection(e.target.value); setSelectedMaterial(""); }}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                  {MATERIAL_SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select value={selectedMaterial} onChange={(e) => setSelectedMaterial(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                  <option value="">Select a material...</option>
-                  {(BUILDING_MATERIALS_CATALOG[materialSection] || []).map((m) => (
-                    <option key={m.name} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
-                {isOthersMaterial && (
-                  <>
-                    <input type="text" value={othersMaterialName} onChange={(e) => setOthersMaterialName(e.target.value)}
-                      placeholder="Material name" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                    <input type="text" value={othersUnit} onChange={(e) => setOthersUnit(e.target.value)}
-                      placeholder="Pricing unit (e.g. per tonne)" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                  </>
-                )}
-                {selectedMaterial && !isOthersMaterial && (
-                  <p className="text-[10px] text-gray-400">
-                    Real, standardised unit for this material: <span className="font-semibold">{currentMaterialEntry?.unit}</span> — locked, so every vendor&apos;s price is genuinely comparable.
-                  </p>
-                )}
-              </>
-            ) : (
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                placeholder={listingType === "service" ? "Service name (e.g. Estate Security Package)" : "Product name"}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            )}
-            {listingType === "product" ? (
-              <div className="flex gap-2">
-                <input type="number" value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : parseInt(e.target.value))}
-                  placeholder="Price (₦)" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                {!isBuildingMaterials && (
-                  <select value={priceUnit} onChange={(e) => setPriceUnit(e.target.value)}
-                    className="px-2 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                    {["per unit", "per bag", "per sqm", "per project"].map((u) => <option key={u}>{u}</option>)}
-                  </select>
-                )}
-              </div>
-            ) : (
-              <p className="text-[10px] text-gray-400">
-                Real estate owners will request a real quote for this — pricing depends on the specific property, so no fixed price is needed here.
-              </p>
-            )}
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
-              placeholder="Description" className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-            <FileUploadBox onFileSelect={setPhoto} accept="image/*" label="a product photo" selectedFileName={photo?.name} />
-            {error && <p className="text-xs text-chs-red">{error}</p>}
-            <button type="submit" disabled={submitting}
-              className="w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
-              {submitting ? "Adding..." : "Add listing"}
-            </button>
-          </form>
+        {showForm && session && (
+          <VendorListingForm vendor={vendor} userId={session.user.id} onAdded={() => { setShowForm(false); loadData(); }} />
         )}
 
         <p className="text-xs font-bold text-chs-charcoal mb-2">My listings ({products.length})<InfoTip term="listing_products_bundles" /></p>
@@ -414,20 +279,34 @@ export default function VendorDashboard() {
         ) : (
           products.map((p) => (
             <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-              <div className="flex justify-between items-center">
-                <div>
+              <div className="flex justify-between items-start gap-2">
+                <div className="min-w-0">
                   <p className="text-xs font-semibold text-chs-charcoal">{p.name}</p>
+                  {(p.brand || p.model) && <p className="text-[10px] text-gray-500">{[p.brand, p.model].filter(Boolean).join(" · ")}</p>}
                   <p className="text-xs text-gray-500">
                     {p.listing_type === "service" ? "Quote-based service" : `${formatNaira(p.price!)} ${p.price_unit}`}
                   </p>
                 </div>
-                <button onClick={() => toggleSoldOut(p.id, p.status)}
-                  className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
-                    p.status === "sold_out" ? "bg-gray-100 text-gray-500" : "bg-chs-amber-light text-chs-amber-dark"
-                  }`}>
-                  {p.status === "sold_out" ? "Mark active" : "Mark sold out"}
-                </button>
+                <span className={`shrink-0 text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                  p.status === "sold_out" ? "bg-gray-200 text-gray-600" : p.status === "delisted" ? "bg-red-50 text-chs-red" : "bg-green-50 text-green-700"
+                }`}>
+                  {p.status === "sold_out" ? "● Sold out" : p.status === "delisted" ? "● Removed" : "● Active"}
+                </span>
               </div>
+              {p.listing_type === "product" && (
+                <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-500">
+                  <span>In stock:</span>
+                  <input type="number" min="0" value={stockEdits[p.id] ?? (p.stock_quantity ?? "")} placeholder="not tracked"
+                    onChange={(e) => setStockEdits({ ...stockEdits, [p.id]: e.target.value })}
+                    className="w-16 px-2 py-1 rounded border border-gray-200 text-xs" />
+                  {stockEdits[p.id] !== undefined && <button onClick={() => saveStock(p.id)} className="font-semibold text-white bg-chs-charcoal px-2.5 py-1 rounded-full">Save</button>}
+                  {(p.stock_quantity ?? 1) > 0 && p.status !== "delisted" && (
+                    <button onClick={() => toggleSoldOut(p.id, p.status)} className="ml-auto font-semibold underline">
+                      {p.status === "sold_out" ? "Reopen listing" : "Mark as sold out"}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {p.listing_type === "service" && p.quoteRequests.length > 0 && (
                 <div className="mt-2 pt-2 border-t border-gray-100">
@@ -444,7 +323,7 @@ export default function VendorDashboard() {
         )}
       </div>
 
-      {!SERVICE_CATEGORIES.includes(vendor.category) && (
+      {categoryKind(vendor.category) === "vendor" && (
         <div className="px-4 pb-4">
           <p className="text-xs font-bold text-chs-charcoal mb-2">My Bundles ({bundles.length})<InfoTip text="A real group of your individual products sold together at one combined price — genuinely useful for encouraging a buyer to purchase more at once." /></p>
           <p className="text-[10px] text-gray-400 mb-2">

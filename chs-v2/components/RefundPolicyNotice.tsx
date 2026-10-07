@@ -1,4 +1,5 @@
 import Link from "next/link";
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 
 // Real, direct implementation of an explicit client instruction: the
 // refund policy must be clearly notified to every tenant, buyer, and
@@ -17,6 +18,7 @@ export default function RefundPolicyNotice({ className = "" }: { className?: str
         plus ₦100, never more than ₦2,000).{" "}
         <Link href="/terms" className="underline font-semibold">Read the full policy (term 36)</Link>
       </p>
+      <PaymentSafetyNotice variant="compact" className="mt-1.5 pt-1.5 border-t border-green-200" />
     </div>
   );
 }

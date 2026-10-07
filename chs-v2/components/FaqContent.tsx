@@ -41,6 +41,34 @@ const FAQ_ITEMS = [
     a: "As soon as you arrive. Booking is prepaid: you pay before your stay, CHS holds the money safely, and the moment you arrive and confirm in the app that the property is as described and each listed facility is present and working, the money is released to the host and both the host and CHS receive your confirmation. If you do not respond, it is released automatically 24 hours after check-in. If something is wrong, report a problem instead and the payment stays held while CHS looks into it. A host whose guest has arrived can also ask CHS to release it.",
   },
   {
+    q: "What is the difference between an Artisan, a Vendor and a Service Provider?",
+    a: "An Artisan does skilled trade work, such as plumbing, electrical work, carpentry or painting. A Vendor sells goods: furniture, electronics and home appliances, bedding and textiles, kitchen items, building materials or interior design items. A Service Provider offers a service: security, cleaning, fumigation and pest control, or facilities maintenance. Each has its own registration, and each is reviewed by CHS before it is shown to the public.",
+  },
+  {
+    q: "How do I list a product properly as a Vendor?",
+    a: "Open your vendor dashboard and tap Add a listing. Give the brand, model and condition, the price and how many you have in stock, then the specification for your kind of product (for a television: size, features, power, dimensions; for furniture: material and dimensions), then any options the buyer chooses, such as colour or size, a warranty and delivery information, and up to six clear photos. Fields marked with a red star are required. When your stock reaches zero the listing shows Sold out automatically, and reopens when you restock.",
+  },
+  {
+    q: "How is my wallet protected from fraud?",
+    a: "In layers. (1) A separate 6-digit transaction PIN, which you set under Wallet security, is asked for whenever money leaves your wallet; five wrong tries lock it for 30 minutes. (2) Only ID-verified users can send money to another CHS user, and there are limits per transfer and per day, with a lower cap on a first transfer to someone new. (3) Money you receive from another CHS user can be used inside CHS at once, but can only be withdrawn to a bank after 24 hours. (4) You are alerted the moment money leaves your wallet. (5) If you suspect anything, tap Freeze my wallet and nothing can leave until CHS verifies you. (6) If your account is opened on a device CHS has not seen before, you are alerted, and for the first day a larger transfer or withdrawal from it needs extra confirmation (a code texted to your phone once SMS codes are switched on, or a lower limit until then). (7) Money you add by card also waits 24 hours before it can go to a bank. (8) CHS scans wallet activity every 15 minutes for unusual patterns and reviews anything suspicious. (9) If you were tricked or did not authorise a transfer, tap Report this transfer beside it: CHS holds that amount in the recipient's wallet and investigates, and can reverse it while the money is still there. Never share your PIN, and never send money because someone asks you to — CHS never asks.",
+  },
+  {
+    q: "I got a message saying a new device signed in to my account. What should I do?",
+    a: "If it was you on a new phone or browser, nothing — for the first 24 hours, larger transfers and withdrawals from that device need extra confirmation, and then it is treated as your usual device. If it was NOT you, open your wallet and tap Freeze my wallet now, then contact CHS so we can verify you and help you secure your account. Never share your PIN or any code CHS texts you.",
+  },
+  {
+    q: "I sold a property and handed over the documents. How do I get my money?",
+    a: "Your proceeds, after CHS's commission, are held safely from the moment the buyer pays. They are released when the buyer confirms in the app that they have the documents, or when CHS confirms delivery. If the buyer has not confirmed, open your Owner dashboard and tap Request release of my money, with a short note of how and when you delivered. CHS then verifies delivery from the platform's records or by contacting the buyer, tells the buyer you have asked, and either releases your money or tells you what is still outstanding. Only that sale's money is released, never anything else in your wallet.",
+  },
+  {
+    q: "Can I pay an agent, an owner, a host or CHS staff directly — or into an account?",
+    a: "No. Every payment on CHS — rent, purchases, bookings, inspection costs, fees — is made through your own CHS Wallet inside the app, and nowhere else. Never transfer money to any person or bank account, even if they say they represent CHS. CHS staff and agents will never ask you to pay into a personal account, to “send it first”, or to share your PIN or wallet code. If anyone asks you to pay any other way, it is a scam: stop, do not pay, and report it to CHS straight away.",
+  },
+  {
+    q: "Who pays for a physical inspection, and how?",
+    a: "Photographs and room videos are free, and you can ask the owner for more of either. If you still want to see a property in person, the whole transport cost is yours — never split with the owner and never carried by CHS. CHS assigns an agent and confirms the final cost, worked out from where the agent sets off to the property and back (₦150 per km each way). You then pay it from your CHS Wallet in My Inspections. It is held safely and passed to the agent after the visit. You are refunded in full if the owner or CHS cancels, or if you cancel at least 12 hours before; inside 12 hours it goes to the agent. A visit you have not paid for 2 hours before it is due lapses, and nothing is charged.",
+  },
+  {
     q: "Why am I asked what time I will arrive?",
     a: "So the host can have your room ready. For a booking that starts today it is required, because the host has only 30 minutes to reply and needs to know when to expect you. For other bookings it is optional but helpful.",
   },
@@ -66,7 +94,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "Why was I asked to accept the Terms & Conditions again?",
-    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again.",
+    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again. Version 4 (October 2026) adds the wallet-only payment rule, the wallet protections, the inspection cost rule, the release of sale money and the Rent to Own changes.",
   },
   {
     q: "What does a 'CHS Verified' or 'Verified Listing' label actually mean?",

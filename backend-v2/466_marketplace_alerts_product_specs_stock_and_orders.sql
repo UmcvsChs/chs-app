@@ -1,0 +1,16 @@
+-- 466 — marketplace: admin alerts on registration; real product details; stock; orders that record what was bought (applied October 2026)
+-- FOUND IN TESTING: (a) registration was a bare insert that alerted nobody, so a pending vendor (Alex Group Ltd) and a pending
+-- artisan sat unseen in the admin's Verification tab; (b) a listing had only a name, price, unit, description and one photo, and the
+-- order recorded only an amount — no quantity, no colour/size, no delivery address; (c) "Mark sold out" was an action button that read
+-- like a status (the products were never actually sold out).
+-- NOW: triggers alert the responsible admins (artisan_dev_pm_vendor) on every vendor / artisan registration — and the registrations
+-- already waiting were alerted; marketplace_products gains brand, model, condition, stock_quantity, sku, warranty, delivery_info, specs
+-- (category-specific key/values) and option_groups (the choices a buyer makes: colour, size …); a trigger marks a product sold out when
+-- its stock reaches 0 and reopens it when restocked; marketplace_direct_orders gains quantity, unit_price, selected_options and
+-- delivery_address; buy_product_direct(product, quantity, options, delivery address) refuses more than the stock, an option the vendor
+-- does not offer, a missing option, a missing address (or one containing a phone number), buying one's own product, and a vendor that
+-- is not verified; it takes stock off and records everything. Verified (rolled back): alerts, every refusal, the amount to the naira
+-- (2 x 375,000 + 6% = 795,000), stock 2 -> 0 -> sold out -> restocked -> active.
+-- Front end: lib/marketplaceCategories.ts (Vendor vs Service Provider — the one list every screen reads), lib/marketplaceSpecs.ts
+-- (the question set per category), VendorRegistrationForm (state and LGA dropdowns, tick-box state coverage), VendorListingForm,
+-- ProductDetailSheet, /become-vendor and /become-service-provider, the three-way /choose-category.

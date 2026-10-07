@@ -13,9 +13,13 @@ export interface Inspection {
   requested_time: string;
   meeting_point: string;
   distance_km: number | null;
-  transport_fee: number | null;
+  transport_fee: number | null;      // the whole round trip, paid 100% by the requester
+  takeoff_point?: string | null;     // where the CHS agent sets off from (set by CHS)
+  fee_final?: boolean;               // false = an estimate; true = confirmed by CHS from the real takeoff point
   video_call: boolean;
   verified_report_addon: boolean;
-  status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
+  status: "pending" | "awaiting_payment" | "confirmed" | "completed" | "cancelled" | "no_show";
+  payment_status?: "unpaid" | "held" | "released" | "refunded";
+  agent_id?: string | null;
   created_at: string;
 }

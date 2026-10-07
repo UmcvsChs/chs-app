@@ -719,6 +719,7 @@ export default function TenantDashboard() {
 
         <div>
           <p className="text-xs font-bold text-chs-charcoal mb-2">My inspection requests</p>
+          <Link href="/my-inspections" className="block text-[11px] font-semibold text-chs-red underline mb-1.5">Pay or cancel an inspection — My Inspections →</Link>
           {inspections.length === 0 ? (
             <p className="text-sm text-gray-400">No inspection requests yet.</p>
           ) : (

@@ -1,0 +1,16 @@
+-- 468 — layered protection for wallet-to-wallet transfers and withdrawals (applied October 2026)
+-- THE GAP: a transfer needed only a logged-in session — no proof the holder is the owner, no limits, no cooling-off for a new recipient,
+-- no pause on money that had just arrived (a mule could receive and cash out within minutes), no alert, no way to report fraud, no
+-- self-freeze, no overspend protection (two simultaneous transfers could both pass the balance check).
+-- LAYERS (numbers are platform_settings rows): transaction PIN (hashed, locks after wrong attempts; required for anyone who has set one,
+-- and for everyone once transfer_requires_pin / withdrawal_requires_pin = 'true' — switched on AFTER the new screens are deployed);
+-- ID-verified senders only; per-transfer, daily and hourly limits; a first-time recipient capped for 24h; money received from another
+-- user is locked from BANK withdrawal for 24h (wallet_locks) but usable inside CHS; daily withdrawal limit; alerts to sender and recipient,
+-- admin alert for large transfers; freeze_my_wallet(); report_fraudulent_transfer (the amount is held in the recipient's wallet; admins
+-- reverse, dismiss or freeze via get_transfer_reports / admin_resolve_transfer_report); wallet rows locked in a fixed order during a transfer;
+-- wallets.main_balance >= 0 (NOT VALID check: enforced on every future write).
+-- PIN failures are RETURNED as {ok:false,error} rather than raised, so a wrong guess is counted and not rolled back.
+-- The initiate-withdrawal edge function (v7) now calls check_withdrawal_allowed (PIN, the pause on received money, the daily limit)
+-- BEFORE anything is debited, and tells the holder when a withdrawal is requested.
+-- Verified (rolled back): every layer, including a wrong-PIN lock-out that persists, the 24h cap on a new recipient, the pause on
+-- received money (withdraw 100,000 refused when 200,000 of 250,000 just arrived; 40,000 allowed), self-freeze, report and reversal.

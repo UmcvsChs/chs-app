@@ -1,0 +1,14 @@
+-- 469 — second tranche of wallet protection (applied October 2026)
+-- DEVICES: register_device(device id, label) is called by the app on each visit (DeviceRegistrar). A device new to an account that already
+--   has another triggers an alert to the holder; for device_established_hours (24) a transfer/withdrawal from it needs an SMS code (when
+--   otp_step_up_enabled = 'true') or is capped at new_device_max_amount (50,000). A first device, or an old app that sends none, is never penalised.
+-- SMS CODES: issue_wallet_otp / verify_wallet_otp — 6 digits, hashed, valid 10 min, 5 tries, 3 requests per 10 min, sent ONLY by SMS through the
+--   existing send-multichannel-reminder function (Termii) using send_sms_now; never shown in the app. Required at otp_amount_threshold (200,000) for
+--   transfers / otp_withdrawal_threshold (100,000) for withdrawals, or from a new device. If the SMS cannot be sent the code is void and the transaction
+--   is refused (fails closed). otp_step_up_enabled stays 'false' until the SMS provider key is configured; the shared secret for the sender lives in
+--   private_secrets (not readable through the API; platform_settings is readable by everyone).
+-- FUNDING HOLD: a trigger on wallet_transactions holds each 'Wallet funding via Paystack' credit from BANK withdrawal for funding_withdrawal_hold_hours (24)
+--   (usable inside CHS) — the live Paystack webhook is untouched; a replayed webhook does not double the hold.
+-- transfer_wallet_funds gained p_device_id and p_otp; check_withdrawal_allowed gained p_device and p_otp (the initiate-withdrawal edge function, v8, passes them).
+-- Verified (rolled back): first device silent, second device alerts; 60,000 refused from a new device, 40,000 allowed, 60,000 allowed from the established one;
+--   an SMS that cannot be sent refuses the transfer and moves nothing; wrong code counted, right code works once, same/expired code refused; one hold per funding.

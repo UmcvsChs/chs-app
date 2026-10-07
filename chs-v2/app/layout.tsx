@@ -6,6 +6,8 @@ import TermsGate from "@/components/TermsGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SplashScreen from "@/components/SplashScreen";
 import TestModeBanner from "@/components/TestModeBanner";
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
+import DeviceRegistrar from "@/components/DeviceRegistrar";
 import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
 
 // CHS's real, established typography — Playfair Display for headings
@@ -73,6 +75,8 @@ export default function RootLayout({
           <SplashScreen />
           <AuthProvider>
             <TestModeBanner />
+            <PaymentSafetyNotice variant="bar" />
+            <DeviceRegistrar />
             <AccountStatusGate><TermsGate>{children}</TermsGate></AccountStatusGate>
           </AuthProvider>
         </ThemeProvider>

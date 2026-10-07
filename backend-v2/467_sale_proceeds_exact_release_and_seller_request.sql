@@ -1,0 +1,15 @@
+-- 467 / 467b — property sales: release EXACTLY the sale's own money, and let the seller ask for it (applied October 2026)
+-- FOUND: confirm_documents_received (buyer) and confirm_legal_transfer_complete (admin) released the seller's ENTIRE held balance
+-- (wallets.escrow_held), which is ONE number shared by every sale, installment and rent held for that person — so confirming one sale
+-- could release another sale's money or a landlord's rent; the buyer path did not even check the offer was paid or already released.
+-- NOW: offers.held_amount records each sale's own net (price - the seller's recorded commission; backfilled for paid sales and set by
+-- pay_for_property); release_sale_proceeds is the ONE routine that moves exactly that amount, refuses an unpaid or already-released sale,
+-- refuses if the held balance cannot cover it, and records how. Used by (1) the buyer confirming, (2) CHS confirming, and the NEW
+-- (3) request_sale_release (the seller asks; CHS verifies delivery from platform records or by phoning the buyer, and approves with
+-- admin_release_sale_funds — recording which, a phone check needs a recorded note — or declines with admin_reject_sale_release; the buyer
+-- is told the seller says delivery is done). get_pending_legal_transfers now carries the parties, the delivery record and the request.
+-- The release card moved to the Escrow Oversight tab (where every alert links); it had been tucked inside the Buyer ID tab.
+-- Data repair, audited: the Bungalow, Ikeja sale (16,450,000 net) was paid and unreleased but the seller's held balance had been zeroed
+-- on 23 Sep (an earlier test reset or this defect); the held amount was restored so the sale can be released properly.
+-- Verified (rolled back): release moves exactly the sale's net while another 3,000,000 in the same wallet stays; second release refused;
+-- unpaid refused; insufficient held balance refused; stranger refused; phone check without a record refused; reject needs a reason.

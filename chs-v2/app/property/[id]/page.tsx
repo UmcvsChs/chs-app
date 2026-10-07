@@ -9,7 +9,7 @@ import PropertyVideos from "@/components/PropertyVideos";
 import InterestButton from "@/components/InterestButton";
 import CurrencyReference from "@/components/CurrencyReference";
 import CommunityFeedback from "@/components/CommunityFeedback";
-import { calcInspectionFee } from "@/lib/inspectionFee";
+import { inspectionEstimateText } from "@/lib/inspectionFee";
 import MediaRequests from "@/components/MediaRequests";
 import SaveButton from "@/components/SaveButton";
 import ShareButton from "@/components/ShareButton";
@@ -269,6 +269,7 @@ export default async function PropertyDetailPage({
             ShareButton are their own separate components too. */}
         <PropertyTourButton
           photos={property.photos || []}
+          labels={Array.isArray(property.photo_labels) ? property.photo_labels : []}
           videoUrl={property.video_url}
           propertyTitle={property.title}
         />
@@ -469,7 +470,7 @@ export default async function PropertyDetailPage({
           <div className="bg-chs-amber-light rounded-xl p-3">
             <p className="text-xs font-bold text-chs-amber-dark mb-1">Transparent fees</p>
             <p className="text-[11px] text-chs-amber-dark leading-relaxed">
-              Estimated inspection transport fee (per person): {formatNaira(calcInspectionFee(`${property.location_area} ${property.location_lga || ""} ${property.location_state}`).perPersonFee)}
+              Physical inspection (only if you still want to visit after seeing the photos and videos — you can also ask for more of either, free): the whole transport cost is paid by you, never split with the owner or CHS — {inspectionEstimateText(`${property.location_area} ${property.location_lga || ""} ${property.location_state}`)}.
             </p>
             <p className="text-[11px] text-gray-500 leading-relaxed mt-2 pt-2 border-t border-chs-amber-dark/20">
               CHS discourages caution fees — a fixed deposit rarely covers real damage and is often never refunded honestly. Instead, every tenancy uses a <strong>Property Condition Report</strong>, documented and photographed at move-in, so liability is based on evidence, not a guess. Inspection fee, where charged, covers agent transport costs only, split between both parties.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -13,6 +13,7 @@ import FileUploadBox from "@/components/FileUploadBox";
 import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
 import { PROPERTY_TYPE_CATEGORIES } from "@/types/propertyTypes";
+import { buildPhotoChecklist, groupSlots } from "@/lib/photoChecklist";
 
 const DOC_TYPES = [
   { value: "ownership_document", label: "Ownership document" },
@@ -22,18 +23,6 @@ const DOC_TYPES = [
   { value: "inheritance_consent", label: "Inheritance consent (if applicable)" },
 ];
 
-const PHOTO_SLOTS = [
-  { key: "front", label: "Front exterior" },
-  { key: "rear", label: "Rear exterior" },
-  { key: "side_left", label: "Side view (left)" },
-  { key: "side_right", label: "Side view (right)" },
-  { key: "compound", label: "Compound / access road" },
-  { key: "sitting", label: "Sitting room" },
-  { key: "bedroom", label: "Main bedroom" },
-  { key: "kitchen", label: "Kitchen" },
-  { key: "bathroom", label: "Bathroom" },
-  { key: "meter", label: "Meter / water source" },
-];
 
 const PURPOSE_OPTIONS = [
   { value: "sale", label: "For Sale" },
@@ -82,6 +71,11 @@ export default function ListPropertyPage() {
   const [bathrooms, setBathrooms] = useState<number | "">("");
   const [toilets, setToilets] = useState<number | "">("");
   const [totalRooms, setTotalRooms] = useState<number | "">("");
+  // The photographs required for THIS property: grows with the bedrooms, bathrooms and toilets declared above.
+  const photoSlots = useMemo(
+    () => buildPhotoChecklist({ propertyType, bedrooms, bathrooms, toilets }),
+    [propertyType, bedrooms, bathrooms, toilets]
+  );
   const [otherFacilities, setOtherFacilities] = useState<string[]>([]);
   const [newFacilityInput, setNewFacilityInput] = useState("");
   const [videos, setVideos] = useState<{ label: string; file: File }[]>([]);
@@ -98,6 +92,7 @@ export default function ListPropertyPage() {
   // inspection trips, since buyers arrive already knowing what to
   // expect, rather than a generic unlabeled photo dump.
   const [labeledPhotos, setLabeledPhotos] = useState<Record<string, File | null>>({});
+  const photosDone = photoSlots.filter((sl) => labeledPhotos[sl.key]).length;
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [documents, setDocuments] = useState<Record<string, File | null>>({});
   const [saleDocuments, setSaleDocuments] = useState<Record<string, File | null>>({});
@@ -147,7 +142,6 @@ export default function ListPropertyPage() {
         if (d.primaryDocType) setPrimaryDocType(d.primaryDocType);
       }
     } catch { /* a corrupted or blocked draft should never break the real form */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     try {
@@ -202,8 +196,8 @@ export default function ListPropertyPage() {
     // CURRENT, real mechanisms — the labeled photo checklist and the
     // real per-room video array (property_videos) — not the older,
     // now-secondary single video field below.
-    for (const slot of PHOTO_SLOTS) {
-      if (!labeledPhotos[slot.key]) return `Please upload a photo for "${slot.label}" — every item in the Virtual Inspection Checklist is required.`;
+    for (const slot of photoSlots) {
+      if (!labeledPhotos[slot.key]) return `Please upload a photo for "${slot.caption}" — every item in the Virtual Inspection Checklist is required (${photosDone} of ${photoSlots.length} done).`;
     }
     if (videos.length === 0) return "Please upload at least one real room video (see 'Short room videos' below) — this is now required for every listing.";
     return null;
@@ -301,15 +295,19 @@ export default function ListPropertyPage() {
     // organise them under. Labeled slots upload first, so the front
     // exterior genuinely becomes the main display photo, followed by
     // any additional unlabeled photos.
-    const allPhotos = [...PHOTO_SLOTS.map((s) => labeledPhotos[s.key]).filter((f): f is File => !!f), ...photos];
+    const allPhotos: { file: File; caption: string }[] = [
+      ...photoSlots.filter((sl) => labeledPhotos[sl.key]).map((sl) => ({ file: labeledPhotos[sl.key] as File, caption: sl.caption })),
+      ...photos.map((f, i) => ({ file: f, caption: `Additional photo ${i + 1}` })),
+    ];
     if (allPhotos.length > 0) {
       const uploadedUrls: string[] = [];
+      const uploadedCaptions: string[] = [];
       for (let i = 0; i < allPhotos.length; i++) {
-        const url = await uploadPropertyPhoto(allPhotos[i], session.user.id, newProperty.id, i);
-        if (url) uploadedUrls.push(url);
+        const url = await uploadPropertyPhoto(allPhotos[i].file, session.user.id, newProperty.id, i);
+        if (url) { uploadedUrls.push(url); uploadedCaptions.push(allPhotos[i].caption); }
       }
       if (uploadedUrls.length > 0) {
-        await supabase.from("properties").update({ photos: uploadedUrls }).eq("id", newProperty.id);
+        await supabase.from("properties").update({ photos: uploadedUrls, photo_labels: uploadedCaptions }).eq("id", newProperty.id);
       }
 
     // Real, new video uploads — a genuine, cost-free alternative to
@@ -818,19 +816,29 @@ export default function ListPropertyPage() {
             <p className="text-[10px] text-gray-400 mb-1.5">
               These photos are how a tenant or buyer &quot;inspects&quot; the property without visiting — all of them are required.
             </p>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              {PHOTO_SLOTS.map((slot) => (
-                <div key={slot.key} className={labeledPhotos[slot.key] ? "" : "bg-red-50 rounded-lg p-1.5"}>
-                  <label className="text-[10px] text-gray-500">
-                    {slot.label} <span className="text-chs-red">*</span>
-                  </label>
-                  <div className="mt-0.5">
-                    <FileUploadBox onFileSelect={(f) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: f })} accept="image/*"
-                      label={slot.label} selectedFileName={labeledPhotos[slot.key]?.name} />
-                  </div>
-                </div>
-              ))}
+            <div className={`rounded-lg px-3 py-2 mb-2 ${photosDone === photoSlots.length ? "bg-green-50 text-green-700" : "bg-chs-amber-light text-chs-charcoal"}`}>
+              <p className="text-xs font-bold">{photosDone} of {photoSlots.length} required photos done</p>
+              <p className="text-[10px] mt-0.5">
+                This list is built from your property: it grows with the bedrooms, bathrooms and toilets you entered above (change them and the list updates). Each photo is named for you, and buyers see that name beside it.
+              </p>
             </div>
+            {groupSlots(photoSlots).map((g) => (
+              <div key={g.group} className="mb-3">
+                <p className="text-[11px] font-bold text-chs-charcoal mb-1">{g.group} <span className="font-normal text-gray-400">({g.slots.filter((sl) => labeledPhotos[sl.key]).length}/{g.slots.length})</span></p>
+                <div className="grid grid-cols-2 gap-2">
+                  {g.slots.map((slot) => (
+                    <div key={slot.key} className={labeledPhotos[slot.key] ? "" : "bg-red-50 rounded-lg p-1.5"}>
+                      <label className="text-[10px] font-semibold text-gray-600">
+                        {slot.label} <span className="text-chs-red">*</span>
+                      </label>
+                      <p className="text-[9px] text-gray-400 leading-tight mb-0.5">{slot.hint}</p>
+                      <FileUploadBox onFileSelect={(f) => setLabeledPhotos({ ...labeledPhotos, [slot.key]: f })} accept="image/*"
+                        label={slot.caption} selectedFileName={labeledPhotos[slot.key]?.name} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
             <label className="text-xs font-semibold text-gray-600">Additional photos (optional)</label>
             <input type="file" accept="image/*" multiple
               onChange={(e) => setPhotos(e.target.files ? Array.from(e.target.files) : [])}

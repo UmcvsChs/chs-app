@@ -1,9 +1,11 @@
 "use client";
 
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
+import { Req, Opt, RequiredLegend } from "@/components/FormMarks";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
-import { calcInspectionFee, AREA_MEETING_POINTS, CHS_OFFICE } from "@/lib/inspectionFee";
+import { calcInspectionFee, AREA_MEETING_POINTS } from "@/lib/inspectionFee";
 import { formatNaira } from "@/lib/format";
 import InfoTip from "./InfoTip";
 
@@ -87,8 +89,8 @@ export default function InspectionBookingForm({
       setError("Please choose a time at least 12 hours from now, so CHS and the owner have time to confirm.");
       return;
     }
-    if (hasRoomVideos && !videosAcknowledged) {
-      setError("Please confirm you've seen the real room videos before booking a paid physical visit.");
+    if (!videosAcknowledged) {
+      setError("Please confirm you understand that the full transport cost is yours before booking a physical visit.");
       return;
     }
 
@@ -102,7 +104,8 @@ export default function InspectionBookingForm({
       requested_date: date,
       requested_time: time24,
       meeting_point: meetingPoint.trim(),
-      transport_fee: fee.perPersonFee,
+      transport_fee: fee.known ? fee.totalFee : null,
+      status: "pending",
     }).select().single();
 
     if (insertError) {
@@ -138,29 +141,38 @@ export default function InspectionBookingForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {hasRoomVideos && (
-        <div className="bg-chs-charcoal rounded-lg px-3 py-2.5">
-          <p className="text-xs font-bold text-white">🎥 Real room videos are available for this property</p>
-          <p className="text-[11px] text-white/70 mt-0.5">
-            Scroll up to watch them — a free way to see the place before booking a paid physical visit.
-          </p>
-          <label className="flex items-start gap-2 mt-2 text-[11px] text-white/90">
-            <input type="checkbox" checked={videosAcknowledged} onChange={(e) => setVideosAcknowledged(e.target.checked)} className="mt-0.5" />
-            I&apos;ve seen the room videos and still want to book a physical visit — I understand and agree to pay my share of the transport/logistics cost shown below.
-          </label>
-        </div>
-      )}
-
-      <div className="bg-chs-amber-light rounded-lg px-3 py-2.5">
-        <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport fee — calculated by distance<InfoTip term="inspection_booking_transport_fee" /></p>
-        <p className="text-xs text-chs-amber-dark">
-          ~{fee.distanceKm}km from {CHS_OFFICE} — {formatNaira(fee.totalFee)} round trip, split evenly.
+      <div className="bg-chs-charcoal rounded-lg px-3 py-2.5">
+        <p className="text-xs font-bold text-white">{hasRoomVideos ? "🎥 Real room videos are available — watch them first (free)" : "📷 See the property first — it costs nothing"}</p>
+        <p className="text-[11px] text-white/70 mt-0.5">
+          The photographs{hasRoomVideos ? " and videos" : ""} on this page are there so you can see the property without travelling, and you can ask the owner for more photos or a video, free of charge. A physical visit is only for when you are still not satisfied.
         </p>
-        <p className="text-sm font-bold text-chs-amber-dark mt-1">Your share: {formatNaira(fee.perPersonFee)}</p>
+        <label className="flex items-start gap-2 mt-2 text-[11px] text-white/90">
+          <input type="checkbox" checked={videosAcknowledged} onChange={(e) => setVideosAcknowledged(e.target.checked)} className="mt-0.5" />
+          <span>I have looked at what is online and I still choose to visit in person. I understand that the <b>full transport and logistics cost shown below is 100% mine</b> — the owner and CHS pay none of it. <Req /></span>
+        </label>
+      </div>
+
+      <PaymentSafetyNotice variant="compact" />
+      <div className="bg-chs-amber-light rounded-lg px-3 py-2.5">
+        <p className="text-[10px] font-bold text-chs-amber-dark uppercase mb-1">🚗 Transport cost — calculated by distance<InfoTip term="inspection_booking_transport_fee" /></p>
+        {fee.known ? (
+          <>
+            <p className="text-xs text-chs-amber-dark">
+              About {fee.distanceKm} km each way, at ₦150 per km, there and back. It is worked out from where your CHS agent actually sets off to the property — so this is an estimate until your agent is assigned, when CHS confirms the final amount and tells you before the visit.
+            </p>
+            <p className="text-sm font-bold text-chs-amber-dark mt-1">Your transport cost: {formatNaira(fee.totalFee as number)} <span className="text-[10px] font-normal">(estimate · you pay 100%)</span></p>
+            <p className="text-[10px] text-chs-amber-dark mt-1"><b>Nothing is taken now.</b> Once CHS confirms your agent and the final cost, you pay it from your CHS Wallet (My Inspections).</p>
+          </>
+        ) : (
+          <p className="text-xs text-chs-amber-dark">
+            CHS will quote the exact transport cost for this area, from where your agent sets off to the property and back, before the visit is confirmed. You bear <b>100%</b> of it — the owner and CHS pay none. <b>Nothing is taken now</b>; you pay from your CHS Wallet once it is quoted.
+          </p>
+        )}
       </div>
 
       <div>
-        <label className="text-xs font-semibold text-gray-600">Preferred date</label>
+        <RequiredLegend className="mb-1.5" />
+        <label className="text-xs font-semibold text-gray-600">Preferred date <Req /></label>
         <input
           type="date"
           value={date}
@@ -169,7 +181,7 @@ export default function InspectionBookingForm({
         />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Preferred time</label>
+        <label className="text-xs font-semibold text-gray-600">Preferred time <Req /></label>
         <div className="flex gap-2 mt-1">
           <select value={hour12} onChange={(e) => setHour12(e.target.value)}
             className="flex-1 px-2 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
@@ -187,7 +199,7 @@ export default function InspectionBookingForm({
         </div>
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Meeting point</label>
+        <label className="text-xs font-semibold text-gray-600">Meeting point <Req /></label>
         {suggestedMeetingPoints.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-1 mb-1.5">
             {suggestedMeetingPoints.map((point) => (
@@ -218,7 +230,7 @@ export default function InspectionBookingForm({
           A few quick questions — helps the owner prioritize real, ready buyers and tenants
         </p>
         <div>
-          <label className="text-xs font-semibold text-gray-600">When are you looking to move / finalize?</label>
+          <label className="text-xs font-semibold text-gray-600">When are you looking to move / finalize? <Opt /></label>
           <select value={timeline} onChange={(e) => setTimeline(e.target.value)}
             className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
             <option value="ready_now">Ready now</option>
@@ -229,18 +241,18 @@ export default function InspectionBookingForm({
         </div>
         <label className="flex items-center gap-2 text-xs text-gray-600">
           <input type="checkbox" checked={fundsReady} onChange={(e) => setFundsReady(e.target.checked)} />
-          My deposit / funds are ready now
+          My deposit / funds are ready now <Opt />
         </label>
         <label className="flex items-center gap-2 text-xs text-gray-600">
           <input type="checkbox" checked={decisionMaker} onChange={(e) => setDecisionMaker(e.target.checked)} />
-          I&apos;m the one making this decision (not exploring on someone else&apos;s behalf)
+          I&apos;m the one making this decision (not exploring on someone else&apos;s behalf) <Opt />
         </label>
       </div>
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
       <button
         type="submit"
-        disabled={submitting || (hasRoomVideos && !videosAcknowledged)}
+        disabled={submitting || !videosAcknowledged}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
       >
         {submitting ? "Booking..." : "Book inspection"}

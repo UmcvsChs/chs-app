@@ -1,5 +1,6 @@
 "use client";
 
+import { Req, RequiredLegend } from "@/components/FormMarks";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -290,37 +291,38 @@ export default function RentalApplicationForm({
 
       <p className="text-[10px] font-bold text-gray-400 uppercase pt-1">About you</p>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Your full name (as on your ID)</label>
+        <RequiredLegend className="mb-1.5" />
+        <label className="text-xs font-semibold text-gray-600">Your full name (as on your ID) <Req /></label>
         <input type="text" name="applicant-full-name" autoComplete="name" value={applicantFullName} onChange={(e) => setApplicantFullName(e.target.value)}
           placeholder="Your real, full legal name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Your phone number</label>
+        <label className="text-xs font-semibold text-gray-600">Your phone number <Req /></label>
         <ValidatedInput kind="phone" value={applicantPhone} onChange={setApplicantPhone}
           placeholder="08XXXXXXXXX — CHS may need to reach you directly" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Occupation</label>
+        <label className="text-xs font-semibold text-gray-600">Occupation <Req /></label>
         <input type="text" name="occupation" autoComplete="organization-title" value={occupation} onChange={(e) => setOccupation(e.target.value)}
           placeholder="e.g. Civil servant, Trader, Student" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Present address</label>
+        <label className="text-xs font-semibold text-gray-600">Present address <Req /></label>
         <input type="text" name="present-address" autoComplete="street-address" value={presentAddress} onChange={(e) => setPresentAddress(e.target.value)}
           placeholder="Where you currently live" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Employer / business name</label>
+        <label className="text-xs font-semibold text-gray-600">Employer / business name <Req /></label>
         <input type="text" name="employer-business-name" autoComplete="organization" value={employerBusinessName} onChange={(e) => setEmployerBusinessName(e.target.value)}
           placeholder="Who you work for, or your business name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Employer / business address</label>
+        <label className="text-xs font-semibold text-gray-600">Employer / business address <Req /></label>
         <input type="text" name="employer-business-address" value={employerBusinessAddress} onChange={(e) => setEmployerBusinessAddress(e.target.value)}
           placeholder="A real, verifiable work or business address" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
       <div>
-        <label className="text-xs font-semibold text-gray-600">Source of income</label>
+        <label className="text-xs font-semibold text-gray-600">Source of income <Req /></label>
         <input type="text" name="income-source" value={incomeSource} onChange={(e) => setIncomeSource(e.target.value)}
           placeholder="e.g. Salary from XYZ Ltd, Business owner" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
@@ -334,19 +336,19 @@ export default function RentalApplicationForm({
           You provide only their name and phone number below. Your guarantor will independently fill in everything else about themselves — their address, occupation, ID, and their own real consent — through a private link sent directly to them. This is deliberate: CHS does not accept a guarantor&apos;s details entered by anyone but the guarantor.
         </p>
         <div>
-          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s full name</label>
+          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s full name <Req /></label>
           <input type="text" name="guarantor-full-name" value={guarantorName} onChange={(e) => setGuarantorName(e.target.value)}
             placeholder="Full name" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
         </div>
         <div className="mt-2">
-          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s phone number</label>
+          <label className="text-xs font-semibold text-gray-600">Guarantor&apos;s phone number <Req /></label>
           <ValidatedInput kind="phone" value={guarantorPhone} onChange={setGuarantorPhone}
             placeholder="08XXXXXXXXX" className="w-full mt-1 px-3 py-2.5 rounded-lg text-sm" />
         </div>
       </div>
 
       <div>
-        <label className="text-xs font-semibold text-gray-600">Preferred move-in date</label>
+        <label className="text-xs font-semibold text-gray-600">Preferred move-in date <Req /></label>
         <input
           type="date"
           value={moveInDate}

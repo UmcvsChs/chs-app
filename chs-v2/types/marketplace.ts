@@ -30,6 +30,15 @@ export interface MarketplaceProduct {
   photos: string[];
   status: "active" | "sold_out" | "delisted";
   created_at: string;
+  brand?: string | null;
+  model?: string | null;
+  condition?: "new" | "used" | "refurbished" | null;
+  stock_quantity?: number | null;       // null = not tracked
+  sku?: string | null;
+  warranty?: string | null;
+  delivery_info?: string | null;
+  specs?: Record<string, string> | null;
+  option_groups?: { name: string; values: string[] }[] | null;
 }
 
 export interface MarketplaceVendor {

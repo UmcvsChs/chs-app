@@ -51,6 +51,7 @@ export interface Property {
   rent_to_own_min_deposit: number | null;
 
   photos: string[];
+  photo_labels?: string[] | null;
   video_url: string | null;
   owner_identity_visible_to_tenant: boolean;
   managing_agent_id: string | null;

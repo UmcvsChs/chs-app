@@ -16,10 +16,10 @@ export default function TermsContent() {
         <li><strong className="text-chs-charcoal">Hotel &amp; Lodge, Event Centre, and casual/hourly Car Park bookings</strong>: a flat 6% from the Guest, 4% from the Host, regardless of duration.</li>
         <li><strong className="text-chs-charcoal">Agent-managed listings</strong>: a real, independent agent who brings full management authority to a property may set their own commission rate with their client (matching real market practice). In this arrangement, CHS charges neither the buyer/tenant nor the owner directly — instead, CHS takes a real, capped 3% only from the agent&apos;s own commission earnings, once paid.</li>
       </ul>
-      <p>No inspection fee as standard.</p>
+      <p>No inspection fee as standard. Photographs and videos are free, and a buyer or tenant may ask for more of either. If, after that, they still ask for a physical visit, the whole transport cost — worked out from where the CHS agent sets off — is theirs alone: it is shown before the visit, paid from their wallet and held until the visit, and refunded if the owner or CHS cancels or the requester cancels at least 12 hours before.</p>
       <p><strong className="text-chs-charcoal">4. Honesty and accurate information is mandatory.</strong> Falsified documents or fraudulent listings result in permanent suspension and may be reported to law enforcement.</p>
       <p><strong className="text-chs-charcoal">5. Agents and Property Managers must not extort Users.</strong> No undisclosed fees, caution money, or inspection charges.</p>
-      <p><strong className="text-chs-charcoal">6. All funds are held in escrow</strong> until the conditions for release are met.</p>
+      <p><strong className="text-chs-charcoal">6. All funds are held in escrow</strong> until the conditions for release are met. <strong className="text-chs-charcoal">Every payment on CHS is made through your CHS Wallet, and only there.</strong> Never transfer money to any person or bank account, even one claiming to be CHS, an agent, an owner, a host or a vendor; CHS staff and agents will never ask you to, nor ask for your PIN or a confirmation code. A request to pay any other way is a scam and should be reported to CHS.</p>
       <p><strong className="text-chs-charcoal">7. Ownership warranty.</strong> Owners personally warrant they hold clear authority to list or sell a property; for inherited or family property, consent of all co-owners is required.</p>
       <p><strong className="text-chs-charcoal">8. Disputes are resolved through CHS&apos;s internal process first</strong>, before arbitration or the courts of Kaduna State.</p>
       <p><strong className="text-chs-charcoal">9. CHS reserves the right to suspend or terminate</strong> any account found in breach of these terms.</p>
@@ -41,7 +41,7 @@ export default function TermsContent() {
 
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">12. Wallet freezing</p>
-        <p>CHS reserves the right to freeze any wallet pending a genuine investigation into suspected fraud or a policy violation. A frozen wallet is functionally blocked from withdrawal until the matter is resolved.</p>
+        <p>CHS reserves the right to freeze any wallet pending a genuine investigation into suspected fraud or a policy violation. A frozen wallet is functionally blocked from withdrawal until the matter is resolved. A wallet holder may also freeze their own wallet at any time; only CHS can lift that freeze, after verifying their identity. When a user reports a transfer as unauthorised or a scam, the amount is held in the recipient&apos;s wallet while CHS investigates, and CHS may reverse the transfer while that money remains in the recipient&apos;s wallet.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">
@@ -89,7 +89,7 @@ export default function TermsContent() {
 
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">20. Wallet-to-wallet transfers</p>
-        <p>A user may transfer wallet funds directly to another CHS user, identified by their registered phone number or email. A transfer cannot be sent to oneself, cannot exceed the sender&apos;s available balance, and cannot be sent from or to a frozen wallet. A completed transfer is final. CHS is not responsible for funds sent to the wrong recipient due to a user-entered error, though CHS support may be contacted to investigate.</p>
+        <p>A user may transfer wallet funds directly to another CHS user, identified by their registered phone number or email. A transfer cannot be sent to oneself, cannot exceed the sender&apos;s available balance, and cannot be sent from or to a frozen wallet. A completed transfer is final, except where CHS reverses it after a fraud report. Transfers are protected: the sender must be ID-verified; once a transaction PIN is set it must be entered (CHS may require it of every user); CHS may require a confirmation code sent by SMS for larger amounts or from a device it has not seen before; and limits apply per transfer, per day and per hour, with a lower cap on a first transfer to a new recipient. Money received from another CHS user, or added to a wallet by card, can be used inside CHS at once but cannot be withdrawn to a bank for 24 hours. CHS is not responsible for funds sent to the wrong recipient due to a user-entered error, though CHS support may be contacted to investigate.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">
@@ -99,7 +99,7 @@ export default function TermsContent() {
 
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">22. Rent to Own / Mortgage</p>
-        <p>A buyer may request a Rent to Own / Mortgage agreement on any property listed under that category; the owner must approve the request before it begins. Each real monthly installment is paid through the CHS Wallet directly to the owner, and genuinely builds toward full ownership at the real percentage disclosed on the listing. Once 100% ownership is reached, the property automatically converts to a completed sale — this is irreversible and does not require a further approval step.</p>
+        <p>A buyer may request a Rent to Own / Mortgage agreement on any property listed under that category; the owner must approve the request before it begins. Each real monthly installment is paid through the CHS Wallet directly to the owner, and genuinely builds toward full ownership at the real percentage disclosed on the listing. Once 100% ownership is reached, the property automatically converts to a completed sale — this is irreversible and does not require a further approval step. Every request goes to CHS first, which either passes it to the owner or declines it with a reason; the owner may then approve or decline it. A property can have only one active Rent to Own agreement, and approving one buyer declines the other pending requests.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">
@@ -129,7 +129,7 @@ export default function TermsContent() {
 
       <div className="border-t border-gray-200 pt-4 mt-2">
         <p className="font-bold text-chs-charcoal mb-2">28. Escrow hold on sale proceeds</p>
-        <p>When a buyer completes payment for a property, the seller&apos;s net proceeds are immediately visible in their CHS Wallet, but held and not withdrawable. Funds are released to the seller&apos;s spendable balance only once CHS confirms that the real, physical legal documents — Deed of Assignment, Certificate of Occupancy, and all other required documents — have genuinely been prepared (through a qualified barrister where required) and delivered to the new owner. This protection exists to ensure a buyer receives real, complete legal ownership before a seller can access sale proceeds.</p>
+        <p>When a buyer completes payment for a property, the seller&apos;s net proceeds are immediately visible in their CHS Wallet, but held and not withdrawable. Funds are released to the seller&apos;s spendable balance only once CHS confirms that the real, physical legal documents — Deed of Assignment, Certificate of Occupancy, and all other required documents — have genuinely been prepared (through a qualified barrister where required) and delivered to the new owner. This protection exists to ensure a buyer receives real, complete legal ownership before a seller can access sale proceeds. The proceeds of a sale are released when the buyer confirms they have received the documents, when CHS confirms delivery, or when the seller asks CHS to release them and CHS has verified delivery from its records or by contacting the buyer. Each release is for that sale&apos;s own proceeds only.</p>
       </div>
 
       <div className="border-t border-gray-200 pt-4 mt-2">

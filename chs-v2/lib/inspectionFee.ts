@@ -1,11 +1,11 @@
 // The real, distance-based inspection fee calculator — restored
-// exactly from the original app, not reinvented. CHS Office at
-// Leventis Roundabout as the fixed reference point, a real ₦150/km
-// one-way rate, doubled for the round trip, then split evenly between
-// both parties — genuinely fair, not an arbitrary flat fee.
+// from the original app. A real ₦150/km one-way rate, doubled for the round trip.
+// RULE: the photographs, videos and "ask for more" tools are there so nobody needs to travel. If a buyer or tenant
+// still insists on a physical visit, the WHOLE transport cost is theirs — not split with the owner, not carried by
+// CHS — and it is worked out from where the CHS agent actually sets off, not from a fixed office.
 
 export const CHS_OFFICE = "CHS Office — near Leventis Roundabout Post Office, Kaduna North";
-export const RATE_PER_KM = 150; // ₦ per km, one-way; doubled for round trip, then split buyer/owner
+export const RATE_PER_KM = 150; // ₦ per km, one way; doubled for the round trip; paid 100% by the requester
 
 // Real, approximate road distance (km) from CHS Office to each area —
 // restored exactly from the original app's own real data.
@@ -47,16 +47,26 @@ export function findAreaKey(locationText: string | null): string | null {
 }
 
 export interface InspectionFeeBreakdown {
-  distanceKm: number;
-  totalFee: number;
-  perPersonFee: number;
+  known: boolean;               // false = CHS has no distance data for this area, so no number is invented
+  distanceKm: number | null;    // one way
+  totalFee: number | null;      // the WHOLE round trip — borne 100% by whoever asks for the physical visit
   areaKey: string | null;
 }
 
+// The estimate shown BEFORE an agent is assigned. The distance table below was measured from the CHS office, so
+// it is only an estimate: when CHS assigns the agent it records where that agent actually sets off from and the
+// real distance (set_inspection_takeoff), and the final cost is calculated from that. The requester bears 100% of it.
 export function calcInspectionFee(locationText: string | null): InspectionFeeBreakdown {
   const areaKey = findAreaKey(locationText);
-  const distanceKm = areaKey ? AREA_DISTANCE_KM[areaKey] : 8; // real default fallback, matching the original exactly
-  const roundTripFee = distanceKm * RATE_PER_KM * 2;
-  const perPersonFee = Math.round(roundTripFee / 2);
-  return { distanceKm, totalFee: roundTripFee, perPersonFee, areaKey };
+  if (!areaKey) return { known: false, distanceKm: null, totalFee: null, areaKey: null };
+  const distanceKm = AREA_DISTANCE_KM[areaKey];
+  return { known: true, distanceKm, totalFee: distanceKm * RATE_PER_KM * 2, areaKey };
+}
+
+// One plain sentence for places that only mention the fee (e.g. the property page).
+export function inspectionEstimateText(locationText: string | null): string {
+  const f = calcInspectionFee(locationText);
+  return f.known
+    ? `about ₦${(f.totalFee as number).toLocaleString("en-NG")} for the round trip (an estimate; CHS confirms the final amount when your agent is assigned)`
+    : "quoted by CHS for this area before the visit is confirmed";
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -175,6 +176,7 @@ export default function LoginPage() {
         </div>
 
         <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1 text-center">Welcome back</h1>
+        <PaymentSafetyNotice variant="full" className="my-3" />
         <p className="text-sm text-gray-500 mb-6 text-center">Log in to your CHS account</p>
 
         {showBiometric ? (
