@@ -16,6 +16,9 @@ import ShortletMessageThread from "@/components/ShortletMessageThread";
 import PendingBookingRequests from "@/components/PendingBookingRequests";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import ShortletRating from "@/components/ShortletRating";
+import HostHotelTools from "@/components/HostHotelTools";
+import HostBookingControls from "@/components/HostBookingControls";
+import HostStaffManager from "@/components/HostStaffManager";
 
 // Real, new dashboard completing a direct, thorough client decision:
 // Host is a genuine, separate role from Owner — a real, different
@@ -138,6 +141,14 @@ export default function HostDashboardPage() {
             </button>
           </div>
         )}
+        {listings.length > 0 && (
+          <>
+            <Link href="/host/arrivals" className="block bg-white rounded-xl border border-gray-200 p-3 text-sm font-bold text-chs-charcoal text-center mb-2">
+              🛎️ Front Desk: today&apos;s arrivals &amp; check-in →
+            </Link>
+            <HostStaffManager />
+          </>
+        )}
         <p className="text-xs font-bold text-chs-charcoal">🏠 My Real Listings ({listings.length})</p>
         {listings.length === 0 ? (
           <p className="text-xs text-gray-400 mb-4">No real shortlet or hire listings yet.</p>
@@ -154,6 +165,7 @@ export default function HostDashboardPage() {
               <p className={`text-[10px] font-semibold mt-1 ${calendarFreshness(l.calendar_confirmed_at).className}`}>{calendarFreshness(l.calendar_confirmed_at).text}</p>
               {/* House rules the guest must read and accept before requesting to book */}
               {session && <div className="mt-2"><HouseRulesUpload propertyId={l.id} session={session} /></div>}
+              <HostHotelTools propertyId={l.id} />
               <Link href={`/host/calendar/${l.id}`} className="mt-2 block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
                 Rooms &amp; calendar →
               </Link>
@@ -189,6 +201,7 @@ export default function HostDashboardPage() {
                     )}
                     {b.guest_verified && <p className="text-[10px] font-semibold text-green-700">✓ Guest identity verified by CHS</p>}
                     <HostPayoutStatus bookingId={b.id} />
+                    {b.status === "confirmed" && <HostBookingControls bookingId={b.id} checkIn={b.check_in} onChanged={() => router.refresh()} />}
                     <HostShortletCheckInOut bookingId={b.id} propertyTitle={embeddedOne(b.properties)?.title || "Property"} />
                     <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_full_name} />
                     {b.status === "confirmed" && <ShortletRating bookingId={b.id} label="Rate this real guest" />}

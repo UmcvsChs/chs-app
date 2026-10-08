@@ -25,8 +25,8 @@ interface TenancyDetail {
   auto_pay_rent_enabled: boolean;
   landlord_id: string; manager_id: string | null; management_delegated: boolean;
   properties: { title: string; location_area: string; street_address: string } | null;
-  landlord: { full_name: string; phone: string } | null;
-  manager: { full_name: string; phone: string } | null;
+  landlord: { full_name: string } | null;
+  manager: { full_name: string } | null;
 }
 
 interface FaultReport {
@@ -77,7 +77,7 @@ export default function MyRentedSpacePage() {
   function loadData() {
     if (!session) return;
     supabase.from("tenancies")
-      .select("id, lease_start, lease_end, annual_rent, auto_pay_rent_enabled, landlord_id, manager_id, management_delegated, properties(title, location_area, street_address), landlord:landlord_id(full_name, phone), manager:manager_id(full_name, phone)")
+      .select("id, lease_start, lease_end, annual_rent, auto_pay_rent_enabled, landlord_id, manager_id, management_delegated, properties(title, location_area, street_address), landlord:landlord_id(full_name), manager:manager_id(full_name)")
       .eq("tenant_id", session.user.id).eq("status", "active")
       .order("created_at", { ascending: false }).limit(1).maybeSingle()
       .then(({ data }) => {
@@ -155,7 +155,6 @@ export default function MyRentedSpacePage() {
   const neverPaid = hasEverPaid === false;
   const paymentUrgent = neverPaid || daysLeft <= 30;
   const responsibleName = tenancy.management_delegated ? tenancy.manager?.full_name : tenancy.landlord?.full_name;
-  const responsiblePhone = tenancy.management_delegated ? tenancy.manager?.phone : tenancy.landlord?.phone;
   const responsibleId = tenancy.management_delegated ? tenancy.manager_id : tenancy.landlord_id;
   const responsibleRole = tenancy.management_delegated ? "Manager" : "Landlord";
 
@@ -213,7 +212,7 @@ export default function MyRentedSpacePage() {
         <div className="bg-white rounded-xl border border-gray-200 p-3">
           <p className="text-xs font-bold text-chs-charcoal mb-1">📞 Your {responsibleRole}</p>
           <p className="text-sm text-chs-charcoal">{responsibleName || "Not yet assigned"}</p>
-          {responsiblePhone && <p className="text-xs text-gray-500">{responsiblePhone}</p>}
+          <p className="text-xs text-gray-500">Contact goes through CHS. Use the message button below.</p>
           {responsibleId && (
             <button onClick={() => setShowChat(true)} className="mt-2 w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
               💬 Message your {responsibleRole.toLowerCase()}

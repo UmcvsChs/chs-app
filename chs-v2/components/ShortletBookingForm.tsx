@@ -34,6 +34,19 @@ interface RealPricing {
   security_deposit_required: boolean;
   security_deposit_amount: number;
   real_total_guest_pays: number;
+  peak_nights?: number;
+  peak_names?: string[] | null;
+  min_stay?: number | null;
+}
+
+interface ExpressAlternative {
+  id: string;
+  title: string;
+  location_area: string | null;
+  location_lga: string | null;
+  price_per_night: number;
+  instant: boolean;
+  has_house_rules: boolean;
 }
 
 export default function ShortletBookingForm({
@@ -60,6 +73,16 @@ export default function ShortletBookingForm({
   const [pricing, setPricing] = useState<RealPricing | null>(null);
   const [houseRulesUrl, setHouseRulesUrl] = useState<string | null>(null);
   const [rulesAcknowledged, setRulesAcknowledged] = useState(false);
+  // Instant Confirm: the host pre-approved bookings, so the guest pays and is
+  // confirmed at once — no waiting for a reply.
+  const [isInstant, setIsInstant] = useState(false);
+  // Express: for a same-day stay the guest may ask up to 2 more hotels at once.
+  const [alternatives, setAlternatives] = useState<ExpressAlternative[]>([]);
+  const [alsoAsk, setAlsoAsk] = useState<string[]>([]);
+
+  useEffect(() => {
+    supabase.rpc("property_is_instant", { p_property_id: propertyId }).then(({ data }) => setIsInstant(data === true));
+  }, [propertyId]);
 
   useEffect(() => {
     Promise.all([
@@ -112,6 +135,21 @@ export default function ShortletBookingForm({
   }, [checkIn, checkOut]);
 
   const validDateRange = checkIn && checkOut && new Date(checkOut) > new Date(checkIn);
+  const showExpress = !isInstant && laneInfo?.lane === "express" && !!validDateRange;
+
+  useEffect(() => {
+    if (!showExpress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAlternatives([]); setAlsoAsk([]);
+      return;
+    }
+    supabase.rpc("get_express_alternatives", { p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut })
+      .then(({ data }) => setAlternatives((data as ExpressAlternative[]) || []));
+  }, [showExpress, propertyId, checkIn, checkOut]);
+
+  function toggleAlt(id: string) {
+    setAlsoAsk((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 ? cur : [...cur, id]);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -136,13 +174,58 @@ export default function ShortletBookingForm({
     setError(null);
     setSubmitting(true);
 
+    const cleanPhone = validatePhone(guestPhone, { international: true }).value;
+
+    if (isInstant) {
+      const { data: inst, error: instError } = await supabase.rpc("book_instant_shortlet", {
+        p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut, p_guests: guests,
+        p_guest_full_name: guestName.trim(), p_guest_phone: cleanPhone, p_guest_id_document_url: null,
+        p_house_rules_acknowledged: rulesAcknowledged, p_room_type_id: roomTypeId || null,
+        p_expected_arrival_time: arrivalTime || null,
+      });
+      if (instError || !inst) {
+        setError(friendlyBookingError(instError?.message, { lane: "express", total: pricing.real_total_guest_pays }, "Could not complete your booking. Nothing was charged. Please try again."));
+        setSubmitting(false);
+        setCalendarKey((k) => k + 1);
+        return;
+      }
+      onSuccess({
+        booking_id: (inst as { booking_id: string }).booking_id, status: "confirmed", lane: "instant",
+        relay_minutes: null, host_minutes: 0, pay_minutes: 0,
+        total_to_pay: (inst as { total_paid?: number }).total_paid ?? pricing.real_total_guest_pays, instant: true,
+      });
+      return;
+    }
+
+    if (showExpress && alsoAsk.length > 0) {
+      const { data: ex, error: exError } = await supabase.rpc("request_express_booking", {
+        p_property_ids: [propertyId, ...alsoAsk], p_check_in: checkIn, p_check_out: checkOut, p_guests: guests,
+        p_guest_full_name: guestName.trim(), p_guest_phone: cleanPhone, p_guest_id_document_url: null,
+        p_house_rules_acknowledged: rulesAcknowledged, p_primary_room_type_id: roomTypeId || null,
+        p_expected_arrival_time: arrivalTime || null,
+      });
+      if (exError || !ex) {
+        setError(friendlyBookingError(exError?.message, { lane: laneInfo?.lane, total: pricing.real_total_guest_pays }));
+        setSubmitting(false);
+        setCalendarKey((k) => k + 1);
+        return;
+      }
+      onSuccess({
+        booking_id: (ex as { group_id: string }).group_id, status: "awaiting_admin_relay", lane: "express",
+        relay_minutes: laneInfo?.relay_minutes ?? null, host_minutes: laneInfo?.host_minutes ?? 0,
+        pay_minutes: laneInfo?.pay_minutes ?? 0, total_to_pay: pricing.real_total_guest_pays,
+        express_asked: (ex as { asked: number }).asked,
+      });
+      return;
+    }
+
     const { data: requestResult, error: rpcError } = await supabase.rpc("request_shortlet_booking", {
       p_property_id: propertyId,
       p_check_in: checkIn,
       p_check_out: checkOut,
       p_guests: guests,
       p_guest_full_name: guestName.trim(),
-      p_guest_phone: validatePhone(guestPhone, { international: true }).value,
+      p_guest_phone: cleanPhone,
       // Deliberately null: the guest's identity is already verified by
       // CHS (required before this form even appears), and the ID
       // document itself is not passed on to hosts — the gate promises
@@ -229,6 +312,14 @@ export default function ShortletBookingForm({
             <span>CHS service fee</span>
             <span>{formatNaira(pricing.guest_commission_amount)}</span>
           </div>
+          {!!pricing.peak_nights && pricing.peak_nights > 0 && (
+            <p className="text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-1">
+              📈 {pricing.peak_nights} of your nights fall in a busy period{pricing.peak_names && pricing.peak_names.length > 0 ? ` (${pricing.peak_names.join(", ")})` : ""}, so the host&apos;s peak rate applies to them. The price above already includes it.
+            </p>
+          )}
+          {pricing.min_stay && pricing.min_stay > 1 && (
+            <p className="text-[10px] text-gray-500 mt-1">Minimum stay for these dates: {pricing.min_stay} nights.</p>
+          )}
           {pricing.security_deposit_required && (
             <div className="flex justify-between text-xs text-gray-500">
               <span>Refundable security deposit</span>
@@ -266,8 +357,37 @@ export default function ShortletBookingForm({
               className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
             <p className="text-[10px] text-gray-400 mt-0.5">Helps the host have your room ready when you arrive.</p>
           </div>
-          <BookingFlowNotice info={laneInfo} total={pricing.real_total_guest_pays} />
+          {isInstant ? (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+              <p className="text-xs font-bold text-green-800">⚡ Instant Confirm</p>
+              <p className="text-[11px] text-green-800 mt-0.5">This host confirms bookings automatically. You pay {formatNaira(pricing.real_total_guest_pays)} from your CHS wallet now and your room is confirmed straight away. The host is paid only after you arrive and confirm.</p>
+            </div>
+          ) : (
+            <BookingFlowNotice info={laneInfo} total={pricing.real_total_guest_pays} />
+          )}
         </>
+      )}
+
+      {showExpress && alternatives.length > 0 && (
+        <div className="border border-chs-red/30 rounded-lg p-3 bg-chs-amber-light/40">
+          <p className="text-xs font-bold text-chs-charcoal">⚡ Need a room today? Ask up to 2 more hotels at once</p>
+          <p className="text-[10px] text-gray-600 mb-2">CHS passes your request to each one. The first host to confirm wins, and the others are cancelled automatically. You are charged only once, for the one you get. These hotels have a free room for your dates:</p>
+          <div className="space-y-1.5">
+            {alternatives.map((a) => (
+              <label key={a.id} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 cursor-pointer bg-white ${alsoAsk.includes(a.id) ? "border-chs-red" : "border-gray-200"}`}>
+                <span className="flex items-center gap-2">
+                  <input type="checkbox" checked={alsoAsk.includes(a.id)} onChange={() => toggleAlt(a.id)} disabled={!alsoAsk.includes(a.id) && alsoAsk.length >= 2} />
+                  <span>
+                    <span className="block text-xs font-semibold text-chs-charcoal">{a.title}{a.instant ? " ⚡" : ""}</span>
+                    <span className="block text-[10px] text-gray-400">{[a.location_area, a.location_lga].filter(Boolean).join(", ")}</span>
+                  </span>
+                </span>
+                <span className="text-xs font-bold text-chs-charcoal whitespace-nowrap">{formatNaira(a.price_per_night)}<span className="text-[9px] font-normal text-gray-400">/night</span></span>
+              </label>
+            ))}
+          </div>
+          {alsoAsk.length > 0 && <p className="text-[10px] text-gray-500 mt-1.5">Your wallet must already hold the full amount of the dearest hotel you pick.</p>}
+        </div>
       )}
 
       {houseRulesUrl && (
@@ -289,7 +409,13 @@ export default function ShortletBookingForm({
 
       <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-        {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
+        {submitting
+          ? (isInstant ? "Confirming your booking..." : "Sending your request...")
+          : isInstant
+            ? `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays) : ""} from wallet`
+            : alsoAsk.length > 0
+              ? `Ask ${alsoAsk.length + 1} hotels at once — nothing is charged now`
+              : "Send request — nothing is charged now"}
       </button>
     </form>
   );

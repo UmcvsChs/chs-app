@@ -1,0 +1,7 @@
+-- 471 — the buyer's delivery phone number never reaches the seller (applied October 2026)
+-- Standing rule: CHS relays every contact between parties; no counterparty ever sees the other's phone number.
+-- document_dispatch_requests: SELECT revoked from authenticated/anon, then re-granted column by column WITHOUT delivery_phone
+--   (id, offer_id, requested_by, status, dispatch_method, tracking_reference, dispatched_at, created_at, delivery_note, delivery_address, preferred_method).
+--   A seller reading the table directly now gets "permission denied" for delivery_phone; a column added later must be granted explicitly.
+-- get_pending_legal_transfers() also returns delivery_address and delivery_phone, for admins only, so CHS can coordinate the hand-over.
+-- Screens: owner dashboard, my-rented-space, PropertyActions note, admin held-funds card. owner_rental_applications (view) carries no phone.

@@ -19,12 +19,16 @@ export interface LaneInfo {
 // What request_shortlet_booking / request_event_booking return.
 export interface BookingRequestResult {
   booking_id: string;
-  status: "awaiting_admin_relay" | "pending_host_review";
-  lane: "standard" | "soon" | "express";
+  status: "awaiting_admin_relay" | "pending_host_review" | "confirmed";
+  lane: "standard" | "soon" | "express" | "instant";
   relay_minutes: number | null;
   host_minutes: number;
   pay_minutes: number;
   total_to_pay: number;
+  // Instant Confirm: the booking was confirmed and paid in one step.
+  instant?: boolean;
+  // Express: how many hotels were asked at once (1 to 3).
+  express_asked?: number;
 }
 
 export function durationText(minutes: number): string {

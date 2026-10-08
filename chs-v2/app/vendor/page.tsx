@@ -14,6 +14,7 @@ import InfoTip from "@/components/InfoTip";
 import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import GuidePrompt from "@/components/GuidePrompt";
 import { formatNaira } from "@/lib/format";
+import VendorAccountTabs, { VendorSubscription } from "@/components/VendorAccountTabs";
 
 interface ProductWithQuotes extends MarketplaceProduct {
   quoteRequests: ServiceQuoteRequest[];
@@ -36,6 +37,7 @@ export default function VendorDashboard() {
   const [products, setProducts] = useState<ProductWithQuotes[]>([]);
   const [bundles, setBundles] = useState<MarketplaceBundle[]>([]);
   const [directOrders, setDirectOrders] = useState<DirectOrderRow[]>([]);
+  const [subscriptions, setSubscriptions] = useState<VendorSubscription[]>([]);
   const [showBundleForm, setShowBundleForm] = useState(false);
   const [bundleName, setBundleName] = useState("");
   const [bundleItems, setBundleItems] = useState("");
@@ -79,6 +81,9 @@ export default function VendorDashboard() {
       .maybeSingle();
 
     setVendor(vendorData);
+
+    const { data: subs } = await supabase.from("promo_subscriptions").select("id, status, next_billing_date, created_at, promotion_packages(name, monthly_price_naira, star_rating)").eq("user_id", session.user.id).order("created_at", { ascending: false });
+    setSubscriptions((subs as unknown as VendorSubscription[]) || []);
 
     // A vendor whose real category is a service category should default
     // to listing services — a security firm's own products list is
@@ -236,6 +241,8 @@ export default function VendorDashboard() {
           </span>
         </div>
       </div>
+
+      <VendorAccountTabs products={products} orders={directOrders} subscriptions={subscriptions} />
 
       <div className="px-4 py-4">
         {vendor.verification_status !== "verified" && (

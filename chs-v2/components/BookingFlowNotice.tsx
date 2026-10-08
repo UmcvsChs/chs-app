@@ -30,6 +30,9 @@ export default function BookingFlowNotice({ info, total }: { info: LaneInfo | nu
           {info.lane === "express" ? "⚡ Same-day booking" : "🕒 Your stay starts soon"}: your wallet must already hold {formatNaira(total)} when you send this request, so a host is never asked to hold a room for someone who can&apos;t pay.
         </p>
       )}
+      {info.lane === "express" && (
+        <p className="text-[11px] text-gray-600 mt-1">You can ask up to 2 more hotels at the same time. The first host to confirm wins, and the others cancel on their own.</p>
+      )}
     </div>
   );
 }

@@ -1,0 +1,14 @@
+-- 472 / 472b — hotel Steps 4 and 5: Instant Confirm, Express, peak pricing (applied October 2026)
+-- properties: instant_confirm, latitude, longitude, suspended_for_review, suspension_note. shortlet_bookings: express_group_id, instant_booked.
+-- shortlet_bookings lane and relay_mode checks now allow 'instant' (472b).
+-- Tables chs_peak_periods (CHS calendar: Christmas and New Year, Eid al-Fitr, Easter, Eid al-Adha, Democracy Day) and property_peak_rates (host switches on / own events).
+-- shortlet_stay_breakdown(): night-by-night uplift (the highest uplift wins on an overlapping night), minimum stay, peak names.
+--   get_real_shortlet_pricing() uses it and returns peak_nights, peak_names, min_stay, base_price_per_night.
+-- Instant: property_is_instant() = switched on AND active AND not suspended AND calendar confirmed in the last 12 hours.
+--   book_instant_shortlet() inserts an awaiting_payment booking and calls pay_for_booking(); admins are told. This is the only lane with no admin relay.
+-- Express (same-day lane only): get_express_alternatives() lists up to 12 free hotels in the same state; request_express_booking() asks 1 to 3 hotels,
+--   each through request_shortlet_booking(), under one express_group_id. When one host confirms, host_decide_shortlet_booking() cancels the sibling requests
+--   and tells the other hosts and the guest. get_admin_booking_queue() returns express_group_id, instant_booked, group_size.
+-- Host and admin peak functions: get_host_peak_settings, host_save_peak_rate, host_delete_peak_rate, get_property_peak_periods,
+--   get_peak_periods_admin, admin_save_peak_period, admin_delete_peak_period.
+-- Money rule unchanged: the host is paid when the guest arrives and confirms, not after the stay.

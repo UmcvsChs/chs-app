@@ -10,6 +10,7 @@ import { formatNaira } from "@/lib/format";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import BookingStageCard from "@/components/BookingStageCard";
+import GuestArrivalPass from "@/components/GuestArrivalPass";
 
 interface Booking {
   id: string;
@@ -104,6 +105,7 @@ export default function MyBookingsPage() {
                 {["awaiting_admin_relay", "pending_host_review", "awaiting_payment"].includes(b.status) && b.room_type_id && typeName[b.room_type_id] && (
                   <p className="text-[11px] text-gray-500 mt-0.5">Requested: {typeName[b.room_type_id]} room — a specific room is named once the host confirms.</p>
                 )}
+                {b.status === "confirmed" && <GuestArrivalPass bookingId={b.id} />}
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
               </div>

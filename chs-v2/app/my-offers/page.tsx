@@ -94,8 +94,8 @@ export default function MyOffersPage() {
         {/* Restored: lost during a prior reconciliation pass between
             two parallel work sessions. */}
         <Link href="/rent-to-own" className="block bg-chs-amber-light rounded-xl p-3 mb-1">
-          <p className="text-xs font-bold text-chs-amber-dark">🏠 Have a Mortgage (Rent to Own) agreement instead?<InfoTip term="rent_to_own_mortgage" /></p>
-          <p className="text-[11px] text-gray-600 mt-0.5">Those are tracked separately — tap here to view it and pay your monthly installment.</p>
+          <p className="text-xs font-bold text-chs-amber-dark">🏠 Mortgage Installment Panel: your mortgage payments<InfoTip term="rent_to_own_mortgage" /></p>
+          <p className="text-[11px] text-gray-600 mt-0.5">Track every mortgage (Rent to Own) you are paying, make your next payment, pay extra or pay it all off, and request your property documents.</p>
         </Link>
         {offers.length === 0 ? (
           <div className="text-center py-8">

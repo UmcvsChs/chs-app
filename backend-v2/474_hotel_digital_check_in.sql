@@ -1,0 +1,8 @@
+-- 474 — hotel Step 7: digital check-in (applied October 2026)
+-- shortlet_bookings: arrival_code (unique XXXX-XXXX, made by trigger when the booking is confirmed), registered_at, arrived_at, arrival_distance_m,
+--   checked_in_at, checked_in_by, no_show_at, lockbox_code. Tables guest_registration_cards and host_staff. Helpers can_manage_arrivals, notify_front_desk.
+-- Guest: get_my_arrival_pass, submit_registration_card, guest_arrived (1 km nearness check when the hotel location is set), get_my_lockbox_code
+--   (shown only on stay days and only after "I've arrived"; each showing is audit-logged).
+-- Front desk (host, staff the host added, admin): get_arrivals_board, verify_arrival_pass, check_in_guest, mark_guest_no_show
+--   (from 12:00 the day after check-in; the host is paid under the cancellation terms, the deposit goes back to the guest, the room is freed).
+-- Host: host_add_staff(phone), host_remove_staff, get_my_staff, get_my_front_desk_access, host_set_property_location, host_set_lockbox_code.

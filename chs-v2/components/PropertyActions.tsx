@@ -54,8 +54,9 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   const [ownerOffers, setOwnerOffers] = useState<{
     id: string; amount: number; status: string; buyer_full_name: string | null; note: string | null;
   }[]>([]);
+  // The owner sees the buyer as "Alex P." only; CHS holds the full name and phone.
   const [ownerRentToOwnRequests, setOwnerRentToOwnRequests] = useState<{
-    id: string; monthly_amount: number; status: string; buyer: { full_name: string } | null;
+    id: string; monthly_amount: number; status: string; display_name: string; occupation: string | null; source_of_funds: string | null; verified: boolean;
   }[]>([]);
   async function handleApproveRentToOwn(id: string) {
     const { error } = await supabase.rpc("approve_rent_to_own_request", { p_agreement_id: id });
@@ -73,9 +74,8 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           if (active) setFinalizeAmount(active.amount);
         });
       if (property.purpose === "rent_to_own") {
-        supabase.from("rent_to_own_agreements").select("id, monthly_amount, status, buyer:profiles!rent_to_own_agreements_buyer_id_fkey(full_name)")
-          .eq("property_id", property.id).eq("status", "requested")
-          .then(({ data }) => setOwnerRentToOwnRequests((data as unknown as typeof ownerRentToOwnRequests) || []));
+        supabase.rpc("get_owner_rto_requests", { p_property_id: property.id })
+          .then(({ data }) => setOwnerRentToOwnRequests(((data as typeof ownerRentToOwnRequests) || []).filter((r) => r.status === "requested")));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -415,10 +415,32 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     action();
   }
 
+  // Buyer details are collected FIRST, then the request is sent to CHS.
+  const [rto, setRto] = useState({ name: "", phone: "", occupation: "", funds: "", address: "" });
+  useEffect(() => {
+    if (activeForm !== "rentToOwn" || !session) return;
+    supabase.from("profiles").select("full_name, phone").eq("id", session.user.id).single().then(({ data }) => {
+      if (!data) return;
+      setRto((cur) => ({ ...cur, name: cur.name || data.full_name || "", phone: cur.phone || data.phone || "" }));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeForm]);
+
   async function handleRequestRentToOwn() {
-    setRentToOwnSubmitting(true);
     setError(null);
-    const { error: rpcError } = await supabase.rpc("request_rent_to_own", { p_property_id: property.id });
+    const nameCheck = validateFullName(rto.name, "full name");
+    if (!nameCheck.valid) { setError(nameCheck.message); return; }
+    const phoneCheck = validatePhone(rto.phone, { international: true });
+    if (!phoneCheck.valid) { setError(`Your phone number: ${phoneCheck.message}`); return; }
+    if (!rto.occupation.trim() || !rto.funds.trim() || rto.address.trim().length < 5) {
+      setError("Please fill in every field marked with a red star before sending.");
+      return;
+    }
+    setRentToOwnSubmitting(true);
+    const { error: rpcError } = await supabase.rpc("request_rent_to_own", {
+      p_property_id: property.id, p_full_name: rto.name.trim(), p_phone: phoneCheck.value,
+      p_occupation: rto.occupation.trim(), p_source_of_funds: rto.funds.trim(), p_address: rto.address.trim(),
+    });
     setRentToOwnSubmitting(false);
     if (rpcError) {
       setError(rpcError.message);
@@ -555,7 +577,8 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
               placeholder="Where should the documents be delivered?" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
             <label className="text-[10px] font-semibold text-gray-600">Your real contact phone number <Req /></label>
             <ValidatedInput kind="phoneIntl" value={deliveryPhone} onChange={setDeliveryPhone}
-              placeholder="A real number the seller/courier can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg text-[11px]" />
+              placeholder="A real number CHS can reach you on" className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg text-[11px]" />
+            <p className="text-[10px] text-gray-500 mb-1.5">Kept by CHS to coordinate the hand-over. The seller never sees your phone number.</p>
             <label className="text-[10px] font-semibold text-gray-600">Preferred delivery method <Req /></label>
             <select value={preferredMethod} onChange={(e) => setPreferredMethod(e.target.value)}
               className="w-full mt-1 mb-1.5 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px] bg-white">
@@ -808,7 +831,21 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
       <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-3">
         <VerifiedOnly session={session} propertyId={property.id}>
           <p className="text-sm font-semibold text-chs-charcoal">Request Mortgage (Rent to Own)</p>
-          <p className="text-xs text-gray-500">The owner will review your request and, if they approve, CHS will guide you through the next steps.</p>
+          <p className="text-xs text-gray-500">Fill in your details first. CHS checks them and passes your request to the owner, who sees only your first name and the first letter of your last name. Nothing is charged now.</p>
+          <RequiredLegend />
+          <div className="space-y-2">
+            <label className="text-[10px] font-semibold text-gray-600">Full name <Req /></label>
+            <input value={rto.name} onChange={(e) => setRto({ ...rto, name: e.target.value })} placeholder="As shown on your ID" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-[10px] font-semibold text-gray-600">Phone number <Req /></label>
+            <ValidatedInput kind="phoneIntl" value={rto.phone} onChange={(v) => setRto({ ...rto, phone: v })} placeholder="08XXXXXXXXX" className="w-full px-3 py-2.5 rounded-lg text-sm" />
+            <p className="text-[10px] text-gray-500">Kept by CHS. The owner never sees it.</p>
+            <label className="text-[10px] font-semibold text-gray-600">Occupation <Req /></label>
+            <input value={rto.occupation} onChange={(e) => setRto({ ...rto, occupation: e.target.value })} placeholder="e.g. Civil servant, trader, engineer" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-[10px] font-semibold text-gray-600">Source of funds <Req /></label>
+            <input value={rto.funds} onChange={(e) => setRto({ ...rto, funds: e.target.value })} placeholder="e.g. Salary, business income, savings" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <label className="text-[10px] font-semibold text-gray-600">Your home address <Req /></label>
+            <input value={rto.address} onChange={(e) => setRto({ ...rto, address: e.target.value })} placeholder="Where you live now" className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+          </div>
           {error && <p className="text-xs text-chs-red">{error}</p>}
           <button
             onClick={handleRequestRentToOwn}
@@ -927,10 +964,10 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-3 mt-2">
             <p className="text-xs font-bold text-chs-charcoal mb-1">🏠 A real Rent-to-Own request needs your approval</p>
             <p className="text-sm font-semibold text-chs-red">{formatNaira(r.monthly_amount)}/month</p>
-            <p className="text-xs text-gray-500 mb-2">from {r.buyer?.full_name} · Ref RTO-{r.id.slice(0, 8)} (contact goes through CHS)</p>
+            <p className="text-xs text-gray-500 mb-2">from {r.display_name}{r.verified ? " · verified by CHS" : ""}{r.occupation ? ` · ${r.occupation}` : ""} · Ref RTO-{r.id.slice(0, 8)} (contact goes through CHS)</p>
             <button onClick={() => handleApproveRentToOwn(r.id)}
               className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold">
-              Approve this real request
+              Approve this request (CHS will confirm it to the buyer)
             </button>
           </div>
         ))}

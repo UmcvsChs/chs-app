@@ -24,6 +24,8 @@ import DocumentViewLink from "@/components/DocumentViewLink";
 import EngageChatThread from "@/components/EngageChatThread";
 import { EngageDocumentManager } from "@/components/EngageDocuments";
 import InfoTip from "@/components/InfoTip";
+import AdminHotelControls from "@/components/AdminHotelControls";
+import AdminRtoPanel from "@/components/AdminRtoPanel";
 
 interface DeveloperApplication {
   id: string;
@@ -68,7 +70,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -311,6 +313,7 @@ function AdminDashboardInner() {
     host_name: string; host_phone: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
     expected_arrival_time: string | null; amount_if_confirmed: number; payment_status: string; hold_expires_at: string | null;
     created_at: string; admin_relay_note: string | null; relay_mode: string | null; minutes_left: number | null;
+    express_group_id?: string | null; instant_booked?: boolean; group_size?: number;
   }[]>([]);
   const [relayNotes, setRelayNotes] = useState<Record<string, string>>({});
   const [bookingRejectReasons, setBookingRejectReasons] = useState<Record<string, string>>({});
@@ -327,7 +330,7 @@ function AdminDashboardInner() {
   // reject it with a reason. Previously the request went straight to the owner and admin never saw it.
   const [rtoQueue, setRtoQueue] = useState<{
     id: string; ref: string; property_title: string; property_ref: string; location: string | null; total_price: number; monthly_amount: number; payments: number | null;
-    buyer_name: string; buyer_phone: string; buyer_id_verified: boolean; owner_name: string; owner_phone: string; requested_at: string; competing_requests: number;
+    buyer_name: string; buyer_phone: string; buyer_id_verified: boolean; owner_name: string; owner_phone: string; requested_at: string; competing_requests: number; needs_action?: boolean;
   }[]>([]);
   const [rtoNotes, setRtoNotes] = useState<Record<string, string>>({});
   // Transfers a user has reported as not authorised or a scam. The amount is already held in the recipient's wallet.
@@ -1021,7 +1024,9 @@ function AdminDashboardInner() {
     setAdminReports((data as unknown as typeof adminReports) || []);
   }
   const [appealResponses, setAppealResponses] = useState<Record<string, string>>({});
-  const [analyticsPeriod, setAnalyticsPeriod] = useState<"today" | "week" | "month" | "quarter">("month");
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<"today" | "yesterday" | "week" | "month" | "quarter" | "custom">("month");
+  const [analyticsFrom, setAnalyticsFrom] = useState("");
+  const [analyticsTo, setAnalyticsTo] = useState("");
   interface AnalyticsReport {
     period_start: string; period_end: string;
     sold_properties_count: number; sold_properties_value: number;
@@ -1038,7 +1043,17 @@ function AdminDashboardInner() {
   function getPeriodRange(period: typeof analyticsPeriod) {
     const end = new Date();
     const start = new Date();
-    if (period === "today") start.setHours(0, 0, 0, 0);
+    if (period === "custom") {
+      // any single day or span: from the start of the first day to the end of the last
+      const s = analyticsFrom ? new Date(analyticsFrom + "T00:00:00") : new Date(0);
+      const e = analyticsTo ? new Date(analyticsTo + "T23:59:59.999") : new Date(analyticsFrom ? analyticsFrom + "T23:59:59.999" : Date.now());
+      return { start: s.toISOString(), end: e.toISOString() };
+    }
+    if (period === "yesterday") {
+      start.setDate(start.getDate() - 1); start.setHours(0, 0, 0, 0);
+      end.setDate(end.getDate() - 1); end.setHours(23, 59, 59, 999);
+    }
+    else if (period === "today") start.setHours(0, 0, 0, 0);
     else if (period === "week") start.setDate(start.getDate() - 7);
     else if (period === "month") start.setMonth(start.getMonth() - 1);
     else if (period === "quarter") start.setMonth(start.getMonth() - 3);
@@ -2490,8 +2505,9 @@ function AdminDashboardInner() {
           // Oversight
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "hotelcontrols", label: "🏨 Hotel Controls (peak & cancellations)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "walletsecurity", label: `Wallet Security (${walletSecurityOpen})`, domain: "owner_buyer_tenant", group: "Oversight" },
-          { key: "rtorequests", label: `Rent-to-Own Requests (${rtoQueue.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "rtorequests", label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "engage", label: `Engage CHS (${pendingEngage.length})`, domain: "super_admin_only", group: "Oversight" },
 
@@ -2524,7 +2540,7 @@ function AdminDashboardInner() {
                  itself, not just once you're already inside the tab. */
               (tab.key === "staleoffers" && stalePendingOffers.length > 0) ||
               (tab.key === "walletsecurity" && walletSecurityOpen > 0) ||
-              (tab.key === "rtorequests" && rtoQueue.length > 0) ||
+              (tab.key === "rtorequests" && rtoQueue.some((r) => r.needs_action)) ||
               (tab.key === "vendors" && pendingVendors.length > 0) ||
               (tab.key === "artisans" && pendingArtisans.length > 0) ||
               (tab.key === "shortletbookings" && (pendingMsgs.length > 0 || releaseItems.some((r) => r.kind !== "arrived_unconfirmed") || bookingQueue.some((q) => q.stage === "awaiting_admin_relay" || q.lane === "express")))
@@ -2924,11 +2940,13 @@ function AdminDashboardInner() {
             <div className="flex gap-2 overflow-x-auto pb-1">
               {([
                 { key: "today", label: "Today" },
+                { key: "yesterday", label: "Yesterday" },
                 { key: "week", label: "This Week" },
                 { key: "month", label: "This Month" },
                 { key: "quarter", label: "This Quarter" },
+                { key: "custom", label: "Custom" },
               ] as const).map((p) => (
-                <button key={p.key} onClick={() => { setAnalyticsPeriod(p.key); loadAnalytics(p.key); }}
+                <button key={p.key} onClick={() => { setAnalyticsPeriod(p.key); if (p.key !== "custom") loadAnalytics(p.key); }}
                   className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold ${
                     analyticsPeriod === p.key ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"
                   }`}>
@@ -2936,6 +2954,19 @@ function AdminDashboardInner() {
                 </button>
               ))}
             </div>
+
+            {analyticsPeriod === "custom" && (
+              <div className="bg-gray-50 rounded-lg p-3 flex flex-wrap items-end gap-2">
+                <label className="text-[10px] font-semibold text-gray-600">From
+                  <input type="date" value={analyticsFrom} onChange={(e) => setAnalyticsFrom(e.target.value)} className="block mt-0.5 px-2 py-1.5 rounded border border-gray-200 text-xs" />
+                </label>
+                <label className="text-[10px] font-semibold text-gray-600">To
+                  <input type="date" value={analyticsTo} min={analyticsFrom || undefined} onChange={(e) => setAnalyticsTo(e.target.value)} className="block mt-0.5 px-2 py-1.5 rounded border border-gray-200 text-xs" />
+                </label>
+                <button type="button" disabled={!analyticsFrom} onClick={() => loadAnalytics("custom")} className="px-4 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">Show this range</button>
+                <p className="w-full text-[10px] text-gray-500">Leave “To” empty to see just one day (the “From” day).</p>
+              </div>
+            )}
 
             {loadingAnalytics && <p className="text-xs text-gray-400 text-center py-8">Loading real report...</p>}
 
@@ -3527,7 +3558,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-semibold text-chs-charcoal">{d.offers?.properties?.title || "Property"}</p>
                   <p className="text-[9px] text-gray-400 font-mono">{d.offers?.properties?.reference_number}</p>
                   <p className="text-xs text-chs-charcoal mt-1.5"><span className="font-semibold">Address:</span> {d.delivery_address}</p>
-                  <p className="text-xs text-chs-charcoal"><span className="font-semibold">Phone:</span> {d.delivery_phone}</p>
+                  <p className="text-xs text-chs-charcoal"><span className="font-semibold">Delivery contact CHS coordinates with:</span> {d.delivery_phone}</p>
                   <p className="text-xs text-chs-charcoal"><span className="font-semibold">Preferred method:</span> {d.preferred_method}</p>
                   {d.delivery_note && <p className="text-xs text-gray-500 mt-1">&quot;{d.delivery_note}&quot;</p>}
                   <p className="text-[9px] text-gray-400 mt-1">Requested {new Date(d.created_at).toLocaleString()}</p>
@@ -4492,6 +4523,8 @@ function AdminDashboardInner() {
           </>
         )}
 
+        {activeTab === "hotelcontrols" && <AdminHotelControls />}
+
         {activeTab === "walletsecurity" && (
           <div>
             <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
@@ -4552,34 +4585,7 @@ function AdminDashboardInner() {
           </div>
         )}
 
-        {activeTab === "rtorequests" && (
-          <div>
-            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
-              🏠 Mortgage (Rent to Own) requests from verified buyers. Every request comes to CHS first: relay it to the owner, or reject it with a reason. The owner never sees the buyer&apos;s phone number, and the buyer is not charged anything at this stage.
-            </p>
-            {rtoQueue.length === 0 ? (
-              <p className="text-center text-sm text-gray-400 py-8">✓ No Rent-to-Own requests are waiting for CHS.</p>
-            ) : rtoQueue.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border-2 border-chs-amber p-3 mb-3">
-                <div className="flex justify-between items-start gap-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">{r.property_title}</p>
-                  <span className="text-[9px] font-bold bg-chs-amber text-chs-charcoal px-2 py-0.5 rounded-full whitespace-nowrap">{r.ref}</span>
-                </div>
-                <p className="text-[11px] text-gray-500">{r.property_ref} · {r.location} · requested {new Date(r.requested_at).toLocaleString()}</p>
-                <p className="text-xs font-bold text-chs-charcoal mt-1">{formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} <span className="font-normal text-gray-500">({r.payments ?? "?"} payments)</span></p>
-                <p className="text-[11px] text-gray-600 mt-1">Buyer: <b>{r.buyer_name}</b> · {r.buyer_phone} {r.buyer_id_verified ? <span className="text-green-700">· ID and liveness verified ✓</span> : <span className="text-chs-red">· NOT fully verified</span>}</p>
-                <p className="text-[11px] text-gray-600">Owner: <b>{r.owner_name}</b> · {r.owner_phone}</p>
-                {r.competing_requests > 0 && <p className="text-[11px] text-chs-red mt-1">⚠ {r.competing_requests} other request(s) are also pending on this property. Approving one will decline the rest.</p>}
-                <input type="text" value={rtoNotes[r.id] || ""} onChange={(e) => setRtoNotes({ ...rtoNotes, [r.id]: e.target.value })} maxLength={300}
-                  placeholder="Note to the buyer (required to reject; optional when relaying)" className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => handleRtoDecision(r.id, true)} disabled={queueBusy === r.id} className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">{queueBusy === r.id ? "Working…" : "Relay to the owner"}</button>
-                  <button onClick={() => handleRtoDecision(r.id, false)} disabled={queueBusy === r.id} className="flex-1 py-2 rounded-full bg-gray-200 text-gray-700 text-xs font-semibold disabled:opacity-50">Reject</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {activeTab === "rtorequests" && <AdminRtoPanel onChanged={loadRtoQueue} />}
 
         {activeTab === "inspections" && (
           <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
@@ -5193,6 +5199,9 @@ function AdminDashboardInner() {
                               {q.lane === "express" ? "⚡ EXPRESS" : q.lane === "soon" ? "🕒 SOON" : q.lane === "legacy" ? "OLDER — PAID AT REQUEST" : "STANDARD"}
                             </span>
                           </div>
+                          {q.express_group_id && (q.group_size ?? 0) > 1 && (
+                            <p className="text-[10px] font-bold text-chs-red mb-0.5">⚡ Express group: this guest asked {q.group_size} hotels at once. The first to confirm wins and the others cancel by themselves.</p>
+                          )}
                           <p className="text-xs text-gray-600">{q.guest_full_name} · {q.guest_phone} · {q.check_in} → {q.check_out}{q.expected_arrival_time ? ` · arriving about ${q.expected_arrival_time}` : ""}</p>
                           <p className="text-[11px] text-gray-500">Host: {q.host_name} · <b>{q.host_phone}</b></p>
                           <p className="text-sm font-bold text-chs-charcoal mt-1">
@@ -5797,8 +5806,9 @@ function AdminDashboardInner() {
                   { group: "Oversight", items: [
                     { key: "tenantregisteroversight" as Tab, label: "Tenant Register Oversight" },
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
+                    { key: "hotelcontrols" as Tab, label: "Hotel Controls (peak & cancellations)" },
                     { key: "walletsecurity" as Tab, label: `Wallet Security (${walletSecurityOpen})` },
-                    { key: "rtorequests" as Tab, label: `Rent-to-Own Requests (${rtoQueue.length})` },
+                    { key: "rtorequests" as Tab, label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})` },
                     { key: "inspections" as Tab, label: `Inspections (${upcomingInspections.length})` },
                     { key: "engage" as Tab, label: `Engage CHS (${pendingEngage.length})` },
                   ] },

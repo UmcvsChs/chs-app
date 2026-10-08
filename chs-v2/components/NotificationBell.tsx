@@ -11,7 +11,7 @@ import { Notification } from "@/types/notification";
 // shares this one component, so it only ever needs to be built once.
 export default function NotificationBell() {
   const router = useRouter();
-  const { session } = useAuth();
+  const { session, profile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -91,13 +91,27 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
+  // Older notifications, and any sent without a destination, still open
+  // somewhere useful instead of doing nothing: money items go to the wallet,
+  // mortgage items to the mortgage page (or the owner/admin screen), and the
+  // rest to the person's own dashboard.
+  function fallbackLink(n: Notification): string {
+    const text = `${n.title} ${n.body}`.toLowerCase();
+    const role = profile?.role || "";
+    if (/rent-to-own|mortgage/.test(text)) return role === "admin" ? "/admin?tab=rtorequests" : role === "owner" ? "/owner" : "/rent-to-own";
+    if (/wallet|withdraw|deposit|refund|released|payment|installment|earning/.test(text)) return "/wallet";
+    const home: Record<string, string> = { owner: "/owner", agent: "/agent", manager: "/manager", vendor: "/vendor", host: "/host", admin: "/admin", artisan: "/artisan", tenant: "/tenant", developer: "/developer", staff: "/staff", buyer: "/tenant", guest: "/my-bookings" };
+    return home[role] || "/";
+  }
+
   function handleNotificationClick(e: React.MouseEvent, n: Notification) {
     e.preventDefault();
     e.stopPropagation();
     markAsRead(n.id);
     setToast(null);
     setOpen(false);
-    if (n.link) {
+    {
+      const link: string = n.link || fallbackLink(n);
       // Real, seventh and decisive fix to this same handler, after a
       // direct, confirmed report that the "splash screen" problem
       // continued even after removing the service worker entirely —
@@ -113,7 +127,7 @@ export default function NotificationBell() {
       // remember where you were, which is the real, correct
       // mechanism, restored here. A genuinely new tab was the wrong
       // tool for "don't lose my place in a long list."
-      const freshLink = n.link + (n.link.includes("?") ? "&" : "?") + "_n=" + Date.now();
+      const freshLink = link + (link.includes("?") ? "&" : "?") + "_n=" + Date.now();
       router.push(freshLink);
     }
   }
@@ -131,7 +145,7 @@ export default function NotificationBell() {
               <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast(null); }} className="text-white/50 text-xs shrink-0">✕</button>
             </div>
             <p className="text-[11px] text-white/70 mt-1">{toast.body}</p>
-            {toast.link && <p className="text-[10px] text-chs-red font-semibold mt-1.5">Tap to view →</p>}
+            <p className="text-[10px] text-chs-red font-semibold mt-1.5">Tap to view →</p>
           </div>
         </div>
       )}
@@ -169,7 +183,7 @@ export default function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`p-3 border-b border-gray-50 ${n.read ? "bg-white" : "bg-chs-amber-light"} ${n.link ? "cursor-pointer" : ""}`}
+                  className={`p-3 border-b border-gray-50 cursor-pointer ${n.read ? "bg-white" : "bg-chs-amber-light"}`}
                   onClick={(e) => handleNotificationClick(e, n)}
                 >
                   <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
@@ -178,7 +192,7 @@ export default function NotificationBell() {
                     Sent {new Date(n.created_at).toLocaleString()}
                     {n.read_at && <> · <span className="text-green-600">Read {new Date(n.read_at).toLocaleString()}</span></>}
                   </p>
-                  {n.link && <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>}
+                  <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>
                 </div>
               ))
             )}

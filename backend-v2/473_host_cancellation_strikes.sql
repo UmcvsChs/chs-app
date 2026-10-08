@@ -1,0 +1,10 @@
+-- 473 — hotel Step 6: what happens when a host cancels a confirmed booking (applied October 2026)
+-- platform_settings: host_default_penalty_pct = 10, host_default_window_days = 90. Table host_default_strikes.
+-- host_cancel_booking(booking, reason): only for a booking not yet started; a reason of 10+ characters with no contact details is required.
+--   The guest is refunded in full (price + fee + deposit, found through the REQ- wallet debit) and the commission rows are removed.
+--   The bank processing fee is charged to the host (HCF-). Strike 1 = warning; strike 2 = penalty of 10 percent of the booking value (HCP-),
+--   any shortfall collected from later payouts by collect_host_dues_from_payout() inside release_booking_payout(); strike 3 = listing suspended
+--   (status delisted, suspended_for_review). Strikes older than the window do not count.
+--   The cancelled dates stay blocked (unit_calendar row 'Host cancelled — dates stay blocked', protected by trg_protect_host_cancelled_dates).
+--   The guest and host are notified; admins are alerted to help the guest rebook.
+-- get_host_default_status(), get_host_strikes() (admin), admin_reinstate_listing(property, note).

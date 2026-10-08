@@ -1,5 +1,6 @@
 "use client";
 
+import OwnerRtoHandover from "@/components/OwnerRtoHandover";
 import PendingBookingRequests from "@/components/PendingBookingRequests";
 import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
@@ -105,7 +106,7 @@ export default function OwnerDashboard() {
   }
   const [acceptWithInstallment, setAcceptWithInstallment] = useState<Record<string, boolean>>({});
   const [downpaymentPct, setDownpaymentPct] = useState<Record<string, string>>({});
-  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; held_amount: number | null; release_request_status: string | null; release_requested_at: string | null; release_decision_note: string | null; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string; delivery_address: string | null; delivery_phone: string | null; preferred_method: string | null; delivery_note: string | null }[] }[]>([]);
+  const [paidOffersAwaitingDispatch, setPaidOffersAwaitingDispatch] = useState<{ id: string; amount: number; held_amount: number | null; release_request_status: string | null; release_requested_at: string | null; release_decision_note: string | null; properties: { title: string } | null; document_dispatch_requests: { id: string; status: string; delivery_address: string | null; preferred_method: string | null; delivery_note: string | null }[] }[]>([]);
   const [dispatchMethod, setDispatchMethod] = useState<Record<string, string>>({});
   const [dispatchTracking, setDispatchTracking] = useState<Record<string, string>>({});
   const [dispatchingId, setDispatchingId] = useState<string | null>(null);
@@ -238,7 +239,7 @@ export default function OwnerDashboard() {
     // real documents as sent.
     supabase
       .from("offers")
-      .select("id, amount, held_amount, release_request_status, release_requested_at, release_decision_note, properties!inner(title, owner_id), document_dispatch_requests(id, status, delivery_address, delivery_phone, preferred_method, delivery_note)")
+      .select("id, amount, held_amount, release_request_status, release_requested_at, release_decision_note, properties!inner(title, owner_id), document_dispatch_requests(id, status, delivery_address, preferred_method, delivery_note)")
       .eq("properties.owner_id", session.user.id)
       .eq("payment_status", "paid")
       .eq("legal_transfer_confirmed", false)
@@ -803,7 +804,7 @@ export default function OwnerDashboard() {
         <div className="px-4 pb-3">
           <div className="bg-chs-amber-light border-2 border-chs-amber rounded-xl p-3">
             <p className="text-xs font-bold text-chs-charcoal">🏠 {rentToOwnRequests.length} Mortgage (Rent to Own) request{rentToOwnRequests.length !== 1 ? "s" : ""} waiting for your approval</p>
-            <p className="text-[10px] text-gray-500 mb-2">CHS has reviewed the buyer and passed their request to you. Contact with the buyer goes through CHS.</p>
+            <p className="text-[10px] text-gray-500 mb-2">CHS has reviewed the buyer and passed their request to you. Your answer goes to CHS first, and CHS tells the buyer. Contact with the buyer goes through CHS.</p>
             {rentToOwnRequests.map((r) => (
               <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                 <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(r.properties)?.title || "Property"}</p>
@@ -812,7 +813,7 @@ export default function OwnerDashboard() {
                 </p>
                 <button onClick={() => handleApproveRentToOwn(r.id)} disabled={approvingRtoId === r.id}
                   className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                  {approvingRtoId === r.id ? "Approving..." : "✓ Approve this request"}
+                  {approvingRtoId === r.id ? "Approving..." : "✓ Approve this request (CHS will confirm to the buyer)"}
                 </button>
                 <input type="text" value={declineReason[r.id] || ""} onChange={(e) => setDeclineReason((prev) => ({ ...prev, [r.id]: e.target.value }))} maxLength={200}
                   placeholder="Or decline — a short reason for the buyer (required)" className="w-full mt-2 px-2 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
@@ -826,6 +827,8 @@ export default function OwnerDashboard() {
           </div>
         </div>
       )}
+
+      {session && <OwnerRtoHandover userId={session.user.id} />}
 
       {actionError && (
         <p className="text-xs text-chs-red bg-chs-amber-light mx-4 mt-3 rounded-lg px-3 py-2">{actionError}</p>
@@ -1190,7 +1193,7 @@ export default function OwnerDashboard() {
                             <span className="text-[9px] font-bold text-chs-amber-dark bg-chs-amber-light px-2 py-0.5 rounded-full whitespace-nowrap">⚠ Not yet verified</span>
                           )}
                         </div>
-                        <p className="text-gray-500 mt-0.5">{app.tenant?.phone}</p>
+                        <p className="text-gray-500 mt-0.5">Contact with applicants goes through CHS.</p>
                       </div>
 
                       <div>
@@ -1403,11 +1406,11 @@ export default function OwnerDashboard() {
                 {dispatchReq?.status === "requested" && (
                   <p className="text-[10px] bg-chs-amber-light text-chs-amber-dark rounded-full px-2 py-1 mb-2 inline-block">⏳ Buyer has requested your real documents</p>
                 )}
-                {dispatchReq && (dispatchReq.delivery_address || dispatchReq.delivery_phone) && (
+                {dispatchReq && dispatchReq.delivery_address && (
                   <div className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-2">
                     <p className="text-[10px] font-bold text-chs-charcoal uppercase mb-1">📮 Real buyer delivery instructions</p>
                     {dispatchReq.delivery_address && <p className="text-[11px] text-gray-600">Address: {dispatchReq.delivery_address}</p>}
-                    {dispatchReq.delivery_phone && <p className="text-[11px] text-gray-600">Contact: {dispatchReq.delivery_phone}</p>}
+                    <p className="text-[11px] text-gray-500">Contact with the buyer goes through CHS. You never see their phone number.</p>
                     {dispatchReq.preferred_method && <p className="text-[11px] text-gray-600 capitalize">Preferred method: {dispatchReq.preferred_method.replace(/_/g, " ")}</p>}
                     {dispatchReq.delivery_note && <p className="text-[11px] text-gray-500 mt-1 italic">&quot;{dispatchReq.delivery_note}&quot;</p>}
                   </div>

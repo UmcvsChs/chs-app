@@ -9,8 +9,21 @@ import { BookingRequestResult, durationText } from "@/lib/bookingLane";
 // next. (This used to read "Booking confirmed — your dates are secured", which
 // was never true of a request.)
 export default function BookingRequestSent({ result }: { result: BookingRequestResult | null }) {
+  if (result?.instant) {
+    return (
+      <div className="bg-white rounded-xl border border-green-200 p-4">
+        <p className="text-sm font-semibold text-green-800 mb-1">⚡ Booking confirmed</p>
+        <p className="text-xs text-gray-600">You paid <b>{formatNaira(result.total_to_pay)}</b> from your CHS wallet and your room is secured. CHS holds the money safely. The host is paid only after you arrive and confirm.</p>
+        <p className="text-xs text-gray-600 mt-1.5">Your arrival pass is waiting in My Bookings. Show it at the front desk when you arrive.</p>
+        <Link href="/my-bookings" className="inline-block mt-3 text-xs font-semibold text-chs-red underline">Open My Bookings →</Link>
+      </div>
+    );
+  }
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4">
+      {result?.express_asked && result.express_asked > 1 && (
+        <p className="text-xs font-semibold text-chs-red mb-1.5">⚡ Express: we asked {result.express_asked} hotels at once. The first to confirm wins and the others cancel on their own.</p>
+      )}
       <p className="text-sm font-semibold text-chs-charcoal mb-1">✓ Request sent — nothing has been charged</p>
       {result ? (
         <>

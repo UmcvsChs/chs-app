@@ -132,3 +132,12 @@ Now: a red **"booking requests awaiting your decision"** panel sits at the very 
 **Honest limits:** no digital room keys (lock systems vary widely and most Nigerian hotels use physical keys); hotels may still require sight of ID; the "I've arrived" alert needs location permission and a decent GPS fix; the host's device must be online to verify a pass.
 
 **Small hooks built into earlier steps so step 7 is not a rewrite:** the guest sees their assigned room (step 2); the request captures an ETA (step 3).
+
+---
+## Build status (October 2026)
+Steps 4, 5, 6 and 7 are built in the database (migrations 472, 472b, 473, 474) and on screen:
+- Step 4 Instant Confirm and Express: host switch in the listing tools; Book now and the "ask up to 2 more hotels" panel on the booking form; Express group shown in the admin booking queue.
+- Step 5 Peak pricing: host panel (CHS periods on/off with own percentage and minimum stay, own events); admin Hotel Controls tab to edit CHS periods; guests see the busy nights and the full price before booking.
+- Step 6 Host cancellation: the host sees the consequence before cancelling; admin Hotel Controls lists strikes and reinstates a suspended listing.
+- Step 7 Digital check-in: guest arrival pass, registration card, "I've arrived", self check-in code; /host/arrivals front desk; staff management; hotel location.
+Known limits: the arrival pass is a code, not a QR image; Instant booking on screen was checked only for mounting (the database path passed a full rolled-back test); the guest wallet-top-up flow when funds are short is the existing one.
