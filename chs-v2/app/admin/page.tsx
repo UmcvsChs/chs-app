@@ -5567,7 +5567,7 @@ function AdminDashboardInner() {
                     await supabase.from("notifications").update({ read: true, read_at: new Date().toISOString() }).eq("id", n.id);
                     setNotificationsFeed((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
                   }
-                  if (n.link) router.push(n.link);
+                  if (n.link) router.push(n.link + (n.link.includes("?") ? "&" : "?") + "_n=" + Date.now());
                 }} className={`block w-full text-left rounded-xl border p-3 mb-2 ${n.read ? "bg-white border-gray-100" : "bg-chs-amber-light border-chs-amber-dark"}`}>
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{n.title}</p>
