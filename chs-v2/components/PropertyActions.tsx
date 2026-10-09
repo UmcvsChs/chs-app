@@ -978,7 +978,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
   // Default state: show the real, relevant actions for this property's
   // purpose. Making an offer only makes sense for a sale property;
   // booking an inspection is genuinely useful for every property type;
-  // starting a rental application only makes sense for rent/lease/hire;
+  // starting a rental application only makes sense for rent/lease/hire (never for a mortgage / rent-to-own property, which has its own request);
   // shortlet booking is its own, entirely separate purpose.
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
@@ -1022,7 +1022,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           Book now
         </button>
       )}
-      {property.purpose !== "sale" && property.purpose !== "shortlet" && !(property.purpose === "hire" && property.hire_category) && (
+      {property.purpose !== "sale" && property.purpose !== "shortlet" && property.purpose !== "rent_to_own" && !(property.purpose === "hire" && property.hire_category) && (
         <button
           onClick={() => requireLoginThen(() => setActiveForm("rentalApplication"))}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold"

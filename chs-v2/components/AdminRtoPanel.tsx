@@ -33,16 +33,21 @@ const STAGE: Record<string, { label: string; tone: string }> = {
   defaulted: { label: "Defaulted", tone: "bg-gray-100 text-gray-500" },
 };
 
+interface Pending { id: string; reference: string; amount: number; net_amount: number; paid_at: string; property_title: string; buyer_name: string; owner_name: string; agreement_ref: string }
+
 export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<"action" | "all">("all");
+  const [pending, setPending] = useState<Pending[]>([]);
 
   const load = useCallback(async () => {
     const { data } = await supabase.rpc("get_rto_admin_queue");
     setRows(Array.isArray(data) ? (data as Row[]) : []);
+    const { data: pend } = await supabase.rpc("get_rto_pending_payments");
+    setPending(Array.isArray(pend) ? (pend as Pending[]) : []);
   }, []);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -74,6 +79,24 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
         ))}
       </div>
       {err && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{err}</p>}
+      {pending.length > 0 && (
+        <div className="bg-white rounded-xl border-2 border-chs-amber p-3 mb-3">
+          <div className="flex justify-between items-center gap-2 mb-2">
+            <p className="text-sm font-bold text-chs-charcoal">💰 Payments to release ({pending.length})</p>
+            <button onClick={() => run("all", supabase.rpc("admin_release_all_rto_payments"))} disabled={busy === "all"} className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">Release all</button>
+          </div>
+          <p className="text-[10px] text-gray-500 mb-2">Every mortgage installment reaches CHS first. Each one below is sitting with CHS and has not yet reached the owner&apos;s wallet.</p>
+          {pending.map((p) => (
+            <div key={p.id} className="border-t border-gray-100 py-2 flex justify-between items-center gap-2">
+              <div className="text-[11px] text-gray-700">
+                <p className="font-semibold text-chs-charcoal">{formatNaira(p.net_amount)} to {p.owner_name} <span className="font-normal text-gray-500">(paid {formatNaira(p.amount)} before commission)</span></p>
+                <p>{p.property_title} · from {p.buyer_name} · {p.agreement_ref} · {p.reference} · {new Date(p.paid_at).toLocaleString()}</p>
+              </div>
+              <button onClick={() => run(p.id, supabase.rpc("admin_release_rto_payment", { p_payment_id: p.id, p_note: null }))} disabled={busy === p.id} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[11px] font-semibold disabled:opacity-50 whitespace-nowrap">Release to owner</button>
+            </div>
+          ))}
+        </div>
+      )}
       {shown.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-8">{filter === "action" ? "✓ Nothing is waiting for CHS." : "No agreements yet."}</p>
       ) : shown.map((r) => {

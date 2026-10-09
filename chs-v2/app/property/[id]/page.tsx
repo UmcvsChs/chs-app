@@ -328,6 +328,15 @@ export default async function PropertyDetailPage({
           )}
         </p>
 
+        {property.purpose === "rent_to_own" && property.rent_to_own_monthly ? (
+          <div className="bg-chs-amber-light border border-chs-amber-dark rounded-xl p-3 mb-4">
+            <p className="text-xs font-bold text-chs-charcoal mb-1">🏠 Mortgage (Rent to Own) terms</p>
+            <div className="flex justify-between text-xs text-gray-600 mb-1"><span>Monthly installment</span><span>{formatNaira(property.rent_to_own_monthly)}</span></div>
+            <div className="flex justify-between text-xs text-gray-600 mb-1"><span>Number of installments</span><span>{Math.ceil(property.price / property.rent_to_own_monthly)}</span></div>
+            <p className="text-[10px] text-gray-500 mt-1">You pay towards owning this property. Every payment goes through your CHS wallet and CHS passes it to the owner. You can pay more than the installment at any time. The final payment is held until the owner hands over the property documents.</p>
+          </div>
+        ) : null}
+
         {/* Real, new feature per direct client request: an
             independent agent's own, real, itemized fees — shown
             transparently, upfront, rolling into one real "Total

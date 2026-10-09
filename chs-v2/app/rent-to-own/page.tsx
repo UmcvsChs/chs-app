@@ -174,6 +174,7 @@ export default function RentToOwnPage() {
           <div className="flex justify-between text-[11px] text-gray-600"><span>Remaining</span><span>{formatNaira(remaining)}</span></div>
           <div className="flex justify-between text-[11px] text-gray-600"><span>Total price</span><span>{formatNaira(a.total_price)}</span></div>
           {mine[0] && <p className="text-[10px] text-gray-500 mt-1.5">Last payment: {formatNaira(mine[0].amount)} on {new Date(mine[0].paid_at).toLocaleDateString()} ({mine[0].reference})</p>}
+          <p className="text-[10px] text-gray-500 mt-1">Every payment is received by CHS first and then passed to the owner, so there is a record of each one.</p>
           {a.status === "active" && remaining > 0 && <p className="text-[10px] font-semibold text-chs-charcoal mt-0.5">Next payment: {formatNaira(nextAmount)} (plus your CHS commission)</p>}
         </div>
         {children}

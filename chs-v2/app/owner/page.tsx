@@ -924,6 +924,8 @@ export default function OwnerDashboard() {
                   found completely missing during the systematic Owner
                   dashboard comparison. */}
               <div className="flex gap-1.5 mt-1.5">
+                {property.purpose !== "sale" && property.purpose !== "rent_to_own" && (
+                  <>
                 <button
                   onClick={() => handleTogglePrivacy(property.id, true)}
                   className={`text-[9px] font-semibold px-2 py-1 rounded-full border ${
@@ -940,6 +942,8 @@ export default function OwnerDashboard() {
                 >
                   Keep private
                 </button>
+                  </>
+                )}
                 {property.status === "active" && (
                   comingSoonNoteId === property.id ? (
                     <div className="flex gap-1.5 mt-1.5 w-full">

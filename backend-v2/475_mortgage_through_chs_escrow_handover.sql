@@ -1,4 +1,5 @@
 -- 475 — Mortgage (Rent to Own): every decision and payment goes through CHS; final payment held until documents are handed over (applied October 2026)
+-- FIX (same evening): get_rto_admin_queue() originally used json_agg(x order by x.sort_at), which is invalid SQL at run time, so the admin queue returned an error. Corrected to json_agg(t.x order by t.sort_at) and applied live.
 -- 1. Owner approve / decline no longer reach the buyer directly. New statuses owner_approved / owner_declined: CHS is told, and
 --    admin_relay_rto_decision() passes the decision to the buyer. The admin queue now lists EVERY agreement (newest first) and never drops one.
 -- 2. Buyer details (name, phone, occupation, source of funds, address) are collected BEFORE the request is sent: request_rent_to_own() takes them.
@@ -179,7 +180,7 @@ end $$;
 create or replace function get_rto_admin_queue() returns json language plpgsql security definer set search_path = public as $$
 begin
   if not is_admin() then raise exception 'Not authorised: CHS admins only.'; end if;
-  return (select coalesce(json_agg(x order by x.sort_at desc), '[]'::json) from (
+  return (select coalesce(json_agg(t.x order by t.sort_at desc), '[]'::json) from (
     select a.started_at as sort_at, json_build_object(
       'id', a.id, 'ref', 'RTO-' || substr(a.id::text, 1, 8), 'status', a.status,
       'needs_action', (a.status in ('awaiting_admin_relay','owner_approved','owner_declined') or coalesce(h.status, '') = 'sent'),
@@ -413,3 +414,11 @@ do $$ declare v text; begin
   if position('    buyer_full_name,' in v) = 0 then raise exception 'owner_offers definition changed; review'; end if;
   execute 'create or replace view owner_offers as ' || replace(v, '    buyer_full_name,', '    public_display_name(buyer_full_name) AS buyer_full_name,');
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- 475c (applied live 9 Oct 2026): EVERY installment reaches CHS first.
+-- pay_rent_to_own() now credits the owner's escrow_held (not main balance) for every payment, marks the payment pending_release,
+-- and CHS releases it from Rent-to-Own Requests -> "Payments to release" (admin_release_rto_payment / admin_release_all_rto_payments /
+-- get_rto_pending_payments). The final payment still waits for the document handover. Columns added to rent_to_own_payments:
+-- pending_release, net_amount, released_at, released_by. See the live function definitions for the full text.
+-- ---------------------------------------------------------------------------
