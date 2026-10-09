@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import RoleBadge from "@/components/RoleBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import WalletQuickView from "@/components/WalletQuickView";
 import { roleHome } from "@/lib/roleHome";
 import { getFreshDocumentUrl } from "@/lib/storage";
@@ -197,7 +197,7 @@ export default function RentToOwnPage() {
           <div className="flex justify-between mt-2 text-[11px] text-gray-600"><span>Paid so far ({mine.length} payment{mine.length !== 1 ? "s" : ""})</span><span>{formatNaira(a.total_paid)}</span></div>
           <div className="flex justify-between text-[11px] text-gray-600"><span>Remaining</span><span>{formatNaira(remaining)}</span></div>
           <div className="flex justify-between text-[11px] text-gray-600"><span>Total price</span><span>{formatNaira(a.total_price)}</span></div>
-          {mine[0] && <p className="text-[10px] text-gray-500 mt-1.5">Last payment: {formatNaira(mine[0].amount)} on {new Date(mine[0].paid_at).toLocaleDateString()} ({mine[0].reference})</p>}
+          {mine[0] && <p className="text-[10px] text-gray-500 mt-1.5">Last payment: {formatNaira(mine[0].amount)} on {formatDateTime(mine[0].paid_at)} ({mine[0].reference})</p>}
           <p className="text-[10px] text-gray-500 mt-1">Every payment is received by CHS first and then passed to the owner, so there is a record of each one.</p>
           {a.status === "active" && remaining > 0 && <p className="text-[10px] font-semibold text-chs-charcoal mt-0.5">Next payment: {formatNaira(nextAmount)} (plus your CHS commission)</p>}
         </div>
@@ -206,7 +206,7 @@ export default function RentToOwnPage() {
           <details className="mt-2">
             <summary className="text-[10px] font-semibold text-gray-500 cursor-pointer">All payments ({mine.length})</summary>
             {mine.map((p) => (
-              <p key={p.id} className="text-[10px] text-gray-500 flex justify-between border-b border-gray-100 py-1"><span>{new Date(p.paid_at).toLocaleDateString()} · {p.reference}</span><span>{formatNaira(p.amount)}</span></p>
+              <p key={p.id} className="text-[10px] text-gray-500 flex justify-between border-b border-gray-100 py-1"><span>{formatDateTime(p.paid_at)} · {p.reference}</span><span>{formatNaira(p.amount)}</span></p>
             ))}
           </details>
         )}
@@ -326,18 +326,18 @@ export default function RentToOwnPage() {
                         {h && (
                           <div className="mt-2 text-[11px] text-gray-700 space-y-0.5">
                             <p>To: {h.recipient_name}, {h.delivery_address}</p>
-                            <p>The owner must deliver by <b>{new Date(h.deadline).toLocaleDateString()}</b> ({h.max_days} days){h.overdue && h.status !== "confirmed" ? " · overdue, CHS has been alerted" : ""}</p>
+                            <p>The owner must deliver by <b>{formatDateTime(h.deadline)}</b> ({h.max_days} days){h.overdue && h.status !== "confirmed" ? " · overdue, CHS has been alerted" : ""}</p>
                             {h.status === "requested" && <p className="text-amber-700 font-semibold">Waiting for the owner to send them and show proof.</p>}
                             {h.status === "sent" && (
                               <>
-                                <p className="text-green-700 font-semibold">The owner says they were sent{h.sent_method ? ` by ${h.sent_method}` : ""}{h.tracking ? ` (tracking ${h.tracking})` : ""}.</p>
+                                <p className="text-green-700 font-semibold">The owner says they were sent{h.sent_method ? ` by ${h.sent_method}` : ""}{h.tracking ? ` (tracking ${h.tracking})` : ""}{h.sent_at ? `, recorded at ${formatDateTime(h.sent_at)}` : ""}.</p>
                                 {h.proof_note && <p className="italic text-gray-500">&quot;{h.proof_note}&quot;</p>}
                                 {a.status === "awaiting_handover" && (
                                   <button onClick={() => confirmDocs(a)} className="mt-1.5 w-full py-2 rounded-full bg-green-600 text-white text-xs font-semibold">✓ I have received my documents</button>
                                 )}
                               </>
                             )}
-                            {h.status === "confirmed" && <p className="text-green-700 font-semibold">✓ You confirmed receipt.</p>}
+                            {h.status === "confirmed" && <p className="text-green-700 font-semibold">✓ You confirmed receipt{h.confirmed_at ? ` on ${formatDateTime(h.confirmed_at)}` : ""}. CHS was alerted at that moment.</p>}
                           </div>
                         )}
                         {docMsg[a.id] && <p className="text-[10px] text-chs-red mt-1">{docMsg[a.id]}</p>}

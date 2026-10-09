@@ -445,3 +445,14 @@ end $$;
 --    awaiting_handover. Refuses if the owner no longer has the money.
 --  * get_rto_admin_queue: needs_action also true when buyer confirmed and money is still held; handover
 --    JSON carries confirmed_by. Notification wording in pay_rent_to_own / rto_mark_documents_sent updated.
+
+-- 475g (applied live 2026-10-09): Terms Version 5. platform_settings.terms_current_version = '5'
+--   (lib/termsVersion.ts CURRENT_TERMS_VERSION = 5). Term 22 rewritten: Mortgage payments are held by CHS; final payment held
+--   until the documents are handed over; released by hand by a super admin unless auto release has been switched on.
+-- Documents regenerated the same day: Terms PDF, Users Guide, Feature Catalog (PDF + xlsx, section 17), Handover Notes, System Documentation.
+
+-- 475h (applied live 2026-10-09): full timestamps. rto_applicant_contacts gains created_at. get_rto_admin_queue() now also returns
+--   handover.requested_at (rto_handovers.created_at) and the agreement's completed_at / final_paid_at, so the admin panel can show a complete
+--   handover timeline (requested, documents uploaded and reviewed, sent, buyer confirmed, released), each to the second.
+
+-- 475i (applied live 2026-10-09): Terms Version 6 - term 37 'Records and timestamps' (CHS keeps date-and-time records to the second, WAT; they may be relied on as evidence). platform_settings.terms_current_version = '6'; CURRENT_TERMS_VERSION = 6.

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import { getFreshDocumentUrl } from "@/lib/storage";
 
 // CHS's view of every Mortgage (Rent to Own) agreement, newest first. Nothing
@@ -11,14 +11,14 @@ import { getFreshDocumentUrl } from "@/lib/storage";
 
 interface Handover {
   status: string; recipient_name: string; delivery_address: string; delivery_phone: string; method: string; max_days: number; deadline: string; overdue: boolean;
-  sent_at: string | null; sent_method: string | null; tracking: string | null; proof_note: string | null; proof_url: string | null; confirmed_at: string | null; confirmed_by?: string | null;
+  sent_at: string | null; sent_method: string | null; tracking: string | null; proof_note: string | null; proof_url: string | null; confirmed_at: string | null; confirmed_by?: string | null; requested_at?: string | null;
 }
 interface Row {
   id: string; ref: string; status: string; needs_action: boolean; property_title: string; property_ref: string; location: string | null;
   total_price: number; monthly_amount: number; total_paid: number; ownership_pct: number; payments: number | null; payments_made: number; last_payment_at: string | null;
   buyer_name: string; buyer_phone: string; applicant_occupation: string | null; applicant_source_of_funds: string | null; applicant_address: string | null; buyer_id_verified: boolean;
   owner_name: string; owner_phone: string; requested_at: string; owner_decision_at: string | null; owner_decision_note: string | null;
-  competing_requests: number; final_held_amount: number; handover: Handover | null;
+  competing_requests: number; final_held_amount: number; handover: Handover | null; completed_at?: string | null;
 }
 
 const STAGE: Record<string, { label: string; tone: string }> = {
@@ -34,7 +34,7 @@ const STAGE: Record<string, { label: string; tone: string }> = {
   defaulted: { label: "Defaulted", tone: "bg-gray-100 text-gray-500" },
 };
 
-interface Submission { id: string; status: string; note: string | null; review_note: string | null; created_at: string; files: { name: string; url: string }[] }
+interface Submission { id: string; status: string; note: string | null; review_note: string | null; created_at: string; reviewed_at?: string | null; files: { name: string; url: string }[] }
 interface Pending { id: string; reference: string; amount: number; net_amount: number; paid_at: string; property_title: string; buyer_name: string; owner_name: string; agreement_ref: string }
 
 export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void }) {
@@ -125,7 +125,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
             <div key={p.id} className="border-t border-gray-100 py-2 flex justify-between items-center gap-2">
               <div className="text-[11px] text-gray-700">
                 <p className="font-semibold text-chs-charcoal">{formatNaira(p.net_amount)} to {p.owner_name} <span className="font-normal text-gray-500">(paid {formatNaira(p.amount)} before commission)</span></p>
-                <p>{p.property_title} · from {p.buyer_name} · {p.agreement_ref} · {p.reference} · {new Date(p.paid_at).toLocaleString()}</p>
+                <p>{p.property_title} · from {p.buyer_name} · {p.agreement_ref} · {p.reference} · {formatDateTime(p.paid_at)}</p>
               </div>
               <button onClick={() => run(p.id, supabase.rpc("admin_release_rto_payment", { p_payment_id: p.id, p_note: null }))} disabled={busy === p.id} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[11px] font-semibold disabled:opacity-50 whitespace-nowrap">Release to owner</button>
             </div>
@@ -150,17 +150,17 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
               <span className="text-[9px] font-bold bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap">{r.ref}</span>
             </div>
             <span className={`inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${stage.tone}`}>{stage.label}</span>
-            <p className="text-[11px] text-gray-500 mt-1">{r.property_ref} · {r.location} · requested {new Date(r.requested_at).toLocaleString()}</p>
+            <p className="text-[11px] text-gray-500 mt-1">{r.property_ref} · {r.location} · requested {formatDateTime(r.requested_at)}</p>
             <p className="text-xs font-bold text-chs-charcoal mt-1">{formatNaira(r.monthly_amount)}/month toward {formatNaira(r.total_price)} <span className="font-normal text-gray-500">({r.payments ?? "?"} payments)</span></p>
             {(r.payments_made > 0 || r.total_paid > 0) && (
-              <p className="text-[11px] text-gray-600">Paid {formatNaira(r.total_paid)} in {r.payments_made} payment{r.payments_made !== 1 ? "s" : ""} · ownership {Number(r.ownership_pct).toFixed(2)}%{r.last_payment_at ? ` · last ${new Date(r.last_payment_at).toLocaleDateString()}` : ""}</p>
+              <p className="text-[11px] text-gray-600">Paid {formatNaira(r.total_paid)} in {r.payments_made} payment{r.payments_made !== 1 ? "s" : ""} · ownership {Number(r.ownership_pct).toFixed(2)}%{r.last_payment_at ? ` · last ${formatDateTime(r.last_payment_at)}` : ""}</p>
             )}
             <p className="text-[11px] text-gray-600 mt-1">Buyer: <b>{r.buyer_name}</b> · {r.buyer_phone} {r.buyer_id_verified ? <span className="text-green-700">· ID and liveness verified ✓</span> : <span className="text-chs-red">· not fully verified</span>}</p>
             {(r.applicant_occupation || r.applicant_source_of_funds || r.applicant_address) && (
               <p className="text-[11px] text-gray-500">{[r.applicant_occupation, r.applicant_source_of_funds && `funds: ${r.applicant_source_of_funds}`, r.applicant_address].filter(Boolean).join(" · ")}</p>
             )}
             <p className="text-[11px] text-gray-600">Owner: <b>{r.owner_name}</b> · {r.owner_phone}</p>
-            {r.owner_decision_at && <p className="text-[11px] text-gray-600">Owner answered {new Date(r.owner_decision_at).toLocaleString()}{r.owner_decision_note ? `: “${r.owner_decision_note}”` : ""}</p>}
+            {r.owner_decision_at && <p className="text-[11px] text-gray-600">Owner answered {formatDateTime(r.owner_decision_at)}{r.owner_decision_note ? `: “${r.owner_decision_note}”` : ""}</p>}
             {r.competing_requests > 0 && <p className="text-[11px] text-chs-red mt-1">⚠ {r.competing_requests} other request(s) are also pending on this property. Starting one will decline the rest.</p>}
 
             {(r.status === "awaiting_admin_relay" || r.status === "owner_approved" || r.status === "owner_declined" || (r.status === "awaiting_handover" && !(h && (h.status === "sent" || h.status === "confirmed")))) && (
@@ -184,7 +184,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
 
             {(subs[r.id] || []).map((sb) => (
               <div key={sb.id} className="mt-2 bg-gray-50 rounded-lg p-2.5 text-[11px] text-gray-700">
-                <p className="font-bold text-chs-charcoal">📄 Documents from the owner ({sb.status === "approved" ? "approved" : sb.status === "changes_requested" ? "changes requested" : "waiting for your check"}) · {new Date(sb.created_at).toLocaleDateString()}</p>
+                <p className="font-bold text-chs-charcoal">📄 Documents from the owner ({sb.status === "approved" ? "approved" : sb.status === "changes_requested" ? "changes requested" : "waiting for your check"}) · {formatDateTime(sb.created_at)}</p>
                 <div className="flex flex-wrap gap-1.5 my-1">
                   {sb.files.map((f, i) => (<button key={i} type="button" onClick={() => openFile(f.url)} className="px-2 py-1 rounded-full bg-white border border-gray-200 text-[10px] underline">{f.name}</button>))}
                 </div>
@@ -201,15 +201,28 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
               </div>
             ))}
 
+            {(h || r.completed_at) && (
+              <div className="mt-2 border-l-2 border-gray-200 pl-2.5 text-[10px] text-gray-600 space-y-0.5">
+                <p className="font-bold text-chs-charcoal text-[10px]">🕒 Handover timeline (Nigerian time, to the second)</p>
+                {h?.requested_at && <p>Buyer asked for the documents: <b>{formatDateTime(h.requested_at)}</b></p>}
+                {(subs[r.id] || []).slice().reverse().map((sb) => (
+                  <p key={sb.id}>Owner uploaded documents: <b>{formatDateTime(sb.created_at)}</b>{sb.reviewed_at ? <> · CHS {sb.status === "approved" ? "approved" : "reviewed"}: <b>{formatDateTime(sb.reviewed_at)}</b></> : " · not yet reviewed"}</p>
+                ))}
+                {h?.sent_at && <p>Owner marked the hard copy as sent: <b>{formatDateTime(h.sent_at)}</b></p>}
+                {h?.deadline && <p>Delivery deadline: <b>{formatDateTime(h.deadline)}</b></p>}
+                {h?.confirmed_at && <p>{h.confirmed_by === "buyer" ? "Buyer confirmed receipt" : "Handover confirmed (" + (h.confirmed_by || "CHS") + ")"}: <b>{formatDateTime(h.confirmed_at)}</b> · CHS was alerted at the same moment</p>}
+                {r.completed_at && <p>Final payment released: <b>{formatDateTime(r.completed_at)}</b></p>}
+              </div>
+            )}
             {r.status === "awaiting_handover" && (
               <div className="mt-2 bg-gray-50 rounded-lg p-2.5 text-[11px] text-gray-700 space-y-0.5">
                 <p className="font-bold text-chs-charcoal">🔒 {formatNaira(r.final_held_amount)} held for the owner</p>
                 {!h && <p>The buyer has not asked for the documents yet.</p>}
                 {h && (
                   <>
-                    <p>Deliver to {h.recipient_name}, {h.delivery_address} · buyer phone <b>{h.delivery_phone}</b> · by {new Date(h.deadline).toLocaleDateString()}{h.overdue ? " · OVERDUE" : ""}</p>
+                    <p>Deliver to {h.recipient_name}, {h.delivery_address} · buyer phone <b>{h.delivery_phone}</b> · by {formatDateTime(h.deadline)}{h.overdue ? " · OVERDUE" : ""}</p>
                     {h.status === "requested" && <p className="text-amber-700">Waiting for the owner to send and show proof.</p>}
-                    {h.status === "confirmed" && <p className="text-green-700 font-semibold">✓ The buyer confirmed on {h.confirmed_at ? new Date(h.confirmed_at).toLocaleString() : "—"} that the documents arrived. The money stays held until you release it.</p>}
+                    {h.status === "confirmed" && <p className="text-green-700 font-semibold">✓ The buyer confirmed on {h.confirmed_at ? formatDateTime(h.confirmed_at) : "—"} that the documents arrived. The money stays held until you release it.</p>}
                     {h.status === "sent" && <p className="text-green-700">Owner says sent{h.sent_method ? ` by ${h.sent_method}` : ""}{h.tracking ? `, tracking ${h.tracking}` : ""}. {h.proof_note ? `“${h.proof_note}”` : ""} {h.proof_url && <button type="button" onClick={() => openFile(h.proof_url as string)} className="underline">View receipt</button>} Phone the buyer to confirm, then release.</p>}
                   </>
                 )}
@@ -221,7 +234,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
                 )}
               </div>
             )}
-            {r.status === "completed" && h && <p className="text-[11px] text-green-700 mt-1">Handover confirmed{h.confirmed_at ? ` on ${new Date(h.confirmed_at).toLocaleDateString()}` : ""}.</p>}
+            {r.status === "completed" && h && <p className="text-[11px] text-green-700 mt-1">Handover confirmed{h.confirmed_at ? ` on ${formatDateTime(h.confirmed_at)}` : ""}.</p>}
           </div>
         );
       })}

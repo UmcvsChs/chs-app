@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uploadDocument } from "@/lib/storage";
@@ -46,7 +48,7 @@ export function EngageDocumentsList({ requestId }: { requestId: string }) {
           <span className="text-gray-600">{DOC_TYPE_LABELS[d.document_type] || d.document_type}</span>
           <div className="flex items-center gap-1.5">
             {d.status === "pending" && d.due_by && (
-              <span className="text-[10px] text-gray-400">Due {new Date(d.due_by).toLocaleDateString()}</span>
+              <span className="text-[10px] text-gray-400">Due {formatDateTime(d.due_by)}</span>
             )}
             <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full ${
               d.status === "ready" || d.status === "delivered" ? "text-green-700 bg-green-50" : "text-chs-amber-dark bg-chs-amber-light"

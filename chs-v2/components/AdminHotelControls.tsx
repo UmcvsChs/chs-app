@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 
 // Admin: (1) the CHS peak-period calendar that hosts can switch on, and
 // (2) the list of hosts who cancelled confirmed bookings, with a button to
@@ -102,7 +102,7 @@ export default function AdminHotelControls() {
             <p className="text-[11px] text-gray-500">Host phone (CHS only): {s.host_phone}</p>
             {(s.fee_owed > 0 || s.penalty_owed > 0) && <p className="text-[11px] text-amber-700">Still owed by the host: {formatNaira(s.fee_owed + s.penalty_owed)} (collected from their next payouts)</p>}
             <p className="text-[11px] text-gray-500 italic mt-0.5">“{s.reason}”</p>
-            <p className="text-[9px] text-gray-400">{new Date(s.created_at).toLocaleString()}</p>
+            <p className="text-[9px] text-gray-400">{formatDateTime(s.created_at)}</p>
             {s.suspended && !s.reinstated_at && (
               <div className="mt-2">
                 <input value={notes[s.id] || ""} onChange={(e) => setNotes({ ...notes, [s.id]: e.target.value })} placeholder="Note for the record (why it is safe to reinstate)" className="w-full px-2 py-1.5 rounded border border-gray-200 text-[11px] mb-1.5" />

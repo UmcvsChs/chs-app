@@ -7,7 +7,7 @@ import Link from "next/link";
 import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatCalendarDate } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import MessageThread from "@/components/MessageThread";
@@ -179,7 +179,7 @@ export default function MyRentedSpacePage() {
           <p className={`text-sm font-bold ${paymentUrgent ? "text-chs-red" : "text-chs-charcoal"}`}>
             {paymentUrgent && "⚠️ "}{neverPaid ? "First rent payment due" : daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left to your next rent` : "Your rent is due"}
           </p>
-          <p className="text-xs text-gray-500">{formatNaira(tenancy.annual_rent)}/year · Lease runs to {new Date(tenancy.lease_end).toLocaleDateString()}</p>
+          <p className="text-xs text-gray-500">{formatNaira(tenancy.annual_rent)}/year · Lease runs to {formatCalendarDate(tenancy.lease_end)}</p>
           {payMessage && <p className="text-xs text-gray-600 mt-1">{payMessage}</p>}
           {paymentUrgent && (
             <div className="mt-2 space-y-1.5">

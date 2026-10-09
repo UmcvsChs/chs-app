@@ -10,7 +10,7 @@ import RoleBadge from "@/components/RoleBadge";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime, formatCalendarDate } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import TransactionCommissions from "@/components/TransactionCommissions";
 import WalletQuickView from "@/components/WalletQuickView";
@@ -331,7 +331,7 @@ export default function TenantDashboard() {
                 >
                   <div>
                     <p className="text-xs font-semibold text-chs-charcoal">{NOTICE_TYPE_LABELS[n.notice_type]}</p>
-                    <p className="text-[10px] text-gray-400">Ref {n.reference} · {new Date(n.issued_at).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-gray-400">Ref {n.reference} · {formatDateTime(n.issued_at)}</p>
                   </div>
                   <span className="text-gray-400 text-xs">{expandedNoticeId === n.id ? "▲" : "▼"}</span>
                 </button>
@@ -346,7 +346,7 @@ export default function TenantDashboard() {
                     )}
                     <p className="text-[9px] text-gray-400 mt-2">
                       {n.first_viewed_at
-                        ? `Viewed ${new Date(n.first_viewed_at).toLocaleString()}`
+                        ? `Viewed ${formatDateTime(n.first_viewed_at)}`
                         : "Marking as viewed now"}
                     </p>
                   </div>
@@ -481,7 +481,7 @@ export default function TenantDashboard() {
                   if (daysUntilDue > 30 && tenanciesWithPriorPayment.has(t.id)) {
                     return (
                       <div className="mt-1.5 bg-green-50 border border-green-200 rounded-lg p-2.5">
-                        <p className="text-xs font-semibold text-green-700">✓ Rent paid through {new Date(t.lease_end).toLocaleDateString()}</p>
+                        <p className="text-xs font-semibold text-green-700">✓ Rent paid through {formatCalendarDate(t.lease_end)}</p>
                         <Link href="/my-receipts" className="text-[10px] text-chs-red underline font-semibold">View your real receipt</Link>
                       </div>
                     );

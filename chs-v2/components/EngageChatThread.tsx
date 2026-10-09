@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -172,7 +174,7 @@ export default function EngageChatThread({
               <div key={m.id} className={`flex mb-2 ${isMine ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[75%] px-2.5 py-1.5 rounded-2xl text-[11px] ${isMine ? "bg-chs-red text-white" : "bg-gray-100 text-chs-charcoal"}`}>
                   {m.text}
-                  <p className="text-[9px] opacity-70 mt-0.5">{new Date(m.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] opacity-70 mt-0.5">{formatDateTime(m.created_at)}</p>
                 </div>
               </div>
             );

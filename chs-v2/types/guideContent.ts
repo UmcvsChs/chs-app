@@ -44,7 +44,7 @@ export const ROLE_GUIDES: Record<string, { title: string; sections: GuideSection
       { title: "Making an offer", body: "Propose a price directly to the owner. Once accepted, CHS reviews and clears the deal before anything moves to escrow — a real checkpoint protecting both sides." },
       { title: "Urgent & Emergency Sale listings", body: "Marked 🚨 on the homepage — a genuine, discounted, time-boxed sale with a real deadline. Shows a direct CHS hotline for faster processing." },
       { title: "Talk to an Agent", body: "Not sure exactly what to search for? Use \"Property request\" in the bottom navigation to describe what you need in your own words — CHS follows up personally." },
-      { title: "Rent-to-Own", body: "Some sale listings offer a rent-to-own path — a monthly amount that counts toward eventual ownership, shown directly on the listing where available." },
+      { title: "Rent-to-Own", body: "Some sale listings offer a rent-to-own path — a monthly amount that counts toward eventual ownership, shown directly on the listing where available. Every payment goes through CHS, and the final payment is held by CHS until the property documents are handed over." },
     ],
   },
   agent: {

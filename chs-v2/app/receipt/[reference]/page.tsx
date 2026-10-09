@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import InfoTip from "@/components/InfoTip";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 
 // Real, new page per direct client request: neither CHS nor its
 // agents/managers could issue a real receipt to a client for any
@@ -175,7 +175,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
             {date && (
               <div className="flex justify-between items-start gap-5 py-2.5 border-b border-[#f1ede6]">
                 <span className="text-[#8f8776] font-medium whitespace-nowrap">Date</span>
-                <span className="font-bold text-chs-charcoal text-right">{new Date(date).toLocaleString()}</span>
+                <span className="font-bold text-chs-charcoal text-right">{formatDateTime(date)}</span>
               </div>
             )}
             {payer && (

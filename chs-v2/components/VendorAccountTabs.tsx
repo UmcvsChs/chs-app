@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import type { MarketplaceProduct } from "@/types/marketplace";
 import type { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 
@@ -36,7 +36,7 @@ const Row = ({ l }: { l: Line }) => (
   <div className="flex justify-between gap-2 py-1.5 border-b border-gray-100 text-[11px]">
     <div className="min-w-0">
       <p className="font-semibold text-chs-charcoal truncate">{l.name}</p>
-      <p className="text-gray-400">{l.kind} {l.ref} · {new Date(l.at).toLocaleDateString()}</p>
+      <p className="text-gray-400">{l.kind} {l.ref} · {formatDateTime(l.at)}</p>
     </div>
     <div className="text-right shrink-0">
       <p className="font-bold text-chs-charcoal">{formatNaira(l.gross)}</p>
@@ -163,7 +163,7 @@ export default function VendorAccountTabs({ products, orders, subscriptions }: {
             <div key={s.id} className="py-2 border-b border-gray-100 text-[11px]">
               <p className="font-semibold text-chs-charcoal">{s.promotion_packages?.name || "Plan"} {s.promotion_packages?.star_rating ? "★".repeat(s.promotion_packages.star_rating) : ""}</p>
               <p className="text-gray-600">{s.promotion_packages?.monthly_price_naira ? `${formatNaira(s.promotion_packages.monthly_price_naira)} a month` : "Price not set"} · {s.status}</p>
-              <p className="text-gray-400">Started {new Date(s.created_at).toLocaleDateString()}{s.next_billing_date ? ` · renews ${s.next_billing_date}` : ""}</p>
+              <p className="text-gray-400">Started {formatDateTime(s.created_at)}{s.next_billing_date ? ` · renews ${s.next_billing_date}` : ""}</p>
             </div>
           ))
         )}
@@ -184,7 +184,7 @@ export default function VendorAccountTabs({ products, orders, subscriptions }: {
             <p className="text-[10px] text-gray-500 mb-1">Every quote you have given a buyer. CHS relays the best options to the buyer.</p>
             {bids.length === 0 ? <Empty text="No bids in this period." /> : bids.map(({ q, name }) => (
               <div key={q.id} className="py-1.5 border-b border-gray-100 text-[11px] flex justify-between gap-2">
-                <div className="min-w-0"><p className="font-semibold text-chs-charcoal truncate">{name}</p><p className="text-gray-400">{q.reference_number} · {new Date(q.created_at).toLocaleDateString()}</p></div>
+                <div className="min-w-0"><p className="font-semibold text-chs-charcoal truncate">{name}</p><p className="text-gray-400">{q.reference_number} · {formatDateTime(q.created_at)}</p></div>
                 <div className="text-right shrink-0"><p className="font-bold text-chs-charcoal">{q.quoted_amount ? formatNaira(Number(q.quoted_amount)) : "no price yet"}</p><p className="text-gray-500 capitalize">{String(q.status).replace(/_/g, " ")}</p></div>
               </div>
             ))}
@@ -200,7 +200,7 @@ export default function VendorAccountTabs({ products, orders, subscriptions }: {
             </div>
             {released.length === 0 ? <Empty text="No earnings in this period." /> : released.map((l) => (
               <div key={l.kind + l.id} className="flex justify-between py-1.5 border-b border-gray-100 text-[11px]">
-                <span className="text-chs-charcoal truncate pr-2">{l.name} · {new Date(l.at).toLocaleDateString()}</span>
+                <span className="text-chs-charcoal truncate pr-2">{l.name} · {formatDateTime(l.at)}</span>
                 <span className="font-bold text-green-700 shrink-0">{formatNaira(l.gross - l.commission)}</span>
               </div>
             ))}

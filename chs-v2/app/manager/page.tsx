@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { FaultReport, FaultQuotation } from "@/types/faultReport";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import MessageThread from "@/components/MessageThread";
 import RoleBadge from "@/components/RoleBadge";
 import InfoTip from "@/components/InfoTip";
@@ -207,7 +207,7 @@ export default function ManagerDashboard() {
     doc.setFontSize(16);
     doc.text("CHS — Property Manager Report", 14, 20);
     doc.setFontSize(10);
-    doc.text(`Generated ${new Date().toLocaleDateString()}`, 14, 27);
+    doc.text(`Generated ${formatDateTime(new Date())}`, 14, 27);
 
     doc.setFontSize(12);
     doc.text(`Properties managed: ${distinctProperties}`, 14, 42);
@@ -434,7 +434,7 @@ export default function ManagerDashboard() {
                         {r.direction === "credit" ? "+" : "−"}{formatNaira(r.amount)}
                       </p>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(r.created_at)}</p>
                   </div>
                 ))}
               </>

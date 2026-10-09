@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import { Req } from "@/components/FormMarks";
 import { uploadDocument } from "@/lib/storage";
 
@@ -14,7 +14,7 @@ interface Row { id: string; total_price: number; final_held_amount: number | nul
 interface Submission { id: string; status: "submitted" | "approved" | "changes_requested"; review_note: string | null; created_at: string; files: { name: string; url: string }[] }
 interface Handover {
   status: "requested" | "sent" | "confirmed"; recipient_name: string; delivery_address: string; method: string; max_days: number;
-  deadline: string; overdue: boolean; sent_at: string | null; tracking: string | null; proof_note: string | null;
+  deadline: string; overdue: boolean; sent_at: string | null; confirmed_at?: string | null; tracking: string | null; proof_note: string | null;
 }
 
 const titleOf = (p: Row["properties"]) => (Array.isArray(p) ? p[0]?.title : p?.title) || "Property";
@@ -106,7 +106,7 @@ export default function OwnerRtoHandover({ userId }: { userId: string }) {
                   <p className="text-[10px] font-bold text-chs-charcoal">Step 1: upload the documents for CHS to check</p>
                   {(subs[r.id] || []).map((sb) => (
                     <p key={sb.id} className={`text-[10px] mt-0.5 ${sb.status === "approved" ? "text-green-700" : sb.status === "changes_requested" ? "text-chs-red" : "text-amber-700"}`}>
-                      {sb.status === "approved" ? "✓ Approved by CHS" : sb.status === "changes_requested" ? `✕ CHS asks for changes: ${sb.review_note || ""}` : "⏳ With CHS for checking"} · {sb.files.length} file(s) · {new Date(sb.created_at).toLocaleDateString()}
+                      {sb.status === "approved" ? "✓ Approved by CHS" : sb.status === "changes_requested" ? `✕ CHS asks for changes: ${sb.review_note || ""}` : "⏳ With CHS for checking"} · {sb.files.length} file(s) · {formatDateTime(sb.created_at)}
                     </p>
                   ))}
                   {!(subs[r.id] || []).some((sb) => sb.status === "approved") && (
@@ -121,7 +121,9 @@ export default function OwnerRtoHandover({ userId }: { userId: string }) {
               {h && (
                 <div className="mt-1 text-[11px] text-gray-700 space-y-0.5">
                   <p>Send to: <b>{h.recipient_name}</b>, {h.delivery_address}</p>
-                  <p>By: <b>{new Date(h.deadline).toLocaleDateString()}</b> ({h.max_days} days){h.overdue && h.status !== "confirmed" ? " · overdue" : ""}</p>
+                  {h.sent_at && <p>You marked it sent: <b>{formatDateTime(h.sent_at)}</b></p>}
+                  {h.confirmed_at && <p>The buyer confirmed receipt: <b>{formatDateTime(h.confirmed_at)}</b></p>}
+                  <p>By: <b>{formatDateTime(h.deadline)}</b> ({h.max_days} days){h.overdue && h.status !== "confirmed" ? " · overdue" : ""}</p>
                   {h.status === "requested" && (
                     <div className="space-y-1.5 mt-1.5">
                       <p className="text-[10px] font-bold text-chs-charcoal">Step 2: send the hard copies and report it{!(subs[r.id] || []).some((sb) => sb.status === "approved") ? " (after CHS approves Step 1)" : ""}</p>

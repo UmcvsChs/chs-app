@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -52,7 +54,7 @@ export default function ArrivalConfirmation({ bookingId, onChanged }: { bookingI
 
   const allFacilitiesTicked = s.facilities.every((f) => fac[f]);
   const ready = arrived && matches && allOk && allFacilitiesTicked;
-  const autoAt = s.auto_release_at ? new Date(s.auto_release_at).toLocaleString() : null;
+  const autoAt = s.auto_release_at ? formatDateTime(s.auto_release_at) : null;
 
   async function confirm() {
     setBusy(true); setError(null);
@@ -75,7 +77,7 @@ export default function ArrivalConfirmation({ bookingId, onChanged }: { bookingI
   }
 
   if (s.state === "guest_confirmed") {
-    return <p className="mt-2 text-[11px] text-green-700 bg-green-50 rounded-lg px-2.5 py-1.5">✓ You confirmed your arrival{s.confirmed_at ? ` on ${new Date(s.confirmed_at).toLocaleDateString()}` : ""} — your host has been paid. Enjoy your stay.</p>;
+    return <p className="mt-2 text-[11px] text-green-700 bg-green-50 rounded-lg px-2.5 py-1.5">✓ You confirmed your arrival{s.confirmed_at ? ` on ${formatDateTime(s.confirmed_at)}` : ""} — your host has been paid. Enjoy your stay.</p>;
   }
   if (s.state === "auto_released") {
     return <p className="mt-2 text-[11px] text-gray-600 bg-gray-50 rounded-lg px-2.5 py-1.5">Your payment was released to the host automatically — no problem was reported within 24 hours of check-in.</p>;

@@ -93,8 +93,24 @@ const FAQ_ITEMS = [
     a: "The deal is reversed. The money CHS was holding for you on that deal is removed from your held balance (only that deal's share — your other held amounts are untouched), CHS's commission from you on that deal is cancelled, and you are told the reason. For a sale or a first-year rent, your property is listed as available again. A refund only happens after the agreed deadline has passed without you delivering, or after CHS has reviewed a failure, so delivering the documents, keys or service on time protects your payout.",
   },
   {
+    q: "On a Mortgage (Rent to Own), who holds my payments?",
+    a: "CHS does. Every instalment you pay goes from your CHS Wallet to CHS first, is recorded, and is released to the owner by CHS. You can pay one instalment or any larger amount up to the full balance. The owner never receives money directly from you, and never sees your phone number.",
+  },
+  {
+    q: "When does the owner get the final payment on a Mortgage?",
+    a: "Only after the property documents are in your hands. When you have paid in full, you request your documents. The owner uploads them for CHS to check, CHS approves, the owner sends the hard copies, and you confirm in the app that they arrived. CHS then releases the final payment. A CHS super admin does this by hand, so your confirmation alone does not move the money; during very busy periods CHS may switch on automatic release.",
+  },
+  {
+    q: "What happens if a host cancels my confirmed hotel booking?",
+    a: "You are refunded in full, the dates stay blocked, and CHS helps you find another place. The host must give a real reason, and is penalised: a warning the first time, a 10% penalty the second time within 90 days, and suspension of the listing the third time.",
+  },
+  {
+    q: "How does hotel check-in work?",
+    a: "Once your booking is confirmed you get an arrival pass with a code. Fill in the short registration card before you travel. When you arrive, tap I have arrived; the front desk verifies your pass and checks you in. If the host uses a lockbox, its code is shown to you only on your stay days after you have arrived.",
+  },
+  {
     q: "Why was I asked to accept the Terms & Conditions again?",
-    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again. Version 4 (October 2026) adds the wallet-only payment rule, the wallet protections, the inspection cost rule, the release of sale money and the Rent to Own changes.",
+    a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again. Version 4 (October 2026) adds the wallet-only payment rule, the wallet protections, the inspection cost rule, the release of sale money and the Rent to Own changes. Version 5 (October 2026) makes every Mortgage (Rent to Own) payment pass through CHS and holds the final payment until the property documents are handed over. Version 6 (October 2026) adds term 37: CHS keeps an exact date-and-time record of important events, and those records can be relied on as evidence in a dispute.",
   },
   {
     q: "What does a 'CHS Verified' or 'Verified Listing' label actually mean?",

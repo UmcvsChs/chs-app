@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import InfoTip from "@/components/InfoTip";
 
@@ -84,7 +84,7 @@ export default function InvestorPage() {
         {error && <p className="text-sm text-red-600 bg-red-50 rounded-xl p-3 mb-4">{error}</p>}
         {summary && (
           <>
-            <p className="text-[10px] text-gray-400 mb-4">As of {new Date(summary.as_of).toLocaleString()}</p>
+            <p className="text-[10px] text-gray-400 mb-4">As of {formatDateTime(summary.as_of)}</p>
 
             <div className="bg-chs-charcoal text-white rounded-xl p-4 mb-3">
               <p className="text-[10px] text-white/70 uppercase font-bold">Gross Transaction Value <InfoTip text="The total real naira value of every genuinely completed sale on the platform, all time." /></p>

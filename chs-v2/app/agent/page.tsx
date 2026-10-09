@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { AgentReferral } from "@/types/agentReferral";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import GuidePrompt from "@/components/GuidePrompt";
 import InfoTip from "@/components/InfoTip";
 import MessageThread from "@/components/MessageThread";
@@ -489,7 +489,7 @@ export default function AgentDashboard() {
                   <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Real Daily Reports</p>
                   {teamReports.map((r) => (
                     <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-[11px]">
-                      <p className="font-semibold text-chs-charcoal">{r.team_members?.role_label} — {new Date(r.created_at).toLocaleDateString()}</p>
+                      <p className="font-semibold text-chs-charcoal">{r.team_members?.role_label} — {formatDateTime(r.created_at)}</p>
                       <p className="text-gray-600 mt-0.5">{r.activities}</p>
                       {r.transactions_handled && <p className="text-green-700 mt-0.5">💰 {r.transactions_handled}</p>}
                       {r.complaints_raised && <p className="text-chs-amber-dark mt-0.5">⚠️ {r.complaints_raised}</p>}

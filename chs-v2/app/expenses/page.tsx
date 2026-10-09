@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatCalendarDate } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 
 // Real, new page per direct client request: a genuine expenses page —
@@ -175,7 +175,7 @@ export default function ExpensesPage() {
               <div key={e.id} className="bg-white rounded-lg border border-gray-100 p-2.5 flex justify-between items-center">
                 <div>
                   <p className="text-xs font-semibold text-chs-charcoal">{e.description}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{e.category.replace(/_/g, " ")} · {new Date(e.entry_date).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-gray-400 capitalize">{e.category.replace(/_/g, " ")} · {formatCalendarDate(e.entry_date)}</p>
                 </div>
                 <p className={`text-xs font-bold ${e.direction === "income" ? "text-green-700" : "text-chs-red"}`}>
                   {e.direction === "income" ? "+" : "-"}{formatNaira(e.amount)}

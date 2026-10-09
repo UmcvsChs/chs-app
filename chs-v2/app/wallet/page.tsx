@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import InfoTip from "@/components/InfoTip";
 import { Wallet, WalletTransaction } from "@/types/wallet";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import { startWalletFunding } from "@/lib/paystack";
 import CurrencyInput from "@/components/CurrencyInput";
 import BankAccountSecurity, { checkWithdrawalAllowed } from "@/components/BankAccountSecurity";
@@ -465,7 +465,7 @@ export default function WalletPage() {
                     {tx.description || WALLET_TYPE_LABELS[tx.wallet_type]}
                   </p>
                   <p className="text-[10px] text-gray-400">
-                    {WALLET_TYPE_LABELS[tx.wallet_type]} · {new Date(tx.created_at).toLocaleDateString()}
+                    {WALLET_TYPE_LABELS[tx.wallet_type]} · {formatDateTime(tx.created_at)}
                   </p>
                   {tx.direction === "debit" && tx.reference?.startsWith("P2P-") && <ReportTransferLink reference={tx.reference} onDone={loadData} />}
                 </div>

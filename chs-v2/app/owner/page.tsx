@@ -15,7 +15,7 @@ import { Inspection } from "@/types/inspection";
 import { RentalApplication } from "@/types/rentalApplication";
 import { EngageRequest } from "@/types/engageRequest";
 import { MediaRequest } from "@/types/mediaRequest";
-import { formatNaira, purposeLabel } from "@/lib/format";
+import { formatNaira, purposeLabel, formatDateTime } from "@/lib/format";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import GuidePrompt from "@/components/GuidePrompt";
 import EngageChatThread from "@/components/EngageChatThread";
@@ -787,7 +787,7 @@ export default function OwnerDashboard() {
                 <div key={tx.id} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
                   <div>
                     <p className="text-[11px] text-chs-charcoal font-semibold">{tx.description}</p>
-                    <p className="text-[9px] text-gray-400">{new Date(tx.created_at).toLocaleDateString()} · {tx.wallet_type === "escrow_held" ? "Held (pending document transfer)" : "Main wallet"}</p>
+                    <p className="text-[9px] text-gray-400">{formatDateTime(tx.created_at)} · {tx.wallet_type === "escrow_held" ? "Held (pending document transfer)" : "Main wallet"}</p>
                   </div>
                   <p className="text-xs font-bold text-green-700">+{formatNaira(tx.amount)}</p>
                 </div>
@@ -1351,7 +1351,7 @@ export default function OwnerDashboard() {
                   ) : (
                     conditionReports.map((r) => (
                       <div key={r.id} className="bg-white rounded-lg p-2 mb-1.5 text-[10px]">
-                        <p className="font-semibold text-chs-charcoal capitalize">{r.report_type.replace(/_/g, " ")} — {new Date(r.submitted_at).toLocaleDateString()}</p>
+                        <p className="font-semibold text-chs-charcoal capitalize">{r.report_type.replace(/_/g, " ")} — {formatDateTime(r.submitted_at)}</p>
                         <p className="text-gray-500">{(r.rooms as { name: string }[]).length} room(s) documented</p>
                         {r.affidavit_url && (
                           <a href={r.affidavit_url} target="_blank" rel="noopener noreferrer" className="text-chs-red font-semibold underline">
@@ -1447,7 +1447,7 @@ export default function OwnerDashboard() {
                   <p className="text-[10px] font-bold text-chs-charcoal uppercase mb-1">💰 Your money: {formatNaira(offer.held_amount ?? offer.amount)}</p>
                   {offer.release_request_status === "pending" ? (
                     <p className="text-[11px] bg-chs-amber-light text-chs-amber-dark rounded-lg px-2.5 py-2">
-                      ⏳ You asked CHS to release this{offer.release_requested_at ? ` on ${new Date(offer.release_requested_at).toLocaleDateString()}` : ""}. CHS is verifying that the documents were delivered — from its records, or by contacting the buyer — and will update you.
+                      ⏳ You asked CHS to release this{offer.release_requested_at ? ` on ${formatDateTime(offer.release_requested_at)}` : ""}. CHS is verifying that the documents were delivered — from its records, or by contacting the buyer — and will update you.
                     </p>
                   ) : (
                     <>

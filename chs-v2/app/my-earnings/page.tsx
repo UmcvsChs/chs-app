@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import NotificationBell from "@/components/NotificationBell";
 
 // Real, comprehensive "My Earnings" per direct, detailed client
@@ -105,7 +105,7 @@ export default function MyEarningsPage() {
               <p className="text-[10px] font-bold text-chs-charcoal uppercase">{CATEGORY_LABEL[e.category]}</p>
               <p className="text-sm font-semibold text-chs-charcoal mt-1">{e.property_title} — {e.property_location}</p>
               <p className="text-xs text-gray-500 mt-0.5">Payment by {e.payer_name} · {e.detail_label}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{new Date(e.paid_at).toLocaleString()}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(e.paid_at)}</p>
               <div className="bg-[var(--zone-card)] rounded-lg p-2 mt-2 space-y-0.5">
                 <div className="flex justify-between text-[11px]"><span className="text-gray-500">Gross payment</span><span className="font-semibold">{formatNaira(e.gross_amount)}</span></div>
                 <div className="flex justify-between text-[11px]"><span className="text-gray-500">CHS commission</span><span className="font-semibold">{formatNaira(e.commission_amount)}</span></div>

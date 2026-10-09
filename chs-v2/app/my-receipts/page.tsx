@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -88,7 +88,7 @@ export default function MyReceiptsPage() {
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-xs font-semibold text-chs-charcoal">{t.description}</p>
-                  <p className="text-[10px] text-gray-400">{new Date(t.created_at).toLocaleDateString()} · {t.reference}</p>
+                  <p className="text-[10px] text-gray-400">{formatDateTime(t.created_at)} · {t.reference}</p>
                 </div>
                 <p className={`text-sm font-bold ${t.direction === "credit" ? "text-green-700" : "text-chs-red"}`}>
                   {t.direction === "credit" ? "+" : "-"}{formatNaira(t.amount)}

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 
 // The host's side of a prepaid stay: where their payout stands, and — once the guest's check-in day has
 // arrived — a way to ask CHS to release it if the guest has not confirmed. The payout is released at once
@@ -30,7 +30,7 @@ export default function HostPayoutStatus({ bookingId }: { bookingId: string }) {
   }, [load]);
 
   if (!s || s.state === "not_applicable") return null;
-  const autoAt = s.auto_release_at ? new Date(s.auto_release_at).toLocaleString() : null;
+  const autoAt = s.auto_release_at ? formatDateTime(s.auto_release_at) : null;
 
   async function ask() {
     setBusy(true); setError(null);

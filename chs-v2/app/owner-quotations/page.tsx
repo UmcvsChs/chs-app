@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import NotificationBell from "@/components/NotificationBell";
 
 // Real, new dedicated tab per direct client request: every real
@@ -72,7 +72,7 @@ export default function OwnerQuotationsPage() {
                 <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(o.properties)?.title || "Property"}</p>
                 {needsAttention(o.status) && <span className="text-[9px] font-bold text-white bg-chs-red px-1.5 py-0.5 rounded-full">Needs you</span>}
               </div>
-              <p className="text-[10px] text-gray-500">{o.buyer_full_name} · {new Date(o.created_at).toLocaleString()}</p>
+              <p className="text-[10px] text-gray-500">{o.buyer_full_name} · {formatDateTime(o.created_at)}</p>
               <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(o.amount)}</p>
               <p className="text-xs font-semibold text-gray-600">{o.status}{o.payment_status === "paid" ? " · ✓ Paid" : ""}</p>
               <Link href="/owner" className="block text-center mt-1.5 py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">

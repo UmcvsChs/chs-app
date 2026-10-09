@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import InfoTip from "@/components/InfoTip";
 import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
@@ -43,9 +43,9 @@ interface HostListing {
 function calendarFreshness(stamp: string | null): { text: string; className: string } {
   if (!stamp) return { text: "📅 Calendar never confirmed", className: "text-chs-red" };
   const hrs = (Date.now() - new Date(stamp).getTime()) / 3600000;
-  if (hrs < 24) return { text: "📅 Calendar confirmed today", className: "text-green-700" };
+  if (hrs < 24) return { text: `📅 Calendar confirmed today (${formatDateTime(stamp)})`, className: "text-green-700" };
   const days = Math.floor(hrs / 24);
-  return { text: `📅 Calendar last confirmed ${days} day${days !== 1 ? "s" : ""} ago`, className: days >= 3 ? "text-chs-red" : "text-amber-700" };
+  return { text: `📅 Calendar last confirmed ${days} day${days !== 1 ? "s" : ""} ago (${formatDateTime(stamp)})`, className: days >= 3 ? "text-chs-red" : "text-amber-700" };
 }
 
 interface HostBooking {

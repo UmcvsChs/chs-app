@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
@@ -110,7 +110,7 @@ export default function MyOffersPage() {
                 <p className="text-sm font-bold text-chs-charcoal">{formatNaira(o.amount)}</p>
                 <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{o.status}</span>
               </div>
-              <p className="text-[10px] text-gray-400 mt-1">{new Date(o.created_at).toLocaleDateString()}</p>
+              <p className="text-[10px] text-gray-400 mt-1">{formatDateTime(o.created_at)}</p>
               {/* Real, direct fix per explicit, repeated client
                   request: wherever a rejected offer is actually seen,
                   the real reply conversation should be right there —

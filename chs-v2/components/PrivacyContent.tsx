@@ -20,6 +20,9 @@ export default function PrivacyContent() {
         <li><strong className="text-chs-charcoal">If you stand as a guarantor:</strong> your relationship to the applicant, address, occupation, your own ID, and a real proof of address dated within the last 90 days.</li>
         <li><strong className="text-chs-charcoal">Face verification (where used):</strong> a photo captured directly on your device during a short liveness check, confirming a real person is completing the step.</li>
         <li><strong className="text-chs-charcoal">Transaction data:</strong> offers, rental applications, bookings, messages exchanged through the platform, condition reports, payment records, and wallet transactions.</li>
+        <li><strong className="text-chs-charcoal">Wallet security data:</strong> a transaction PIN (stored so it cannot be read back), the devices you sign in from (so CHS can pause large transfers from an unfamiliar device), and the phone number used to send you a confirmation code by SMS.</li>
+        <li><strong className="text-chs-charcoal">For a Mortgage (Rent to Own) handover:</strong> the recipient name, delivery address and phone number you give when you ask for your property documents, and any documents the owner uploads for CHS to check. These are kept by CHS to arrange and prove the handover; the owner never sees your phone number.</li>
+        <li><strong className="text-chs-charcoal">Activity records:</strong> the exact date and time (to the second, Nigerian time) of documents, confirmations, messages, notifications, payments, applications and staff actions, kept as an audit trail and as evidence for resolving disputes (see Terms &amp; Conditions, term 37).</li>
         <li><strong className="text-chs-charcoal">Technical data:</strong> the device and browser you use to access CHS, and basic usage logs, collected automatically to keep the platform working and secure.</li>
       </ul>
 

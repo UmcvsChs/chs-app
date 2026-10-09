@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import WalletQuickView from "@/components/WalletQuickView";
 import NotificationBell from "@/components/NotificationBell";
 import TransactionCommissions from "@/components/TransactionCommissions";
@@ -118,7 +118,7 @@ export default function MyApplicationsPage() {
             rentalApps.map((a) => (
               <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(a.properties)?.title || "Property"}</p>
-                <p className="text-[10px] text-gray-400">{embeddedOne(a.properties)?.location_area} · Applied {new Date(a.created_at).toLocaleString()}</p>
+                <p className="text-[10px] text-gray-400">{embeddedOne(a.properties)?.location_area} · Applied {formatDateTime(a.created_at)}</p>
                 {/* Real, direct fix per a specific, serious client
                     report: the rich timestamp shown in the
                     notification itself was completely gone once you
@@ -128,7 +128,7 @@ export default function MyApplicationsPage() {
                     exactly when the owner's real decision landed,
                     full date and time, whenever one exists. */}
                 {a.owner_decision_at && (
-                  <p className="text-[10px] text-gray-400">Owner decided {new Date(a.owner_decision_at).toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400">Owner decided {formatDateTime(a.owner_decision_at)}</p>
                 )}
                 <p className="text-xs font-semibold text-chs-red mt-1">{statusLabel(a.status)}</p>
                 {a.status === "approved" && (
@@ -149,7 +149,7 @@ export default function MyApplicationsPage() {
             offers.map((o) => (
               <div key={o.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(o.properties)?.title || "Property"}</p>
-                <p className="text-[10px] text-gray-400">{embeddedOne(o.properties)?.location_area} · {new Date(o.created_at).toLocaleDateString()}</p>
+                <p className="text-[10px] text-gray-400">{embeddedOne(o.properties)?.location_area} · {formatDateTime(o.created_at)}</p>
                 <p className="text-sm font-bold text-chs-charcoal mt-1">{formatNaira(o.amount)}</p>
                 <p className="text-xs font-semibold text-chs-red mt-0.5">{statusLabel(o.status)}{o.payment_status === "paid" ? " · ✓ Paid" : ""}</p>
                 {o.status === "accepted" && o.payment_status !== "paid" && (
@@ -190,7 +190,7 @@ export default function MyApplicationsPage() {
             videoRequests.map((v) => (
               <div key={v.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(v.properties)?.title || "Property"} — {v.room_label}</p>
-                <p className="text-[10px] text-gray-400">{embeddedOne(v.properties)?.location_area} · {new Date(v.created_at).toLocaleDateString()}</p>
+                <p className="text-[10px] text-gray-400">{embeddedOne(v.properties)?.location_area} · {formatDateTime(v.created_at)}</p>
                 <p className={`text-xs font-semibold mt-0.5 ${v.status === "fulfilled" ? "text-green-700" : "text-chs-amber-dark"}`}>
                   {v.status === "fulfilled" ? "✓ Video added — go take a look" : "⏳ Waiting on the owner"}
                 </p>

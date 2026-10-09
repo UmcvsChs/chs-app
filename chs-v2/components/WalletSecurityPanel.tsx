@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 
 // The account holder's own controls over their wallet — the layers that answer "how do we know it is really you?":
@@ -80,7 +80,7 @@ export default function WalletSecurityPanel({ status, onChanged }: { status: Wal
         <p>Sending to another CHS user: up to <b>{formatNaira(status.limit_single)}</b> at a time and <b>{formatNaira(status.limit_daily)}</b> a day ({formatNaira(status.remaining_today)} left today). A first transfer to someone new is capped for 24 hours.</p>
         <p>Money you receive from another CHS user can be used inside CHS at once, and withdrawn to a bank after <b>{status.hold_hours} hours</b>.</p>
         {status.locked_amount > 0 && (
-          <p className="text-chs-amber-dark font-semibold">⏳ {formatNaira(status.locked_amount)} cannot go to a bank yet{status.next_unlock ? ` (earliest ${new Date(status.next_unlock).toLocaleString()})` : " (under CHS review)"}. You can withdraw {formatNaira(status.withdrawable)} now.</p>
+          <p className="text-chs-amber-dark font-semibold">⏳ {formatNaira(status.locked_amount)} cannot go to a bank yet{status.next_unlock ? ` (earliest ${formatDateTime(status.next_unlock)})` : " (under CHS review)"}. You can withdraw {formatNaira(status.withdrawable)} now.</p>
         )}
       </div>
 

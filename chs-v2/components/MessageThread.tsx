@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -99,7 +101,7 @@ export default function MessageThread({
                   }`}
                 >
                   {m.text}
-                  <p className="text-[9px] opacity-70 mt-0.5">{new Date(m.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] opacity-70 mt-0.5">{formatDateTime(m.created_at)}</p>
                 </div>
               </div>
             );

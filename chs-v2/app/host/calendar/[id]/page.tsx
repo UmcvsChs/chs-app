@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import { addDays, parseISO, todayISO } from "@/lib/availability";
 import { parseRoomLabels } from "@/lib/roomLabels";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 
 // The host's own view of their rooms and calendar — the hotel "tape chart":
 // every room down the side, the next 14 days across the top.
@@ -39,9 +39,9 @@ const pretty = (iso: string) => parseISO(iso).toLocaleDateString("en-GB", { week
 function freshness(stamp: string | null): { text: string; tone: "ok" | "warn" | "bad" } {
   if (!stamp) return { text: "Never confirmed — guests can't tell if this is up to date", tone: "bad" };
   const hrs = (Date.now() - new Date(stamp).getTime()) / 3600000;
-  if (hrs < 24) return { text: hrs < 1 ? "Confirmed just now" : `Confirmed ${Math.floor(hrs)}h ago`, tone: "ok" };
+  if (hrs < 24) return { text: hrs < 1 ? `Confirmed just now (${formatDateTime(stamp)})` : `Confirmed ${Math.floor(hrs)}h ago (${formatDateTime(stamp)})`, tone: "ok" };
   const days = Math.floor(hrs / 24);
-  return { text: `Last confirmed ${days} day${days !== 1 ? "s" : ""} ago`, tone: days >= 3 ? "bad" : "warn" };
+  return { text: `Last confirmed ${days} day${days !== 1 ? "s" : ""} ago (${formatDateTime(stamp)})`, tone: days >= 3 ? "bad" : "warn" };
 }
 
 const CELL: Record<string, string> = {
@@ -429,7 +429,7 @@ export default function HostCalendarPage() {
                 <p className="text-xs text-gray-500">{pretty(sheet.entry.start)} → {pretty(sheet.entry.end)}</p>
                 {sheet.entry.note && <p className="text-[11px] text-gray-500 italic mt-1">&quot;{sheet.entry.note}&quot;</p>}
                 {sheet.entry.state === "held" && sheet.entry.expires_at && (
-                  <p className="text-[11px] text-chs-red mt-1">Expires {new Date(sheet.entry.expires_at).toLocaleString()} — then the guest is refunded automatically.</p>
+                  <p className="text-[11px] text-chs-red mt-1">Expires {formatDateTime(sheet.entry.expires_at)} — then the guest is refunded automatically.</p>
                 )}
                 <div className="mt-3 space-y-2">
                   {(sheet.entry.state === "held" || sheet.entry.state === "confirmed") && (

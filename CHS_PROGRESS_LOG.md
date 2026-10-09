@@ -6,6 +6,23 @@
 
 ---
 
+## October 9, 2026 (later) — Full timestamps required on everything
+
+Client feedback: the admin panel showed the date a document reached Dr. Azaraya and the date he confirmed, but no time. Timestamps are required for accountability, auditing and legal protection. Done: one shared formatter (`formatDateTime`, Nigerian time, to the second) now replaces every date-only display of an event across about 35 screens; the admin Mortgage panel has a handover timeline; the buyer and owner handover views show sent and confirmed times; relative labels such as "confirmed 3 days ago" now carry the exact stamp. Standing rule 11 added to the Handover Notes. Calendar dates (lease end, check-in day) remain dates by design.
+
+---
+
+## October 9, 2026 — Mortgage held by CHS end to end; final release manual by super admin; documents brought up to date
+
+- Installments were found going straight to the owner's wallet, against the rule that every payment passes through CHS. Redesigned: every installment is held and released by admin; the final payment is held until the documents are handed over (migration 475).
+- Added the handover flow: buyer request, owner uploads for CHS to check, admin approves, soft copy to the buyer, hard copy with proof, buyer confirms. Fixed the admin queue SQL error, the typing bug in the request form (a component defined inside render), the buyer's missing soft copy, and navigation from admin notifications.
+- Notification bell on every role's dashboard; newest-first ordering across dashboards (due dates and scheduled inspections stay soonest first).
+- Client instruction at 12:55: the buyer's confirmation must never release funds. Done (475f): final release is super admin only; `rto_final_auto_release` setting (off by default) with a tick box on the admin panel; `admin_revert_rto_final_release()` built. Dr. Azaraya's already released ₦73,535,000 was returned to CHS hold on the client's explicit instruction, for testing.
+- Tested in rolled-back transactions: buyer confirmation leaves the money held; a sub-admin is refused; super admin release works; auto-release works only when switched on.
+- Documents audit: found the Terms PDF header at Version 3, the mortgage wording out of date in the Terms, Guide and Catalog, and the Handover Notes, Progress Log and System Documentation stale. All updated this round: Terms Version 5, Users Guide, FAQ, Privacy Policy, Feature Catalog (section 17), Handover Notes, System Documentation.
+
+---
+
 ## September 15, 2026 (continued) — Adopted the working v14 base; found one more real bug of the same class the other agent missed
 
 The client's own deploy attempts kept failing, and — reasonably, given the delay — brought in a different agent, who diagnosed and fixed two real build-breaking issues this session's verification never caught:

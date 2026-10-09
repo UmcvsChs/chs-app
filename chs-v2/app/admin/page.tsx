@@ -45,7 +45,7 @@ import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import RoleBadge from "@/components/RoleBadge";
 import AdminSidebar from "@/components/AdminSidebar";
 import NotificationBell from "@/components/NotificationBell";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 
 interface PendingProfile {
   id: string;
@@ -2601,7 +2601,7 @@ function AdminDashboardInner() {
                 <p className="text-xs font-bold text-chs-charcoal mb-2">📋 Real CHS Staff Daily Reports</p>
                 {adminReports.map((r) => (
                   <div key={r.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 text-[11px]">
-                    <p className="font-semibold text-chs-charcoal">{r.profiles?.full_name} {r.staff_role_at_time ? `(${r.staff_role_at_time})` : ""} — {new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="font-semibold text-chs-charcoal">{r.profiles?.full_name} {r.staff_role_at_time ? `(${r.staff_role_at_time})` : ""} — {formatDateTime(r.created_at)}</p>
                     <p className="text-gray-600 mt-0.5">{r.activities}</p>
                     {r.transactions_handled && <p className="text-green-700 mt-0.5">💰 {r.transactions_handled}</p>}
                     {r.complaints_raised && <p className="text-chs-amber-dark mt-0.5">⚠️ {r.complaints_raised}</p>}
@@ -2712,7 +2712,7 @@ function AdminDashboardInner() {
                     <div key={t.id} className="bg-[var(--zone-card)] rounded-lg p-2 text-[10px]">
                       <div className="flex justify-between items-center">
                         <span className="font-semibold capitalize">{t.transaction_type.replace(/_/g, " ")} — {t.payer_role}</span>
-                        <span className="text-gray-400">{new Date(t.paid_at).toLocaleDateString()}</span>
+                        <span className="text-gray-400">{formatDateTime(t.paid_at)}</span>
                       </div>
                       <p className="text-gray-500 mt-0.5">{t.profiles?.full_name || "User"} · {t.properties?.title || ""}</p>
                       {t.properties?.street_address && (
@@ -2853,7 +2853,7 @@ function AdminDashboardInner() {
                         <span className={h.status === "approved" ? "text-green-700 font-semibold" : "text-chs-red font-semibold"}>
                           {h.status === "approved" ? "✓" : "✕"} {h.action_type.replace(/_/g, " ")}
                         </span>
-                        {" "}— {h.profiles?.[0]?.full_name || "Unknown"}, {h.resolved_at && new Date(h.resolved_at).toLocaleString()}
+                        {" "}— {h.profiles?.[0]?.full_name || "Unknown"}, {h.resolved_at && formatDateTime(h.resolved_at)}
                         {h.resolution_note && ` ("${h.resolution_note}")`}
                       </div>
                     ))}
@@ -2974,7 +2974,7 @@ function AdminDashboardInner() {
             {!loadingAnalytics && analyticsReport && (
               <>
                 <p className="text-[10px] text-gray-400">
-                  {new Date(analyticsReport.period_start).toLocaleDateString()} — {new Date(analyticsReport.period_end).toLocaleDateString()}
+                  {formatDateTime(analyticsReport.period_start)} — {formatDateTime(analyticsReport.period_end)}
                 </p>
 
                 <div className="bg-chs-charcoal rounded-xl p-4">
@@ -3041,7 +3041,7 @@ function AdminDashboardInner() {
                 <p className="text-xs font-bold text-chs-red mb-1">⚠️ {staleCommissions.length} real commission(s) invoiced but never collected</p>
                 <p className="text-[10px] text-gray-600 mb-2">These have sat unpaid for 2+ hours — a real, early warning sign of a broken payment flow, exactly the pattern found and fixed on {new Date().getFullYear()}-09-06.</p>
                 {staleCommissions.slice(0, 5).map((c) => (
-                  <p key={c.id} className="text-[10px] text-gray-700">{c.payer_name} ({c.payer_phone}) — {c.transaction_type}, {formatNaira(c.commission_amount)} owed since {new Date(c.created_at).toLocaleString()}</p>
+                  <p key={c.id} className="text-[10px] text-gray-700">{c.payer_name} ({c.payer_phone}) — {c.transaction_type}, {formatNaira(c.commission_amount)} owed since {formatDateTime(c.created_at)}</p>
                 ))}
               </div>
             )}
@@ -3135,7 +3135,7 @@ function AdminDashboardInner() {
                             <p className="text-[10px] text-gray-400 mt-1">No transactions.</p>
                           ) : traceData.walletTx.map((tx, i) => (
                             <p key={i} className="text-[10px] text-gray-500 mt-1">
-                              {tx.direction === "credit" ? "+" : "−"}{formatNaira(tx.amount)} — {tx.description} ({new Date(tx.created_at).toLocaleDateString()})
+                              {tx.direction === "credit" ? "+" : "−"}{formatNaira(tx.amount)} — {tx.description} ({formatDateTime(tx.created_at)})
                             </p>
                           ))}
                         </>
@@ -3148,7 +3148,7 @@ function AdminDashboardInner() {
                         <p className="text-[10px] text-gray-400">No credit transactions.</p>
                       ) : traceData.promoCredits.map((tx, i) => (
                         <p key={i} className="text-[10px] text-gray-500 mt-1">
-                          {tx.direction === "credit" ? "+" : "−"}{tx.amount} credits — {tx.description} ({new Date(tx.created_at).toLocaleDateString()})
+                          {tx.direction === "credit" ? "+" : "−"}{tx.amount} credits — {tx.description} ({formatDateTime(tx.created_at)})
                         </p>
                       ))}
                       {traceData.promotions.length > 0 && (
@@ -3168,7 +3168,7 @@ function AdminDashboardInner() {
                         <p className="text-[10px] text-gray-400">No roadmap unlocks.</p>
                       ) : traceData.roadmapAccess.map((r, i) => (
                         <p key={i} className="text-[10px] text-gray-500 mt-1">
-                          {r.model_id} — {formatNaira(r.amount_paid)}{r.is_test_grant && " (TEST GRANT)"} ({new Date(r.created_at).toLocaleDateString()})
+                          {r.model_id} — {formatNaira(r.amount_paid)}{r.is_test_grant && " (TEST GRANT)"} ({formatDateTime(r.created_at)})
                         </p>
                       ))}
                     </div>
@@ -3243,7 +3243,7 @@ function AdminDashboardInner() {
                 <div key={entry.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-xs font-bold text-chs-charcoal">{entry.action.replace(/_/g, " ")}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(entry.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(entry.created_at)}</span>
                   </div>
                   <p className="text-[10px] text-gray-500 mt-0.5">
                     By {entry.profiles?.[0]?.full_name || "System"} ({entry.actor_role || "system"}) — {entry.profiles?.[0]?.phone}
@@ -3285,7 +3285,7 @@ function AdminDashboardInner() {
                     <div key={h.item_type + h.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                       <div className="flex justify-between items-start">
                         <p className="text-xs font-bold text-chs-charcoal capitalize">{h.item_type.replace(/_/g, " ")}</p>
-                        <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(h.acted_at).toLocaleString()}</span>
+                        <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(h.acted_at)}</span>
                       </div>
                       <p className="text-sm text-chs-charcoal mt-1">{h.person_name} — {h.property_title}</p>
                       <p className={`text-[10px] font-semibold mt-0.5 capitalize ${h.status.includes("reject") || h.status.includes("declin") ? "text-chs-red" : "text-green-700"}`}>
@@ -3311,7 +3311,7 @@ function AdminDashboardInner() {
                 <div key={offer.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{offer.properties?.title || "Property"}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(offer.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(offer.created_at)}</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Accepted offer: {formatNaira(offer.amount)}</p>
                   {offer.note && <p className="text-xs text-gray-400 mt-1">{offer.note}</p>}
@@ -3360,7 +3360,7 @@ function AdminDashboardInner() {
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start mb-2">
                     <p className="text-sm font-semibold text-chs-charcoal">{sub.profiles?.full_name || "User"}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(sub.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(sub.created_at)}</span>
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={sub.captured_photo_url} alt="Liveness capture" className="w-full rounded-lg mb-2" />
@@ -3411,7 +3411,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
                   <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
                   <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
-                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {new Date(doc.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {formatDateTime(doc.created_at)}</p>
                   <div className="flex gap-2">
                     <button onClick={() => handleSaleDocReview(doc.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -3444,7 +3444,7 @@ function AdminDashboardInner() {
               pendingBuyerIds.map((sub) => (
                 <div key={sub.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{sub.profiles?.full_name || "User"}</p>
-                  <p className="text-[9px] text-gray-400 mb-1">Submitted {new Date(sub.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-400 mb-1">Submitted {formatDateTime(sub.created_at)}</p>
                   <IdSubmissionDetailsBlock sub={sub} />
                   {/* Real, direct fix: the real upload form explicitly
                       accepts a PDF as well as an image
@@ -3535,7 +3535,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-semibold text-chs-charcoal mb-1">{doc.properties?.title || "Property"}</p>
                   <p className="text-xs text-gray-500 mb-2 capitalize">{doc.document_type.replace(/_/g, " ")}</p>
                   <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block mb-2">View uploaded document</a>
-                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {new Date(doc.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-400 mb-2">Uploaded {formatDateTime(doc.created_at)}</p>
                   <div className="flex gap-2">
                     <button onClick={() => handleSaleDocReview(doc.id, true)}
                       className="flex-1 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -3562,7 +3562,7 @@ function AdminDashboardInner() {
                   <p className="text-xs text-chs-charcoal"><span className="font-semibold">Delivery contact CHS coordinates with:</span> {d.delivery_phone}</p>
                   <p className="text-xs text-chs-charcoal"><span className="font-semibold">Preferred method:</span> {d.preferred_method}</p>
                   {d.delivery_note && <p className="text-xs text-gray-500 mt-1">&quot;{d.delivery_note}&quot;</p>}
-                  <p className="text-[9px] text-gray-400 mt-1">Requested {new Date(d.created_at).toLocaleString()}</p>
+                  <p className="text-[9px] text-gray-400 mt-1">Requested {formatDateTime(d.created_at)}</p>
                   <button onClick={() => handleMarkDispatched(d.id, d.preferred_method)}
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     ✓ Mark as dispatched
@@ -3591,7 +3591,7 @@ function AdminDashboardInner() {
                 <div key={p.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{p.full_name}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(p.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(p.created_at)}</span>
                   </div>
                   <p className="text-xs text-gray-500">{p.phone} — {p.role} — {p.state}</p>
 
@@ -3720,7 +3720,7 @@ function AdminDashboardInner() {
               <div key={app.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-semibold text-chs-charcoal">{app.properties?.title || "Property"}</p>
-                  <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(app.created_at).toLocaleString()}</span>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(app.created_at)}</span>
                 </div>
                 <p className="text-[10px] text-gray-500 mb-2">
                   {app.properties?.street_address ? `${app.properties.street_address}, ` : ""}{app.properties?.location_area}
@@ -3861,7 +3861,7 @@ function AdminDashboardInner() {
                   </span>
                 </div>
                 <p className="text-xs text-gray-500 mb-2">{app.tenant?.full_name} — {app.tenant?.phone}</p>
-                <p className="text-[9px] text-gray-400 mb-2">{new Date(app.created_at).toLocaleString()}</p>
+                <p className="text-[9px] text-gray-400 mb-2">{formatDateTime(app.created_at)}</p>
                 <button onClick={() => handleArchiveApplication(app.id)}
                   className="w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                   🗄️ Send to Archive
@@ -3917,7 +3917,7 @@ function AdminDashboardInner() {
                       <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
                       <p className="text-[9px] text-gray-400 font-mono">{o.properties?.reference_number}</p>
                     </div>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(o.created_at)}</span>
                   </div>
                   <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
                   <p className="text-[10px] text-chs-charcoal bg-gray-50 rounded-lg px-2 py-1 mt-1.5">
@@ -3951,7 +3951,7 @@ function AdminDashboardInner() {
                   <div key={o.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-semibold text-chs-charcoal">{o.properties?.title || "Property"}</p>
-                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(o.owner_decision_at).toLocaleString()}</span>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(o.owner_decision_at)}</span>
                     </div>
                     <p className="text-sm font-bold text-chs-red mt-1">{formatNaira(o.amount)}</p>
                     <p className="text-xs text-chs-charcoal mt-1">Buyer: {o.buyer_full_name} — {o.buyer_phone}</p>
@@ -4043,7 +4043,7 @@ function AdminDashboardInner() {
               <div key={prop.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <p className="text-sm font-semibold text-chs-charcoal">{prop.title}</p>
                 <p className="text-xs text-gray-500">{prop.location_area} — {prop.purpose}</p>
-                <p className="text-[9px] text-gray-400">Listed {new Date(prop.created_at).toLocaleString()}</p>
+                <p className="text-[9px] text-gray-400">Listed {formatDateTime(prop.created_at)}</p>
                 {/* Real, direct fix per a genuine, confirmed client
                     concern: the same real bio-data rigor already
                     built for a buyer making an offer was never
@@ -4155,7 +4155,7 @@ function AdminDashboardInner() {
               <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <div className="flex justify-between items-start">
                   <p className="text-sm text-chs-charcoal">{d.description}</p>
-                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(d.created_at).toLocaleString()}</span>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(d.created_at)}</span>
                 </div>
                 {d.amount_in_dispute !== null && (
                   <p className="text-xs font-semibold text-chs-charcoal mt-1">
@@ -4194,7 +4194,7 @@ function AdminDashboardInner() {
                 <div key={r.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-3">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{embeddedOne(r.tenancies?.properties)?.title || "Property"}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.submitted_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(r.submitted_at)}</span>
                   </div>
                   <p className="text-[10px] text-gray-500 capitalize mb-2">{r.report_type.replace(/_/g, " ")} · {r.status} · Ref: {r.reference}</p>
                   {r.affidavit_url && (
@@ -4239,7 +4239,7 @@ function AdminDashboardInner() {
               <div key={f.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <div className="flex justify-between items-start">
                   <p className="text-sm text-chs-charcoal">{f.note}</p>
-                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(f.created_at).toLocaleString()}</span>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(f.created_at)}</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">— {f.relation}</p>
                 <div className="flex gap-2 mt-2">
@@ -4321,7 +4321,7 @@ function AdminDashboardInner() {
               <div key={v.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3">
                 <div className="flex justify-between items-start">
                   <p className="text-sm font-semibold text-chs-charcoal">{v.business_name}</p>
-                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(v.created_at).toLocaleString()}</span>
+                  <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(v.created_at)}</span>
                 </div>
                 <p className="text-xs text-gray-500">{v.category} — {v.location_state}</p>
                 {v.cac_number && <p className="text-xs text-gray-500">CAC: {v.cac_number}</p>}
@@ -4373,7 +4373,7 @@ function AdminDashboardInner() {
                   <div className="flex justify-between items-center">
                     <p className="text-xs font-semibold text-chs-charcoal">{r.masked_reference}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(r.created_at).toLocaleString()}</span>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(r.created_at)}</span>
                       <span className="text-[9px] font-bold uppercase text-gray-400">{r.stage}</span>
                     </div>
                   </div>
@@ -4444,7 +4444,7 @@ function AdminDashboardInner() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">{f.description}</p>
-                    <p className="text-[10px] text-gray-400 mt-1 capitalize">Status: {f.status.replace(/_/g, " ")} · {new Date(f.created_at).toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-400 mt-1 capitalize">Status: {f.status.replace(/_/g, " ")} · {formatDateTime(f.created_at)}</p>
                     <button
                       onClick={() => handleSendFaultForApproval(f)}
                       className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold"
@@ -4472,7 +4472,7 @@ function AdminDashboardInner() {
                 <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal capitalize">{a.trades?.join(", ")}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(a.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(a.created_at)}</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">{a.years_experience} years experience · {a.equipment_tier.replace(/_/g, " ")} equipment</p>
                   <p className="text-xs text-gray-500">{a.base_lga ? `${a.base_lga}, ` : ""}{a.base_state} · {a.willing_to_travel_interstate ? "Willing to travel" : "Local jobs only"}</p>
@@ -4565,7 +4565,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-bold text-chs-charcoal">{formatNaira(r.amount)}</p>
                   <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${r.status === "open" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-500"}`}>{r.status === "open" ? "OPEN" : r.status.toUpperCase()}</span>
                 </div>
-                <p className="text-[11px] text-gray-600">Ref {r.reference} · reported {new Date(r.created_at).toLocaleString()}</p>
+                <p className="text-[11px] text-gray-600">Ref {r.reference} · reported {formatDateTime(r.created_at)}</p>
                 <p className="text-[11px] text-gray-600 mt-1">Sent by (reporting): <b>{r.reporter_name}</b> · {r.reporter_phone}</p>
                 <p className="text-[11px] text-gray-600">Received by: <b>{r.recipient_name}</b> · {r.recipient_phone} — wallet holds {r.recipient_balance !== null ? formatNaira(r.recipient_balance) : "?"}{r.recipient_frozen ? " · FROZEN" : ""}</p>
                 {r.note && <p className="text-[11px] text-chs-red mt-1">Reporter says: “{r.note}”</p>}
@@ -4656,7 +4656,7 @@ function AdminDashboardInner() {
                 <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">🏗️ {d.company_name}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(d.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(d.created_at)}</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">CAC: {d.cac_number} · {d.years_experience}</p>
                   {d.current_projects && <p className="text-xs text-gray-500">{d.current_projects}</p>}
@@ -4723,7 +4723,7 @@ function AdminDashboardInner() {
                       {c.tenant_name} ({c.tenant_phone}) ↔ {c.responsible_party_name || "Unassigned"} ({c.responsible_party_role})
                     </p>
                     <p className="text-xs text-chs-charcoal bg-white rounded-lg px-2 py-1.5 mb-1">&quot;{c.last_message_text}&quot;</p>
-                    <p className="text-[9px] text-gray-400">{new Date(c.last_message_at).toLocaleString()} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
+                    <p className="text-[9px] text-gray-400">{formatDateTime(c.last_message_at)} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
                   </div>
                 ))}
               </div>
@@ -4757,7 +4757,7 @@ function AdminDashboardInner() {
                       <DocumentViewLink url={t.selfie_url} label="View real selfie" />
                     )}
                   </div>
-                  <p className="text-[9px] text-gray-400 mt-1">Recorded {new Date(t.created_at).toLocaleDateString()}</p>
+                  <p className="text-[9px] text-gray-400 mt-1">Recorded {formatDateTime(t.created_at)}</p>
                 </div>
               ))
             )}
@@ -4881,7 +4881,7 @@ function AdminDashboardInner() {
                               <div>
                                 <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full mr-1.5">{u.category}</span>
                                 <span className="text-[11px] text-chs-charcoal">{u.label}</span>
-                                {u.date && <p className="text-[9px] text-gray-400 ml-0.5">{new Date(u.date).toLocaleString()}</p>}
+                                {u.date && <p className="text-[9px] text-gray-400 ml-0.5">{formatDateTime(u.date)}</p>}
                               </div>
                               <span className="text-[11px] font-bold text-chs-amber-dark whitespace-nowrap ml-2">{formatNaira(u.amount)}</span>
                             </div>
@@ -4900,7 +4900,7 @@ function AdminDashboardInner() {
                             </div>
                             {u.releaseBlockedNote && <p className="text-[8px] text-gray-400 mt-1">{u.releaseBlockedNote}</p>}
                             {u.refund && refundNotYet && (
-                              <p className="text-[8px] text-gray-400 mt-1">Refund opens {new Date(u.refund.opensAt as string).toLocaleString()} — after the {u.refund.defaulterLabel}&apos;s deadline has passed.</p>
+                              <p className="text-[8px] text-gray-400 mt-1">Refund opens {formatDateTime(u.refund.opensAt as string)} — after the {u.refund.defaulterLabel}&apos;s deadline has passed.</p>
                             )}
                             {u.category === "Shortlet Deposit" && (
                               <p className="text-[8px] text-gray-400 mt-1">For a disputed claim (host keeps the deposit), use the detailed Shortlet/Hire Deposits section below instead — it needs a written reason.</p>
@@ -4945,7 +4945,7 @@ function AdminDashboardInner() {
                       <div>
                         <p className="text-xs text-chs-charcoal">{r.property_title}</p>
                         <p className="text-[10px] text-gray-400">Landlord: {r.landlord_name} · {daysLeft > 0 ? `${daysLeft} days to auto-release` : "Past grace period"}</p>
-                        <p className="text-[9px] text-gray-400">Paid {new Date(r.created_at).toLocaleString()}</p>
+                        <p className="text-[9px] text-gray-400">Paid {formatDateTime(r.created_at)}</p>
                       </div>
                       <p className="text-xs font-bold text-chs-red">{formatNaira(r.amount)}</p>
                     </div>
@@ -4976,7 +4976,7 @@ function AdminDashboardInner() {
                   </p>
                   {offer.release_request_status === "pending" && (
                     <p className="text-[11px] bg-chs-amber-light text-chs-charcoal rounded-lg px-2.5 py-1.5 mt-1.5">
-                      The seller asked for release{offer.release_requested_at ? ` on ${new Date(offer.release_requested_at).toLocaleString()}` : ""}.{offer.release_request_note ? ` Seller says: “${offer.release_request_note}”` : ""}
+                      The seller asked for release{offer.release_requested_at ? ` on ${formatDateTime(offer.release_requested_at)}` : ""}.{offer.release_request_note ? ` Seller says: “${offer.release_request_note}”` : ""}
                     </p>
                   )}
                   {offer.release_request_status === "rejected" && offer.release_decision_note && <p className="text-[10px] text-gray-500 mt-1">Last request declined: {offer.release_decision_note}</p>}
@@ -5001,7 +5001,7 @@ function AdminDashboardInner() {
                 <div key={q.id} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
                   <div>
                     <p className="text-xs text-chs-charcoal">{q.product_name || "Marketplace order"}</p>
-                    <p className="text-[9px] text-gray-400">Paid {new Date(q.created_at).toLocaleString()}</p>
+                    <p className="text-[9px] text-gray-400">Paid {formatDateTime(q.created_at)}</p>
                   </div>
                   <p className="text-xs font-bold text-chs-red">{formatNaira(q.quoted_amount || 0)}</p>
                 </div>
@@ -5017,7 +5017,7 @@ function AdminDashboardInner() {
                   <div key={`s-${d.id}`} className="bg-[var(--zone-card)] rounded-lg p-2.5 mb-1.5 flex justify-between items-center">
                     <div>
                       <p className="text-xs text-chs-charcoal">Booking — {d.property_title}</p>
-                      <p className="text-[9px] text-gray-400">Paid {new Date(d.created_at).toLocaleString()}</p>
+                      <p className="text-[9px] text-gray-400">Paid {formatDateTime(d.created_at)}</p>
                     </div>
                     <p className="text-xs font-bold text-chs-red">{formatNaira(d.security_deposit_amount)}</p>
                   </div>
@@ -5047,7 +5047,7 @@ function AdminDashboardInner() {
                       {c.guest_name} ({c.guest_phone}) ↔ {c.host_name} ({c.host_phone})
                     </p>
                     <p className="text-xs text-chs-charcoal bg-white rounded-lg px-2 py-1.5 mb-1">&quot;{c.last_message_text}&quot;</p>
-                    <p className="text-[9px] text-gray-400">{new Date(c.last_message_at).toLocaleString()} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
+                    <p className="text-[9px] text-gray-400">{formatDateTime(c.last_message_at)} · {c.message_count} real message{c.message_count !== 1 ? "s" : ""} total</p>
                   </div>
                 ))}
               </div>
@@ -5138,7 +5138,7 @@ function AdminDashboardInner() {
                   <p className="text-xs font-bold text-chs-charcoal mt-0.5">{formatNaira(r.host_net)} <span className="text-[10px] font-normal text-gray-500">to the host (net) · {formatNaira(r.amount_held)} held in all</span></p>
                   {r.move_in_issue_note && <p className="text-[11px] text-chs-red mt-0.5">Guest says: “{r.move_in_issue_note}”</p>}
                   {r.release_request_note && <p className="text-[11px] text-gray-600 mt-0.5">Host says: “{r.release_request_note}”</p>}
-                  {r.auto_release_at && r.kind !== "problem" && <p className="text-[10px] text-gray-400 mt-0.5">Releases automatically at {new Date(r.auto_release_at).toLocaleString()}</p>}
+                  {r.auto_release_at && r.kind !== "problem" && <p className="text-[10px] text-gray-400 mt-0.5">Releases automatically at {formatDateTime(r.auto_release_at)}</p>}
                   <button onClick={() => handleReleaseNow(r.id, r.kind)} disabled={queueBusy === r.id}
                     className={`w-full mt-1.5 py-1.5 rounded-full text-[11px] font-semibold disabled:opacity-50 ${r.kind === "problem" ? "bg-gray-200 text-gray-600" : "bg-chs-red text-white"}`}>
                     {queueBusy === r.id ? "Releasing…" : "Release the host's payment now"}
@@ -5216,7 +5216,7 @@ function AdminDashboardInner() {
                           )}
                           {q.admin_relay_note && <p className="text-[10px] text-gray-500 italic mt-0.5">CHS note to host: “{q.admin_relay_note}”</p>}
                           {q.relay_mode === "auto" && stage !== "awaiting_admin_relay" && <p className="text-[9px] text-gray-400 mt-0.5">Relayed to the host automatically</p>}
-                          <p className="text-[9px] text-gray-400 mt-0.5">Requested {new Date(q.created_at).toLocaleString()}</p>
+                          <p className="text-[9px] text-gray-400 mt-0.5">Requested {formatDateTime(q.created_at)}</p>
 
                           {stage === "awaiting_admin_relay" && (
                             <div className="mt-2">
@@ -5262,7 +5262,7 @@ function AdminDashboardInner() {
                   <p className="text-sm font-bold text-chs-charcoal mb-1">{formatNaira(o.amount)}</p>
                   <p className="text-[11px] text-gray-600">Buyer: {o.buyer_name} · {o.buyer_phone}</p>
                   <p className="text-[11px] text-gray-500 mb-2">Seller: {o.seller_name} · {o.seller_phone}</p>
-                  <p className="text-[9px] text-gray-400 mb-2">Accepted {new Date(o.pending_since).toLocaleDateString()} — buyer never completed payment</p>
+                  <p className="text-[9px] text-gray-400 mb-2">Accepted {formatDateTime(o.pending_since)} — buyer never completed payment</p>
                   <div className="flex gap-2 mb-2">
                     <button onClick={() => handleSendStaleReminder(o.id)}
                       className="flex-1 py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
@@ -5302,7 +5302,7 @@ function AdminDashboardInner() {
                       <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                     </div>
                     <p className="text-xs text-gray-500 mb-1">Vendor: {o.vendor_name}</p>
-                    <p className="text-[9px] text-gray-400 mb-1">Paid {new Date(o.created_at).toLocaleString()}</p>
+                    <p className="text-[9px] text-gray-400 mb-1">Paid {formatDateTime(o.created_at)}</p>
                     <p className="text-sm font-bold text-chs-charcoal mb-2">Real amount held: {formatNaira(o.amount)}</p>
                     <input type="text" placeholder="If refunding: real reason"
                       value={directOrderReasons[o.id] || ""} onChange={(e) => setDirectOrderReasons({ ...directOrderReasons, [o.id]: e.target.value })}
@@ -5325,7 +5325,7 @@ function AdminDashboardInner() {
                     <p className="text-sm font-semibold text-chs-charcoal">{q.product_name || "Product"}</p>
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{q.reference_number}</span>
-                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{new Date(q.created_at).toLocaleString()}</span>
+                      <span className="text-[9px] text-gray-400 whitespace-nowrap">{formatDateTime(q.created_at)}</span>
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">Vendor: {q.vendor_name}</p>
@@ -5391,7 +5391,7 @@ function AdminDashboardInner() {
                     <span className="font-semibold text-chs-charcoal">{e.profiles?.full_name} ({e.profiles?.phone})</span>
                     <span className="font-bold text-green-700">+{formatNaira(e.commission_amount)}</span>
                   </div>
-                  <p className="text-gray-500 mt-0.5">{e.transaction_type.replace(/_/g, " ")} · {e.payer_role} · {new Date(e.created_at).toLocaleString()}</p>
+                  <p className="text-gray-500 mt-0.5">{e.transaction_type.replace(/_/g, " ")} · {e.payer_role} · {formatDateTime(e.created_at)}</p>
                 </div>
               ))
             )}
@@ -5481,7 +5481,7 @@ function AdminDashboardInner() {
                             {item.payer_name} ({item.payer_role}) · {item.commission_percentage}% of {formatNaira(item.base_amount)}
                           </p>
                           <p className="text-[9px] text-gray-400">
-                            {new Date(item.paid_at).toLocaleString()}{item.reference ? ` · ${item.reference}` : ""}
+                            {formatDateTime(item.paid_at)}{item.reference ? ` · ${item.reference}` : ""}
                           </p>
                         </div>
                       ))}
@@ -5527,7 +5527,7 @@ function AdminDashboardInner() {
                           <p className="text-[9px] text-gray-500">
                             Real share due from {item.payer_name} ({item.payer_role}) · {item.payer_phone}
                           </p>
-                          <p className="text-[9px] text-gray-400">Deal recorded {new Date(item.created_at).toLocaleString()}</p>
+                          <p className="text-[9px] text-gray-400">Deal recorded {formatDateTime(item.created_at)}</p>
                         </div>
                       ))}
                     </div>
@@ -5572,7 +5572,7 @@ function AdminDashboardInner() {
                 }} className={`block w-full text-left rounded-xl border p-3 mb-2 ${n.read ? "bg-white border-gray-100" : "bg-chs-amber-light border-chs-amber-dark"}`}>
                   <div className="flex justify-between items-start">
                     <p className="text-sm font-semibold text-chs-charcoal">{n.title}</p>
-                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(n.created_at).toLocaleString()}</span>
+                    <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(n.created_at)}</span>
                   </div>
                   <p className="text-xs text-gray-600 mt-0.5">{n.body}</p>
                 </button>
@@ -5601,7 +5601,7 @@ function AdminDashboardInner() {
                     {h.status === "approved" ? "✓" : "✕"} {h.action_type.replace(/_/g, " ")}
                   </span>
                   <p className="text-[10px] text-gray-500 mt-0.5">
-                    {h.profiles?.[0]?.full_name || "Unknown"} · {h.resolved_at && new Date(h.resolved_at).toLocaleString()}
+                    {h.profiles?.[0]?.full_name || "Unknown"} · {h.resolved_at && formatDateTime(h.resolved_at)}
                   </p>
                   {h.resolution_note && <p className="text-[11px] text-gray-600 mt-1">&quot;{h.resolution_note}&quot;</p>}
                 </div>
@@ -5901,7 +5901,7 @@ function AdminDashboardInner() {
                     </div>
                     <p className="text-gray-500 mt-0.5 font-mono">{u.reference_number} · {u.phone} · <span className="capitalize">{u.role}</span></p>
                     <p className="text-[10px] text-gray-400 mt-0.5">
-                      Registered {new Date(u.created_at).toLocaleDateString()} · Last seen {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleDateString() : "never"}
+                      Registered {formatDateTime(u.created_at)} · Last seen {u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : "never"}
                     </p>
                   </div>
                 ))}
@@ -5979,7 +5979,7 @@ function EngageRequestCard({
     <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
       <div className="flex justify-between items-start">
         <p className="text-sm font-semibold text-chs-charcoal">{request.service_type}</p>
-        <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(request.created_at).toLocaleString()}</span>
+        <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(request.created_at)}</span>
       </div>
       <p className="text-xs text-gray-500 mt-1">{request.location}</p>
       <p className="text-xs text-gray-600 mt-1">{request.description}</p>

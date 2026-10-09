@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Session } from "@supabase/supabase-js";
@@ -45,7 +47,7 @@ export default function HouseRulesAcknowledgment({ tenancyId, propertyId, sessio
       </a>
       {acknowledgedAt ? (
         <p className="text-[10px] text-gray-400">
-          You accepted these house rules on {new Date(acknowledgedAt).toLocaleDateString()} — timestamped and binding.
+          You accepted these house rules on {formatDateTime(acknowledgedAt)} — timestamped and binding.
         </p>
       ) : (
         <button onClick={handleAcknowledge} className="w-full py-2 rounded-full bg-chs-red text-white text-[11px] font-semibold">

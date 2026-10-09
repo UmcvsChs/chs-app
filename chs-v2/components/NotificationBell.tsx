@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -189,8 +191,8 @@ export default function NotificationBell() {
                   <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
                   <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>
                   <p className="text-[9px] text-gray-400 mt-1">
-                    Sent {new Date(n.created_at).toLocaleString()}
-                    {n.read_at && <> · <span className="text-green-600">Read {new Date(n.read_at).toLocaleString()}</span></>}
+                    Sent {formatDateTime(n.created_at)}
+                    {n.read_at && <> · <span className="text-green-600">Read {formatDateTime(n.read_at)}</span></>}
                   </p>
                   <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>
                 </div>

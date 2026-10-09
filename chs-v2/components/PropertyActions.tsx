@@ -8,7 +8,7 @@ import InfoTip from "./InfoTip";
 import { Property } from "@/types/property";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatCalendarDate } from "@/lib/format";
 import CurrencyInput from "./CurrencyInput";
 import InspectionBookingForm from "./InspectionBookingForm";
 import RentalApplicationForm from "./RentalApplicationForm";
@@ -542,7 +542,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
           </Link>
         )}
         <p className="text-xs text-gray-500 mb-3">
-          Real documents are due to you by {new Date(myPaidOffer.document_deadline).toLocaleDateString()}. If they haven&apos;t arrived by then, you can request a refund below — your full payment back, including CHS&apos;s commission, less only a small real bank processing fee (never more than ₦2,000).
+          Real documents are due to you by {formatCalendarDate(myPaidOffer.document_deadline)}. If they haven&apos;t arrived by then, you can request a refund below — your full payment back, including CHS&apos;s commission, less only a small real bank processing fee (never more than ₦2,000).
         </p>
         {/* Real, new fix — the actual verified legal documents,
             uploaded and confirmed by CHS at listing time, made

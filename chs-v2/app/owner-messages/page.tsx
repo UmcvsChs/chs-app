@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -80,7 +82,7 @@ export default function OwnerMessageHistoryPage() {
             >
               <div className="flex justify-between items-start">
                 <p className="text-xs font-bold text-chs-charcoal">{m.property_title}</p>
-                <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{new Date(m.created_at).toLocaleString()}</span>
+                <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(m.created_at)}</span>
               </div>
               <p className="text-[10px] text-gray-400 mt-0.5">
                 {m.conversation_type === "offer" ? "🏡 Buyer" : "🏠 Tenant"}: {m.sender_name}

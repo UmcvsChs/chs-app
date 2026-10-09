@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { formatNaira } from "@/lib/format";
+import { formatNaira, formatDateTime } from "@/lib/format";
 import HostBookingDecision from "@/components/HostBookingDecision";
 import { durationText } from "@/lib/bookingLane";
 
@@ -135,7 +135,7 @@ export default function PendingBookingRequests() {
 
               {left && (
                 <p className={`text-[11px] font-semibold mt-1.5 ${left.urgent ? "text-chs-red" : "text-amber-700"}`}>
-                  ⏳ {left.text}{r.expires_at ? ` (by ${new Date(r.expires_at).toLocaleString()})` : ""}
+                  ⏳ {left.text}{r.expires_at ? ` (by ${formatDateTime(r.expires_at)})` : ""}
                 </p>
               )}
 

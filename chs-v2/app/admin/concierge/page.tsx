@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDateTime } from "@/lib/format";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -140,7 +142,7 @@ export default function AdminConciergePage() {
                   </p>
                   <p className="text-xs text-gray-400">
                     {r.contact_phone || (r.user_id ? "Logged-in account" : "No contact given")}
-                    {" · "}{new Date(r.created_at).toLocaleString()}
+                    {" · "}{formatDateTime(r.created_at)}
                   </p>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
