@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -319,7 +320,7 @@ export default function AgentDashboard() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Agent Dashboard" />
         <div className="flex justify-between items-end mt-1 gap-2">
-          <h1 className="font-serif text-lg font-bold">Agent Dashboard</h1>
+          <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">Agent Dashboard</h1><NotificationBell /></div>
           {session && <WalletQuickView userId={session.user.id} extra="agent_earnings" />}
         </div>
 

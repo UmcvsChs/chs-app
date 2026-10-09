@@ -114,8 +114,12 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
       {shown.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-8">{filter === "action" ? "✓ Nothing is waiting for CHS." : "No agreements yet."}</p>
       ) : shown.map((r) => {
-        const stage = STAGE[r.status] || { label: r.status, tone: "bg-gray-100 text-gray-600" };
         const h = r.handover;
+        const stage = r.status === "awaiting_handover" && h && h.status === "requested"
+          ? { label: "Buyer has asked for the documents: waiting for the owner to upload and send them", tone: "bg-amber-100 text-amber-800" }
+          : r.status === "awaiting_handover" && h && h.status === "sent"
+            ? { label: "Owner says documents sent: confirm with the buyer, then release", tone: "bg-green-600 text-white" }
+            : (STAGE[r.status] || { label: r.status, tone: "bg-gray-100 text-gray-600" });
         return (
           <div key={r.id} className={`bg-white rounded-xl border-2 p-3 mb-3 ${r.needs_action ? "border-chs-amber" : "border-gray-100"}`}>
             <div className="flex justify-between items-start gap-2">

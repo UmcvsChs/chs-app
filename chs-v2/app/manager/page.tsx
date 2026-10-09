@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -235,7 +236,7 @@ export default function ManagerDashboard() {
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Property Manager Dashboard" />
         <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold">Property Manager</h1>
+          <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">Property Manager</h1><NotificationBell /></div>
           <Link href="/manager/estates" className="text-[10px] font-semibold bg-white/15 px-2.5 py-1 rounded-full">
             🏘️ My Estates<InfoTip term="estate_management" />
           </Link>

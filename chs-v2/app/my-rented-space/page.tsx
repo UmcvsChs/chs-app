@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import RefundPolicyNotice from "@/components/RefundPolicyNotice";
@@ -165,7 +166,7 @@ export default function MyRentedSpacePage() {
         <div className="flex justify-between items-start mt-1">
           <div>
             <RoleBadge label="My Rented Space" />
-            <h1 className="font-serif text-xl font-bold mt-1">{tenancy.properties?.title}</h1>
+            <div className="flex items-center gap-2"><h1 className="font-serif text-xl font-bold mt-1">{tenancy.properties?.title}</h1><NotificationBell /></div>
             <p className="text-xs text-white/70">{tenancy.properties?.location_area}</p>
           </div>
         </div>

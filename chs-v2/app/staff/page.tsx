@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -110,7 +111,7 @@ export default function StaffPage() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <RoleBadge label="Team Staff Dashboard" />
-        <h1 className="font-serif text-lg font-bold mt-1">My Work</h1>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold mt-1">My Work</h1><NotificationBell /></div>
       </div>
 
       <div className="px-4 py-4 space-y-4">

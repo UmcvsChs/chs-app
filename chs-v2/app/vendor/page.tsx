@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -231,7 +232,7 @@ export default function VendorDashboard() {
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <div className="flex justify-between items-center mt-1">
           <div>
-            <h1 className="font-serif text-lg font-bold">{vendor.business_name}</h1>
+            <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">{vendor.business_name}</h1><NotificationBell /></div>
             <p className="text-[10px] text-white/70">{KIND_LABEL[categoryKind(vendor.category)]} · {categoryLabel(vendor.category)}</p>
           </div>
           <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${

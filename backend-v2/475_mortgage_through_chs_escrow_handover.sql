@@ -427,3 +427,7 @@ end $$;
 -- Table rto_document_submissions; rto_submit_documents (owner uploads scans), admin_review_rto_documents (CHS approves / asks for changes),
 -- get_rto_submissions (buyer sees status only, never the files); rto_mark_documents_sent now requires an approved submission and accepts a receipt file;
 -- confirm_rto_documents_received now also notifies the owner and CHS. See the live function definitions for the full text.
+
+-- 475e (applied live 9 Oct 2026): approved soft copy reaches the buyer.
+-- admin_review_rto_documents now also notifies the buyer on approval; get_rto_submissions shows the files to the buyer only once approved;
+-- rto_buyer_can_read_file() + storage policy private_docs_rto_buyer_read let the buyer open ONLY approved files. See the live definitions.

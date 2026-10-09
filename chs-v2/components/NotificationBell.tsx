@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Notification } from "@/types/notification";
+import { roleHome } from "@/lib/roleHome";
 
 // A real, working notification bell — the single most-flagged missing
 // piece from the full audit against the original app. Every dashboard
@@ -100,8 +101,7 @@ export default function NotificationBell() {
     const role = profile?.role || "";
     if (/rent-to-own|mortgage/.test(text)) return role === "admin" ? "/admin?tab=rtorequests" : role === "owner" ? "/owner" : "/rent-to-own";
     if (/wallet|withdraw|deposit|refund|released|payment|installment|earning/.test(text)) return "/wallet";
-    const home: Record<string, string> = { owner: "/owner", agent: "/agent", manager: "/manager", vendor: "/vendor", host: "/host", admin: "/admin", artisan: "/artisan", tenant: "/tenant", developer: "/developer", staff: "/staff", buyer: "/tenant", guest: "/my-bookings" };
-    return home[role] || "/";
+    return roleHome(role);
   }
 
   function handleNotificationClick(e: React.MouseEvent, n: Notification) {

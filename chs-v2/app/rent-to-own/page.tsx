@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RoleBadge from "@/components/RoleBadge";
@@ -8,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import WalletQuickView from "@/components/WalletQuickView";
+import { roleHome } from "@/lib/roleHome";
+import { getFreshDocumentUrl } from "@/lib/storage";
 import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import { Req } from "@/components/FormMarks";
 
@@ -55,7 +58,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function RentToOwnPage() {
   const router = useRouter();
-  const { session, loading: authLoading } = useAuth();
+  const { session, profile, loading: authLoading } = useAuth();
   const [agreements, setAgreements] = useState<RtoAgreement[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [handovers, setHandovers] = useState<Record<string, Handover | null>>({});
@@ -66,6 +69,11 @@ export default function RentToOwnPage() {
   const [custom, setCustom] = useState<Record<string, string>>({});
   const [docForm, setDocForm] = useState<Record<string, { name: string; address: string; phone: string; method: string; days: string }>>({});
   const [docMsg, setDocMsg] = useState<Record<string, string>>({});
+  const [softCopies, setSoftCopies] = useState<Record<string, { name: string; url: string }[]>>({});
+  async function openSoftCopy(url: string) {
+    const fresh = await getFreshDocumentUrl(url);
+    if (fresh) window.open(fresh, "_blank");
+  }
 
   async function loadData() {
     if (!session) return;
@@ -93,6 +101,13 @@ export default function RentToOwnPage() {
       hand[a.id] = (data as Handover) || null;
     }));
     setHandovers(hand);
+    const soft: Record<string, { name: string; url: string }[]> = {};
+    await Promise.all(list.filter((a) => a.status === "awaiting_handover" || a.status === "completed").map(async (a) => {
+      const { data } = await supabase.rpc("get_rto_submissions", { p_agreement_id: a.id });
+      const files = (Array.isArray(data) ? data : []).flatMap((x: { status: string; files: { name: string; url: string }[] }) => (x.status === "approved" ? x.files : []));
+      if (files.length) soft[a.id] = files;
+    }));
+    setSoftCopies(soft);
     setLoading(false);
   }
 
@@ -193,10 +208,10 @@ export default function RentToOwnPage() {
   return (
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
-        <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
+        <Link href={roleHome(profile?.role)} className="text-xs text-white/70">← Back to my dashboard</Link>
         <RoleBadge label="Mortgage Installment Panel" />
         <div className="flex justify-between items-end mt-1 gap-2">
-          <h1 className="font-serif text-lg font-bold">My Mortgage Payments</h1>
+          <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">My Mortgage Payments</h1><NotificationBell /></div>
           {session && <WalletQuickView userId={session.user.id} />}
         </div>
         <div className="flex gap-1.5 mt-2">
@@ -267,6 +282,14 @@ export default function RentToOwnPage() {
                         </p>
                         {payMessage[a.id] && <p className="text-[10px] text-gray-600 mt-1">{payMessage[a.id]}</p>}
                         <p className="text-[10px] text-gray-500 mt-0.5">Ownership becomes legal when the owner hands over the property documents. Until then CHS holds the last payment, so the owner has every reason to send them.</p>
+                        {(softCopies[a.id] || []).length > 0 && (
+                          <div className="mt-2 bg-green-50 rounded-lg p-2">
+                            <p className="text-[10px] font-bold text-green-800">📄 Soft copy checked by CHS (view while the hard copy is on its way)</p>
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {softCopies[a.id].map((f2, i) => (<button key={i} type="button" onClick={() => openSoftCopy(f2.url)} className="px-2 py-1 rounded-full bg-white border border-green-200 text-[10px] underline">{f2.name}</button>))}
+                            </div>
+                          </div>
+                        )}
                         {!h && (
                           <div className="mt-2 space-y-1.5">
                             <p className="text-[10px] font-bold text-chs-charcoal">Click here to demand the documents of this property</p>

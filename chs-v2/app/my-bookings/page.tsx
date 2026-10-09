@@ -1,6 +1,7 @@
 "use client";
 
 import { embeddedOne } from "@/lib/embedded";
+import NotificationBell from "@/components/NotificationBell";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -82,7 +83,7 @@ export default function MyBookingsPage() {
     <div className="min-h-screen bg-[var(--zone-bg)] px-4 py-8">
       <div className="max-w-md mx-auto">
         <button onClick={() => router.back()} className="text-xs text-gray-400 mb-4 inline-block">← Back</button>
-        <h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">🏠 My Shortlet Bookings</h1>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-2xl font-bold text-chs-charcoal mb-1">🏠 My Shortlet Bookings</h1><NotificationBell /></div>
         <Link href="/tenant" className="text-xs text-chs-red font-semibold underline mb-4 inline-block">
           Looking for a long-term rental instead? See My Rentals →
         </Link>

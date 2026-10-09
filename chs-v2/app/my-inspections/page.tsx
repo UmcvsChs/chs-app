@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { roleHome } from "@/lib/roleHome";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
@@ -22,7 +24,7 @@ const first = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? n
 
 export default function MyInspectionsPage() {
   const router = useRouter();
-  const { session, loading } = useAuth();
+  const { session, profile, loading } = useAuth();
   const [items, setItems] = useState<Insp[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
@@ -71,8 +73,8 @@ export default function MyInspectionsPage() {
   return (
     <div className="min-h-screen bg-background pb-10">
       <div className="px-4 pt-4">
-        <Link href="/" className="text-xs text-gray-500">← Home</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Inspections</h1>
+        <Link href={roleHome(profile?.role)} className="text-xs text-gray-500">← Back to my dashboard</Link>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold mt-1">My Inspections</h1><NotificationBell /></div>
         <p className="text-[11px] text-gray-500 mt-0.5">Physical visits you asked for. The photographs and videos are free; if you still want to visit in person, the whole transport cost is yours, paid from your CHS Wallet.</p>
       </div>
       <div className="px-4 mt-3"><PaymentSafetyNotice variant="full" /></div>

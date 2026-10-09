@@ -1,6 +1,7 @@
 "use client";
 
 import { embeddedOne } from "@/lib/embedded";
+import NotificationBell from "@/components/NotificationBell";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -110,7 +111,7 @@ export default function GuestDashboardPage() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <Link href="/" className="text-xs text-white/70">← Back to homepage</Link>
         <RoleBadge label="Guest" />
-        <h1 className="font-serif text-lg font-bold mt-1">My Guest Dashboard</h1>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold mt-1">My Guest Dashboard</h1><NotificationBell /></div>
         <p className="text-xs text-white/60 mt-1">Shortlet, hotel/event, and casual hire bookings — a real, different kind of stay from renting or buying.</p>
         {/* Real, direct fix per explicit client request: the same
             real, persistent "browse" link already on buyer's own

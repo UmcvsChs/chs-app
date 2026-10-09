@@ -1,6 +1,7 @@
 "use client";
 
 import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
+import NotificationBell from "@/components/NotificationBell";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -257,7 +258,7 @@ export default function WalletPage() {
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href={{admin:"/admin",owner:"/owner",host:"/host",agent:"/agent",manager:"/manager",tenant:"/tenant",buyer:"/my-offers",guest:"/guest",developer:"/developer",staff:"/staff"}[profile?.role || ""] || "/"} className="text-xs text-white/70">← Back to Dashboard</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold mt-1">My Wallet</h1><NotificationBell /></div>
         <PaymentSafetyNotice variant="full" className="my-3" />
         <Link href="/my-receipts" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           🧾 My Real Receipts →

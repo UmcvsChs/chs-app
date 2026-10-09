@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -63,7 +64,7 @@ export default function SavedPropertiesPage() {
     <div className="min-h-screen zone-buyer bg-[var(--zone-bg)] pb-20">
       <div className="bg-chs-charcoal text-white px-4 py-4">
         <Link href={{admin:"/admin",owner:"/owner",host:"/host",agent:"/agent",manager:"/manager",tenant:"/tenant",buyer:"/my-offers",guest:"/guest",developer:"/developer",staff:"/staff"}[profile?.role || ""] || "/"} className="text-xs text-white/70">← Back to Dashboard</Link>
-        <h1 className="font-serif text-lg font-bold mt-1">❤️ Saved Properties</h1>
+        <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold mt-1">❤️ Saved Properties</h1><NotificationBell /></div>
       </div>
 
       {negotiations.length > 0 && (

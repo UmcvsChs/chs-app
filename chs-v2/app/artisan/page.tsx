@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -227,7 +228,7 @@ export default function ArtisanDashboard() {
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
         <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
         <div className="flex justify-between items-center mt-1">
-          <h1 className="font-serif text-lg font-bold capitalize">{artisan.trades?.join(", ")} {artisan.artisan_type === "chs_agent" ? "· CHS Agent" : "· Independent"}<InfoTip text="'CHS Agent' means you were brought on directly through CHS's own vetting. 'Independent' means you registered yourself — both are real, verified artisans, this just shows how you joined." /></h1>
+          <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold capitalize">{artisan.trades?.join(", ")} {artisan.artisan_type === "chs_agent" ? "· CHS Agent" : "· Independent"}<InfoTip text="'CHS Agent' means you were brought on directly through CHS's own vetting. 'Independent' means you registered yourself — both are real, verified artisans, this just shows how you joined." /></h1><NotificationBell /></div>
           <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${artisan.verification_status === "verified" ? "bg-chs-red" : "bg-white/15"}`}>
             {artisan.verification_status === "verified" ? "✓ Verified" : "Pending review"}
           </span>
