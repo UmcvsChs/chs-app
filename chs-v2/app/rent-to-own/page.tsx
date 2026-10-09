@@ -333,7 +333,7 @@ export default function RentToOwnPage() {
                                 <p className="text-green-700 font-semibold">The owner says they were sent{h.sent_method ? ` by ${h.sent_method}` : ""}{h.tracking ? ` (tracking ${h.tracking})` : ""}.</p>
                                 {h.proof_note && <p className="italic text-gray-500">&quot;{h.proof_note}&quot;</p>}
                                 {a.status === "awaiting_handover" && (
-                                  <button onClick={() => confirmDocs(a)} className="mt-1.5 w-full py-2 rounded-full bg-green-600 text-white text-xs font-semibold">✓ I have received my documents. Release the final payment</button>
+                                  <button onClick={() => confirmDocs(a)} className="mt-1.5 w-full py-2 rounded-full bg-green-600 text-white text-xs font-semibold">✓ I have received my documents</button>
                                 )}
                               </>
                             )}

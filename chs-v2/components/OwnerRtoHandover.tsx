@@ -91,7 +91,7 @@ export default function OwnerRtoHandover({ userId }: { userId: string }) {
     <div className="px-4 pb-3">
       <div className="bg-white border-2 border-chs-charcoal/20 rounded-xl p-3">
         <p className="text-xs font-bold text-chs-charcoal">📮 Mortgage documents to hand over ({shown.length})</p>
-        <p className="text-[10px] text-gray-500 mb-2">The buyer has paid in full. CHS holds your final payment and releases it when you have sent the property documents and the buyer or CHS confirms. Contact with the buyer goes through CHS.</p>
+        <p className="text-[10px] text-gray-500 mb-2">The buyer has paid in full. CHS holds your final payment and releases it after you have sent the property documents, the buyer confirms receipt and CHS has checked. Contact with the buyer goes through CHS.</p>
         {shown.map((r) => {
           const h = handovers[r.id];
           const f = form[r.id] || { method: "courier", tracking: "", note: "" };

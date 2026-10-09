@@ -11,7 +11,7 @@ import { getFreshDocumentUrl } from "@/lib/storage";
 
 interface Handover {
   status: string; recipient_name: string; delivery_address: string; delivery_phone: string; method: string; max_days: number; deadline: string; overdue: boolean;
-  sent_at: string | null; sent_method: string | null; tracking: string | null; proof_note: string | null; proof_url: string | null; confirmed_at: string | null;
+  sent_at: string | null; sent_method: string | null; tracking: string | null; proof_note: string | null; proof_url: string | null; confirmed_at: string | null; confirmed_by?: string | null;
 }
 interface Row {
   id: string; ref: string; status: string; needs_action: boolean; property_title: string; property_ref: string; location: string | null;
@@ -45,6 +45,8 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
   const [filter, setFilter] = useState<"action" | "all">("all");
   const [pending, setPending] = useState<Pending[]>([]);
   const [subs, setSubs] = useState<Record<string, Submission[]>>({});
+  const [isSuper, setIsSuper] = useState(false);
+  const [autoRelease, setAutoRelease] = useState(false);
 
   const load = useCallback(async () => {
     const { data } = await supabase.rpc("get_rto_admin_queue");
@@ -58,6 +60,13 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
       if (Array.isArray(x) && x.length) sb[r.id] = x as Submission[];
     }));
     setSubs(sb);
+    const { data: on } = await supabase.rpc("rto_auto_release_on");
+    setAutoRelease(on === true);
+    const { data: au } = await supabase.auth.getUser();
+    if (au.user) {
+      const { data: me } = await supabase.from("profiles").select("is_super_admin").eq("id", au.user.id).single();
+      setIsSuper(!!(me as { is_super_admin?: boolean } | null)?.is_super_admin);
+    }
   }, []);
   async function openFile(url: string) {
     const fresh = await getFreshDocumentUrl(url);
@@ -85,6 +94,18 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
       <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2.5 mb-3">
         🏠 Every Mortgage (Rent to Own) agreement, newest first. Every request, every owner answer and the final payment go through CHS. The owner never sees the buyer&apos;s name in full or phone number, and the buyer never deals with the owner directly. Nothing leaves this list.
       </p>
+      <div className={`rounded-xl border-2 p-3 mb-3 ${autoRelease ? "border-chs-red bg-chs-amber-light" : "border-gray-100 bg-white"}`}>
+        <label className="flex items-start gap-2 text-xs text-chs-charcoal">
+          <input type="checkbox" checked={autoRelease} disabled={!isSuper || busy === "auto"} className="mt-0.5"
+            onChange={(e) => {
+              const on = e.target.checked;
+              if (on && !window.confirm("Switch ON auto release? From now on, the moment a buyer confirms they received their documents (after the owner has sent them), the held final payment goes to the owner's wallet without any admin clicking. Use this only for busy periods.")) return;
+              run("auto", supabase.rpc("admin_set_rto_auto_release", { p_on: on }));
+            }} />
+          <span><b>Auto release of final mortgage payments</b> {autoRelease ? <span className="text-chs-red font-bold">· ON</span> : <span className="text-gray-500">· OFF (manual)</span>}<br />
+            <span className="text-[10px] text-gray-500">When this box is not ticked, every final payment stays held until a super admin releases it here. Tick it only in a busy period; untick it afterwards.{!isSuper ? " Only a super admin can change this." : ""}</span></span>
+        </label>
+      </div>
       <div className="flex gap-2 mb-3">
         {([["all", "All agreements"], ["action", "Needs action"]] as const).map(([k, l]) => (
           <button key={k} type="button" onClick={() => setFilter(k)} className={`px-3 py-1.5 rounded-full text-xs font-semibold ${filter === k ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}>
@@ -117,6 +138,8 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
         const h = r.handover;
         const stage = r.status === "awaiting_handover" && h && h.status === "requested"
           ? { label: "Buyer has asked for the documents: waiting for the owner to upload and send them", tone: "bg-amber-100 text-amber-800" }
+          : r.status === "awaiting_handover" && h && h.status === "confirmed"
+            ? { label: "Buyer CONFIRMED receipt: final payment waiting for your release", tone: "bg-green-600 text-white" }
           : r.status === "awaiting_handover" && h && h.status === "sent"
             ? { label: "Owner says documents sent: confirm with the buyer, then release", tone: "bg-green-600 text-white" }
             : (STAGE[r.status] || { label: r.status, tone: "bg-gray-100 text-gray-600" });
@@ -140,7 +163,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
             {r.owner_decision_at && <p className="text-[11px] text-gray-600">Owner answered {new Date(r.owner_decision_at).toLocaleString()}{r.owner_decision_note ? `: “${r.owner_decision_note}”` : ""}</p>}
             {r.competing_requests > 0 && <p className="text-[11px] text-chs-red mt-1">⚠ {r.competing_requests} other request(s) are also pending on this property. Starting one will decline the rest.</p>}
 
-            {(r.status === "awaiting_admin_relay" || r.status === "owner_approved" || r.status === "owner_declined" || (r.status === "awaiting_handover" && !(h && h.status === "sent"))) && (
+            {(r.status === "awaiting_admin_relay" || r.status === "owner_approved" || r.status === "owner_declined" || (r.status === "awaiting_handover" && !(h && (h.status === "sent" || h.status === "confirmed")))) && (
               <input type="text" value={notes[r.id] || ""} onChange={(e) => setNotes({ ...notes, [r.id]: e.target.value })} maxLength={300}
                 placeholder={r.status === "awaiting_admin_relay" ? "Note to the owner / reason to reject (required to reject)" : r.status === "awaiting_handover" ? "How you verified the handover (required to release without proof)" : "Optional note"}
                 className="w-full mt-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
@@ -186,11 +209,16 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
                   <>
                     <p>Deliver to {h.recipient_name}, {h.delivery_address} · buyer phone <b>{h.delivery_phone}</b> · by {new Date(h.deadline).toLocaleDateString()}{h.overdue ? " · OVERDUE" : ""}</p>
                     {h.status === "requested" && <p className="text-amber-700">Waiting for the owner to send and show proof.</p>}
+                    {h.status === "confirmed" && <p className="text-green-700 font-semibold">✓ The buyer confirmed on {h.confirmed_at ? new Date(h.confirmed_at).toLocaleString() : "—"} that the documents arrived. The money stays held until you release it.</p>}
                     {h.status === "sent" && <p className="text-green-700">Owner says sent{h.sent_method ? ` by ${h.sent_method}` : ""}{h.tracking ? `, tracking ${h.tracking}` : ""}. {h.proof_note ? `“${h.proof_note}”` : ""} {h.proof_url && <button type="button" onClick={() => openFile(h.proof_url as string)} className="underline">View receipt</button>} Phone the buyer to confirm, then release.</p>}
                   </>
                 )}
-                <button onClick={() => run(r.id, supabase.rpc("admin_release_rto_final", { p_agreement_id: r.id, p_note: note(r.id) || null }))} disabled={busy === r.id}
-                  className="mt-1.5 w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">Release the final payment to the owner</button>
+                {isSuper ? (
+                  <button onClick={() => { if (window.confirm(`Release ${formatNaira(r.final_held_amount)} to ${r.owner_name}? This moves real money into their wallet.`)) run(r.id, supabase.rpc("admin_release_rto_final", { p_agreement_id: r.id, p_note: note(r.id) || null })); }} disabled={busy === r.id}
+                    className="mt-1.5 w-full py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">Release the final payment to the owner</button>
+                ) : (
+                  <p className="mt-1.5 text-[11px] text-chs-red">Only a super admin can release the final payment.</p>
+                )}
               </div>
             )}
             {r.status === "completed" && h && <p className="text-[11px] text-green-700 mt-1">Handover confirmed{h.confirmed_at ? ` on ${new Date(h.confirmed_at).toLocaleDateString()}` : ""}.</p>}

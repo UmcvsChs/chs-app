@@ -431,3 +431,17 @@ end $$;
 -- 475e (applied live 9 Oct 2026): approved soft copy reaches the buyer.
 -- admin_review_rto_documents now also notifies the buyer on approval; get_rto_submissions shows the files to the buyer only once approved;
 -- rto_buyer_can_read_file() + storage policy private_docs_rto_buyer_read let the buyer open ONLY approved files. See the live definitions.
+
+-- 475f (applied live 2026-10-09): FINAL RELEASE IS MANUAL, SUPER ADMIN ONLY.
+--  * confirm_rto_documents_received no longer releases money. It marks the handover 'confirmed',
+--    notifies owner + admins. The held final payment stays in escrow_held.
+--  * admin_release_rto_final requires profiles.is_super_admin (accepts handover 'sent' or 'confirmed';
+--    otherwise a >=10 char verification note is required).
+--  * platform_settings 'rto_final_auto_release' (default 'false'). rto_auto_release_on() reads it;
+--    admin_set_rto_auto_release(boolean) (super admin only, audited) toggles it. Only when 'true' does the
+--    buyer's confirmation call release_rto_final(). Tick box is on the admin Mortgage panel.
+--  * admin_revert_rto_final_release(agreement, note>=10 chars): super admin only; moves a released final
+--    payment from the owner's main balance back to escrow_held (refs RTOREV-xxxxxxxx), agreement back to
+--    awaiting_handover. Refuses if the owner no longer has the money.
+--  * get_rto_admin_queue: needs_action also true when buyer confirmed and money is still held; handover
+--    JSON carries confirmed_by. Notification wording in pay_rent_to_own / rto_mark_documents_sent updated.
