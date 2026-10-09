@@ -422,3 +422,8 @@ end $$;
 -- get_rto_pending_payments). The final payment still waits for the document handover. Columns added to rent_to_own_payments:
 -- pending_release, net_amount, released_at, released_by. See the live function definitions for the full text.
 -- ---------------------------------------------------------------------------
+
+-- 475d (applied live 9 Oct 2026): owner document check + receipt trail.
+-- Table rto_document_submissions; rto_submit_documents (owner uploads scans), admin_review_rto_documents (CHS approves / asks for changes),
+-- get_rto_submissions (buyer sees status only, never the files); rto_mark_documents_sent now requires an approved submission and accepts a receipt file;
+-- confirm_rto_documents_received now also notifies the owner and CHS. See the live function definitions for the full text.

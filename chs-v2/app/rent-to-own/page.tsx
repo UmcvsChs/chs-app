@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RoleBadge from "@/components/RoleBadge";
@@ -155,7 +155,7 @@ export default function RentToOwnPage() {
   const handover = agreements.filter((a) => a.status === "awaiting_handover" || a.status === "completed");
   const other = agreements.filter((a) => !["active", "awaiting_handover", "completed"].includes(a.status));
 
-  const Card = ({ a, children }: { a: RtoAgreement; children?: React.ReactNode }) => {
+  const renderCard = (a: RtoAgreement, children?: React.ReactNode) => {
     const mine = payments.filter((p) => p.agreement_id === a.id); // newest first
     const remaining = Math.max(0, a.total_price - a.total_paid);
     const nextAmount = Math.min(a.monthly_amount, remaining);
@@ -223,7 +223,7 @@ export default function RentToOwnPage() {
                   const commissionOn = (x: number) => Math.round((x * buyerCommissionPct) / 100);
                   const customAmount = Number(custom[a.id] || 0);
                   return (
-                    <Card key={a.id} a={a}>
+                    <Fragment key={a.id}>{renderCard(a, (<>
                       <div className="bg-white rounded-lg p-2.5 mt-2 text-[11px] text-gray-600">
                         <div className="flex justify-between"><span>Installment</span><span>{formatNaira(installment)}</span></div>
                         <div className="flex justify-between"><span>Your CHS commission ({buyerCommissionPct}%)</span><span>{formatNaira(commissionOn(installment))}</span></div>
@@ -246,7 +246,7 @@ export default function RentToOwnPage() {
                         </button>
                         <p className="text-[9px] text-gray-400 mt-1">Your last payment is held by CHS until the owner hands over the property documents.</p>
                       </div>
-                    </Card>
+                    </>))}</Fragment>
                   );
                 })}
               </div>
@@ -260,7 +260,7 @@ export default function RentToOwnPage() {
                   const f = docForm[a.id] || { name: "", address: "", phone: "", method: "courier", days: "14" };
                   const setF = (patch: Partial<typeof f>) => setDocForm({ ...docForm, [a.id]: { ...f, ...patch } });
                   return (
-                    <Card key={a.id} a={a}>
+                    <Fragment key={a.id}>{renderCard(a, (<>
                       <div className="mt-2 bg-white rounded-lg p-2.5">
                         <p className="text-[11px] font-bold text-chs-charcoal">
                           {a.status === "completed" ? "✓ Handover complete" : "🔒 You have paid in full. The final payment is held by CHS"}
@@ -310,7 +310,7 @@ export default function RentToOwnPage() {
                         )}
                         {docMsg[a.id] && <p className="text-[10px] text-chs-red mt-1">{docMsg[a.id]}</p>}
                       </div>
-                    </Card>
+                    </>))}</Fragment>
                   );
                 })}
               </div>
