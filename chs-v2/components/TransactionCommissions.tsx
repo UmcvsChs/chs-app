@@ -50,7 +50,8 @@ export default function TransactionCommissions({ session }: { session: Session }
       .from("transaction_commissions")
       .select("id, transaction_type, payer_role, base_amount, commission_percentage, commission_amount, tenancy_id, properties(title)")
       .eq("payer_id", session.user.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
     setCommissions((data as unknown as Commission[]) || []);
   }
 

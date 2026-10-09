@@ -34,6 +34,7 @@ export default function SavedPropertiesPage() {
       .from("saved_properties")
       .select("properties(*)")
       .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
       .then(({ data }) => {
         setProperties((data || []).map((r) => r.properties).filter(Boolean) as unknown as Property[]);
         setLoading(false);

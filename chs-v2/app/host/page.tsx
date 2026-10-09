@@ -98,11 +98,13 @@ export default function HostDashboardPage() {
       supabase.from("properties")
         .select("id, title, hire_category, price_per_night, price, status, calendar_confirmed_at")
         .eq("owner_id", session.user.id)
-        .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)"),
+        .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)")
+        .order("created_at", { ascending: false }),
       supabase.from("shortlet_bookings")
         .select("id, guest_id, guest_full_name, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
-        .in("status", ["confirmed", "active"]),
+        .in("status", ["confirmed", "active"])
+        .order("created_at", { ascending: false }),
     ]).then(([listingsRes, bookingsRes]) => {
       setListings(listingsRes.data || []);
       setBookings((bookingsRes.data as unknown as HostBooking[]) || []);

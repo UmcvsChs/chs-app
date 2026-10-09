@@ -200,7 +200,8 @@ export default function AgentDashboard() {
     const { data: props } = await supabase
       .from("properties")
       .select("id, title, status, agent_commission_pct, owner_id, tenancies(id, tenant_id, status)")
-      .eq("managing_agent_id", session.user.id);
+      .eq("managing_agent_id", session.user.id)
+      .order("created_at", { ascending: false });
 
     // Real, necessary fix from the security audit: an embedded join
     // into profiles for another user's name no longer works now that

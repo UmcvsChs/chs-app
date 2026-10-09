@@ -1616,6 +1616,7 @@ function AdminDashboardInner() {
       .select("id, masked_reference, stage, chs_commission, agent_share_pct, split_50_50, agent_payout, created_at")
       .neq("stage", "completed")
       .neq("stage", "lost")
+      .order("created_at", { ascending: false })
       .then(({ data }) => setAgentReferrals(data || []));
 
     // Only a real super admin needs to see or act on these — a

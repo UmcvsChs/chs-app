@@ -166,9 +166,18 @@ export default function RentToOwnPage() {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
 
-  const active = agreements.filter((a) => a.status === "active");
-  const handover = agreements.filter((a) => a.status === "awaiting_handover" || a.status === "completed");
-  const other = agreements.filter((a) => !["active", "awaiting_handover", "completed"].includes(a.status));
+  // Newest activity first everywhere: inside each group, and the groups themselves are ordered by their newest agreement.
+  const activityOf = (a: RtoAgreement) => Math.max(
+    new Date(a.started_at || 0).getTime(), new Date(a.completed_at || 0).getTime(),
+    ...payments.filter((p) => p.agreement_id === a.id).map((p) => new Date(p.paid_at).getTime()));
+  const byNewest = (x: RtoAgreement, y: RtoAgreement) => activityOf(y) - activityOf(x);
+  const active = agreements.filter((a) => a.status === "active").sort(byNewest);
+  const handover = agreements.filter((a) => a.status === "awaiting_handover" || a.status === "completed").sort(byNewest);
+  const other = agreements.filter((a) => !["active", "awaiting_handover", "completed"].includes(a.status)).sort(byNewest);
+  const groupRank = (arr: RtoAgreement[]) => (arr.length ? activityOf(arr[0]) : 0);
+  const groupOrder = [["active", groupRank(active)], ["handover", groupRank(handover)], ["other", groupRank(other)]]
+    .sort((x, y) => (y[1] as number) - (x[1] as number)).map((g) => g[0] as string);
+  const orderOf = (name: string) => groupOrder.indexOf(name);
 
   const renderCard = (a: RtoAgreement, children?: React.ReactNode) => {
     const mine = payments.filter((p) => p.agreement_id === a.id); // newest first
@@ -228,9 +237,9 @@ export default function RentToOwnPage() {
             <p className="text-xs text-gray-400 mt-1">Browse properties listed as Mortgage (Rent to Own) and request one from the property page.</p>
           </div>
         ) : (
-          <>
+          <div className="flex flex-col gap-5">
             {active.length > 0 && (
-              <div>
+              <div style={{ order: orderOf("active") }}>
                 <p className="text-xs font-bold text-chs-charcoal mb-2">Payments in progress ({active.length})</p>
                 {active.map((a) => {
                   const remaining = Math.max(0, a.total_price - a.total_paid);
@@ -268,7 +277,7 @@ export default function RentToOwnPage() {
             )}
 
             {handover.length > 0 && (
-              <div>
+              <div style={{ order: orderOf("handover") }}>
                 <p className="text-xs font-bold text-chs-charcoal mb-2">Documents and handover ({handover.length})</p>
                 {handover.map((a) => {
                   const h = handovers[a.id];
@@ -340,7 +349,7 @@ export default function RentToOwnPage() {
             )}
 
             {other.length > 0 && (
-              <div>
+              <div style={{ order: orderOf("other") }}>
                 <p className="text-xs font-bold text-chs-charcoal mb-2">Requests and other agreements</p>
                 {other.map((a) => (
                   <div key={a.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
@@ -354,7 +363,7 @@ export default function RentToOwnPage() {
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

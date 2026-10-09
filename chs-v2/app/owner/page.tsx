@@ -214,6 +214,7 @@ export default function OwnerDashboard() {
       .select("id, guest_full_name, guest_verified, check_in, check_out, status, properties!inner(title, owner_id)")
       .eq("properties.owner_id", session.user.id)
       .in("status", ["confirmed", "active"])
+      .order("created_at", { ascending: false })
       .then(({ data }) => setShortletBookings((data as unknown as typeof shortletBookings) || []));
 
     // Real fix found during the audit — owners previously had zero
@@ -224,6 +225,7 @@ export default function OwnerDashboard() {
       .select("id, category, description, status, approved_vendor, approved_amount, property_id, properties!inner(title, owner_id), fault_quotations(vendor_name, amount, artisans(user_id, trade))")
       .eq("properties.owner_id", session.user.id)
       .neq("status", "resolved")
+      .order("created_at", { ascending: false })
       .then(({ data }) => setFaultReports((data as unknown as typeof faultReports) || []));
 
     supabase
@@ -231,6 +233,7 @@ export default function OwnerDashboard() {
       .select("id, total_price, monthly_amount, properties(title)")
       .eq("seller_id", session.user.id)
       .eq("status", "requested")
+      .order("started_at", { ascending: false })
       .then(({ data }) => setRentToOwnRequests((data as unknown as typeof rentToOwnRequests) || []));
 
     // Real fix found through direct client testing: a seller had no
@@ -243,6 +246,7 @@ export default function OwnerDashboard() {
       .eq("properties.owner_id", session.user.id)
       .eq("payment_status", "paid")
       .eq("legal_transfer_confirmed", false)
+      .order("created_at", { ascending: false })
       .then(({ data }) => setPaidOffersAwaitingDispatch((data as unknown as typeof paidOffersAwaitingDispatch) || []));
 
     // Real, genuine portfolio-wide summary — replacing what used to
