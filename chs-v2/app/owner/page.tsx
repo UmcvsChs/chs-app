@@ -1,5 +1,7 @@
 "use client";
 
+import ListingAvailability from "@/components/ListingAvailability";
+import ListingGapsNotice from "@/components/ListingGapsNotice";
 import OwnerRtoHandover from "@/components/OwnerRtoHandover";
 import PendingBookingRequests from "@/components/PendingBookingRequests";
 import { embeddedOne } from "@/lib/embedded";
@@ -897,6 +899,10 @@ export default function OwnerDashboard() {
               )}
 
               <p className="text-base font-bold text-chs-charcoal mb-2">{formatNaira(property.price)}</p>
+              {property.verification_status === "pending" && <ListingGapsNotice propertyId={property.id} />}
+              {property.verification_status === "verified" && property.status === "active" && !property.hire_category && (
+                <ListingAvailability propertyId={property.id} confirmedAt={property.availability_confirmed_at ?? null} />
+              )}
 
               <Link href={`/edit-listing/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
                 Edit listing

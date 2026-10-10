@@ -18,6 +18,9 @@ import PendingBookingRequests from "@/components/PendingBookingRequests";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import ShortletRating from "@/components/ShortletRating";
 import HostHotelTools from "@/components/HostHotelTools";
+import HotelOperations from "@/components/HotelOperations";
+import HostPlans from "@/components/HostPlans";
+import EventOperations from "@/components/EventOperations";
 import HostBookingControls from "@/components/HostBookingControls";
 import HostStaffManager from "@/components/HostStaffManager";
 
@@ -61,6 +64,8 @@ interface HostBooking {
   wants_music_band: boolean;
   wants_caterer: boolean;
   wants_ushers: boolean;
+  wants_security?: boolean;
+  number_of_security?: number | null;
   number_of_ushers: number | null;
   additional_event_requests: string | null;
   properties: { title: string }[] | null;
@@ -101,7 +106,7 @@ export default function HostDashboardPage() {
         .or("purpose.eq.shortlet,and(purpose.eq.hire,hire_category.not.is.null)")
         .order("created_at", { ascending: false }),
       supabase.from("shortlet_bookings")
-        .select("id, guest_id, guest_full_name, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, additional_event_requests, properties!inner(title, owner_id)")
+        .select("id, guest_id, guest_full_name, guest_verified, check_in, check_out, status, total_price, host_commission_amount, wants_music_band, wants_caterer, wants_ushers, number_of_ushers, wants_security, number_of_security, additional_event_requests, properties!inner(title, owner_id)")
         .eq("properties.owner_id", session.user.id)
         .in("status", ["confirmed", "active"])
         .order("created_at", { ascending: false }),
@@ -149,6 +154,10 @@ export default function HostDashboardPage() {
             <Link href="/host/arrivals" className="block bg-white rounded-xl border border-gray-200 p-3 text-sm font-bold text-chs-charcoal text-center mb-2">
               🛎️ Front Desk: today&apos;s arrivals &amp; check-in →
             </Link>
+            <Link href="/host/work" className="block bg-white rounded-xl border border-gray-200 p-3 text-sm font-bold text-chs-charcoal text-center mb-2">
+              📋 Work: duties, shift reports &amp; team →
+            </Link>
+            <HostPlans />
             <HostStaffManager />
           </>
         )}
@@ -169,6 +178,8 @@ export default function HostDashboardPage() {
               {/* House rules the guest must read and accept before requesting to book */}
               {session && <div className="mt-2"><HouseRulesUpload propertyId={l.id} session={session} /></div>}
               <HostHotelTools propertyId={l.id} />
+              {l.hire_category === "hotel_lodge" && <HotelOperations propertyId={l.id} />}
+              {l.hire_category === "event_centre" && <EventOperations propertyId={l.id} />}
               <Link href={`/host/calendar/${l.id}`} className="mt-2 block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
                 Rooms &amp; calendar →
               </Link>
@@ -193,12 +204,13 @@ export default function HostDashboardPage() {
                   <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
                     <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
                     <p className="text-[10px] text-gray-400">{b.guest_full_name} · Ref REQ-{b.id.slice(0, 8)} · {b.check_in} → {b.check_out}</p>
-                    {(b.wants_music_band || b.wants_caterer || b.wants_ushers || b.additional_event_requests) && (
+                    {(b.wants_music_band || b.wants_caterer || b.wants_ushers || b.wants_security || b.additional_event_requests) && (
                       <div className="bg-gray-50 rounded-lg px-2 py-1.5 mt-1.5">
                         <p className="text-[9px] font-bold text-chs-charcoal uppercase mb-0.5">🎉 Real event-day requests</p>
                         {b.wants_music_band && <p className="text-[10px] text-gray-700">🎵 Music band / live entertainment</p>}
                         {b.wants_caterer && <p className="text-[10px] text-gray-700">🍽️ Caterer</p>}
                         {b.wants_ushers && <p className="text-[10px] text-gray-700">🙋 {b.number_of_ushers || "?"} usher(s)</p>}
+                  {b.wants_security && <p className="text-[10px] text-gray-700">🛡️ {b.number_of_security || "?"} security personnel</p>}
                         {b.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{b.additional_event_requests}&quot;</p>}
                       </div>
                     )}

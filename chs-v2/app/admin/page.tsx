@@ -1,5 +1,7 @@
 "use client";
 
+import AdminListingReports from "@/components/AdminListingReports";
+import ListingRiskFlags from "@/components/ListingRiskFlags";
 import { embeddedOne } from "@/lib/embedded";
 import { Suspense, useEffect, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
@@ -70,7 +72,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2488,6 +2490,7 @@ function AdminDashboardInner() {
           { key: "liveness", label: `Face Verification (${pendingLiveness.length})`, domain: "registration_setup", group: "Verification" },
           { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup", group: "Verification" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant", group: "Verification" },
+          { key: "listingreports", label: "Listing reports", domain: "owner_buyer_tenant", group: "Verification" },
           { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
           { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
           { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
@@ -3999,6 +4002,7 @@ function AdminDashboardInner() {
           </div>
         )}
 
+        {activeTab === "listingreports" && <AdminListingReports />}
         {activeTab === "properties" && (
           <div>
             {/* Real, new search tool completing a direct, serious
@@ -4093,6 +4097,7 @@ function AdminDashboardInner() {
                 {(docs.length === 0 || unverifiedCount > 0) && (
                   <p className="text-[10px] text-chs-red font-semibold mt-1.5">⚠️ Real documents above are not yet fully verified — verify each one before approving this listing.</p>
                 )}
+                <ListingRiskFlags propertyId={prop.id} />
                 <input type="text" value={propertyRejectReasons[prop.id] || ""} onChange={(e) => setPropertyRejectReasons({ ...propertyRejectReasons, [prop.id]: e.target.value })}
                   placeholder="If rejecting: a real, genuine reason — the owner will see this exact text"
                   className="w-full mt-2 px-2.5 py-2 rounded-lg border border-gray-200 text-[11px]" />
@@ -5789,6 +5794,7 @@ function AdminDashboardInner() {
                     { key: "liveness" as Tab, label: `Face Verification (${pendingLiveness.length})` },
                     { key: "buyerid" as Tab, label: `ID Verification (${pendingBuyerIds.length})` },
                     { key: "properties" as Tab, label: `Properties (${pendingProperties.length})` },
+                    { key: "listingreports" as Tab, label: "Listing reports" },
                     { key: "vendors" as Tab, label: `Vendors (${pendingVendors.length})` },
                     { key: "artisans" as Tab, label: `Artisans (${pendingArtisans.length})` },
                     { key: "developers" as Tab, label: `Developers (${developerApplications.length})` },

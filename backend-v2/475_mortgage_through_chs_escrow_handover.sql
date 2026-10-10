@@ -456,3 +456,65 @@ end $$;
 --   handover timeline (requested, documents uploaded and reviewed, sent, buyer confirmed, released), each to the second.
 
 -- 475i (applied live 2026-10-09): Terms Version 6 - term 37 'Records and timestamps' (CHS keeps date-and-time records to the second, WAT; they may be relied on as evidence). platform_settings.terms_current_version = '6'; CURRENT_TERMS_VERSION = 6.
+
+-- 475j (applied live 2026-10-09): event services. shortlet_bookings gains wants_security + number_of_security.
+--   request_event_booking() now also takes p_wants_music_band, p_wants_caterer, p_wants_ushers, p_number_of_ushers, p_wants_security,
+--   p_number_of_security, p_additional_event_requests; request_shortlet_booking() takes p_wants_security, p_number_of_security;
+--   get_my_booking_requests() returns them. The previous versions were renamed *_retired_475j and had all access revoked.
+--   Test accounts (phone, PIN 123456): 08130000001 Event Centre Host, 08130000002 Event Centre Guest, 08130000003 Hotel/Lodge Host,
+--   08130000004 Hotel/Lodge Guest. Guests hold 100,000,000. Properties: Grand Hall Event Centre (Test), Royal Garden Events Centre (Test),
+--   Savannah Grand Hotel (Test) with Standard/Executive/Family Suite room types, Hilltop Lodge (Test) with Instant Confirm.
+--   Older guest wallets (08120000005, 08050000008, 08050000010) topped up to 100,000,000 with recorded credits.
+
+-- 475k (Oct 9 2026) HOTEL OPERATIONS, TRANCHE 1 (applied live; definitions live in the database — read with pg_get_functiondef)
+--   Tables: unit_housekeeping, housekeeping_log, maintenance_tickets, host_income_entries, host_expense_entries, hotel_message_log (RLS on, no policies, access only via RPCs).
+--   RPCs: get_housekeeping_board, set_room_status, get_housekeeping_log, create_maintenance_ticket, update_maintenance_ticket, get_maintenance_tickets
+--         (owner or staff); add_hotel_income (owner or staff); add_hotel_expense, void_hotel_entry, get_hotel_report, get_hotel_ledger (owner only).
+--   Messages: check_in_guest now sends "Welcome to <hotel>"; send_hotel_thank_yous() and send_hotel_owner_summaries() run by pg_cron
+--         chs-hotel-thank-yous (11:30 UTC) and chs-hotel-owner-summaries (19:00 UTC). In-app now; WhatsApp needs a provider account.
+--   Voided entries are never deleted. Report counts only confirmed bookings paid into escrow or released, prorated by nights in range.
+--   Tested (rolled back): board, room status, tickets, income/expense/void, report arithmetic, ledger, guest refused on income/report/board.
+
+-- 475l (Oct 9 2026) HOSPITALITY SUITE, PHASES 1-3 (applied live; definitions live in the database)
+--   Team: host_staff.role (manager|front_desk|housekeeping|kitchen_bar|accountant), host_staff_properties (active flag, never removed),
+--         my_property_role(), can_manage_arrivals() now role- and property-aware (accountant excluded), assert_finance_access(),
+--         host_add_staff_v2, host_update_staff, get_my_staff (role + properties), get_my_work_properties.
+--   Work: staff_duties, staff_reports; create_duty, get_duty_assignees, get_duties, complete_duty, cancel_duty, submit_staff_report, get_staff_reports.
+--   Import: import_batches; import_hotel_rows (rooms|income|expense, per-row validation), undo_hotel_import (soft: deactivate/void), get_import_batches.
+--   Calendar: unit_calendar.external_source_id/external_uid, calendar_sources, unit_ical_tokens; get_unit_ical_token, ical_feed (anon, token-keyed),
+--         add_calendar_source, list_calendar_sources, get_calendar_source_for_sync, stop_calendar_source, apply_external_events.
+--         Next routes: /api/ical/[token] (feed) and /api/calendar-sync (pull; runs as the signed-in user).
+--   Plans: subscription_plans (listed free; pro/business price NULL = not on sale), host_subscriptions, subscription_events;
+--         host_plan_info, host_commission_discount, assert_pro_host/assert_pro_feature, get_subscription_overview, subscribe_to_plan,
+--         cancel_subscription, admin_grant_pilot, admin_set_plan, admin_set_subscription_setting, admin_get_subscriptions, admin_find_host,
+--         process_subscription_renewals (cron chs-subscription-renewals 05:10 UTC). platform_settings: subscriptions_enforced='false' (MASTER SWITCH, OFF),
+--         subscription_pilot_limit='8', subscription_pilot_months='3'.
+--   Commission: get_real_shortlet_pricing and request_event_booking subtract host_commission_discount(owner) from the host-side percentage.
+--   Gated when the switch is ON: create_duty, submit_staff_report, add_hotel_expense, non-front-desk roles (writes need Pro/Business);
+--         get_hotel_report and get_hotel_ledger (reads need to have ever subscribed). Terms current version raised to 7 (term 38).
+--   Rules learned: the SQL tool cancels statements containing row removal; nothing here removes rows (soft flags instead). A DO block that ends in
+--         raise exception rolls back everything in the same call, so patch first, test in a separate call.
+
+-- 475m (Oct 10 2026) EVENT DAY CONTROL (applied live): tables event_run_items, event_vendors; assert_plan_host(host,'pro'|'business');
+--   event_booking_property, ensure_run_sheet (template from the client's requested services), get_event_board, add_run_item,
+--   set_run_item_status, set_event_vendor (owner/manager; phone hidden from other staff; client notified by name on confirm).
+--   Writes need the Business plan only when subscriptions_enforced = 'true'. Tested rolled back with a synthetic confirmed event booking.
+
+-- 475n (Oct 10 2026) HOTEL MENU / ORDERS / POS / STOCK / ASSETS (applied live): tables menu_items, stock_items, stock_movements, recipe_lines,
+--   room_orders, room_order_lines, hotel_assets, hotel_asset_events; get_menu_admin, upsert_menu_item, upsert_stock_item, adjust_stock, set_recipe,
+--   get_stock_movements, upsert_asset, get_assets, get_guest_menu, place_room_order, get_my_room_orders, get_room_orders, set_room_order_status,
+--   mark_room_order_paid, record_pos_sale; internal _order_deduct_stock, _order_book_income, _build_order, apply_stock_change.
+--   Rules: guests order only when checked in; host writes gated by assert_pro_feature; delivery deducts stock; payment posts income by centre.
+-- 475o (Oct 10 2026) PUBLIC HOTEL PAGE (applied live): get_public_hotel_page(property) granted to anon; only verified+active hotel_lodge; page at /hotel/[id].
+-- 475p (Oct 10 2026) EVENT QUOTATIONS (applied live): tables event_quotes, event_quote_lines, event_quote_milestones; send_event_quote, get_event_quote_host, withdraw_event_quote, get_my_event_quote, respond_event_quote, mark_quote_milestone_paid, _event_quote_json. Owner/manager send (Business gate); extras paid to venue directly, outside escrow.
+-- 475q (Oct 10 2026) NO HIDDEN PRICES (applied live): tables property_contacts (private, RPC only; backfilled from owner profile phone), property_price_history;
+--   detect_price_evasion(text); _listing_gaps_row(properties); enforce_listing_basics trigger on properties (price>=1000, location, no price evasion on insert/edit,
+--   and refuses verification_status -> 'verified' while photos(<5)/video/contact/street address/description(<20) are missing); log_price_change trigger;
+--   get_listing_gaps, set_property_contact, get_property_contact, get_price_history (anon ok), get_listing_risk_flags (admin);
+--   enforce_product_price trigger on marketplace_products (price > 0 incl. services, no price evasion on name/description).
+-- 475r (Oct 10 2026) AVAILABILITY, REPORTS, TRUST (applied live): properties.availability_confirmed_at / availability_reminder_stage;
+--   properties_public_read_verified now also requires availability confirmed within 30 days for non-hire listings (existing rows set to now);
+--   confirm_listing_available, send_availability_reminders (cron chs-listing-availability 10 7 * * *); table listing_reports;
+--   report_listing, get_listing_reports, admin_resolve_listing_report (dismiss | warn_owner | hide_listing -> rejected with reason); get_listing_trust (anon ok).
+--   platform_settings.terms_current_version = 8.
+-- 475s (Oct 10 2026) COPIED-PHOTO DETECTION (applied live): property_photo_hashes (64-bit difference hash per photo, RPC only), record_photo_hashes(property, items), _photo_hamming(a,b); get_listing_risk_flags warns when another owner has a photo within 4 bits. Hashes computed in the browser (lib/imageHash.ts); only new listings are covered.

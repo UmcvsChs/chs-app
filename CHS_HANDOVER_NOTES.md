@@ -175,9 +175,11 @@ Real-device testing dominated this round, not new-feature building — most fixe
 
 **Supabase status (October 9, 2026):** 363 migrations recorded live (latest version `20261008161505`), 602 public functions, 115 public tables. `platform_settings.terms_current_version` is 6 (Version 6 adds term 37, Records and timestamps).
 
+**Round 3 test accounts (October 9, 2026), phone login, PIN `123456`:** `08130000001` Event Centre Host, `08130000002` Event Centre Guest, `08130000003` Hotel & Lodge Host, `08130000004` Hotel & Lodge Guest (both guests hold ₦100,000,000). The event centres are Grand Hall (Test) and Royal Garden (Test), each with three capacity tiers and eleven priced facilities; the hotel is Savannah Grand Hotel (Test) with Standard, Executive and Family Suite room types; the lodge is Hilltop Lodge (Test) with Instant Confirm (the host must first tap "My calendar is accurate"). Guests can request ushers, a caterer, a live band, security and free-text extras on any event centre.
+
 **Switch-on checklist before real launch:** set `transfer_requires_pin` and `withdrawal_requires_pin` to `true`; set `otp_step_up_enabled` to `true` only once the Termii SMS key works; rotate the SMS shared secret; keep `rto_final_auto_release` off unless a super admin chooses otherwise for a busy period.
 
-**Known limits:** earlier mortgage instalments paid under the old pay-the-owner-directly rule were not clawed back. There is no wanted-items bidding board (a vendor's "My Recent Bids" shows quote responses). The Vendor and Service Provider test-data SQL (`476_round5_marketplace_test_data.sql`) and the Rent-to-Own test data guide have not been written. Mortgage due dates, a minimum deposit and an agreement document remain unbuilt. Mortgage screens were verified by build and automated screen tests, not yet on the live site by the client for every path.
+**Known limits:** earlier mortgage instalments paid under the old pay-the-owner-directly rule were not clawed back. There is no wanted-items bidding board (a vendor's "My Recent Bids" shows quote responses). The Vendor and Service Provider test data (`476_round5_marketplace_test_data.sql`) and the three test guides (Hospitality walkthrough, Vendor/Service Provider, Rent-to-Own) are written but have not yet been run end to end by a person. Mortgage due dates, a minimum deposit and an agreement document remain unbuilt. Mortgage screens were verified by build and automated screen tests, not yet on the live site by the client for every path.
 
 ## 7. Standing Discipline Going Forward
 
@@ -190,3 +192,19 @@ Every future batch of work should:
 6. **When testing a real function that's expected to fail, run the setup/funding step as a separate call from the failing call.** Supabase's implicit transaction batching means a later statement's error can silently roll back an earlier, successful update in the same request — caught more than once by verifying real database state after a test rather than trusting a query appeared to succeed.
 7. **Before assuming a client-reported visual bug is fully fixed, get their explicit confirmation from a real device.** A compiled, built, and packaged fix is not the same as a confirmed fix for anything involving rendering — this class of bug has needed a second real pass before, and standing here waiting on that same confirmation again.
 8. **When researching a real-world legal or regulatory requirement (documents, permits, compliance) for a feature, cite genuine, current sources and say so plainly — never invent a plausible-sounding list.** This mattered directly for the Sale legal-document requirements.
+
+
+## Hotel operations, tranche 1 (October 9, 2026)
+Host dashboard → hotel_lodge listing → "Hotel operations" (components/HotelOperations.tsx): Housekeeping, Repairs, Money. Database objects are listed in backend-v2/475 note 475k. Finance report, ledger, expenses and voids are owner-only; staff may run housekeeping, repairs and record income. Crons: chs-hotel-thank-yous, chs-hotel-owner-summaries. Messages are in-app only until a WhatsApp Business provider is connected. Tranche 2 (menu, POS, inventory, recipes, assets, branded page) not started.
+
+
+## Hospitality Suite (October 9, 2026, night)
+Screens: host dashboard (My team, Plans), /host/work (duties, reports, hotel operations for the person's role), Hotel operations → Import & sync, Admin → Hotel Controls → Hospitality plans & pilot. Database objects are listed in backend-v2/475 note 475l. LAUNCH CHECKLIST: (1) deploy this code (Terms V7 is already live in the database, so deploy promptly); (2) in Admin set Pro and Business prices and commission cuts (blank price = not on sale); (3) grant the pilot to up to 8 operators; (4) only after the pilot, turn the master switch ON. Automatic calendar refresh, event-centre module and phase 4 are not built. Terms V7 and Privacy 7A are not lawyer-reviewed; the data-processing wording needs a Nigerian lawyer (NDPA 2023) before the pilot.
+
+Event day control (Oct 10, 2026): components/EventOperations.tsx on the host dashboard and Work page for event_centre listings; objects in backend-v2/475 note 475m.
+
+Hotel Phase 4 (Oct 10, 2026): HotelServices.tsx (staff) and GuestRoomMenu.tsx (guest); objects in note 475n. Money on orders is paid to the hotel directly and posts to host_income_entries; no CHS commission. Public hotel page built: app/hotel/[id]/page.tsx via get_public_hotel_page (note 475o).
+
+No hidden prices (Oct 10, 2026): note 475q; lib/listingRules.ts, ListingRiskFlags.tsx, ListingGapsNotice.tsx, changes to list-property, edit-listing, VendorListingForm, owner and admin pages. Contact numbers are stored privately (property_contacts) and not shown publicly. Terms Version 8 (terms 39 and 40) covers this rule and is live in the database. Availability confirmation, listing reports and trust signals: note 475r, components ReportListingButton, AdminListingReports, ListingAvailability. Copied-photo detection: lib/imageHash.ts and note 475s; covers new listings only (older photos have no fingerprints).
+
+Event quotations (Oct 10, 2026): EventQuoteHost.tsx (host, inside Event day control) and GuestEventQuote.tsx (My Bookings); note 475p. Extras are paid to the venue directly, outside CHS escrow; recording a payment posts to host_income_entries centre events.

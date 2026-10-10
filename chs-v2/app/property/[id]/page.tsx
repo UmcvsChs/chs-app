@@ -13,6 +13,7 @@ import { inspectionEstimateText } from "@/lib/inspectionFee";
 import MediaRequests from "@/components/MediaRequests";
 import SaveButton from "@/components/SaveButton";
 import ShareButton from "@/components/ShareButton";
+import ReportListingButton from "@/components/ReportListingButton";
 import PropertyTourButton from "@/components/PropertyTourButton";
 import PropertyCard from "@/components/PropertyCard";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
@@ -37,6 +38,22 @@ async function getProperty(id: string): Promise<Property | null> {
 
   if (error || !data) return null;
   return data as Property;
+}
+
+// Recent price changes on a verified listing, shown openly so a price cannot quietly change after people
+// have seen it.
+async function getPriceHistory(id: string): Promise<{ old_price: number | null; new_price: number; changed_at: string }[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("get_price_history", { p_property_id: id });
+  return Array.isArray(data) ? data : [];
+}
+
+// Public trust signals for a live listing: owner ID verified, member since, how recently availability was
+// confirmed, and whether the price has changed. They say nothing about who the owner is.
+async function getTrust(id: string): Promise<{ owner_id_verified: boolean; member_since: number; confirmed_days_ago: number | null; price_changes: number } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("get_listing_trust", { p_property_id: id });
+  return (data as { owner_id_verified: boolean; member_since: number; confirmed_days_ago: number | null; price_changes: number } | null) ?? null;
 }
 
 // The real, direct fix for "someone abroad Googles a 4-bedroom flat in
@@ -100,6 +117,8 @@ export default async function PropertyDetailPage({
   const { id } = await params;
   const property = await getProperty(id);
   const urgentSaleHotline = property?.is_urgent_sale ? await getUrgentSaleHotline() : null;
+  const priceHistory = property ? await getPriceHistory(id) : [];
+  const trust = property ? await getTrust(id) : null;
 
   // Real, direct fix per a specific, well-described client scenario:
   // a genuine buyer who paid for a property used to see the exact
@@ -327,6 +346,19 @@ export default async function PropertyDetailPage({
             </>
           )}
         </p>
+        {trust && (
+          <p className="text-[11px] text-gray-600 mb-3 flex flex-wrap gap-x-3 gap-y-1">
+            <span>✓ Price shown upfront</span>
+            {trust.owner_id_verified && <span>✓ Owner ID verified</span>}
+            <span>Member since {trust.member_since}</span>
+            {trust.confirmed_days_ago != null && <span>Availability confirmed {trust.confirmed_days_ago === 0 ? "today" : `${trust.confirmed_days_ago} day${trust.confirmed_days_ago === 1 ? "" : "s"} ago`}</span>}
+          </p>
+        )}
+        {priceHistory.length > 0 && (
+          <p className="text-[11px] text-gray-500 -mt-2 mb-3">
+            Price history: {priceHistory.map((h) => `${h.old_price != null ? formatNaira(h.old_price) : "—"} → ${formatNaira(h.new_price)} on ${new Date(h.changed_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" })}`).join("; ")}
+          </p>
+        )}
 
         {property.purpose === "rent_to_own" && property.rent_to_own_monthly ? (
           <div className="bg-chs-amber-light border border-chs-amber-dark rounded-xl p-3 mb-4">
@@ -460,6 +492,7 @@ export default async function PropertyDetailPage({
           <PropertyActions property={property} isOwner={!!user && user.id === property.owner_id} />
         )}
 
+        {(!user || user.id !== property.owner_id) && <ReportListingButton propertyId={property.id} />}
         <CommunityFeedback propertyId={property.id} approvedFeedback={(feedback || []) as CommunityFeedbackType[]} />
 
         <MediaRequests propertyId={property.id} answeredRequests={(mediaRequests || []) as MediaRequest[]} />

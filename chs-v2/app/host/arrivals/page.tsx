@@ -75,6 +75,7 @@ export default function ArrivalsPage() {
         <Link href="/host" className="text-xs text-white/70">← Host dashboard</Link>
         <h1 className="font-serif text-lg font-bold mt-1">🛎️ Front Desk</h1>
         <p className="text-xs text-white/60 mt-1">Today&apos;s arrivals, pass verification and check-in.</p>
+        <Link href="/host/work" className="inline-block mt-2 text-[11px] underline text-white/80">📋 Duties &amp; shift report →</Link>
       </div>
 
       <div className="px-4 py-4 space-y-3 max-w-md mx-auto">

@@ -39,6 +39,8 @@ interface Req {
   wants_music_band: boolean | null;
   wants_caterer: boolean | null;
   wants_ushers: boolean | null;
+  wants_security?: boolean | null;
+  number_of_security?: number | null;
   number_of_ushers: number | null;
   additional_event_requests: string | null;
   event_type: string | null;
@@ -93,7 +95,7 @@ export default function PendingBookingRequests() {
 
         {requests.map((r) => {
           const left = timeLeft(r.expires_at);
-          const hasExtras = r.wants_music_band || r.wants_caterer || r.wants_ushers || r.additional_event_requests;
+          const hasExtras = r.wants_music_band || r.wants_caterer || r.wants_ushers || r.wants_security || r.additional_event_requests;
           return (
             <div key={r.id} className="bg-white rounded-xl border border-gray-200 p-3 mb-2">
               <p className="text-sm font-semibold text-chs-charcoal">{r.property_title}</p>
@@ -129,6 +131,7 @@ export default function PendingBookingRequests() {
                   {r.wants_music_band && <p className="text-[10px] text-gray-700">🎵 Music band / live entertainment</p>}
                   {r.wants_caterer && <p className="text-[10px] text-gray-700">🍽️ Caterer</p>}
                   {r.wants_ushers && <p className="text-[10px] text-gray-700">🙋 {r.number_of_ushers || "?"} usher(s)</p>}
+                  {r.wants_security && <p className="text-[10px] text-gray-700">🛡️ {r.number_of_security || "?"} security personnel</p>}
                   {r.additional_event_requests && <p className="text-[10px] text-gray-600 italic mt-0.5">&quot;{r.additional_event_requests}&quot;</p>}
                 </div>
               )}

@@ -44,7 +44,19 @@ const FAQ_ITEMS = [
     q: "What is the difference between an Artisan, a Vendor and a Service Provider?",
     a: "An Artisan does skilled trade work, such as plumbing, electrical work, carpentry or painting. A Vendor sells goods: furniture, electronics and home appliances, bedding and textiles, kitchen items, building materials or interior design items. A Service Provider offers a service: security, cleaning, fumigation and pest control, or facilities maintenance. Each has its own registration, and each is reviewed by CHS before it is shown to the public.",
   },
+      {
+    q: "Why was my listing hidden, or why am I asked to confirm it is still available?",
+    a: "A property for sale, rent or lease must be confirmed as still available every 30 days. CHS reminds you at 25 days, and an unconfirmed listing is hidden from the public after 30 days. Open your dashboard and tap Confirm available and it is visible again at once. This stops listings that are already taken from wasting people's time.",
+  },
   {
+    q: "How do I report a listing, and will the owner know it was me?",
+    a: "Open the listing and tap Report this listing. Choose a reason, such as a hidden or wrong price, a fake or copied listing, already taken, or scam behaviour. The owner is not told who reported. CHS reviews it, may ask the owner to fix it or take the listing down, and tells you the outcome.",
+  },
+{
+    q: "Why can't I submit a listing without the price, or when I write \"DM for price\"?",
+    a: "CHS does not allow hidden prices. Every listing must show its real price, location, street address, at least five photos, a video, a description and a private contact number before it can be submitted, and the database will not let an incomplete listing go live even if a screen is bypassed. Wording such as DM for price, inbox for price or call for price is refused. A service must show a starting price. Your contact number is kept private for CHS and you; it is not shown publicly.",
+  },
+{
     q: "How do I list a product properly as a Vendor?",
     a: "Open your vendor dashboard and tap Add a listing. Give the brand, model and condition, the price and how many you have in stock, then the specification for your kind of product (for a television: size, features, power, dimensions; for furniture: material and dimensions), then any options the buyer chooses, such as colour or size, a warranty and delivery information, and up to six clear photos. Fields marked with a red star are required. When your stock reaches zero the listing shows Sold out automatically, and reopens when you restock.",
   },
@@ -107,6 +119,22 @@ const FAQ_ITEMS = [
   {
     q: "How does hotel check-in work?",
     a: "Once your booking is confirmed you get an arrival pass with a code. Fill in the short registration card before you travel. When you arrive, tap I have arrived; the front desk verifies your pass and checks you in. If the host uses a lockbox, its code is shown to you only on your stay days after you have arrived.",
+  },
+  {
+    q: "What can a hotel owner manage on CHS besides bookings?",
+    a: "Each hotel or lodge has a Hotel operations panel on the host dashboard: a housekeeping board (which rooms are occupied, to clean or ready), repair tickets with costs, income from the restaurant, bar, laundry, gym and events, expenses, and an owner-only report showing occupancy, average room rate, revenue per available room and the net result, with a downloadable ledger. Every entry is stamped with who made it and the exact date and time, and a wrong entry is voided with a reason rather than erased. Guests get a welcome at check-in and a thank-you after check-out, and the owner gets a summary each evening.",
+  },
+  {
+    q: "Can a hotel owner add staff, assign duties and move over from Excel or another booking site?",
+    a: "Yes. The owner adds staff by phone number with a role (manager, front desk, housekeeping, kitchen or bar, accountant) and can limit each person to certain properties. The owner or a manager assigns duties with a due time; staff mark them done and send shift reports, and each carries the person's name and exact time. Rooms, income and expenses can be imported from an Excel or CSV sheet, with a preview before anything is saved and an Undo afterwards. A private calendar link per room can be shared with Booking.com, Airbnb or Google Calendar, and their calendars can be linked into CHS so a room booked elsewhere is blocked here too. Free Listed hosts get the basics; Pro and Business plans add the team and finance tools and a lower CHS commission.",
+  },
+  {
+    q: "How do the Pro and Business plans work, and what if I stop paying?",
+    a: "A plan is paid from your CHS Wallet for 30 days and renews from your wallet until you cancel. If a renewal fails, you have 7 days to top up. After that you move to the free Listed plan: your records, reports and ledger stay readable and downloadable, you just cannot add new Pro records until you subscribe again. A paid plan lowers the commission CHS charges you on bookings CHS brings you. CHS charges no commission on walk-in guests or direct sales you record in the tools.",
+  },
+  {
+    q: "Can I ask for ushers, a caterer, a live band or security for my event?",
+    a: "Yes. When you request an event centre, tick the services you want (ushers, caterer, live band, security, with numbers where it matters) or write anything else you need. Your request goes through CHS to the venue, who tells you what is possible. Nothing is charged until the venue confirms, and you pay from your CHS Wallet.",
   },
   {
     q: "Why was I asked to accept the Terms & Conditions again?",

@@ -6,6 +6,31 @@
 
 ---
 
+## October 10, 2026 — Terms Version 8, availability confirmation, reports and trust signals
+
+Terms V8 (set live in the database as terms_current_version 8): term 39 Complete and honest listings; term 40 Food, drink and extras paid to the operator (an explicit exception to the V4 wallet-only rule, to be reviewed by a lawyer). Privacy 7B (listing contact numbers and reports). Built to match: 30-day availability confirmation (hidden at 30 days, reminder at 25), Report a listing with an admin queue (Admin, Listing reports), and trust signals on the property page. Note 475r. Copied-photo detection added afterwards (note 475s): browser fingerprints, reviewer warning, new listings only.
+
+## October 10, 2026 — No hidden prices and listing integrity
+
+New rule on every listing (note 475q): real price, location, street address, 5 photos, video, description and a private contact number are required; the form blocks submission and the database refuses to approve an incomplete listing; "DM/inbox/call for price" wording is refused (also on marketplace products and services, which now need a starting price); price changes on live listings are logged and shown; the admin review shows what is missing plus risk warnings (new/unverified owner, possible duplicate, price far from similar listings). Not retroactive: existing live listings are untouched but are checked again if they are re-approved or their price or text is edited.
+
+## October 10, 2026 — Hotel Phase 4: menu, room orders, sales, stock, recipes, assets
+
+Objects in backend-v2/475 note 475n. Staff screen: components/HotelServices.tsx (tab "Menu & stock"). Guest screen: components/GuestRoomMenu.tsx on My Bookings. Also: the host calendar page now refreshes linked calendars older than an hour when opened. Verified by a rolled-back database test (order, delivery, stock deduction 20 to 19 kg, payment to income 10,500, counter sale 3,000, double-pay refused, guest cannot use staff actions or counter sales); screens verified by tsc/lint/build only. Public hotel page added at /hotel/[id] (photos, rooms, facilities, menu, book and share). Event quotations with payment schedule added (note 475p). Paid to the venue directly; not part of the CHS escrow payment.
+
+## October 10, 2026 (early) — Event day control for event centres
+
+Chosen as the best next step because event centres were the category the client asked to re-test and the module reuses the booking data already captured (ushers, caterer, band, security, notes). Built: vendor assignment per event with confirm (client told the name, never the phone), a run sheet generated from what the client asked for, tick-off with who/when, tasks assignable to team members. Event writes sit on the Business plan once the master switch is on. Not built: quotations, deposit-then-balance schedule view, guest-side view of vendor status beyond the notification.
+
+## October 9, 2026 (night) — Hospitality Suite built: team, import, calendar sync, plans (Terms V7)
+
+Agreed with the client: hybrid revenue (commission only on CHS-sourced bookings; subscription for tools; subscribers pay a lower commission), event centres in their own module later, free pilot of 8 operators. Built: team roles and property limits; duties and shift reports with timestamps; Excel/CSV import of rooms, income and expenses with preview and undo; per-room iCal feed and pull-in of other sites' calendars (manual Sync now); plans (Listed/Pro/Business) paid from the wallet with renewals, 7-day grace and read-only lapse; admin pilot grant, prices and master switch. The master switch (subscriptions_enforced) is OFF and plan prices are blank, so nothing is gated or charged until the super admin sets prices and turns it on. Terms V7 (term 38) added; Privacy 7A; Guide 19B; Catalog section 18; FAQ.
+Not built: event-centre module (quotes, deposit schedule, run sheet, vendors), automatic iCal refresh (needs a scheduled job), multi-property gating for Business, digital menu/POS/inventory/recipes/assets/branded page (phase 4), WhatsApp (needs provider).
+
+## October 9, 2026 (evening) — Hotel & Lodge upgraded after comparing with Hotelist.ng
+
+Compared the Hotelist.ng hotel-software advertisement with what CHS had. CHS was already stronger on booking, escrow, guest verification, digital check-in and peak pricing; it lacked a back office. Tranche 1 built: housekeeping board, repair tickets, income centres (restaurant, bar, laundry, gym, events), expenses, owner-only financial report (occupancy, ADR, RevPAR, net result) and ledger with CSV, guest welcome and thank-you, owner evening summary. Every entry carries who and exact date/time; voids keep the record. Not yet built (tranche 2, awaiting go-ahead): digital menu with in-room ordering, bar/restaurant point of sale, stock and inventory, kitchen recipes, asset register, branded hotel page. WhatsApp needs a provider account and key.
+
 ## October 9, 2026 (later) — Full timestamps required on everything
 
 Client feedback: the admin panel showed the date a document reached Dr. Azaraya and the date he confirmed, but no time. Timestamps are required for accountability, auditing and legal protection. Done: one shared formatter (`formatDateTime`, Nigerian time, to the second) now replaces every date-only display of an event across about 35 screens; the admin Mortgage panel has a handover timeline; the buyer and owner handover views show sent and confirmed times; relative labels such as "confirmed 3 days ago" now carry the exact stamp. Standing rule 11 added to the Handover Notes. Calendar dates (lease end, check-in day) remain dates by design.

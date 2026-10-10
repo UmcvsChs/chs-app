@@ -114,6 +114,32 @@ export default function HostCalendarPage() {
     load();
   }, [authLoading, session, router, load]);
 
+  // Automatic refresh of linked outside calendars (Booking.com, Airbnb…): whenever the owner or a manager opens this
+  // calendar, any link not refreshed in the last hour is synced first, so dates booked elsewhere show here too.
+  // People who cannot manage links simply get an error from the database, which is ignored.
+  useEffect(() => {
+    if (authLoading || !session) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.rpc("list_calendar_sources", { p_property_id: propertyId });
+      if (error || cancelled) return;
+      const stale = (data as { id: string; active: boolean; last_synced_at: string | null }[]).filter((x) => x.active && (!x.last_synced_at || Date.now() - new Date(x.last_synced_at).getTime() > 3600000));
+      if (stale.length === 0) return;
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token || "";
+      let changed = false;
+      for (const src of stale) {
+        const res = await fetch("/api/calendar-sync", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ source_id: src.id }) }).catch(() => null);
+        const j = res ? await res.json().catch(() => ({})) : {};
+        if (j && j.added > 0) changed = true;
+      }
+      if (changed && !cancelled) load();
+    })();
+    return () => { cancelled = true; };
+    // load() is deliberately left out: this should run once per visit, not whenever the date window moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, session, propertyId]);
+
   async function run(action: () => PromiseLike<{ error: { message: string } | null }>, success?: string): Promise<boolean> {
     setBusy(true);
     setNotice(null);

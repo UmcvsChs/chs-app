@@ -1,5 +1,6 @@
 "use client";
 
+import { priceEvasionError } from "@/lib/listingRules";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uploadPropertyPhoto } from "@/lib/storage";
@@ -77,6 +78,9 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
       if (stock === "" || !Number.isInteger(stock) || stock < 1) { setError("Please enter how many you have in stock (1 or more)."); return; }
       if (photos.filter(Boolean).length < 1) { setError("Please add at least one clear photo of the product."); return; }
     }
+    if (!isProduct && (!price || price <= 0)) { setError("Please enter the starting price for this service. Listings without a price cannot be submitted."); return; }
+    const evasion = priceEvasionError(finalName) || priceEvasionError(description);
+    if (evasion) { setError(evasion); return; }
     for (const f of specFields) {
       if (f.required && !(specs[f.key] || "").trim()) { setError(`Please fill in: ${f.label}.`); return; }
     }
@@ -95,7 +99,7 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
     setError(null); setSubmitting(true);
     const { data: created, error: insertError } = await supabase.from("marketplace_products").insert({
       vendor_id: vendor.id, name: finalName, category: vendor.category, listing_type: listingType,
-      price: isProduct ? price : null, price_unit: finalUnit,
+      price, price_unit: isProduct ? finalUnit : "starting from",
       brand: isProduct ? brand.trim() || null : null, model: isProduct ? model.trim() || null : null,
       condition: isProduct ? condition : null, stock_quantity: isProduct ? stock : null, sku: isProduct ? sku.trim() || null : null,
       warranty: isProduct ? warranty.trim() || null : null, delivery_info: isProduct ? deliveryInfo.trim() || null : null,
@@ -189,6 +193,14 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
           </div>
           <p className="text-[10px] text-gray-400">When the stock reaches 0 the listing is marked <b>Sold out</b> automatically, and reopens when you restock.</p>
         </>
+      )}
+
+      {!isProduct && (
+        <div>
+          <label className={small}>Starting price (₦)<Req /></label>
+          <input type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : parseInt(e.target.value))} className={field} />
+          <p className="text-[10px] text-gray-400 mt-1">The lowest price a customer should expect. The final quote can be higher for bigger jobs, but every listing must show a real starting price: CHS does not allow &quot;message us for the price&quot;.</p>
+        </div>
       )}
 
       {specFields.length > 0 && (

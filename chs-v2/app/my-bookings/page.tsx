@@ -12,6 +12,8 @@ import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import BookingStageCard from "@/components/BookingStageCard";
 import GuestArrivalPass from "@/components/GuestArrivalPass";
+import GuestRoomMenu from "@/components/GuestRoomMenu";
+import GuestEventQuote from "@/components/GuestEventQuote";
 
 interface Booking {
   id: string;
@@ -107,6 +109,8 @@ export default function MyBookingsPage() {
                   <p className="text-[11px] text-gray-500 mt-0.5">Requested: {typeName[b.room_type_id]} room — a specific room is named once the host confirms.</p>
                 )}
                 {b.status === "confirmed" && <GuestArrivalPass bookingId={b.id} />}
+                {b.status === "confirmed" && <GuestRoomMenu bookingId={b.id} />}
+                {b.status !== "cancelled" && <GuestEventQuote bookingId={b.id} />}
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
               </div>

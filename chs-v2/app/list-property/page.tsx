@@ -14,6 +14,9 @@ import { LGA_BY_STATE, NIGERIAN_STATES } from "@/lib/geoData";
 
 import { PROPERTY_TYPE_CATEGORIES } from "@/types/propertyTypes";
 import { buildPhotoChecklist, groupSlots } from "@/lib/photoChecklist";
+import { validatePhone } from "@/lib/validators";
+import { priceEvasionError } from "@/lib/listingRules";
+import { photoFingerprint } from "@/lib/imageHash";
 
 const DOC_TYPES = [
   { value: "ownership_document", label: "Ownership document" },
@@ -67,6 +70,12 @@ export default function ListPropertyPage() {
   const [pricePerNight, setPricePerNight] = useState<number | "">("");
   const [pricePeriod, setPricePeriod] = useState("per year");
   const [description, setDescription] = useState("");
+  // Private contact number for this listing: stored for CHS and the owner only, never shown publicly.
+  const [contactPhone, setContactPhone] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (profile?.phone) setContactPhone((c) => c || profile.phone);
+  }, [profile?.phone]);
   const [bedrooms, setBedrooms] = useState<number | "">("");
   const [bathrooms, setBathrooms] = useState<number | "">("");
   const [toilets, setToilets] = useState<number | "">("");
@@ -177,12 +186,17 @@ export default function ListPropertyPage() {
 
   function validate(): string | null {
     if (!title.trim()) return "Please enter a title for this property.";
+    const evasion = priceEvasionError(title) || priceEvasionError(description);
+    if (evasion) return evasion;
+    const phoneCheck = validatePhone(contactPhone);
+    if (!phoneCheck.valid) return `A contact phone number is required. ${phoneCheck.message}`;
+    if (description.trim().length < 20) return "Please add a short, honest description (at least 20 characters) of the property.";
     if (!streetAddress.trim()) return "Please enter a real, specific street address or house number.";
     if (!locationArea.trim()) return "Please enter the location area.";
     if (purpose === "shortlet") {
-      if (!pricePerNight || pricePerNight < 1000) return "Please enter a valid nightly price.";
+      if (!pricePerNight || pricePerNight < 1000) return "The price is required. Please enter the real nightly price. Listings without a price cannot be submitted.";
     } else {
-      if (!price || price < 1000) return "Please enter a valid price.";
+      if (!price || price < 1000) return "The price is required. Please enter the real price. Listings without a price cannot be submitted.";
     }
     // A real, required legal gate — restored, found completely missing.
     // The original never let a sale listing be submitted without this.
@@ -291,6 +305,10 @@ export default function ListPropertyPage() {
       return;
     }
 
+    // Private contact number, kept for CHS and the owner only.
+    const { error: contactError } = await supabase.rpc("set_property_contact", { p_property_id: newProperty.id, p_phone: validatePhone(contactPhone).value });
+    if (contactError) setError(`Your listing was saved, but its contact number could not be stored (${contactError.message}). Open Edit listing to add it, or it cannot go live.`);
+
     // Real photo uploads, now that a real property ID exists to
     // organise them under. Labeled slots upload first, so the front
     // exterior genuinely becomes the main display photo, followed by
@@ -302,9 +320,18 @@ export default function ListPropertyPage() {
     if (allPhotos.length > 0) {
       const uploadedUrls: string[] = [];
       const uploadedCaptions: string[] = [];
+      const fingerprints: { url: string; hash: string }[] = [];
       for (let i = 0; i < allPhotos.length; i++) {
         const url = await uploadPropertyPhoto(allPhotos[i].file, session.user.id, newProperty.id, i);
-        if (url) { uploadedUrls.push(url); uploadedCaptions.push(allPhotos[i].caption); }
+        if (url) {
+          uploadedUrls.push(url); uploadedCaptions.push(allPhotos[i].caption);
+          const hash = await photoFingerprint(allPhotos[i].file);
+          if (hash) fingerprints.push({ url, hash });
+        }
+      }
+      // Fingerprints let CHS warn a reviewer about copied photos. They must never block a listing.
+      if (fingerprints.length > 0) {
+        try { await supabase.rpc("record_photo_hashes", { p_property_id: newProperty.id, p_items: fingerprints }); } catch { /* ignore */ }
       }
       if (uploadedUrls.length > 0) {
         await supabase.from("properties").update({ photos: uploadedUrls, photo_labels: uploadedCaptions }).eq("id", newProperty.id);
@@ -490,6 +517,15 @@ export default function ListPropertyPage() {
               placeholder="e.g. House 12, Shagari Road" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
             <p className="text-[10px] text-gray-400 mt-1">
               A real, specific address — this is how CHS, the occupant, and future analytics identify this exact property, not just its general neighborhood.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Contact phone number (required)</label>
+            <input type="tel" inputMode="numeric" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)}
+              placeholder="e.g. 08012345678" className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Kept private for CHS and you. It is how CHS reaches the owner or agent, and a listing cannot go live without it. The price, location, photos and a video are also required: CHS does not allow &quot;DM for price&quot; listings.
             </p>
           </div>
 

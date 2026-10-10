@@ -59,6 +59,8 @@ export default function HireBookingForm({
   const [wantsCaterer, setWantsCaterer] = useState(false);
   const [wantsUshers, setWantsUshers] = useState(false);
   const [numberOfUshers, setNumberOfUshers] = useState(2);
+  const [wantsSecurity, setWantsSecurity] = useState(false);
+  const [numberOfSecurity, setNumberOfSecurity] = useState(2);
   const [additionalEventRequests, setAdditionalEventRequests] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
@@ -98,6 +100,45 @@ export default function HireBookingForm({
   const eventGuestCommission = Math.round(eventBaseAmount * 0.06);
   const eventRealTotal = eventBaseAmount + eventGuestCommission;
 
+  // The "services you would like arranged" panel, used by BOTH event booking flows so a guest can always
+  // ask for ushers, a caterer, a live band, security, or anything similar. It is a request, relayed through
+  // CHS to the venue; nothing here is charged until the venue confirms.
+  function renderEventServices(title: string) {
+    return (
+      <div className="border-t border-gray-200 pt-3">
+        <p className="text-xs font-bold text-chs-charcoal mb-1">{title}</p>
+        <p className="text-[10px] text-gray-400 mb-2">Tell the venue what you will need. The venue arranges it or connects you with trusted providers through CHS, and agrees the price with you before anything is charged.</p>
+        <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
+          <input type="checkbox" checked={wantsUshers} onChange={(e) => setWantsUshers(e.target.checked)} /> 🙋 Ushers
+        </label>
+        {wantsUshers && (
+          <div className="ml-6 mb-1.5">
+            <label className="text-[10px] text-gray-500">Number of ushers needed</label>
+            <input type="number" min={1} value={numberOfUshers} onChange={(e) => setNumberOfUshers(parseInt(e.target.value) || 1)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+          </div>
+        )}
+        <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
+          <input type="checkbox" checked={wantsCaterer} onChange={(e) => setWantsCaterer(e.target.checked)} /> 🍽️ Caterer
+        </label>
+        <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
+          <input type="checkbox" checked={wantsMusicBand} onChange={(e) => setWantsMusicBand(e.target.checked)} /> 🎵 Live band / entertainment
+        </label>
+        <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
+          <input type="checkbox" checked={wantsSecurity} onChange={(e) => setWantsSecurity(e.target.checked)} /> 🛡️ Security
+        </label>
+        {wantsSecurity && (
+          <div className="ml-6 mb-1.5">
+            <label className="text-[10px] text-gray-500">Number of security personnel needed</label>
+            <input type="number" min={1} value={numberOfSecurity} onChange={(e) => setNumberOfSecurity(parseInt(e.target.value) || 1)} className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+          </div>
+        )}
+        <textarea value={additionalEventRequests} onChange={(e) => setAdditionalEventRequests(e.target.value)} rows={2} maxLength={500}
+          placeholder="Anything else? e.g. MC, decoration, DJ, photographer, parking attendants (no phone numbers or emails; CHS passes your request on)"
+          className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
+      </div>
+    );
+  }
+
   async function handleSubmitEventBooking() {
     if (!selectedTierId) { setError("Please select a real capacity tier."); return; }
     if (!eventDate) { setError("Please choose your real event date."); return; }
@@ -117,6 +158,13 @@ export default function HireBookingForm({
       p_guest_phone: validatePhone(guestPhone, { international: true }).value,
       p_guest_id_document_url: null, // identity is already CHS-verified; the document is never passed on to hosts
       p_house_rules_acknowledged: rulesAcknowledged,
+      p_wants_music_band: wantsMusicBand,
+      p_wants_caterer: wantsCaterer,
+      p_wants_ushers: wantsUshers,
+      p_number_of_ushers: wantsUshers ? numberOfUshers : null,
+      p_wants_security: wantsSecurity,
+      p_number_of_security: wantsSecurity ? numberOfSecurity : null,
+      p_additional_event_requests: additionalEventRequests.trim() || null,
     });
     setSubmitting(false);
     if (rpcError || !data) {
@@ -218,6 +266,8 @@ export default function HireBookingForm({
       p_wants_caterer: isEventVenue ? wantsCaterer : false,
       p_wants_ushers: isEventVenue ? wantsUshers : false,
       p_number_of_ushers: isEventVenue && wantsUshers ? numberOfUshers : null,
+      p_wants_security: isEventVenue ? wantsSecurity : false,
+      p_number_of_security: isEventVenue && wantsSecurity ? numberOfSecurity : null,
       p_additional_event_requests: isEventVenue ? additionalEventRequests.trim() || null : null,
       p_expected_arrival_time: arrivalTime || null,
     });
@@ -272,6 +322,8 @@ export default function HireBookingForm({
             </div>
           </div>
         )}
+
+        {renderEventServices("Services you would like arranged (optional)")}
 
         <div>
           <label className="text-xs font-semibold text-gray-600">4. Event date</label>
@@ -350,34 +402,7 @@ export default function HireBookingForm({
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
       </div>
 
-      {isEventVenue && (
-        <div className="border-t border-gray-200 pt-3">
-          <p className="text-xs font-bold text-chs-charcoal mb-2">Event-day services (optional)</p>
-          <p className="text-[10px] text-gray-400 mb-2">Let the host know what you&apos;ll need — they&apos;ll arrange or help connect you with real, trusted providers.</p>
-          <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
-            <input type="checkbox" checked={wantsMusicBand} onChange={(e) => setWantsMusicBand(e.target.checked)} />
-            Music band / live entertainment
-          </label>
-          <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
-            <input type="checkbox" checked={wantsCaterer} onChange={(e) => setWantsCaterer(e.target.checked)} />
-            Caterer
-          </label>
-          <label className="flex items-center gap-2 text-xs text-chs-charcoal mb-1.5">
-            <input type="checkbox" checked={wantsUshers} onChange={(e) => setWantsUshers(e.target.checked)} />
-            Ushers
-          </label>
-          {wantsUshers && (
-            <div className="ml-6 mb-1.5">
-              <label className="text-[10px] text-gray-500">Number of ushers needed</label>
-              <input type="number" min={1} value={numberOfUshers} onChange={(e) => setNumberOfUshers(parseInt(e.target.value) || 1)}
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
-            </div>
-          )}
-          <textarea value={additionalEventRequests} onChange={(e) => setAdditionalEventRequests(e.target.value)} rows={2}
-            placeholder="Anything else the host should know about your event?"
-            className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
-        </div>
-      )}
+      {isEventVenue && renderEventServices("Event-day services (optional)")}
 
       <div className="border-t border-gray-200 pt-3">
         <p className="text-xs font-bold text-chs-charcoal mb-1">Booking contact</p>

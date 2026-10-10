@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 import { Property } from "@/types/property";
 import { uploadPropertyVideo } from "@/lib/storage";
 import InfoTip from "@/components/InfoTip";
+import { validatePhone } from "@/lib/validators";
+import { priceEvasionError } from "@/lib/listingRules";
 
 // A real, complete edit capability — genuinely missing from this
 // rebuild, found during a systematic comparison against the real
@@ -33,6 +35,11 @@ export default function EditListingPage() {
   const [newVideoLabel, setNewVideoLabel] = useState("");
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [contact, setContact] = useState("");
+  const [gaps, setGaps] = useState<string[]>([]);
+  const loadGaps = () => {
+    supabase.rpc("get_listing_gaps", { p_property_id: params.id as string }).then(({ data }) => setGaps((data as string[]) || []));
+  };
 
   useEffect(() => {
     if (authLoading || !session) return;
@@ -54,6 +61,10 @@ export default function EditListingPage() {
       });
     supabase.from("property_videos").select("id, room_label, video_url").eq("property_id", params.id as string)
       .then(({ data }) => setExistingVideos(data || []));
+    supabase.rpc("get_property_contact", { p_property_id: params.id as string }).then(({ data }) => setContact((data as string) || ""));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadGaps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, params.id]);
 
   async function handleUploadVideo(file: File) {
@@ -79,9 +90,14 @@ export default function EditListingPage() {
     }
     setExistingVideos([...existingVideos, data]);
     setNewVideoLabel("");
+    loadGaps();
   }
 
   async function handleDeleteVideo(videoId: string) {
+    if (existingVideos.length <= 1 && property?.verification_status === "verified") {
+      setVideoError("A live listing must keep at least one video. Add the new video first, then remove this one.");
+      return;
+    }
     await supabase.from("property_videos").delete().eq("id", videoId);
     setExistingVideos(existingVideos.filter((v) => v.id !== videoId));
   }
@@ -92,17 +108,25 @@ export default function EditListingPage() {
       setError("Please enter a valid price.");
       return;
     }
+    const evasion = priceEvasionError(description);
+    if (evasion) { setError(evasion); return; }
+    const phoneCheck = validatePhone(contact);
+    if (!phoneCheck.valid) { setError(`A contact phone number is required. ${phoneCheck.message}`); return; }
     setError(null);
     setSaving(true);
+
+    const { error: contactError } = await supabase.rpc("set_property_contact", { p_property_id: params.id as string, p_phone: phoneCheck.value });
+    if (contactError) { setSaving(false); setError(contactError.message); return; }
 
     const { error: updateError } = await supabase
       .from("properties")
       .update({ price: numericPrice, description: description.trim() })
       .eq("id", params.id as string);
 
+    if (!updateError) await supabase.rpc("confirm_listing_available", { p_property_id: params.id as string });
     setSaving(false);
     if (updateError) {
-      setError("Could not save your changes. Please try again.");
+      setError(updateError.message || "Could not save your changes. Please try again.");
       return;
     }
     setSaved(true);
@@ -138,6 +162,18 @@ export default function EditListingPage() {
           </p>
         ) : (
           <div className="space-y-3">
+            {gaps.length > 0 && (
+              <div className="rounded-lg bg-chs-amber-light px-3 py-2 text-xs text-chs-charcoal">
+                <p className="font-semibold">This listing cannot go live until it has:</p>
+                <ul className="list-disc ml-4 mt-1">{gaps.map((g) => <li key={g}>{g}</li>)}</ul>
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-semibold text-gray-600">Contact phone number (private, required)</label>
+              <input type="tel" inputMode="numeric" value={contact} onChange={(e) => setContact(e.target.value)} placeholder="e.g. 08012345678"
+                className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+              <p className="text-[10px] text-gray-400 mt-1">Kept for CHS and you only. Not shown publicly.</p>
+            </div>
             <div>
               <label className="text-xs font-semibold text-gray-600">Price (₦)</label>
               <input type="text" value={price} onChange={(e) => setPrice(e.target.value)}

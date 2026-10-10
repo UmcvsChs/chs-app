@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira, formatDateTime } from "@/lib/format";
+import AdminSubscriptions from "@/components/AdminSubscriptions";
 
 // Admin: (1) the CHS peak-period calendar that hosts can switch on, and
 // (2) the list of hosts who cancelled confirmed bookings, with a button to
@@ -112,6 +113,7 @@ export default function AdminHotelControls() {
           </div>
         ))}
       </div>
+      <AdminSubscriptions />
     </div>
   );
 }

@@ -241,6 +241,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
 
                 {product.listing_type === "service" ? (
                   <>
+                    {product.price != null && <p className="text-sm font-bold text-chs-charcoal mt-1">From {formatNaira(product.price)}</p>}
                     {submittedFor === product.id ? (
                       <p className="text-[10px] text-chs-red font-semibold mt-1.5">✓ Sent to CHS for review — you&apos;ll be notified once approved and relayed to the vendor.</p>
                     ) : quoteFormFor === product.id ? (
