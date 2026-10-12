@@ -1,6 +1,8 @@
 "use client";
 
 import AdminListingReports from "@/components/AdminListingReports";
+import AdminChsStamp from "@/components/AdminChsStamp";
+import AdminAgentApproval from "@/components/AdminAgentApproval";
 import ListingRiskFlags from "@/components/ListingRiskFlags";
 import { embeddedOne } from "@/lib/embedded";
 import { Suspense, useEffect, useState } from "react";
@@ -72,7 +74,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2491,6 +2493,7 @@ function AdminDashboardInner() {
           { key: "buyerid", label: `ID Verification (${pendingBuyerIds.length})`, domain: "registration_setup", group: "Verification" },
           { key: "properties", label: `Properties (${pendingProperties.length})`, domain: "owner_buyer_tenant", group: "Verification" },
           { key: "listingreports", label: "Listing reports", domain: "owner_buyer_tenant", group: "Verification" },
+          { key: "chsstamp", label: "CHS stamp", domain: "owner_buyer_tenant", group: "Verification" },
           { key: "vendors", label: `Vendors (${pendingVendors.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
           { key: "artisans", label: `Artisans (${pendingArtisans.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
           { key: "developers", label: `Developers (${developerApplications.length})`, domain: "artisan_dev_pm_vendor", group: "Verification" },
@@ -4003,6 +4006,7 @@ function AdminDashboardInner() {
         )}
 
         {activeTab === "listingreports" && <AdminListingReports />}
+        {activeTab === "chsstamp" && <><AdminAgentApproval /><AdminChsStamp /></>}
         {activeTab === "properties" && (
           <div>
             {/* Real, new search tool completing a direct, serious
@@ -5795,6 +5799,7 @@ function AdminDashboardInner() {
                     { key: "buyerid" as Tab, label: `ID Verification (${pendingBuyerIds.length})` },
                     { key: "properties" as Tab, label: `Properties (${pendingProperties.length})` },
                     { key: "listingreports" as Tab, label: "Listing reports" },
+                    { key: "chsstamp" as Tab, label: "CHS stamp" },
                     { key: "vendors" as Tab, label: `Vendors (${pendingVendors.length})` },
                     { key: "artisans" as Tab, label: `Artisans (${pendingArtisans.length})` },
                     { key: "developers" as Tab, label: `Developers (${developerApplications.length})` },

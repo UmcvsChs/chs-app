@@ -9,8 +9,28 @@ import Link from "next/link";
 // traces back to a real clause or a real, tested piece of CHS itself.
 const FAQ_ITEMS = [
   {
+    q: "I own a property. How do I ask CHS to manage it?",
+    a: "List the property yourself (or open one you already listed), then go to My Properties and press Ask CHS to manage this property. Choose what CHS should manage it for (rent, shortlet, sale, hotel or commercial), say in what capacity you act, upload the documents CHS asks for, read the full terms and accept. You pay one CHS management fee, which replaces the standard owner-side fee. CHS checks your documents, and once the listing is verified and CHS approves, the property shows the Managed & Advertised by CHS stamp and gets a CHS tag. You can withdraw a pending request, or ask CHS to stop managing the property later.",
+  },
+  {
+    q: "How do I know a property is really managed by CHS?",
+    a: "Properties CHS manages or advertises carry a CHS stamp and a tag such as CHS-100002-3, shown on the listing card and the listing page. Use the Managed by CHS button on the home page to see only those. A badge picture can be copied, but a tag cannot be faked: type it at the Check a CHS tag page and CHS will tell you whether it is genuine and still active. Only CHS staff can give a listing the stamp. A listing without it is from another owner or agent, who sets their own fees, which must be shown on the listing. Never pay anyone because of a picture of a badge.",
+  },
+  {
+    q: "How do I know an agent is really approved by CHS?",
+    a: "A CHS-approved agent is a registered company or firm (CAC, ESVARBON or QSRBN) whose owners CHS has fully verified and which has a proven record of at least 10 paid transactions on CHS in the last 180 days. Their listings show a gold strip with the registered name, registration number and CHS agent ID. You can check any agent ID on the Check an agent page without logging in. If an agent says they are approved but the ID does not check out, do not pay them anything outside your CHS account.",
+  },
+  {
+    q: "How do viewing time slots work?",
+    a: "Some owners set the days and hours they can show a property. When you book an inspection on those properties you pick one free slot, and no one else can take it. You can move your visit to another free slot from My Inspections up to 12 hours before. You get a reminder the day before and a few hours before. If the owner has set no slots, you suggest a time as before.",
+  },
+  {
+    q: "Can I pay rent monthly or quarterly?",
+    a: "On CHS-managed rentals, if the landlord has allowed it. You choose a plan when you first pay, or within 30 days of your lease end for the next year. Each instalment is held safely by CHS like a full-year payment. Your one-time CHS agency fee is paid with the first instalment. If the property does not offer instalments, you pay the full year.",
+  },
+  {
     q: "How much does CHS actually charge?",
-    a: "It depends on what you're doing, and it's always split between both sides — never charged twice for the same amount. Rent/lease: 6% from the tenant, 4% from the landlord (from year two onward, the tenant pays nothing further — only the landlord, at a reduced 3%). Sale: 6.5% from the buyer, 6% from the seller. Rent to Own: 5% buyer / 5.5% seller, charged on each real instalment as it's paid. Shortlet: a sliding scale by length of stay, from 7%/5% down to 5%/3%. Hotel, Event Centre, and hourly Car Park bookings: a flat 6%/4%. There is no separate inspection fee as standard.",
+    a: "It depends on what you're doing, and it's always split between both sides — never charged twice for the same amount. Rent/lease: a 6% agency fee from the tenant and a 4% service charge from the landlord (from year two onward, the tenant pays nothing further — only the landlord, at a reduced 3%). Sale: a 6.5% agency fee from the buyer and a 6% service charge from the seller. Rent to Own: 5% buyer / 5.5% seller, charged on each real instalment as it's paid. Shortlet: a sliding scale by length of stay, from 7%/5% down to 5%/3%. Hotel, Event Centre, and hourly Car Park bookings: a flat 6%/4%. There is no separate inspection fee as standard.",
   },
   {
     q: "When exactly do I pay CHS's commission?",

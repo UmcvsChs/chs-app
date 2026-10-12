@@ -518,3 +518,14 @@ end $$;
 --   report_listing, get_listing_reports, admin_resolve_listing_report (dismiss | warn_owner | hide_listing -> rejected with reason); get_listing_trust (anon ok).
 --   platform_settings.terms_current_version = 8.
 -- 475s (Oct 10 2026) COPIED-PHOTO DETECTION (applied live): property_photo_hashes (64-bit difference hash per photo, RPC only), record_photo_hashes(property, items), _photo_hamming(a,b); get_listing_risk_flags warns when another owner has a photo within 4 bits. Hashes computed in the browser (lib/imageHash.ts); only new listings are covered.
+-- 475t (Oct 12 2026) "MANAGED BY CHS" IDENTITY (applied live): see 477_chs_managed_identity.sql. Admin-only stamp + auto tag ID, public tag check, move-in cost breakdown.
+-- 475u (Oct 12 2026) OWNER HANDS PROPERTY TO CHS (applied live): see 478_management_mandates.sql.
+-- 475v (Oct 12 2026) MANAGEMENT FEE REPLACES OWNER-SIDE FEE + DOCUMENTS + HOTEL (applied live): see 479_management_fees_and_documents.sql.
+-- 475w (Oct 12 2026) AGENCY FEE / SERVICE CHARGE WORDING (applied live): see 480_agency_fee_service_charge_wording.sql.
+-- 475x (Oct 12 2026) RENT BY INSTALMENTS (applied live): see 481_rent_instalments.sql.
+-- 475y (Oct 12 2026) VIEWING TIME SLOTS (applied live): see 482_viewing_slots.sql.
+-- 475z (Oct 12 2026) CHS-APPROVED AGENT BADGE (applied live): see 483_chs_approved_agent.sql.
+-- 475aa (Oct 12 2026) OWNER AT-A-GLANCE SUMMARY (applied live): see 484_owner_summary.sql.
+-- 475ab (Oct 12 2026) AGENT BADGE HARD REQUIREMENTS (applied live): see 485_agent_badge_requirements.sql. Supersedes the light approval in 483.
+-- 475ac (Oct 12 2026) MANAGED-STAMP RULE AND 6.5% SALE CAP (applied live): see 486_managed_rules_and_sale_cap.sql.
+-- 475ad (Oct 12 2026) TERMS V9 ACTIVATION (NOT APPLIED, prepared): see 487_terms_v9_activation.sql. Run only together with CURRENT_TERMS_VERSION=9 in code.

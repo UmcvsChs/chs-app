@@ -9,18 +9,46 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
+import ViewingSlotPicker, { useViewingSlots } from "@/components/ViewingSlotPicker";
 
 // Where anyone who asked for a physical visit sees it through. The transport cost is paid FROM THE WALLET like every
 // other payment on CHS, and held until the visit: it goes to the agent who travelled, or comes back if CHS or the
 // owner cancels (or if the requester cancels at least 12 hours ahead). The WHOLE cost is the requester's.
 
 interface Insp {
-  id: string; reference: string; requested_date: string; requested_time: string; status: string; payment_status: string;
+  id: string; property_id: string; reference: string; requested_date: string; requested_time: string; status: string; payment_status: string;
   transport_fee: number | null; fee_final: boolean; takeoff_point: string | null; distance_km: number | null;
   properties: { title: string; location_area: string | null } | { title: string; location_area: string | null }[] | null;
 }
 
 const first = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+
+// Move a visit to another free slot, when the owner has set viewing times for this property.
+function RescheduleBox({ inspectionId, propertyId, onDone }: { inspectionId: string; propertyId: string; onDone: () => void }) {
+  const slots = useViewingSlots(propertyId);
+  const [open, setOpen] = useState(false);
+  const [pick, setPick] = useState({ d: "", t: "" });
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!slots.hasSlots) return null;
+  async function move() {
+    setMsg(null);
+    const { error } = await supabase.rpc("reschedule_inspection", { p_inspection: inspectionId, p_date: pick.d, p_time: pick.t });
+    if (error) { setMsg(error.message); return; }
+    setOpen(false);
+    onDone();
+  }
+  if (!open) return <button onClick={() => setOpen(true)} className="mt-2 mr-3 text-[11px] font-semibold text-chs-red underline">Move to another slot</button>;
+  return (
+    <div className="mt-2 bg-gray-50 rounded-lg p-2.5">
+      <ViewingSlotPicker days={slots.days} date={pick.d} time={pick.t} onPick={(d, t) => setPick({ d, t })} />
+      <div className="flex gap-2 mt-1.5">
+        <button onClick={move} disabled={!pick.t} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[11px] font-semibold disabled:opacity-50">Move my visit</button>
+        <button onClick={() => setOpen(false)} className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-[11px]">Keep it</button>
+      </div>
+      {msg && <p className="text-[11px] text-chs-red mt-1">{msg}</p>}
+    </div>
+  );
+}
 
 export default function MyInspectionsPage() {
   const router = useRouter();
@@ -34,7 +62,7 @@ export default function MyInspectionsPage() {
     if (!session) return;
     const { data } = await supabase
       .from("inspections")
-      .select("id, reference, requested_date, requested_time, status, payment_status, transport_fee, fee_final, takeoff_point, distance_km, properties(title, location_area)")
+      .select("id, property_id, reference, requested_date, requested_time, status, payment_status, transport_fee, fee_final, takeoff_point, distance_km, properties(title, location_area)")
       .eq("requester_id", session.user.id)
       .order("created_at", { ascending: false });
     setItems((data as unknown as Insp[]) || []);
@@ -117,6 +145,7 @@ export default function MyInspectionsPage() {
               )}
               {!needsPay && message[i.id] && <p className="text-[11px] text-gray-600 mt-1.5">{message[i.id]}</p>}
 
+              {open && <RescheduleBox inspectionId={i.id} propertyId={i.property_id} onDone={load} />}
               {open && (
                 confirmCancel === i.id ? (
                   <div className="mt-2 bg-gray-50 rounded-lg p-2.5">

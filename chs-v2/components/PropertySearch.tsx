@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { NIGERIAN_STATES, LGA_BY_STATE, AREAS_BY_LGA } from "@/lib/geoData";
 import { PROPERTY_TYPE_CATEGORIES } from "@/types/propertyTypes";
 import { Property } from "@/types/property";
+import { isChsStamped } from "@/lib/chsStamp";
 
 // The real, complete "power search" — restored, found genuinely
 // reduced compared to the original's full search modal (purpose,
@@ -24,11 +25,12 @@ export interface SearchFilters {
   maxPrice: string;
   propertyType: string;
   minBedrooms: string;
+  chsOnly: boolean;
 }
 
 const EMPTY_FILTERS: SearchFilters = {
   purpose: "", state: "", lga: "", area: "", landmark: "",
-  minPrice: "", maxPrice: "", propertyType: "", minBedrooms: "",
+  minPrice: "", maxPrice: "", propertyType: "", minBedrooms: "", chsOnly: false,
 };
 
 const PURPOSES = [
@@ -51,6 +53,7 @@ const ALL_PROPERTY_TYPES = PROPERTY_TYPE_CATEGORIES.flatMap((c) => c.options);
 export function applyPropertyFilters(properties: Property[], filters: SearchFilters | null): Property[] {
   if (!filters) return properties;
   return properties.filter((p) => {
+    if (filters.chsOnly && !isChsStamped(p.chs_service)) return false;
     if (filters.purpose && p.purpose !== filters.purpose) return false;
     if (filters.state && p.location_state !== filters.state) return false;
     if (filters.lga && p.location_lga !== filters.lga) return false;
@@ -134,6 +137,11 @@ export default function PropertySearch({
 
       {open && (
         <div className="space-y-3 pb-3">
+          <label className="flex items-center gap-2 bg-chs-charcoal text-amber-300 rounded-lg px-3 py-2.5 text-xs font-bold">
+            <input type="checkbox" checked={filters.chsOnly} onChange={(e) => setFilters({ ...filters, chsOnly: e.target.checked })} />
+            <span>🛡️ Show only properties managed or advertised by CHS</span>
+          </label>
+
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">🏠 What are you looking for?</p>
             <div className="grid grid-cols-3 gap-1.5">

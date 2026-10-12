@@ -87,7 +87,7 @@ export default function MyEarningsPage() {
               <p className="text-sm font-bold mt-0.5">{formatNaira(totalGross)}</p>
             </div>
             <div>
-              <p className="text-[9px] text-white/60 uppercase">CHS commission</p>
+              <p className="text-[9px] text-white/60 uppercase">CHS service charge</p>
               <p className="text-sm font-bold mt-0.5 text-white/70">{formatNaira(totalCommission)}</p>
             </div>
             <div>
@@ -108,7 +108,7 @@ export default function MyEarningsPage() {
               <p className="text-[10px] text-gray-400 mt-0.5">{formatDateTime(e.paid_at)}</p>
               <div className="bg-[var(--zone-card)] rounded-lg p-2 mt-2 space-y-0.5">
                 <div className="flex justify-between text-[11px]"><span className="text-gray-500">Gross payment</span><span className="font-semibold">{formatNaira(e.gross_amount)}</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-gray-500">CHS commission</span><span className="font-semibold">{formatNaira(e.commission_amount)}</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-gray-500">CHS service charge</span><span className="font-semibold">{formatNaira(e.commission_amount)}</span></div>
                 <div className="flex justify-between text-xs border-t border-gray-200 pt-1 mt-1"><span className="font-bold text-chs-charcoal">Your real net</span><span className="font-bold text-chs-red">{formatNaira(e.net_amount)}</span></div>
               </div>
               {e.reference && (

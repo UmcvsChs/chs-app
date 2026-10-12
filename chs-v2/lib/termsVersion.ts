@@ -35,6 +35,15 @@
 //               extras paid to the operator" (room orders and event quotation extras are paid to the operator directly, an exception to
 //               wallet-only payment, with no CHS hold or commission).
 //
+//   Version 9 — PREPARED, NOT ACTIVE. Text is in components/TermsContentV9.tsx. It renames the fees (an "agency fee" from
+//               the tenant, buyer or guest; a "service charge" from the landlord, seller or host), adds term 41 (the CHS stamp,
+//               tag and CHS-managed properties, with the management fee replacing the owner-side fee), term 42 (CHS-approved
+//               agents), term 43 (viewing slots), term 44 (rent by instalments) and term 45 (CHS may change these Terms with or
+//               without prior notice). TO SWITCH IT ON, in this order of preparation and then together at deploy time:
+//                 1. set CURRENT_TERMS_VERSION below to 9 and TERMS_WHATS_NEW to TERMS_WHATS_NEW (old text) + TERMS_V9_WHATS_NEW;
+//                 2. run backend-v2/487_terms_v9_activation.sql (sets platform_settings.terms_current_version to 9);
+//                 3. deploy. Do 1 and 2 close together: accept_terms() refuses a version the database does not know yet.
+//
 // Rolling out a new version is safe in either order: the database's accept_terms() records the
 // version the person actually saw (anything from 1 up to the current one), so a page that is a
 // version behind can never lock anyone out — they are simply asked again, once, afterwards.
@@ -46,6 +55,10 @@ export const TERMS_UPDATED_LABEL = "October 2026";
 // people last accepted that long ago.
 export const TERMS_WHATS_NEW =
   "Two things are new. Term 36: if the other side of your deal (a seller, landlord, host or vendor) fails to deliver, you get your full payment back including CHS's own commission, less only a small real bank processing fee. Term 11: hotels, lodges, shortlets and event centres are now booked request-first — nothing is charged when you send a request, CHS passes it to the host, and you pay only after the host confirms, within a short window. Everything between a guest and a host goes through CHS: messages are reviewed before delivery until a booking is paid, and phone numbers and emails are blocked. New in Version 4: every payment on CHS is made through your CHS Wallet only — never pay a person or a bank account. Your wallet is now better protected (a transaction PIN, limits, a 24-hour pause before money received from another user or added by card can go to a bank, checks on unfamiliar devices, a Freeze button, and a way to report a transfer as fraud). If you still want a physical inspection after seeing the photos and videos, the transport cost is yours alone and is paid from your wallet. A seller can ask CHS to release sale money once the documents are delivered. Rent to Own requests go to CHS first, and the owner may decline. New in Version 5: on a Mortgage (Rent to Own) every instalment you pay is held by CHS and released to the owner by CHS, and the final payment stays with CHS until the property documents are in your hands and you have confirmed it in the app. CHS releases that final payment by hand. New in Version 6: term 37 explains that CHS keeps an exact date-and-time record of every important event (documents, confirmations, payments, applications) and that these records can be relied on as evidence if there is ever a dispute. New in Version 7: term 38 is for hotel, lodge and event-centre hosts. It explains the paid Pro and Business plans (paid from your wallet, a lower CHS commission, a 7-day grace if a renewal fails), the free pilot, team roles, who is responsible for guest and staff data, importing spreadsheets and linking calendars, and that a wrong entry is voided, never erased. New in Version 8: term 39 says every listing must show its real price, location, street address, at least five photos, a video, a description and a private contact number, that asking people to DM or call for the price is not allowed, that price changes are recorded and shown, that property listings must be confirmed as still available every 30 days or they are hidden, and that anyone can report a listing. Term 40 explains that food and drink ordered to a hotel room and extras in an event quotation are paid to the hotel or venue directly, not through your wallet, and CHS does not hold that money.";
+
+// What is new in version 9. Append this to TERMS_WHATS_NEW when switching version 9 on.
+export const TERMS_V9_WHATS_NEW =
+  " New in Version 9: the fees have clearer names. You pay an agency fee if you are the tenant, buyer or guest, and a service charge if you are the landlord, seller or host; the amounts are unchanged. Term 41 explains the CHS stamp and tag (anyone can check a tag), what a CHS-managed property costs, and how an owner hands a property to CHS. Term 42 explains the CHS-approved agent badge. Term 43 explains viewing slots. Term 44 explains paying rent monthly or quarterly where the landlord allows it. Term 45 says CHS may change these Terms, with or without prior notice, and will ask you to accept a changed version.";
 
 type TermsFields = {
   terms_accepted_at: string | null;

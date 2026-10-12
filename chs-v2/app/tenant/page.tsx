@@ -19,6 +19,7 @@ import MessageThread from "@/components/MessageThread";
 import GuidePrompt from "@/components/GuidePrompt";
 import NotificationBell from "@/components/NotificationBell";
 import InfoTip from "@/components/InfoTip";
+import RentInstalments from "@/components/RentInstalments";
 
 interface ApplicationWithProperty {
   id: string;
@@ -39,6 +40,7 @@ interface TenancyWithProperty {
   status: string;
   notice_given_at: string | null;
   auto_pay_rent_enabled: boolean;
+  pay_plan?: string;
   properties: { title: string; location_area: string; street_address: string | null; owner_identity_visible_to_tenant: boolean } | null;
   landlord: { full_name: string } | null;
   manager: { full_name: string } | null;
@@ -122,7 +124,7 @@ export default function TenantDashboard() {
         .order("created_at", { ascending: false }),
       supabase
         .from("tenancies")
-        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, notice_given_at, auto_pay_rent_enabled, properties(title, location_area, street_address, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
+        .select("id, property_id, landlord_id, manager_id, lease_start, lease_end, annual_rent, status, notice_given_at, auto_pay_rent_enabled, pay_plan, properties(title, location_area, street_address, owner_identity_visible_to_tenant), landlord:landlord_id(full_name), manager:manager_id(full_name)")
         .eq("tenant_id", session.user.id)
         .order("created_at", { ascending: false }),
       supabase
@@ -410,7 +412,7 @@ export default function TenantDashboard() {
                       </p>
                       {tenanciesWithPriorPayment.has(t.id) && (
                         <p className="text-[10px] text-green-700 font-semibold mt-0.5">
-                          ✓ This is a renewal — you owe no CHS commission this year, only the rent itself
+                          ✓ This is a renewal — you owe no CHS agency fee this year, only the rent itself
                         </p>
                       )}
                       {t.notice_given_at ? (
@@ -453,7 +455,7 @@ export default function TenantDashboard() {
                 {!!pendingTenantCommission[t.id] && (
                   <div className="bg-white rounded-lg p-2 mt-1 text-[11px] text-gray-600">
                     <div className="flex justify-between"><span>Rent</span><span>{formatNaira(t.annual_rent)}</span></div>
-                    <div className="flex justify-between"><span>Your real CHS commission</span><span>{formatNaira(pendingTenantCommission[t.id])}</span></div>
+                    <div className="flex justify-between"><span>Your CHS agency fee</span><span>{formatNaira(pendingTenantCommission[t.id])}</span></div>
                     <div className="flex justify-between font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1">
                       <span>Real total due</span><span>{formatNaira(t.annual_rent + pendingTenantCommission[t.id])}</span>
                     </div>
@@ -471,7 +473,8 @@ export default function TenantDashboard() {
                     genuinely due or overdue; otherwise a clear, real
                     confirmation replaces it, with a direct link to
                     the receipt. */}
-                {(() => {
+                <RentInstalments tenancyId={t.id} onChanged={loadData} />
+                {(t.pay_plan ?? "annual") === "annual" && (() => {
                   const daysUntilDue = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   // Real, critical fix — same real bug, same real
                   // cause: a brand-new, completely unpaid tenancy
@@ -504,7 +507,7 @@ export default function TenantDashboard() {
                     here when no one-time commission is owed, since
                     rent savings exists purely to hold real rent
                     money, not CHS's own commission. */}
-                {(() => {
+                {(t.pay_plan ?? "annual") === "annual" && (() => {
                   const daysUntilDue2 = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   if ((daysUntilDue2 > 30 && tenanciesWithPriorPayment.has(t.id)) || (pendingTenantCommission[t.id] || 0) > 0) return null;
                   return (

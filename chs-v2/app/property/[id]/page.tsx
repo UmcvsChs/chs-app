@@ -18,6 +18,9 @@ import PropertyTourButton from "@/components/PropertyTourButton";
 import PropertyCard from "@/components/PropertyCard";
 import { CommunityFeedback as CommunityFeedbackType } from "@/types/communityFeedback";
 import { MediaRequest } from "@/types/mediaRequest";
+import { ChsBanner } from "@/components/ChsStamp";
+import AgentBadgeStrip from "@/components/AgentBadge";
+import MoveInCostCard, { MoveInCost } from "@/components/MoveInCostCard";
 
 // Always fetch fresh — a property's price, status, or vacancy could
 // change at any moment, and this page must never show stale data.
@@ -99,6 +102,12 @@ export async function generateMetadata({
   };
 }
 
+async function getMoveInCost(id: string): Promise<MoveInCost | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("get_move_in_cost", { p_property_id: id });
+  return (data as MoveInCost | null) ?? null;
+}
+
 async function getUrgentSaleHotline(): Promise<string | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -119,6 +128,7 @@ export default async function PropertyDetailPage({
   const urgentSaleHotline = property?.is_urgent_sale ? await getUrgentSaleHotline() : null;
   const priceHistory = property ? await getPriceHistory(id) : [];
   const trust = property ? await getTrust(id) : null;
+  const moveInCost = property && property.purpose === "rent" ? await getMoveInCost(id) : null;
 
   // Real, direct fix per a specific, well-described client scenario:
   // a genuine buyer who paid for a property used to see the exact
@@ -301,6 +311,9 @@ export default async function PropertyDetailPage({
         </div>
       )}
 
+      <ChsBanner level={property.chs_service} tag={property.chs_tag} />
+      <AgentBadgeStrip agentId={property.managing_agent_id} />
+
       {isUnderVerification && (
         <div className="bg-chs-amber-light text-chs-amber-dark text-xs font-semibold px-4 py-3 border-b border-chs-amber/30">
           ⏳ Under Verification — CHS is still confirming this property&apos;s documents.
@@ -389,12 +402,14 @@ export default async function PropertyDetailPage({
             </div>
             <p className="text-[10px] text-gray-500 mt-1.5">These are the real, independent agent&apos;s own fees — separate from CHS&apos;s own commission.</p>
           </div>
-        ) : property.managing_agent_id && property.agent_commission_pct ? (
+        ) : !moveInCost && ((property.managing_agent_id && property.agent_commission_pct) || property.chs_service === "chs_managed") ? (
           <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-4">
             <p className="text-xs font-bold text-green-700">✓ No custom fee, no legal fee, no inspection fee</p>
             <p className="text-[10px] text-gray-500 mt-0.5">CHS-managed — only the standard, published commission applies.</p>
           </div>
         ) : null}
+
+        {moveInCost && <MoveInCostCard cost={moveInCost} />}
 
         {property.is_urgent_sale && (
           <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-4">

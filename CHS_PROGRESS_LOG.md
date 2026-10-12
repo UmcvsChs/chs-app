@@ -6,6 +6,22 @@
 
 ---
 
+## October 12, 2026 (late night) — Agency fee from tenant/buyer; service charge from owner/seller
+
+To address the ESVARBON ban on collecting an agency fee from both sides, the tenant's and buyer's fee is now called the CHS agency fee, and the landlord's and seller's fee is the CHS service charge (the management fee on a CHS-managed property is the owner-side service charge). Amounts and logic are unchanged. Renamed in: rent and sale notifications (database), the tenant and buyer payment screens, owner earnings, the fees-due list, the move-in cost card, the Managed by CHS page, the FAQ fee answer, and the four management terms texts (which now say what the service charge pays for: listing and marketing, checks, escrow and payments, statements, support). Migration note: backend-v2/480_agency_fee_service_charge_wording.sql. NOT changed: the Terms & Conditions (version 8) and Privacy text, the Guide, and some older internal labels still say "commission". Changing the Terms needs a new version (V9) that every user must accept again. Renaming helps only if the owner-side charge really is for different services; a lawyer must confirm.
+
+## October 12, 2026 (night) — Management fee replaces the owner-side fee; real terms, documents, hotel model
+
+Decisions: the management fee replaces the standard owner-side platform fee; CHS chose the hybrid base-plus-incentive model for hotels; terms written from local and global practice, reviewable by CHS at any time, not lawyer-reviewed. Built: managed rent now charges the owner 10% instead of 4% and managed sale uses the tiered seller fee instead of 6% (approve_rental_application, generate_sale_commissions, sale_seller_net, get_owner_earnings_detailed; helpers chs_landlord_fee_pct, chs_seller_fee_pct; settings managed_rent_fee_pct = 10, managed_rent_fee_min = 0 because the old 150,000 minimum was 49% of a 305,000 rent); the owner form now asks for purposes (rent, shortlet, sale, hotel), capacity, required documents, the full terms (four new texts in serviceTnc.ts, scroll to the end), three comprehension questions and acceptance; admin must confirm the documents were checked and, for a hotel, record base fee, incentive and term. Migration note: backend-v2/479_management_fees_and_documents.sql. Not done: renewal commission and host-side shortlet and hotel booking commission are still charged the old way (terms promise a credit on the statement); the ESVARBON ban on charging both sides is an open legal question; shortlet 15% is unresearched. See CHS_MANAGEMENT_FEES_AND_TERMS.pdf.
+
+## October 12, 2026 (evening) — Owners can hand their own property to CHS to manage
+
+Owners such as a literate landlord who lists properties himself can now ask CHS to manage them for rent, shortlet and/or sale, without CHS listing anything. Ask CHS to manage this property (My Properties) -> choose purposes, read fees and terms, accept -> CHS admin reviews in Admin -> CHS stamp -> approval turns on the Managed & Advertised by CHS stamp and issues the tag -> the owner can later ask to end it, and an admin ending it removes the stamp. The accepted terms text and version are stored with each request. Migration note: backend-v2/478_management_mandates.sql. Open decisions: shortlet management fee is not defined (the form says CHS confirms it in writing); the management terms are not yet reviewed by a lawyer; requests on unverified listings wait until the listing is verified.
+
+## October 12, 2026 — "Managed by CHS" identity (feedback from tester Fid)
+
+A tester who rented in August paid close to 50% of a year's rent to move in (30% agent, 15% legal and RCD, and a 5,000 naira inspection fee twice). He asked how a tenant can tell CHS-managed properties from other agents'. There was no way to. Built: an admin-only CHS stamp (Managed & Advertised, or Advertised only) with an automatically issued unique tag ID (check digit included), enforced in the database so owners and agents cannot award it to themselves; a card badge, listing-page banner, "Managed by CHS" filter on the home page and in search (stamped listings always loaded and sorted first), a public Managed by CHS page, a public tag-check page (so a copied badge picture proves nothing), a printable sign with a QR code, an admin CHS stamp tab, and a move-in cost breakdown on every rent listing. Migration note: backend-v2/477_chs_managed_identity.sql. Not done: Terms wording on misuse of the CHS name and badge (needs lawyer and a Terms version), baking the stamp into photos, automatic stamping rules beyond listings created by a CHS admin account.
+
 ## October 10, 2026 — Terms Version 8, availability confirmation, reports and trust signals
 
 Terms V8 (set live in the database as terms_current_version 8): term 39 Complete and honest listings; term 40 Food, drink and extras paid to the operator (an explicit exception to the V4 wallet-only rule, to be reviewed by a lawyer). Privacy 7B (listing contact numbers and reports). Built to match: 30-day availability confirmation (hidden at 30 days, reminder at 25), Report a listing with an admin queue (Admin, Listing reports), and trust signals on the property page. Note 475r. Copied-photo detection added afterwards (note 475s): browser fingerprints, reviewer warning, new listings only.
@@ -496,3 +512,27 @@ Migrations 287–410. The most consequential period of this engagement: real bug
 ## Supabase Status (confirmed at time of writing, this update)
 287 real migrations are live in the production Supabase project (versions through `20260928182240`). The `backend-v2/` folder in the repo was found to be significantly out of sync with this — many files back to migration 196 contained only summary comments, not the runnable SQL. This session's own files (383–410) have been corrected to contain the real SQL, verified directly against what is actually deployed. The older backlog (196–382) has not yet been corrected; the live database itself remains the authoritative record in the meantime. Security advisors: 2 ERROR-level findings, both `SECURITY DEFINER` views (`owner_rental_applications`, `owner_offers`) that are correct by design — the whole reason for building them was to bypass RLS safely inside a controlled function.
 
+
+
+## Rent by instalments (Oct 12, 2026)
+CHS-managed landlords can allow quarterly or monthly rent. Tenant chooses a plan at first payment or in the 30-day renewal window; each instalment goes through escrow like annual rent, the management fee is taken in equal parts, reminders run daily. Tested in rolled-back runs: 12 monthly instalments sum to the rent and the net escrow equals rent minus fee; the annual pay button is blocked while on a plan; early instalments refused; renewal extends the lease on first instalment; wrong user refused.
+
+
+## Viewing time slots (Oct 12, 2026)
+Owners can set weekly viewing windows. Visitors pick a free slot; a slot is booked once; either side can move a visit; reminders go out; owners see a missed-visits warning. Rolled-back tests passed: free choice still works with no slots, non-owner cannot set slots, listed slots exclude blocked dates and booked slots, double booking and off-slot times refused, moving to a bad time refused, strangers cannot move a visit, record scoped to the owner, reminders sent.
+
+
+## CHS-approved agent badge (Oct 12, 2026)
+Admins approve agents; badge shows on that agent's listings with the agent ID; public check page; auto-hides on suspension or lost verification; removal needs a reason. Rolled-back tests passed: non-admin refused, unverified agent refused, non-agent refused, anonymous can verify but not list, suspension hides badge, revoke needs a reason.
+
+
+## Owner at-a-glance summary (Oct 12, 2026)
+One card at the top of the owner dashboard: what needs the owner, where the money is, and a row per property. Tested on a real owner account in a rolled-back run; signed-out users are refused.
+
+
+## Agent badge: hard requirements (Oct 12, 2026)
+The first badge build only checked that an agent was registered and verified. Rebuilt on the owner's principles: corporate bodies only (CAC company, ESVARBON firm, QSRBN firm), complete current KYC, at least 10 income-generating transactions in 180 days, accepted terms, eight manual checks by a CHS officer, 12-month validity, automatic hiding. Tests (rolled back): KYC gate, 9 deals refused and 10 accepted, deals older than 180 days not counted, individual refused, regulator firms need an expiry date, old terms refused, agent cannot approve self, partial checklist refused, old approval path closed, stale KYC / expired registration / lapse each hide the badge. One bug found and fixed in testing (missing-KYC list crashed).
+
+
+## Managed-stamp rule, 6.5% sale cap, Terms V9 prepared (Oct 12, 2026)
+"Managed & Advertised by CHS" can now be set only where CHS holds an approved management agreement for that property; removing the stamp ends the open agreement. The managed-sale seller fee is capped at 6.5% (tiers 6 / 5 / 4 / 3 above that). Tested in rolled-back runs. Terms V9 is written and staged but NOT active: code still at version 8 until the switch-over steps in lib/termsVersion.ts are done together with backend-v2/487_terms_v9_activation.sql.

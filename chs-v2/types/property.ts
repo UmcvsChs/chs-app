@@ -55,6 +55,8 @@ export interface Property {
   video_url: string | null;
   owner_identity_visible_to_tenant: boolean;
   managing_agent_id: string | null;
+  chs_service?: "independent" | "chs_advertised" | "chs_managed";
+  chs_tag?: string | null;
   agent_commission_pct: number | null;
   custom_fees: { label: string; percentage: number }[] | null;
   promoted_until: string | null;

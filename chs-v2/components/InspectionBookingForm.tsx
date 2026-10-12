@@ -8,6 +8,7 @@ import { Session } from "@supabase/supabase-js";
 import { calcInspectionFee, AREA_MEETING_POINTS } from "@/lib/inspectionFee";
 import { formatNaira } from "@/lib/format";
 import InfoTip from "./InfoTip";
+import ViewingSlotPicker, { useViewingSlots } from "./ViewingSlotPicker";
 
 interface InspectionBookingFormProps {
   propertyId: string;
@@ -64,6 +65,8 @@ export default function InspectionBookingForm({
   // Real, direct client request: acknowledge the free room-video
   // alternative before booking a paid physical visit, when it exists.
   const [videosAcknowledged, setVideosAcknowledged] = useState(false);
+  const slots = useViewingSlots(propertyId);
+  const [slotTime, setSlotTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,9 +79,9 @@ export default function InspectionBookingForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const time24 = to24Hour(hour12, minute, ampm);
-    if (!date) {
-      setError("Please choose a date.");
+    const time24 = slots.hasSlots ? slotTime : to24Hour(hour12, minute, ampm);
+    if (!date || !time24) {
+      setError(slots.hasSlots ? "Please pick one of the free viewing slots." : "Please choose a date.");
       return;
     }
     if (!meetingPoint.trim()) {
@@ -115,7 +118,9 @@ export default function InspectionBookingForm({
       setError(
         insertError.message.includes("min_12_hours_notice")
           ? "Please choose a time at least 12 hours from now."
-          : "Could not book this inspection. Please try again."
+          : insertError.message.includes("viewing_slot:")
+            ? insertError.message.split("viewing_slot:")[1].trim()
+            : "Could not book this inspection. Please try again."
       );
       setSubmitting(false);
       return;
@@ -170,6 +175,15 @@ export default function InspectionBookingForm({
         )}
       </div>
 
+      {slots.hasSlots ? (
+        <div>
+          <RequiredLegend className="mb-1.5" />
+          <label className="text-xs font-semibold text-gray-600">Pick a viewing slot <Req /></label>
+          <p className="text-[10px] text-gray-500 mb-1">These are the times the owner can show the property. Each slot can be booked once.</p>
+          <ViewingSlotPicker days={slots.days} date={date} time={slotTime} onPick={(d, t) => { setDate(d); setSlotTime(t); }} />
+        </div>
+      ) : (
+        <>
       <div>
         <RequiredLegend className="mb-1.5" />
         <label className="text-xs font-semibold text-gray-600">Preferred date <Req /></label>
@@ -198,6 +212,8 @@ export default function InspectionBookingForm({
           </select>
         </div>
       </div>
+        </>
+      )}
       <div>
         <label className="text-xs font-semibold text-gray-600">Meeting point <Req /></label>
         {suggestedMeetingPoints.length > 0 && (

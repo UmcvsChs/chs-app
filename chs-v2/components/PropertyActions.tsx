@@ -519,7 +519,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     if (refundSuccess) {
       return (
         <div className="bg-white rounded-xl border-2 border-green-600 p-4 text-center">
-          <p className="text-sm font-bold text-green-700">✓ Refund issued — your payment is back in your wallet, with CHS&apos;s commission returned in full, less only the small real bank processing fee. The exact amount is in your wallet history and notifications.</p>
+          <p className="text-sm font-bold text-green-700">✓ Refund issued — your payment is back in your wallet, with CHS&apos;s agency fee returned in full, less only the small real bank processing fee. The exact amount is in your wallet history and notifications.</p>
         </div>
       );
     }
@@ -669,7 +669,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
               <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Real remaining balance</span><span className="font-bold text-chs-red">{formatNaira(myAcceptedOffer.amount - myAcceptedOffer.amount_paid)}</span></div>
             </div>
             {myAcceptedOffer.amount_paid === 0 && (
-              <p className="text-[10px] text-gray-500 mb-2">The seller requires a real minimum down payment of {myAcceptedOffer.downpayment_pct}% ({formatNaira(breakdown.offer_amount * (myAcceptedOffer.downpayment_pct || 0) / 100)}) to begin. Platform commission ({breakdown.buyer_pct}%) is added to whatever amount you pay each time.</p>
+              <p className="text-[10px] text-gray-500 mb-2">The seller requires a real minimum down payment of {myAcceptedOffer.downpayment_pct}% ({formatNaira(breakdown.offer_amount * (myAcceptedOffer.downpayment_pct || 0) / 100)}) to begin. The CHS agency fee ({breakdown.buyer_pct}%) is added to whatever amount you pay each time.</p>
             )}
             <input type="number" placeholder="Amount to pay now" value={installmentAmount}
               onChange={(e) => setInstallmentAmount(e.target.value ? Number(e.target.value) : "")}
@@ -686,7 +686,7 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
             <div className="bg-[var(--zone-card)] rounded-lg p-3 mb-3 space-y-1.5">
               <div className="flex justify-between text-xs"><span className="text-gray-500">Total accepted price</span><span className="font-semibold">{formatNaira(breakdown.offer_amount)}</span></div>
               {!property.agent_commission_pct && (
-                <div className="flex justify-between text-xs"><span className="text-gray-500">Platform commission ({breakdown.buyer_pct}%)<InfoTip text="CHS's real fee for verifying this property's documents, holding your payment safely in escrow, and coordinating the actual legal handover — not an extra profit margin added by the seller." /></span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
+                <div className="flex justify-between text-xs"><span className="text-gray-500">CHS agency fee ({breakdown.buyer_pct}%)<InfoTip text="CHS's real fee for verifying this property's documents, holding your payment safely in escrow, and coordinating the actual legal handover — not an extra profit margin added by the seller." /></span><span className="font-semibold">{formatNaira(breakdown.buyer_commission)}</span></div>
               )}
               <div className="flex justify-between text-sm border-t border-gray-200 pt-1.5 mt-1"><span className="font-bold text-chs-charcoal">Total due</span><span className="font-bold text-chs-red">{formatNaira(breakdown.buyer_total)}</span></div>
             </div>

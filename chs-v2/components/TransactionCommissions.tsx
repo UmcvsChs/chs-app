@@ -67,7 +67,7 @@ export default function TransactionCommissions({ session }: { session: Session }
       setMessage(error.message.includes("insufficient_balance") ? "Insufficient wallet balance for the real total due." : error.message);
       return;
     }
-    setMessage(isFirstRentalPayment ? "✓ Rent and commission paid together — your tenancy is fully active." : "✓ Commission paid.");
+    setMessage(isFirstRentalPayment ? "✓ Rent and agency fee paid together — your tenancy is fully active." : "✓ Fee paid.");
     loadCommissions();
   }
 
@@ -75,7 +75,7 @@ export default function TransactionCommissions({ session }: { session: Session }
 
   return (
     <div className="px-4 pb-4">
-      <p className="text-xs font-bold text-chs-charcoal mb-2">💰 Commission Due</p>
+      <p className="text-xs font-bold text-chs-charcoal mb-2">💰 CHS fees due</p>
       {message && <p className="text-[10px] text-gray-600 bg-gray-50 rounded-lg px-2 py-1.5 mb-2">{message}</p>}
       <div className="space-y-2">
         {commissions.map((c) => {
@@ -86,11 +86,11 @@ export default function TransactionCommissions({ session }: { session: Session }
               <p className="text-xs font-semibold text-chs-charcoal">{embeddedOne(c.properties)?.title || "Property"}</p>
               {isFirstRentalPayment ? (
                 <p className="text-[10px] text-gray-400">
-                  Your first year&apos;s rent ({formatNaira(c.base_amount)}) plus your real CHS commission ({c.commission_percentage}% — {formatNaira(c.commission_amount)}), paid together
+                  Your first year&apos;s rent ({formatNaira(c.base_amount)}) plus your CHS agency fee ({c.commission_percentage}% — {formatNaira(c.commission_amount)}), paid together
                 </p>
               ) : (
                 <p className="text-[10px] text-gray-400">
-                  Your share as the {c.payer_role} — {c.commission_percentage}% of {formatNaira(c.base_amount)}
+                  {c.payer_role === "tenant" || c.payer_role === "buyer" ? "Your CHS agency fee" : "Your CHS service charge"} as the {c.payer_role} — {c.commission_percentage}% of {formatNaira(c.base_amount)}
                   {c.transaction_type === "rental" ? " annual rent" : " sale price"}
                 </p>
               )}

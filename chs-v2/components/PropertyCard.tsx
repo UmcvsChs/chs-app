@@ -2,15 +2,18 @@ import Link from "next/link";
 import { Property } from "@/types/property";
 import { formatNaira, purposeLabel, formatPostedAgo, shouldShowBedrooms } from "@/lib/format";
 import SaveButton from "./SaveButton";
+import { ChsChip } from "./ChsStamp";
+import { isChsStamped } from "@/lib/chsStamp";
 
 export default function PropertyCard({ property }: { property: Property }) {
   const isUnderVerification = property.verification_status !== "verified";
+  const chs = isChsStamped(property.chs_service);
 
   return (
     <Link
       href={`/property/${property.id}`}
       className={`block rounded-2xl overflow-hidden bg-white shadow-sm border ${
-        isUnderVerification ? "border-dashed border-chs-amber" : "border-gray-100"
+        isUnderVerification ? "border-dashed border-chs-amber" : chs ? "border-2 border-amber-400" : "border-gray-100"
       }`}
     >
       <div className="relative h-40 bg-chs-steel-blue-light flex items-center justify-center">
@@ -25,6 +28,7 @@ export default function PropertyCard({ property }: { property: Property }) {
             🚨 URGENT SALE
           </span>
         )}
+        {chs && <span className="absolute bottom-2 left-2 z-10"><ChsChip level={property.chs_service} /></span>}
         {property.status === "coming_soon" && (
           <span className="absolute top-2 right-2 bg-chs-charcoal text-white text-[9px] font-bold px-2 py-1 rounded-full z-10">
             📢 COMING SOON

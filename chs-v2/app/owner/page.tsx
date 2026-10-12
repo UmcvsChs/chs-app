@@ -1,5 +1,10 @@
 "use client";
 
+import ManageByChs from "@/components/ManageByChs";
+import RentPlanSettings from "@/components/RentPlanSettings";
+import ViewingSlotsEditor from "@/components/ViewingSlotsEditor";
+import OwnerSummary from "@/components/OwnerSummary";
+import ViewingSlotPicker, { useViewingSlots } from "@/components/ViewingSlotPicker";
 import ListingAvailability from "@/components/ListingAvailability";
 import ListingGapsNotice from "@/components/ListingGapsNotice";
 import OwnerRtoHandover from "@/components/OwnerRtoHandover";
@@ -729,6 +734,7 @@ export default function OwnerDashboard() {
             </>
           )}
         </div>
+        <OwnerSummary />
         <p className="text-[9px] text-white/50 uppercase font-semibold mt-4 mb-1.5">Quick Actions</p>
         <div className="grid grid-cols-4 gap-1.5">
           <button onClick={() => { setShowConcernForm(!showConcernForm); setShowMessageThread(false); setShowEarningsLedger(false); }}
@@ -904,7 +910,11 @@ export default function OwnerDashboard() {
                 <ListingAvailability propertyId={property.id} confirmedAt={property.availability_confirmed_at ?? null} />
               )}
 
-              <Link href={`/edit-listing/${property.id}`} className="text-[10px] font-semibold text-chs-red underline">
+              {property.purpose !== "hire" && !property.hire_category && <ManageByChs propertyId={property.id} defaultPurpose={property.purpose} />}
+              {property.purpose === "rent" && property.chs_service === "chs_managed" && <RentPlanSettings propertyId={property.id} />}
+              {property.purpose !== "hire" && !property.hire_category && <ViewingSlotsEditor propertyId={property.id} />}
+
+              <Link href={`/edit-listing/${property.id}`} className="text-[10px] font-semibold text-chs-red underline mt-2 inline-block">
                 Edit listing
               </Link>
               {" · "}
@@ -1087,7 +1097,7 @@ export default function OwnerDashboard() {
                       {property.purpose === "sale" && offer.status === "pending" && (
                         <div className="bg-white rounded-md p-2 mt-1.5 space-y-1 border border-gray-100">
                           <div className="flex justify-between text-[10px]"><span className="text-gray-500">Total buyer will pay you</span><span className="font-semibold">{formatNaira(offer.amount)}</span></div>
-                          <div className="flex justify-between text-[10px]"><span className="text-gray-500">Our commission (6%)</span><span className="font-semibold">{formatNaira(offer.amount * 0.06)}</span></div>
+                          <div className="flex justify-between text-[10px]"><span className="text-gray-500">CHS service charge (6%)</span><span className="font-semibold">{formatNaira(offer.amount * 0.06)}</span></div>
                           <div className="flex justify-between text-[10px] border-t border-gray-100 pt-1"><span className="font-bold text-chs-charcoal">You will net</span><span className="font-bold text-chs-red">{formatNaira(offer.amount * 0.94)}</span></div>
                         </div>
                       )}
@@ -1339,7 +1349,7 @@ export default function OwnerDashboard() {
                     {daysLeft > 0 ? `${daysLeft} real day${daysLeft !== 1 ? "s" : ""} to next rent due` : "Rent is due"}
                     {t.notice_given_at && <span className="text-green-700 font-semibold"> · Tenant has given non-renewal notice</span>}
                     {tenanciesWithPriorPayment.has(t.id) && (
-                      <span className="text-chs-amber-dark font-semibold"> · This renewal earns you a real, reduced 3% commission — your tenant pays nothing further</span>
+                      <span className="text-chs-amber-dark font-semibold"> · This renewal earns you a real, reduced 3% service charge — your tenant pays nothing further</span>
                     )}
                   </p>
                 );
@@ -1413,7 +1423,7 @@ export default function OwnerDashboard() {
             return (
               <div key={offer.id} className="bg-white rounded-xl border-2 border-chs-red p-3 mb-2">
                 <p className="text-sm font-semibold text-chs-charcoal mb-1">{offer.properties?.title || "Property"}</p>
-                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — <b>{formatNaira(offer.held_amount ?? offer.amount)}</b> (your proceeds, net of CHS commission) is held until the documents are confirmed delivered.<InfoTip text="CHS holds your real sale proceeds safely until the buyer confirms they've genuinely received all legal documents — this protects you both, and releases to your main wallet the moment that's confirmed." /></p>
+                <p className="text-xs text-gray-500 mb-2">Sold for {formatNaira(offer.amount)} — <b>{formatNaira(offer.held_amount ?? offer.amount)}</b> (your proceeds, net of the CHS service charge) is held until the documents are confirmed delivered.<InfoTip text="CHS holds your real sale proceeds safely until the buyer confirms they've genuinely received all legal documents — this protects you both, and releases to your main wallet the moment that's confirmed." /></p>
                 {!dispatchReq && (
                   <p className="text-[10px] text-gray-400 mb-2">Waiting on the buyer to request their documents, or you can send them proactively below.</p>
                 )}
@@ -1654,6 +1664,25 @@ function InspectionRequestRow({
 }) {
   const [score, setScore] = useState<number | null>(null);
   const [marking, setMarking] = useState(false);
+  const [record, setRecord] = useState<{ completed: number; no_show: number } | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [newSlot, setNewSlot] = useState<{ d: string; t: string }>({ d: "", t: "" });
+  const [moveMsg, setMoveMsg] = useState<string | null>(null);
+  const slotInfo = useViewingSlots(inspection.property_id);
+
+  useEffect(() => {
+    supabase.rpc("get_visitor_viewing_record", { p_user: inspection.requester_id }).then(({ data }) => {
+      if (data) setRecord(data as { completed: number; no_show: number });
+    });
+  }, [inspection.requester_id]);
+
+  async function handleMove() {
+    setMoveMsg(null);
+    const { error } = await supabase.rpc("reschedule_inspection", { p_inspection: inspection.id, p_date: newSlot.d, p_time: newSlot.t });
+    if (error) { setMoveMsg(error.message); return; }
+    setMoving(false);
+    onMarked();
+  }
 
   useEffect(() => {
     supabase.rpc("get_readiness_score", { p_user_id: inspection.requester_id }).then(({ data }) => {
@@ -1700,6 +1729,23 @@ function InspectionRequestRow({
       )}
       {inspection.status === "no_show" && (
         <p className="text-[10px] text-chs-red mt-1.5">Marked as no-show</p>
+      )}
+      {record && record.no_show > 0 && (
+        <p className="text-[10px] text-chs-amber-dark mt-1.5">⚠️ This visitor has missed {record.no_show} earlier visit{record.no_show === 1 ? "" : "s"} (attended {record.completed}).</p>
+      )}
+      {["pending", "awaiting_payment", "confirmed"].includes(inspection.status) && slotInfo.hasSlots && (
+        moving ? (
+          <div className="mt-1.5">
+            <ViewingSlotPicker days={slotInfo.days} date={newSlot.d} time={newSlot.t} onPick={(d, t) => setNewSlot({ d, t })} />
+            <div className="flex gap-2 mt-1.5">
+              <button onClick={handleMove} disabled={!newSlot.t} className="px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Move visit</button>
+              <button onClick={() => setMoving(false)} className="px-3 py-1 rounded-full bg-white border border-gray-200 text-[10px]">Keep</button>
+            </div>
+            {moveMsg && <p className="text-[10px] text-chs-red mt-1">{moveMsg}</p>}
+          </div>
+        ) : (
+          <button onClick={() => setMoving(true)} className="mt-1.5 text-[10px] font-semibold text-chs-red underline">Move to another slot</button>
+        )
       )}
     </div>
   );

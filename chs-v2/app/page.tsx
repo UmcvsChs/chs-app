@@ -54,8 +54,19 @@ export default async function Home() {
     })
   );
 
-  const firstError = results.find((r) => r.error)?.error;
-  const properties = results.flatMap((r) => r.data || []);
+  // CHS-stamped listings are always included, so a busy purpose (hundreds of newer listings) can never push them out.
+  const chsResult = await supabase
+    .from("properties")
+    .select("*")
+    .in("status", ["active", "coming_soon"])
+    .neq("chs_service", "independent")
+    .not("owner_id", "in", `(${blockedOwnerIds.length > 0 ? blockedOwnerIds.join(",") : "00000000-0000-0000-0000-000000000000"})`)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  const firstError = results.find((r) => r.error)?.error ?? chsResult.error;
+  const seen = new Set<string>();
+  const properties = [...results.flatMap((r) => r.data || []), ...(chsResult.data || [])].filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
   const error = firstError;
 
   if (error) {

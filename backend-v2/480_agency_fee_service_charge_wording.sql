@@ -1,0 +1,8 @@
+-- 480: wording. The tenant's and buyer's fee is the "CHS agency fee"; the landlord's and seller's is the "CHS service charge"
+-- (the management fee on a CHS-managed property is the owner-side service charge). Amounts and logic are unchanged
+-- (see 479); only the notification text changes in approve_rental_application and generate_sale_commissions.
+-- Applied live; the function bodies are the 479 versions with these message texts:
+--   tenant:   'A <pct>% CHS agency fee of <amt> also applies ...'
+--   landlord: 'A <pct>% CHS service charge of <amt> is due on this new tenancy ...'
+--   managed landlord: 'The CHS management service charge of <amt> is due ... It replaces the standard CHS service charge ...'
+--   sale buyer: 'Sale agency fee invoice generated'; sale seller: 'Sale service charge invoice generated'

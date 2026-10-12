@@ -13,6 +13,7 @@ import DiasporaMode from "./DiasporaMode";
 import BottomNav from "./BottomNav";
 import { ARTICLES } from "@/types/blogArticles";
 import { useAuth } from "@/contexts/AuthContext";
+import { isChsStamped } from "@/lib/chsStamp";
 
 const PURPOSE_TABS: { value: PropertyPurpose | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -36,6 +37,7 @@ export default function HomePageClient({ properties, platformStats, promotedTick
   const [activeType, setActiveType] = useState("all");
   const [searchFilters, setSearchFilters] = useState<Parameters<typeof applyPropertyFilters>[1]>(null);
   const [diasporaActive, setDiasporaActive] = useState(false);
+  const [chsOnly, setChsOnly] = useState(false);
   const { session, profile, signOut, loading } = useAuth();
   // Real, direct fix: whether someone is an artisan is tracked in a
   // separate `artisans` table (trade, verification_status), NOT on
@@ -102,14 +104,17 @@ export default function HomePageClient({ properties, platformStats, promotedTick
           return (keywords[activeType] || []).some((kw) => t.includes(kw));
         });
 
-  const filteredProperties = applyPropertyFilters(typeFiltered, searchFilters);
+  const chsFiltered = chsOnly ? typeFiltered.filter((p) => isChsStamped(p.chs_service)) : typeFiltered;
+  const filteredProperties = applyPropertyFilters(chsFiltered, searchFilters);
 
   // Real promoted-listing sort — genuinely checks the actual expiry,
   // not just whether a promotion was ever purchased at some point.
   const sortedProperties = [...filteredProperties].sort((a, b) => {
     const aPromoted = a.promoted_until && new Date(a.promoted_until) > new Date() ? 1 : 0;
     const bPromoted = b.promoted_until && new Date(b.promoted_until) > new Date() ? 1 : 0;
-    return bPromoted - aPromoted;
+    if (bPromoted !== aPromoted) return bPromoted - aPromoted;
+    // Then CHS-stamped listings ahead of the rest.
+    return (isChsStamped(b.chs_service) ? 1 : 0) - (isChsStamped(a.chs_service) ? 1 : 0);
   });
 
   return (
@@ -248,6 +253,14 @@ export default function HomePageClient({ properties, platformStats, promotedTick
           </button>
         ))}
       </nav>
+
+      <div className="flex gap-2 px-4 py-2 bg-white border-b border-gray-100">
+        <button onClick={() => setChsOnly(!chsOnly)}
+          className={`flex-1 py-2 rounded-full text-[11px] font-extrabold ${chsOnly ? "bg-chs-charcoal text-amber-300 border border-amber-300" : "bg-gray-100 text-chs-charcoal"}`}>
+          {chsOnly ? "✓ Showing only Managed by CHS" : "🛡️ Managed by CHS only"}
+        </button>
+        <Link href="/chs-managed" className="shrink-0 py-2 px-3 rounded-full text-[11px] font-bold border border-chs-charcoal text-chs-charcoal">What is this?</Link>
+      </div>
 
       {promotedTicker}
 

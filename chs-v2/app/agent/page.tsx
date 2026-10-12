@@ -1,5 +1,6 @@
 "use client";
 
+import MyAgentApprovalCard from "@/components/AgentBadgeApplication";
 import { useEffect, useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
@@ -363,6 +364,7 @@ export default function AgentDashboard() {
           </div>
         )}
 
+        <MyAgentApprovalCard />
         {profile?.chs_agent_id && (
           <div className="bg-chs-charcoal rounded-xl p-3 text-center">
             <p className="text-[9px] text-white/60 uppercase font-semibold">Your Real CHS Agent ID</p>
