@@ -13,7 +13,7 @@ export interface ServiceLine {
   id: string; service: string; label: string; quantity: number | null; status: string;
   provider_name: string | null; price: number | null; note: string | null; source?: string; decided_at: string | null;
   supplier_cost?: number | null; chs_provider?: string | null; chs_provider_contact?: string | null; chs_unable?: boolean;
-  sourced_via?: string | null; provider_confirmed_at?: string | null; messages?: number; paid_at?: string | null; payment_ref?: string | null; payment_status?: string | null;
+  sourced_via?: string | null; provider_confirmed_at?: string | null; messages?: number; paid_at?: string | null; payment_ref?: string | null; payment_status?: string | null; relayed?: boolean;
 }
 
 export const SERVICE_STATUS: Record<string, { text: string; cls: string }> = {
@@ -73,6 +73,7 @@ function LineRow({ bookingId, line, canAnswer, onChanged }: { bookingId: string;
         </p>
         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${st.cls}`}>{st.text}</span>
       </div>
+      {line.relayed === false && <p className="text-[10px] text-blue-800 bg-blue-50 rounded px-2 py-1 mt-1">📨 Your answer is with CHS, who will confirm it to the guest shortly.</p>}
       {line.status === "requested" && line.note && <p className="text-[11px] text-gray-600 italic mt-0.5">“{line.note}”</p>}
       {line.status !== "requested" && (
         <p className="text-[10px] text-gray-500 mt-0.5">
@@ -132,7 +133,7 @@ function LineRow({ bookingId, line, canAnswer, onChanged }: { bookingId: string;
             <input value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, ""))} placeholder="How many" className="w-20 border border-gray-300 rounded px-2 py-1 text-[11px]" />
           </div>
           <div className="flex gap-1">
-            <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Price in naira (optional)" className="flex-1 border border-gray-300 rounded px-2 py-1 text-[11px]" />
+            <input value={price} onChange={(e) => setPrice(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Price in naira (0 if included in the hall price)" className="flex-1 border border-gray-300 rounded px-2 py-1 text-[11px]" />
           </div>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note to the guest (needed if you cannot provide it)" className="w-full border border-gray-300 rounded px-2 py-1 text-[11px]" />
           {err && <p className="text-[10px] text-red-600">{err}</p>}

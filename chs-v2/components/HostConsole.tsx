@@ -33,7 +33,7 @@ interface HB {
   event_type: string | null; tier: string | null; facilities_total: number | null; expires_at: string | null; created_at: string; paid_at: string | null;
   arrived_at: string | null; checked_in_at: string | null; expected_arrival_time: string | null; lane: string | null;
   wants_band: boolean | null; wants_caterer: boolean | null; wants_ushers: boolean | null; ushers: number | null; wants_security: boolean | null; security: number | null; extra: string | null;
-  quote: Quote | null; services_open: number; changes_open: number;
+  quote: Quote | null; services_open: number; changes_open: number; reply_pending?: string | null; reply_release_at?: string | null;
 }
 interface Chg {
   id: string; booking_id: string; property_title: string; cat: string; my_role: string; guest_name: string; check_in: string; old_guests: number | null; new_guests: number | null;
@@ -129,11 +129,13 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
 
       {b.status === "pending_host_review" && (
         <div className="mt-2 border-t border-gray-100 pt-2">
-          {left && <p className="text-[10px] font-semibold text-amber-700 mb-1">⏳ {left} to answer</p>}
+          {left && !b.reply_pending && <p className="text-[10px] font-semibold text-amber-700 mb-1">⏳ {left} to answer</p>}
           <p className="text-[10px] text-gray-500 mb-1">
             {unpaidFlow ? "Confirm that the dates are free. The guest has not paid yet; they pay once you confirm." : "The guest has already paid; the money is held in escrow."}
           </p>
-          {lead ? <HostBookingDecision bookingId={b.id} unpaid={unpaidFlow} onDecided={onChanged} /> : <p className="text-[10px] text-gray-400">Only the host or a manager can answer requests.</p>}
+          {b.reply_pending
+            ? <p className="text-[11px] bg-blue-50 text-blue-900 rounded-lg p-2">📨 You {b.reply_pending === "confirmed" ? "accepted" : "declined"} this request. CHS is confirming your answer to the guest. Nothing more is needed from you.</p>
+            : lead ? <HostBookingDecision bookingId={b.id} unpaid={unpaidFlow} onDecided={onChanged} /> : <p className="text-[10px] text-gray-400">Only the host or a manager can answer requests.</p>}
         </div>
       )}
       {b.status === "awaiting_payment" && left && <p className="text-[10px] font-semibold text-amber-700 mt-2">⏳ The guest has {left} to pay, or the dates are released.</p>}

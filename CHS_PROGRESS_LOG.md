@@ -607,3 +607,10 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - Refund policy: venue cancel/declined/expired/no-fault 100% incl. fee; guest cancel ≥48h 100%, <48h 50%, after start 0%. Refund after provider already paid is flagged to admin.
 - Tables: service_payments, service_provider_payouts. Screens: GuestEventQuote, GuestBookingExtras (Pay button), EventQuoteHost, HostBookingServices, AdminServiceSourcing; Terms V9 draft updated.
 - Tested live (rolled back): hold, double-pay block, price lock, release, referral off, host cancel, <48h 50%, provider payout, low balance, manual payment blocked.
+
+## 497 – Host replies go through CHS (Oct 13 2026)
+- Found: the host's accept/decline and service answers went straight to the guest (only the inbound request was relayed). Now, when manual relay applies, they wait for admin release (Admin > Host replies; edit/clear notes; release). Guest keeps seeing "with the host" / "venue is arranging this"; payment timer starts at release. Unreleased replies auto-release after the relay time (240 min standard) with contact-detail notes removed.
+- Host notes/service notes with phone numbers or emails are refused. "We supply this" needs a price (0 = included).
+- Tables/columns: shortlet_bookings reply_pending/reply_note/reply_at/reply_release_at; booking_services relayed/relay_due_at. Functions: host_decide_shortlet_booking (held), _apply_host_decision, _release_host_reply, _release_host_services, _sweep_host_replies, admin_get_host_replies, admin_release_host_reply; host_set_service rewritten.
+- Tested live (rolled back): hold, double answer blocked, phone note blocked, price required, guest view hidden then shown, admin queue, release, auto release.
+- Not covered: change requests answered by the host and host-initiated chat still go straight; the old Royal Garden test booking was answered before this and has unpriced services.
