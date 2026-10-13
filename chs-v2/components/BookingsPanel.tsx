@@ -17,11 +17,13 @@ import GuestEventQuote from "@/components/GuestEventQuote";
 import GuestBookingExtras from "@/components/GuestBookingExtras";
 import GuestDisruptionClaim from "@/components/GuestDisruptionClaim";
 import SplitPayment from "@/components/SplitPayment";
+import BookingSessions from "@/components/BookingSessions";
 
 interface Booking {
   id: string;
   check_in: string;
   check_out: string;
+  time_slots?: boolean | null;
   total_price: number;
   status: string;
   payment_status: string | null;
@@ -63,7 +65,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
     if (!session) return;
     const { data } = await supabase
       .from("shortlet_bookings")
-      .select("id, check_in, check_out, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
+      .select("id, check_in, check_out, time_slots, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
       .eq("guest_id", session.user.id)
       .order("check_in", { ascending: false });
     const list = (data as unknown as Booking[]) || [];
@@ -116,7 +118,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
             {shown.map((b) => (
               <div key={b.id} id={`booking-${b.id}`} className={`bg-white rounded-xl border p-4 ${focusId === b.id ? "border-chs-red ring-2 ring-chs-red/30" : "border-gray-200"}`}>
                 <p className="text-sm font-bold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
-                <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>
+                {b.time_slots ? <BookingSessions bookingId={b.id} compact /> : <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>}
                 <p className="text-xs text-gray-500">{formatNaira(b.total_price)} stay</p>
                 <BookingStageCard booking={b} onChanged={loadBookings} />
                 {/* The room is only named once the host has confirmed: until

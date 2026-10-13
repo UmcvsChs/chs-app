@@ -1,5 +1,6 @@
 "use client";
 
+import BookingSessions from "@/components/BookingSessions";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira, formatDateTime } from "@/lib/format";
@@ -105,6 +106,7 @@ export default function PendingBookingRequests() {
                 </p>
               )}
               {r.selected_tier_label && <p className="text-[11px] text-gray-500">{r.event_type ? `${r.event_type} · ` : ""}{r.selected_tier_label}</p>}
+              {r.selected_tier_label && <BookingSessions bookingId={r.id} compact />}
 
               {r.booking_lane && r.booking_lane !== "standard" && (
                 <p className={`text-[10px] font-bold mt-1 ${r.booking_lane === "express" ? "text-chs-red" : "text-amber-700"}`}>

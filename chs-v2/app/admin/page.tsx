@@ -30,6 +30,7 @@ import { EngageDocumentManager } from "@/components/EngageDocuments";
 import InfoTip from "@/components/InfoTip";
 import AdminHotelControls from "@/components/AdminHotelControls";
 import AdminDisruptions from "@/components/AdminDisruptions";
+import AdminServiceSourcing from "@/components/AdminServiceSourcing";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
 
 interface DeveloperApplication {
@@ -50,6 +51,7 @@ import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import RoleBadge from "@/components/RoleBadge";
 import AdminSidebar from "@/components/AdminSidebar";
 import NotificationBell from "@/components/NotificationBell";
+import BookingSessions from "@/components/BookingSessions";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
 interface PendingProfile {
@@ -75,7 +77,7 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2515,6 +2517,7 @@ function AdminDashboardInner() {
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelcontrols", label: "🏨 Hotel Controls (peak & cancellations)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "disruptions", label: "⚠️ Disruptions & no-fault refunds", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "servicesourcing", label: "🤝 Service sourcing (venue requests)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "walletsecurity", label: `Wallet Security (${walletSecurityOpen})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "rtorequests", label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "inspections", label: `Inspections (${upcomingInspections.length})`, domain: "owner_buyer_tenant", group: "Oversight" },
@@ -4537,6 +4540,7 @@ function AdminDashboardInner() {
 
         {activeTab === "hotelcontrols" && <AdminHotelControls />}
         {activeTab === "disruptions" && <AdminDisruptions />}
+        {activeTab === "servicesourcing" && <AdminServiceSourcing />}
 
         {activeTab === "walletsecurity" && (
           <div>
@@ -5216,6 +5220,7 @@ function AdminDashboardInner() {
                             <p className="text-[10px] font-bold text-chs-red mb-0.5">⚡ Express group: this guest asked {q.group_size} hotels at once. The first to confirm wins and the others cancel by themselves.</p>
                           )}
                           <p className="text-xs text-gray-600">{q.guest_full_name} · {q.guest_phone} · {q.check_in} → {q.check_out}{q.expected_arrival_time ? ` · arriving about ${q.expected_arrival_time}` : ""}</p>
+                          <BookingSessions bookingId={q.id} compact />
                           <p className="text-[11px] text-gray-500">Host: {q.host_name} · <b>{q.host_phone}</b></p>
                           <p className="text-sm font-bold text-chs-charcoal mt-1">
                             {formatNaira(q.amount_if_confirmed)}
@@ -5823,6 +5828,7 @@ function AdminDashboardInner() {
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
                     { key: "hotelcontrols" as Tab, label: "Hotel Controls (peak & cancellations)" },
                     { key: "disruptions" as Tab, label: "Disruptions & no-fault refunds" },
+                    { key: "servicesourcing" as Tab, label: "Service sourcing (venue requests)" },
                     { key: "walletsecurity" as Tab, label: `Wallet Security (${walletSecurityOpen})` },
                     { key: "rtorequests" as Tab, label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})` },
                     { key: "inspections" as Tab, label: `Inspections (${upcomingInspections.length})` },

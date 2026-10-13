@@ -17,6 +17,7 @@ import EventOperations from "@/components/EventOperations";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import HostClaimsPanel from "@/components/HostClaimsPanel";
 import type { Claim } from "@/components/ClaimTypes";
+import BookingSessions from "@/components/BookingSessions";
 
 // The host's working screen. One read (get_host_console) feeds every tab, and the tabs follow the host's
 // duties from the first request to the money:
@@ -108,6 +109,7 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
         {b.guests ? ` · ${b.guests} guests` : ""}{b.event_type ? ` · ${b.event_type}` : ""}{b.tier ? ` · ${b.tier}` : ""}
         {b.expected_arrival_time ? ` · arriving about ${b.expected_arrival_time}` : ""}
       </p>
+      {b.cat === "event" && <BookingSessions bookingId={b.id} />}
       {b.lane && b.lane !== "standard" && <p className={`text-[10px] font-bold mt-1 ${b.lane === "express" ? "text-chs-red" : "text-amber-700"}`}>{b.lane === "express" ? "⚡ EXPRESS: guest arrives today" : "🕒 Guest arrives soon"}</p>}
       <p className="text-[11px] text-gray-600 mt-1">
         {formatNaira(b.total_price)}{b.facilities_total ? ` (facilities ${formatNaira(b.facilities_total)})` : ""}

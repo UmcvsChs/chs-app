@@ -237,3 +237,9 @@ Date moves and top-ups (Oct 13, 2026): backend-v2/489_date_moves_and_topups.sql 
 
 ## 490 Venue service payments
 No escrow and no commission by design. CHS does not protect these payments; disputes are guest-venue (CHS can mediate). Possible later: small fee on service payments (none now); refund of services on guest cancellation (left to venue). Terms V9 may deserve a line saying so (not lawyer-reviewed).
+
+## Event centre sessions (494a/494b, 13 Oct 2026)
+See CHS_PROGRESS_LOG.md. Test on the Royal Garden Events Centre (Test): Event Pricing > set hourly price / rules; as guest, book one 7-hour session; book Fri 4-7 pm + Sat 10 am-5 pm; then book 6-11 pm on the Saturday (accepted if the reception ends by about 5 pm) and 5:30 pm (refused).
+
+## 496 service payments escrow (Oct 13 2026)
+Replaces direct-to-venue (490). See CHS_PROGRESS_LOG.md. Open: lawyer review of Terms V9 service wording; platform earnings tab does not yet include service fees (use Admin > Service sourcing > Service money).

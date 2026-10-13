@@ -8,7 +8,7 @@ import { formatNaira, formatDateTime } from "@/lib/format";
 // it, we cannot provide it) appears here at once, and the guest can ask for another service or for a change in
 // the number of guests, which the host then approves or declines.
 
-interface Line { id: string; service: string; label: string; quantity: number | null; status: string; provider_name: string | null; price: number | null; note: string | null }
+interface Line { id: string; service: string; label: string; quantity: number | null; status: string; provider_name: string | null; price: number | null; note: string | null; fee?: number | null; paid_at?: string | null; payment_ref?: string | null }
 interface Chg {
   id: string; old_guests: number | null; new_guests: number | null; new_check_in: string | null; new_check_out: string | null; services: { service: string; quantity?: number }[];
   note: string | null; status: string; host_note: string | null; created_at: string; decided_at: string | null; extra_base: number; to_pay: number; topup_expires_at: string | null;
@@ -16,6 +16,7 @@ interface Chg {
 
 const STATUS: Record<string, { text: string; cls: string }> = {
   requested: { text: "Waiting for the venue", cls: "bg-amber-100 text-amber-800" },
+  arranging: { text: "The venue is arranging this", cls: "bg-purple-100 text-purple-800" },
   supplied: { text: "✓ The venue will supply this", cls: "bg-green-100 text-green-800" },
   guest_arranges: { text: "You arrange this yourself", cls: "bg-blue-100 text-blue-800" },
   declined: { text: "Not available", cls: "bg-red-100 text-red-700" },
@@ -88,8 +89,12 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${st.cls}`}>{st.text}</span>
                   </div>
                   {l.status !== "requested" && (l.provider_name || l.price != null || l.note) && (
-                    <p className="text-[10px] text-gray-600 mt-0.5">{l.provider_name ? `By ${l.provider_name}. ` : ""}{l.price != null ? `Price ${formatNaira(l.price)}, agreed with the venue and paid to the venue directly. ` : ""}{l.note ? `“${l.note}”` : ""}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">{l.provider_name ? `By ${l.provider_name}. ` : ""}{l.price != null ? `Price ${formatNaira(l.price)}${l.fee ? ` + ${formatNaira(l.fee)} CHS fee` : ""}${l.paid_at ? ` ✓ paid, held by CHS until your event (receipt ${l.payment_ref}). ` : ". "}` : ""}{l.note ? `“${l.note}”` : ""}</p>
                   )}
+                  {live && l.status === "supplied" && l.price != null && l.price > 0 && !l.paid_at && ["awaiting_payment", "confirmed"].includes(status) && (
+                    <button disabled={busy} onClick={() => run(supabase.rpc("pay_service_line", { p_line: l.id }), "Paid. CHS holds it safely until your event.")} className="mt-1 px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Pay {formatNaira(l.price + (l.fee || 0))} from my wallet</button>
+                  )}
+                  {err && /insufficient_balance/.test(err) && l.status === "supplied" && !l.paid_at && <p className="text-[10px] text-red-600 mt-1">Your wallet balance is too low. <a href="/wallet" className="underline font-semibold">Fund your wallet</a>, then pay.</p>}
                   {l.status === "requested" && l.note && <p className="text-[10px] italic text-gray-500 mt-0.5">“{l.note}”</p>}
                   {live && l.status === "requested" && (
                     <button disabled={busy} onClick={() => run(supabase.rpc("guest_cancel_service", { p_booking: bookingId, p_service: l.service }), "Withdrawn.")} className="text-[10px] underline text-gray-500 mt-1">Withdraw this request</button>

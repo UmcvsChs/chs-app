@@ -9,7 +9,8 @@ import InfoTip from "./InfoTip";
 import AvailabilityCalendar from "@/components/AvailabilityCalendar";
 import BookingFlowNotice from "@/components/BookingFlowNotice";
 import { BookingRequestResult, LaneInfo, friendlyBookingError } from "@/lib/bookingLane";
-import { addDays } from "@/lib/availability";
+import EventSessionsPicker from "@/components/EventSessionsPicker";
+import { EventQuote, Sess, fmtDay, fmtHours, fmtTime } from "@/lib/eventSessions";
 import { formatNaira } from "@/lib/format";
 import ValidatedInput from "@/components/ValidatedInput";
 import { validatePhone, validateFullName } from "@/lib/validators";
@@ -75,11 +76,16 @@ export default function HireBookingForm({
   // fetched and shown for event-type venues that genuinely have real
   // tiers configured; every other hire category keeps the existing,
   // proven per-day flow untouched.
-  const [tiers, setTiers] = useState<{ id: string; label: string; max_guests: number; price: number }[]>([]);
+  const [tiers, setTiers] = useState<{ id: string; label: string; max_guests: number; price: number; hourly_price?: number | null }[]>([]);
   const [facilities, setFacilities] = useState<{ id: string; name: string; price: number; per_guest: boolean }[]>([]);
   const [selectedTierId, setSelectedTierId] = useState("");
   const [selectedFacilityIds, setSelectedFacilityIds] = useState<string[]>([]);
-  const [eventDate, setEventDate] = useState("");
+  // An event is one or more sessions (date + start + end); the server prices them and checks the hall is free.
+  const [sessions, setSessions] = useState<Sess[]>([{ date: "", start: "10:00", end: "17:00", label: "" }]);
+  const [eventQuote, setEventQuote] = useState<EventQuote | null>(null);
+  const [quoteErr, setQuoteErr] = useState<string | null>(null);
+  const [sessionsRefresh, setSessionsRefresh] = useState(0);
+  const firstDate = sessions.map((x) => x.date).filter(Boolean).sort()[0] || "";
   const [eventType, setEventType] = useState("Wedding / Reception");
   const EVENT_TYPES = ["Wedding / Reception", "Engagement / Traditional ceremony", "Conference / Seminar", "Lecture / Public talk", "Birthday party", "Burial / Funeral reception", "Product launch / Corporate event", "Religious programme", "Graduation / Award ceremony", "Other"];
 
@@ -93,12 +99,36 @@ export default function HireBookingForm({
   }, [isEventVenue]);
 
   const selectedTier = tiers.find((t) => t.id === selectedTierId);
-  const facilitiesTotal = facilities
-    .filter((f) => selectedFacilityIds.includes(f.id))
-    .reduce((sum, f) => sum + f.price * (f.per_guest ? (selectedTier?.max_guests || 0) : 1), 0);
-  const eventBaseAmount = (selectedTier?.price || 0) + facilitiesTotal;
-  const eventGuestCommission = Math.round(eventBaseAmount * 0.06);
-  const eventRealTotal = eventBaseAmount + eventGuestCommission;
+  const eventRealTotal = eventQuote?.total_to_pay || 0;
+  const sessionsKey = JSON.stringify(sessions);
+  const facilityKey = selectedFacilityIds.join(",");
+
+  // The exact price and availability come from the server, a moment after the guest stops typing.
+  useEffect(() => {
+    const complete = sessions.length > 0 && sessions.every((x) => x.date && x.start && x.end);
+    if (!isEventVenue || !selectedTierId || !complete) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setEventQuote(null); setQuoteErr(null);
+      return;
+    }
+    const chosen = facilities.filter((f) => selectedFacilityIds.includes(f.id));
+    const tierGuests = tiers.find((t) => t.id === selectedTierId)?.max_guests || 0;
+    const handle = setTimeout(() => {
+      supabase.rpc("quote_event_sessions", {
+        p_property_id: propertyId,
+        p_tier_id: selectedTierId,
+        p_sessions: sessions.map((x) => ({ date: x.date, start: x.start, end: x.end, label: x.label })),
+        p_facility_ids: chosen.map((f) => f.id),
+        p_facility_quantities: chosen.map((f) => (f.per_guest ? tierGuests : 1)),
+      }).then(({ data, error: qe }) => {
+        if (qe || !data) { setEventQuote(null); setQuoteErr(qe?.message || "Could not price this."); return; }
+        setQuoteErr(null);
+        setEventQuote(data as EventQuote);
+      });
+    }, 350);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEventVenue, selectedTierId, sessionsKey, facilityKey, tiers, facilities, sessionsRefresh]);
 
   // The "services you would like arranged" panel, used by BOTH event booking flows so a guest can always
   // ask for ushers, a caterer, a live band, security, or anything similar. It is a request, relayed through
@@ -141,16 +171,17 @@ export default function HireBookingForm({
 
   async function handleSubmitEventBooking() {
     if (!selectedTierId) { setError("Please select a real capacity tier."); return; }
-    if (!eventDate) { setError("Please choose your real event date."); return; }
+    if (!sessions.length || sessions.some((x) => !x.date)) { setError("Please choose the date for every session."); return; }
+    if (!eventQuote?.ok) { setError(quoteErr || "Please fix the times marked in red before sending your request."); return; }
     { const n = validateFullName(guestName, "full name"); if (!n.valid) { setError(n.message); return; }
       const ph = validatePhone(guestPhone, { international: true }); if (!ph.valid) { setError(`Your phone number: ${ph.message}`); return; } }
     setError(null);
     setSubmitting(true);
     const selected = facilities.filter((f) => selectedFacilityIds.includes(f.id));
-    const { data, error: rpcError } = await supabase.rpc("request_event_booking", {
+    const { data, error: rpcError } = await supabase.rpc("request_event_booking_sessions", {
       p_property_id: propertyId,
-      p_event_date: eventDate,
       p_tier_id: selectedTierId,
+      p_sessions: sessions.map((x) => ({ date: x.date, start: x.start, end: x.end, label: x.label })),
       p_event_type: eventType,
       p_facility_ids: selected.map((f) => f.id),
       p_facility_quantities: selected.map((f) => (f.per_guest ? selectedTier?.max_guests || 0 : 1)),
@@ -170,6 +201,7 @@ export default function HireBookingForm({
     if (rpcError || !data) {
       setError(friendlyBookingError(rpcError?.message, { lane: eventLaneInfo?.lane, total: eventRealTotal }));
       setCalendarKey((k) => k + 1);
+      setSessionsRefresh((k) => k + 1);
       return;
     }
     onSuccess(data as BookingRequestResult);
@@ -206,13 +238,13 @@ export default function HireBookingForm({
   const days = startDate && endDate ? Math.max(daysBetween(startDate, endDate), startDate === endDate ? 1 : 0) : 0;
 
   useEffect(() => {
-    if (!eventDate) {
+    if (!firstDate) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setEventLaneInfo(null);
       return;
     }
-    supabase.rpc("booking_lane_info", { p_check_in: eventDate }).then(({ data }) => setEventLaneInfo((data as LaneInfo) || null));
-  }, [eventDate]);
+    supabase.rpc("booking_lane_info", { p_check_in: firstDate }).then(({ data }) => setEventLaneInfo((data as LaneInfo) || null));
+  }, [firstDate]);
 
   useEffect(() => {
     if (!startDate || !endDate || new Date(endDate) <= new Date(startDate)) {
@@ -293,7 +325,7 @@ export default function HireBookingForm({
           <select value={selectedTierId} onChange={(e) => setSelectedTierId(e.target.value)}
             className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white">
             <option value="">Select a real capacity tier</option>
-            {tiers.map((t) => <option key={t.id} value={t.id}>{t.label} — {formatNaira(t.price)}</option>)}
+            {tiers.map((t) => <option key={t.id} value={t.id}>{t.label} — {formatNaira(t.price)} a day{t.hourly_price ? ` or ${formatNaira(t.hourly_price)} an hour` : ""}</option>)}
           </select>
         </div>
 
@@ -326,27 +358,28 @@ export default function HireBookingForm({
         {renderEventServices("Services you would like arranged (optional)")}
 
         <div>
-          <label className="text-xs font-semibold text-gray-600">4. Event date</label>
-          <div className="mt-1">
-            <AvailabilityCalendar
-              key={calendarKey}
-              propertyId={propertyId}
-              mode="single"
-              singleLabel="event date"
-              checkIn={eventDate}
-              checkOut={eventDate ? addDays(eventDate, 1) : ""}
-              onChange={(ci) => setEventDate(ci)}
-            />
-          </div>
+          <label className="text-xs font-semibold text-gray-600">4. When is the event?</label>
+          <p className="text-[10px] text-gray-400 mb-1.5">A book launch is one session. A wedding with a traditional ceremony on Friday and a reception on Saturday is two sessions. You pay only for the hours you book.</p>
+          <EventSessionsPicker propertyId={propertyId} sessions={sessions} onChange={setSessions} quoted={eventQuote?.sessions || null} refreshKey={sessionsRefresh + calendarKey} />
+          {quoteErr && <p className="text-[10px] text-chs-red mt-1">{quoteErr}</p>}
         </div>
 
-        {selectedTier && (
+        {selectedTier && eventQuote && (
           <div className="border-t border-gray-200 pt-3">
-            <p className="text-xs font-bold text-chs-charcoal mb-1">Real, live quotation</p>
-            <div className="flex justify-between text-xs text-gray-500"><span>{selectedTier.label}</span><span>{formatNaira(selectedTier.price)}</span></div>
-            {facilitiesTotal > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Extra facilities</span><span>{formatNaira(facilitiesTotal)}</span></div>}
-            <div className="flex justify-between text-xs text-gray-500"><span>CHS service fee (6%)</span><span>{formatNaira(eventGuestCommission)}</span></div>
-            <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1"><span>Real total (payable once the host confirms)</span><span>{formatNaira(eventRealTotal)}</span></div>
+            <p className="text-xs font-bold text-chs-charcoal mb-1">Live quotation</p>
+            {eventQuote.sessions.filter((x) => !x.reason).map((x, i) => (
+              <div key={i} className="flex justify-between text-xs text-gray-500">
+                <span>{fmtDay(x.date)} · {eventQuote.allow_hourly ? `${fmtTime(x.start)} to ${fmtTime(x.end)} (${fmtHours(x.mins)})` : "full day"}{x.label ? ` · ${x.label}` : ""}</span>
+                <span>{formatNaira(x.fee)}</span>
+              </div>
+            ))}
+            {eventQuote.sessions_total < eventQuote.sessions.reduce((n, x) => n + (x.reason ? 0 : x.fee), 0) && (
+              <p className="text-[10px] text-gray-400">Several sessions on one day never cost more than the day price ({formatNaira(eventQuote.tier_price)}).</p>
+            )}
+            {eventQuote.allow_hourly && <p className="text-[10px] text-gray-400">Hourly rate about {formatNaira(eventQuote.rate_per_hour)}; a full day never costs more than {formatNaira(eventQuote.tier_price)}.</p>}
+            {eventQuote.facilities_total > 0 && <div className="flex justify-between text-xs text-gray-500"><span>Extra facilities</span><span>{formatNaira(eventQuote.facilities_total)}</span></div>}
+            <div className="flex justify-between text-xs text-gray-500"><span>CHS service fee</span><span>{formatNaira(eventQuote.guest_commission)}</span></div>
+            <div className="flex justify-between text-sm font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1"><span>Total (payable once the host confirms)</span><span>{formatNaira(eventQuote.total_to_pay)}</span></div>
           </div>
         )}
 
@@ -370,10 +403,10 @@ export default function HireBookingForm({
           </label>
         )}
 
-        {selectedTier && <BookingFlowNotice info={eventLaneInfo} total={eventRealTotal} />}
+        {selectedTier && eventQuote && <BookingFlowNotice info={eventLaneInfo} total={eventRealTotal} />}
         <RefundPolicyNotice />
         {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
-        <button onClick={handleSubmitEventBooking} disabled={submitting}
+        <button onClick={handleSubmitEventBooking} disabled={submitting || !eventQuote?.ok}
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
           {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
         </button>

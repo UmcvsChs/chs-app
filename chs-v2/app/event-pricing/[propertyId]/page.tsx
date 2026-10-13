@@ -6,8 +6,9 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
+import EventHoursPanel from "@/components/EventHoursPanel";
 
-interface Tier { id: string; label: string; max_guests: number; price: number; }
+interface Tier { id: string; label: string; max_guests: number; price: number; hourly_price?: number | null; }
 interface Facility { id: string; name: string; price: number; per_guest: boolean; }
 
 // Real, new page completing a genuine, verified upgrade: a real,
@@ -75,6 +76,17 @@ export default function EventPricingPage({ params }: { params: Promise<{ propert
     loadAll();
   }
 
+  async function handleHourly(id: string) {
+    const cur = tiers.find((t) => t.id === id);
+    const v = window.prompt("Hourly price for this hall tier in naira (leave empty to use the day price spread over a full day):", cur?.hourly_price ? String(cur.hourly_price) : "");
+    if (v === null) return;
+    const n = v.trim() === "" ? null : Number(v);
+    if (n !== null && (!Number.isFinite(n) || n < 0)) { window.alert("Please enter a valid amount."); return; }
+    const { error } = await supabase.rpc("set_tier_hourly_price", { p_tier_id: id, p_hourly: n });
+    if (error) window.alert(error.message);
+    loadAll();
+  }
+
   async function handleDeleteTier(id: string) {
     await supabase.from("event_capacity_tiers").delete().eq("id", id);
     loadAll();
@@ -108,7 +120,8 @@ export default function EventPricingPage({ params }: { params: Promise<{ propert
             <div key={t.id} className="flex justify-between items-center text-xs bg-gray-50 rounded-lg px-3 py-2 mb-1.5">
               <span>{t.label} <span className="text-gray-400">(up to {t.max_guests})</span></span>
               <span className="flex items-center gap-2">
-                <span className="font-semibold">{formatNaira(t.price)}</span>
+                <span className="font-semibold">{formatNaira(t.price)} a day{t.hourly_price ? ` · ${formatNaira(t.hourly_price)}/hr` : ""}</span>
+                <button onClick={() => handleHourly(t.id)} className="text-[10px] underline">Hourly price</button>
                 <button onClick={() => handleDeleteTier(t.id)} className="text-chs-red text-[10px]">Remove</button>
               </span>
             </div>
@@ -120,6 +133,8 @@ export default function EventPricingPage({ params }: { params: Promise<{ propert
           </div>
           <button onClick={handleAddTier} className="w-full mt-2 py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">+ Add tier</button>
         </div>
+
+        <EventHoursPanel propertyId={propertyId} />
 
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-sm font-bold text-chs-charcoal mb-2">Real extra facilities</p>
