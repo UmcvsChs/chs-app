@@ -213,3 +213,4 @@ begin
   return n;
 end;
 $function$;
+grant select (time_slots) on public.shortlet_bookings to authenticated;

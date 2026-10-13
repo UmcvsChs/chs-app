@@ -615,3 +615,13 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - Tested live (rolled back): hold, double answer blocked, phone note blocked, price required, guest view hidden then shown, admin queue, release, auto release.
 - Not covered: change requests answered by the host and host-initiated chat still go straight; the old Royal Garden test booking was answered before this and has unpriced services.
 - (Oct 13, later) Royal Garden booking 018429ef reverted to "host accepted, waiting for CHS" (reply_pending) so admin can release it. Guest My Bookings: a failed read no longer shows "No shortlet bookings yet"; it retries once and shows "could not load, try again". Payment (pay_for_booking) verified under the authenticated role; page verified in a headless browser against mocked data. Admin "Host replies" screen only exists after the app is deployed.
+- (Oct 13) FIX: shortlet_bookings.time_slots (added in 494a) had no column SELECT grant for authenticated, so My Bookings' query failed and showed 'No shortlet bookings yet'. Granted select (time_slots) live. Lesson: every column added to a column-granted table that the frontend reads needs a grant.
+
+## 498 – Admin categories and Event Centres view (Oct 13 2026)
+- "Shortlet/Hire Bookings" always covered shortlets, hotels/lodges AND event centres but never said which. Rows now carry a category tag, with filter chips (All / Shortlet / Hotel & Lodge / Event Centre). Tabs renamed: "Bookings: Shortlet · Hotel · Event Centre", "Deposits (Shortlet · Hotel · Event Centre)", "Host replies to relay (all bookings)".
+- New tab "Event Centres (live bookings)": sessions, services (waiting/with CHS/to relay/unpaid), quotation, service money held, open changes. Hotel Controls remains settings only (peak pricing and cancellation rules).
+- Functions: _property_cat, admin_get_event_centres; get_admin_booking_queue and admin_get_host_replies now return cat.
+
+## 499 – Category tags everywhere and a Hotels & Lodges view (Oct 13 2026)
+- Category tags (Shortlet / Hotel & Lodge / Event Centre) now also on deposits, "guest arrived, payout held", pending guest/host messages and correspondence rows.
+- New admin tab "Hotels & Lodges (live)": per hotel, requests to relay, host answers to release, urgent arrivals, in-house/arriving, payouts held, calendar freshness. Function admin_get_hotels.

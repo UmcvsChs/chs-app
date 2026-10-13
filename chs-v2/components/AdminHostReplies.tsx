@@ -10,7 +10,7 @@ import { formatNaira, formatDateTime } from "@/lib/format";
 
 interface Svc { service: string; label: string; quantity: number | null; status: string; price: number | null; provider_name: string | null; note: string | null }
 interface Row {
-  id: string; ref: string; property_title: string; host_name: string | null; guest_name: string | null; event_type: string | null; check_in: string; check_out: string;
+  id: string; ref: string; cat?: string; property_title: string; host_name: string | null; guest_name: string | null; event_type: string | null; check_in: string; check_out: string;
   status: string; amount_if_confirmed: number; decision: "confirmed" | "declined" | null; note: string | null; reply_at: string | null; release_at: string | null;
   minutes_left: number | null; services: Svc[];
 }
@@ -32,7 +32,7 @@ function Card({ r, onDone }: { r: Row; onDone: () => void }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-1.5">
       <div className="flex justify-between items-start gap-2">
-        <p className="text-sm font-bold text-chs-charcoal">{r.property_title}</p>
+        <p className="text-sm font-bold text-chs-charcoal">{r.property_title} <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 align-middle">{r.cat === "event" ? "🎉 Event Centre" : r.cat === "hotel" ? "🏨 Hotel & Lodge" : r.cat === "shortlet" ? "🏠 Shortlet" : "Hire"}</span></p>
         {r.decision && <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${r.decision === "confirmed" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-700"}`}>{r.decision === "confirmed" ? "Host ACCEPTED" : "Host DECLINED"}</span>}
       </div>
       <p className="text-[11px] text-gray-600">{r.event_type || "Booking"} · {r.check_in}{r.check_out !== r.check_in ? ` to ${r.check_out}` : ""} · Ref {r.ref}</p>

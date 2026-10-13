@@ -32,6 +32,8 @@ import AdminHotelControls from "@/components/AdminHotelControls";
 import AdminDisruptions from "@/components/AdminDisruptions";
 import AdminServiceSourcing from "@/components/AdminServiceSourcing";
 import AdminHostReplies from "@/components/AdminHostReplies";
+import AdminEventCentres from "@/components/AdminEventCentres";
+import AdminHotels from "@/components/AdminHotels";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
 
 interface DeveloperApplication {
@@ -78,7 +80,9 @@ interface PendingProperty {
   profiles: { full_name: string; phone: string; valid_id_verified: boolean; valid_id_type: string | null; valid_id_number: string | null }[] | null;
 }
 
-export type Tab = "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+const CAT_TAG: Record<string, string> = { shortlet: "🏠 Shortlet", hotel: "🏨 Hotel & Lodge", event: "🎉 Event Centre", other: "Hire" };
+
+export type Tab = "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -316,12 +320,13 @@ function AdminDashboardInner() {
   const [staleCalendars, setStaleCalendars] = useState<{ id: string; title: string; owner_name: string; owner_phone: string; calendar_confirmed_at: string | null; days_since: number | null; rooms: number; pending_requests: number }[]>([]);
   // The live queue of hotel / lodge / venue requests that are still in flight:
   // waiting for CHS to relay them, with the host, or waiting for the guest to pay.
+  const [queueCat, setQueueCat] = useState<"all" | "shortlet" | "hotel" | "event">("all");
   const [bookingQueue, setBookingQueue] = useState<{
     id: string; stage: "awaiting_admin_relay" | "pending_host_review" | "awaiting_payment"; lane: string; property_title: string;
     host_name: string; host_phone: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string;
     expected_arrival_time: string | null; amount_if_confirmed: number; payment_status: string; hold_expires_at: string | null;
     created_at: string; admin_relay_note: string | null; relay_mode: string | null; minutes_left: number | null;
-    express_group_id?: string | null; instant_booked?: boolean; group_size?: number;
+    express_group_id?: string | null; instant_booked?: boolean; group_size?: number; cat?: string; event_type?: string | null; reply_pending?: string | null;
   }[]>([]);
   const [relayNotes, setRelayNotes] = useState<Record<string, string>>({});
   const [bookingRejectReasons, setBookingRejectReasons] = useState<Record<string, string>>({});
@@ -2487,8 +2492,8 @@ function AdminDashboardInner() {
           { key: "transactionlog", label: "📊 Transaction History Log", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "referrals", label: `Referral fees (${owedFees.filter(f => f.status === "owed").length})`, domain: "agent_relations", group: "Financial" },
           { key: "escrowoversight", label: "🔒 Escrow Oversight", domain: "owner_buyer_tenant", group: "Financial" },
-          { key: "shortletdeposits", label: "Shortlet/Hire Deposits", domain: "owner_buyer_tenant", group: "Financial" },
-          { key: "shortletbookings", label: `Shortlet/Hire Bookings (${bookingQueue.length + pendingMsgs.length + releaseItems.length})`, domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletdeposits", label: "Deposits (Shortlet · Hotel · Event Centre)", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "shortletbookings", label: `Bookings: Shortlet · Hotel · Event Centre (${bookingQueue.length + pendingMsgs.length + releaseItems.length})`, domain: "owner_buyer_tenant", group: "Financial" },
           { key: "staleoffers", label: `⚠️ Pending/Inconclusive Deals (${stalePendingOffers.length})`, domain: "owner_buyer_tenant", group: "Financial" },
 
           // Verification — every real kind, grouped together
@@ -2518,7 +2523,9 @@ function AdminDashboardInner() {
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelcontrols", label: "🏨 Hotel Controls (peak & cancellations)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "disruptions", label: "⚠️ Disruptions & no-fault refunds", domain: "owner_buyer_tenant", group: "Oversight" },
-          { key: "hostreplies", label: "📨 Host replies to relay", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "hotelsview", label: "🏨 Hotels & Lodges (live)", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "eventcentres", label: "🎉 Event Centres (live bookings)", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "hostreplies", label: "📨 Host replies to relay (all bookings)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "servicesourcing", label: "🤝 Service sourcing (venue requests)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "walletsecurity", label: `Wallet Security (${walletSecurityOpen})`, domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "rtorequests", label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})`, domain: "owner_buyer_tenant", group: "Oversight" },
@@ -4542,6 +4549,8 @@ function AdminDashboardInner() {
 
         {activeTab === "hotelcontrols" && <AdminHotelControls />}
         {activeTab === "disruptions" && <AdminDisruptions />}
+        {activeTab === "hotelsview" && <AdminHotels />}
+        {activeTab === "eventcentres" && <AdminEventCentres />}
         {activeTab === "hostreplies" && <AdminHostReplies />}
         {activeTab === "servicesourcing" && <AdminServiceSourcing />}
 
@@ -4733,7 +4742,7 @@ function AdminDashboardInner() {
                 {correspondenceOverview.map((c) => (
                   <div key={c.tenancy_id} className={`rounded-xl border p-3 mb-2 ${c.awaiting_landlord_reply ? "bg-red-50 border-red-200" : "bg-[var(--zone-card)] border-gray-100"}`}>
                     <div className="flex justify-between items-start">
-                      <p className="text-sm font-semibold text-chs-charcoal">{c.property_title}</p>
+                      <p className="text-sm font-semibold text-chs-charcoal">{c.property_title} <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 align-middle">{CAT_TAG[(c as { cat?: string }).cat || ""] || "Booking"}</span></p>
                       {c.awaiting_landlord_reply && (
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-chs-red text-white">Awaiting reply</span>
                       )}
@@ -5079,7 +5088,7 @@ function AdminDashboardInner() {
             ) : (
               heldDeposits.map((d) => (
                 <div key={d.id} className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-3 mb-2">
-                  <p className="text-sm font-semibold text-chs-charcoal">{d.property_title || "Property"}</p>
+                  <p className="text-sm font-semibold text-chs-charcoal">{d.property_title || "Property"} <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 align-middle">{CAT_TAG[(d as { cat?: string }).cat || ""] || "Booking"}</span></p>
                   <p className="text-xs text-gray-500">{d.guest_full_name} · {d.guest_phone} · {d.check_in} → {d.check_out}</p>
                   <p className="text-sm font-bold text-chs-charcoal mt-1">Real deposit held: {formatNaira(d.security_deposit_amount)}</p>
                   <input
@@ -5108,7 +5117,7 @@ function AdminDashboardInner() {
         {activeTab === "shortletbookings" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
-              Booking requests for hotels, lodges and venues. Every request and every message comes to CHS first — the guest and the host never deal with each other directly. A guest sends a request (nothing is charged); CHS relays it to the host; the host confirms the dates are free; the guest then pays within a short window. Urgent requests (check-in today or within 3 days) are shown first, in red, and relay to the host automatically only if no one on the team has acted within their short window (30 minutes, or 10 for same-day). Phone any host who goes quiet.
+              Booking requests for shortlets, hotels, lodges and event centres (each row is tagged). Every request and every message comes to CHS first — the guest and the host never deal with each other directly. A guest sends a request (nothing is charged); CHS relays it to the host; the host confirms the dates are free; the guest then pays within a short window. Urgent requests (check-in today or within 3 days) are shown first, in red, and relay to the host automatically only if no one on the team has acted within their short window (30 minutes, or 10 for same-day). Phone any host who goes quiet.
             </p>
             {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
             <div className={`rounded-xl border-2 p-3 mb-3 ${pendingMsgs.length > 0 ? "bg-chs-amber-light border-chs-amber" : "bg-green-50 border-green-200"}`}>
@@ -5123,7 +5132,7 @@ function AdminDashboardInner() {
               )}
               {pendingMsgs.map((m) => (
                 <div key={m.id} className="bg-white rounded-lg border border-gray-200 p-2.5 mb-2">
-                  <p className="text-[10px] text-gray-400">{m.property_title} · {m.booking_ref} · from the <b>{m.sender_role}</b>{m.sender_role === "host" ? ` to ${m.guest_full_name}` : ` (${m.guest_full_name})`} · {m.is_paid ? "booking paid" : "booking not paid yet"}</p>
+                  <p className="text-[10px] text-gray-400">{CAT_TAG[(m as { cat?: string }).cat || ""] || "Booking"} · {m.property_title} · {m.booking_ref} · from the <b>{m.sender_role}</b>{m.sender_role === "host" ? ` to ${m.guest_full_name}` : ` (${m.guest_full_name})`} · {m.is_paid ? "booking paid" : "booking not paid yet"}</p>
                   <p className="text-xs text-chs-charcoal my-1.5">“{m.text}”</p>
                   <div className="flex gap-2 mb-1.5">
                     <button onClick={() => handleApproveMsg(m.id)} disabled={queueBusy === m.id}
@@ -5147,7 +5156,7 @@ function AdminDashboardInner() {
               {releaseItems.map((r) => (
                 <div key={r.id} className={`rounded-lg border p-2.5 mb-2 bg-white ${r.kind === "problem" ? "border-chs-red" : "border-gray-200"}`}>
                   <div className="flex justify-between items-start gap-2">
-                    <p className="text-xs font-semibold text-chs-charcoal">{r.property_title} · {r.booking_ref}</p>
+                    <p className="text-xs font-semibold text-chs-charcoal">{r.property_title} <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 align-middle">{CAT_TAG[(r as { cat?: string }).cat || ""] || "Booking"}</span> · {r.booking_ref}</p>
                     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${r.kind === "problem" ? "bg-chs-red text-white" : r.kind === "host_requested" ? "bg-chs-amber text-chs-charcoal" : "bg-gray-100 text-gray-500"}`}>
                       {r.kind === "problem" ? "⚠ GUEST REPORTED A PROBLEM" : r.kind === "host_requested" ? "HOST ASKED FOR RELEASE" : "GUEST HAS NOT CONFIRMED YET"}
                     </span>
@@ -5191,6 +5200,11 @@ function AdminDashboardInner() {
                 </>
               )}
             </div>
+            <div className="flex gap-1.5 mb-2 flex-wrap">
+              {([["all", "All"], ["shortlet", "🏠 Shortlet"], ["hotel", "🏨 Hotel & Lodge"], ["event", "🎉 Event Centre"]] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setQueueCat(k)} className={`px-3 py-1 rounded-full text-[11px] font-semibold ${queueCat === k ? "bg-chs-charcoal text-white" : "bg-gray-100 text-gray-600"}`}>{l}{k !== "all" ? ` (${bookingQueue.filter((q) => q.cat === k).length})` : ""}</button>
+              ))}
+            </div>
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs font-bold text-chs-charcoal">📋 Requests in progress ({bookingQueue.length})</p>
               <button onClick={loadBookingQueue} className="text-[10px] font-semibold text-chs-red underline">🔄 Refresh</button>
@@ -5199,7 +5213,7 @@ function AdminDashboardInner() {
               <p className="text-center text-sm text-gray-400 py-8">No booking requests are in progress right now.</p>
             ) : (
               (["awaiting_admin_relay", "pending_host_review", "awaiting_payment"] as const).map((stage) => {
-                const rows = bookingQueue.filter((q) => q.stage === stage);
+                const rows = bookingQueue.filter((q) => q.stage === stage && (queueCat === "all" || q.cat === queueCat));
                 if (rows.length === 0) return null;
                 const heading = stage === "awaiting_admin_relay" ? "📨 Waiting for you to relay to the host"
                   : stage === "pending_host_review" ? "⏳ With the host — waiting for them to confirm the dates"
@@ -5214,7 +5228,7 @@ function AdminDashboardInner() {
                       return (
                         <div key={q.id} className={`rounded-xl border-2 p-3 mb-2 ${q.lane === "express" ? "bg-red-50 border-chs-red" : urgent ? "bg-chs-amber-light border-chs-amber" : "bg-[var(--zone-card)] border-gray-100"}`}>
                           <div className="flex justify-between items-start gap-2">
-                            <p className="text-sm font-semibold text-chs-charcoal">{q.property_title}</p>
+                            <p className="text-sm font-semibold text-chs-charcoal">{q.property_title} <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 align-middle">{CAT_TAG[q.cat || ""] || "Booking"}</span></p>
                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${q.lane === "express" ? "bg-chs-red text-white" : urgent ? "bg-chs-amber text-chs-charcoal" : q.lane === "legacy" ? "bg-gray-200 text-gray-600" : "bg-gray-100 text-gray-500"}`}>
                               {q.lane === "express" ? "⚡ EXPRESS" : q.lane === "soon" ? "🕒 SOON" : q.lane === "legacy" ? "OLDER — PAID AT REQUEST" : "STANDARD"}
                             </span>
@@ -5235,6 +5249,7 @@ function AdminDashboardInner() {
                             </p>
                           )}
                           {q.admin_relay_note && <p className="text-[10px] text-gray-500 italic mt-0.5">CHS note to host: “{q.admin_relay_note}”</p>}
+                          {q.reply_pending && <p className="text-[11px] text-blue-800 bg-blue-50 rounded px-2 py-1 mt-1">📨 The host has answered. Release it in <b>Host replies to relay</b>.</p>}
                           {q.relay_mode === "auto" && stage !== "awaiting_admin_relay" && <p className="text-[9px] text-gray-400 mt-0.5">Relayed to the host automatically</p>}
                           <p className="text-[9px] text-gray-400 mt-0.5">Requested {formatDateTime(q.created_at)}</p>
 
@@ -5752,7 +5767,7 @@ function AdminDashboardInner() {
                     const domainTabLabels: Record<string, string[]> = {
                       customer_care: ["Disputes", "Condition Reports", "Feedback"],
                       registration_setup: ["Face Verification", "ID Verification", "Registrations"],
-                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Escrow Oversight", "Shortlet/Hire Deposits", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
+                      owner_buyer_tenant: ["Processed History", "Sale Approvals", "Applications", "Offer Review", "Properties", "Inspections", "Tenant Register Oversight", "Escrow Oversight", "Deposits (Shortlet · Hotel · Event Centre)", "Marketplace Moderation", "Platform Earnings", "Transaction History Log"],
                       agent_relations: ["Referral fees"],
                       artisan_dev_pm_vendor: ["Vendors", "Maintenance", "Artisans", "Developers"],
                     };
@@ -5802,7 +5817,7 @@ function AdminDashboardInner() {
                     { key: "transactionlog" as Tab, label: "Transaction History Log" },
                     { key: "referrals" as Tab, label: `Referral Fees (${owedFees.filter(f => f.status === "owed").length})` },
                     { key: "escrowoversight" as Tab, label: "🔒 Escrow Oversight" },
-                    { key: "shortletdeposits" as Tab, label: "Shortlet/Hire Deposits" },
+                    { key: "shortletdeposits" as Tab, label: "Deposits (Shortlet · Hotel · Event Centre)" },
                   ] },
                   { group: "Verification", items: [
                     { key: "registrations" as Tab, label: `Registrations (${pendingRegistrationsFull.length})` },
@@ -5831,7 +5846,9 @@ function AdminDashboardInner() {
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
                     { key: "hotelcontrols" as Tab, label: "Hotel Controls (peak & cancellations)" },
                     { key: "disruptions" as Tab, label: "Disruptions & no-fault refunds" },
-                    { key: "hostreplies" as Tab, label: "Host replies to relay" },
+                    { key: "hotelsview" as Tab, label: "Hotels & Lodges (live)" },
+                    { key: "eventcentres" as Tab, label: "Event Centres (live bookings)" },
+                    { key: "hostreplies" as Tab, label: "Host replies to relay (all bookings)" },
                     { key: "servicesourcing" as Tab, label: "Service sourcing (venue requests)" },
                     { key: "walletsecurity" as Tab, label: `Wallet Security (${walletSecurityOpen})` },
                     { key: "rtorequests" as Tab, label: `Rent-to-Own Requests (${rtoQueue.filter((r) => r.needs_action).length})` },
