@@ -556,3 +556,24 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - Admin switch: platform_settings event_quote_manual_payment = 'off' stops "paid outside CHS" recording.
 - Screens: GuestEventQuote (Pay from wallet, fund-wallet link), EventQuoteHost (wallet-paid shown, Refund, outside-CHS buttons behind a confirm).
 - Tested rolled back: order, stranger, low balance, exact debit/credit, commission rows unchanged, refund, host-cancel trigger, manual-off, summary.
+
+## 13 Oct 2026 — Guest home rebuilt (migration 491, LIVE)
+- /guest is now a tabbed home: Overview (next booking, things needing action, recent money), Browse (search, category, max price), My bookings (change guests/dates, cancel, message, arrival pass), Bills & quotations (pay instalments from wallet), Transactions (filters + search + receipts), Applications, Cancelled & refunds, Saved, Wallet (fund, withdraw, transfer), Past stays. Wallet balance + Fund/Withdraw strip always visible; badges for waiting items.
+- Wallet, Saved, Applications, Receipts and My Bookings pages were turned into embeddable panels (components/*Panel.tsx); the old URLs still work.
+- New RPCs get_guest_home, get_my_bills. Refund REQUEST flow, disruption (force majeure) events, reschedule/credit options, split payments, withdrawal safeguards are the next steps (agreed policy in chat 13 Oct).
+
+## 13 Oct 2026 — No-fault disruptions: reschedule / refund (migration 492, LIVE)
+- Admin declares a disruption (Admin > Oversight > "Disruptions & no-fault refunds"): state/area/dates; guests with paid bookings in scope are notified; they can move dates free (auto-applied if the new dates are free) or ask for a refund.
+- Guest: "I can't go ahead" on a confirmed paid booking (reasons: declared disruption, bereavement, medical, other), 3 suggested free dates, tracking under Cancelled & refunds (accept/ask CHS/withdraw).
+- Venue: new Host console tab "Refunds & moves": agree, claim real costs (cap 25% of booking price, listed in a note) or disagree. Silent venue: declared disruption goes ahead with no costs after 48h; otherwise to Admin.
+- Money: refund = total + guest fee + deposit minus venue costs; venue costs paid to host wallet, no CHS commission; commission rows removed; calendar freed. Refs DSR-/DSK-.
+- Settings: disruption_venue_cap_pct (25), disruption_host_reply_hours (48), disruption_reschedule_days (90).
+- Terms V9 draft has a new "When nobody is at fault" clause (V9 still inactive).
+- Not yet: credit option (a refund lands in the wallet and can be rebooked), service-payment refunds on a no-fault cancellation (venue refunds those itself), split payments, guest-wallet withdrawal safeguards (step 3).
+
+## 13 Oct 2026 — Split payments (migration 493, LIVE)
+- On a booking waiting for payment, the guest taps "Split this payment" (My bookings) and shares a link/code. Anyone with a CHS wallet opens /split/CODE (or enters the code on the guest Overview) and puts in an amount (min 1,000, max 20 contributors). Contributions are held (debited, ref SPL-); when the pool plus the organiser's "Pay the rest" covers the full price (booking + guest fee + deposit) the pool moves to the organiser's wallet (SPC-) and the booking is paid exactly as normal (_pay_booking_core, ref REQ-). So all cancel/refund/no-fault paths work unchanged.
+- Window closes, booking declined/cancelled, or organiser stops the split: every held contribution returns automatically (SPX-). Cron chs-split-lapse every 10 min plus lazy checks.
+- Refunds: a trigger on wallet_transactions shares any refund credited to the organiser (refs CXL-, HCX-, DSR-, EXP-, DEC-, DEP-, RFD-) back to each contributor in proportion (SPR-). Admin refund now uses ref RFD-<booking> (was random REFUND-).
+- Withdrawal safeguards already existed (PIN, OTP step-up, new-device cap, 24h hold on card-funded money, daily limit, freeze); refunds do not bypass the card-funding lock because that lock stays active against the balance.
+- Not yet: splitting venue-quotation instalments; contributors cannot yet see a split booking in their Transactions grouped by split (they see SPL-/SPR- lines).

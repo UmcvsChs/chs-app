@@ -15,6 +15,8 @@ import ShortletRating from "@/components/ShortletRating";
 import EventQuoteHost from "@/components/EventQuoteHost";
 import EventOperations from "@/components/EventOperations";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
+import HostClaimsPanel from "@/components/HostClaimsPanel";
+import type { Claim } from "@/components/ClaimTypes";
 
 // The host's working screen. One read (get_host_console) feeds every tab, and the tabs follow the host's
 // duties from the first request to the money:
@@ -45,7 +47,7 @@ const CAT_LABEL: Record<string, string> = { event: "Event centre", hotel: "Hotel
 const CAT_ICON: Record<string, string> = { event: "🎉", hotel: "🏨", shortlet: "🏠", other: "📦" };
 const todayLagos = () => new Date(Date.now() + 3600000).toISOString().slice(0, 10);
 
-type TabKey = "overview" | "requests" | "payment" | "paid" | "changes" | "services" | "stays" | "events" | "history" | "listings" | "work";
+type TabKey = "overview" | "requests" | "payment" | "paid" | "changes" | "refunds" | "services" | "stays" | "events" | "history" | "listings" | "work";
 
 function timeLeft(expiresAt: string | null): string | null {
   if (!expiresAt) return null;
@@ -242,6 +244,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
   session: Session; listingsNode: React.ReactNode; workNode: React.ReactNode; overviewExtra?: React.ReactNode; moneyNode?: React.ReactNode;
 }) {
   const [data, setData] = useState<Consolidated | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>("overview");
   const [cat, setCat] = useState<string>("all");
@@ -252,11 +255,13 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
     const { data: d, error } = await supabase.rpc("get_host_console");
     if (error) { setErr(error.message); return; }
     setData(d as Consolidated);
+    const { data: cl } = await supabase.rpc("get_host_claims");
+    setClaims((cl as Claim[]) || []);
   }, []);
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab") as TabKey | null;
-    const valid: TabKey[] = ["overview", "requests", "payment", "paid", "changes", "services", "stays", "events", "history", "listings", "work"];
+    const valid: TabKey[] = ["overview", "requests", "payment", "paid", "changes", "refunds", "services", "stays", "events", "history", "listings", "work"];
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (t && valid.includes(t)) setTab(t);
     load();
@@ -289,6 +294,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
     { key: "payment", label: "Awaiting payment", count: payment.length },
     { key: "paid", label: "Paid & deposits", count: live.length },
     { key: "changes", label: "Changes", count: changes.filter((c) => c.status === "pending").length, hot: true },
+    { key: "refunds", label: "Refunds & moves", count: claims.filter((c) => c.status === "awaiting_host").length, hot: true },
     { key: "services", label: "Services", count: openServices.length, hot: true },
     { key: "stays", label: "Stays & check-in", count: stays.length },
     ...(cats.includes("event") ? [{ key: "events" as TabKey, label: "Events", count: undefined }] : []),
@@ -339,10 +345,11 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
                 { k: "payment" as TabKey, n: payment.length, t: "Waiting for guests to pay", i: "⏳" },
                 { k: "paid" as TabKey, n: live.length, t: "Paid & upcoming", i: "💰" },
                 { k: "changes" as TabKey, n: changes.filter((c) => c.status === "pending").length, t: "Changes to answer", i: "✏️" },
+                { k: "refunds" as TabKey, n: claims.filter((c) => c.status === "awaiting_host").length, t: "Refund / date-move requests", i: "↩️" },
                 { k: "services" as TabKey, n: openServices.length, t: "Service requests", i: "🙋" },
                 { k: "stays" as TabKey, n: stays.length, t: "Arrivals this week", i: "🛎️" },
               ].map((x) => (
-                <button key={x.k} onClick={() => go(x.k)} className={`text-left bg-white rounded-xl border p-3 ${x.n > 0 && ["requests", "changes", "services"].includes(x.k) ? "border-chs-red" : "border-gray-200"}`}>
+                <button key={x.k} onClick={() => go(x.k)} className={`text-left bg-white rounded-xl border p-3 ${x.n > 0 && ["requests", "changes", "services", "refunds"].includes(x.k) ? "border-chs-red" : "border-gray-200"}`}>
                   <p className="text-2xl font-bold text-chs-charcoal">{x.n}</p>
                   <p className="text-[11px] text-gray-600">{x.i} {x.t}</p>
                 </button>
@@ -391,6 +398,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
             {changes.length === 0 ? <p className="text-xs text-gray-400 py-6 text-center">No change requests.</p> : changes.map((c) => <ChangeCard key={c.id + c.status} c={c} onChanged={load} />)}
           </>
         )}
+        {data && tab === "refunds" && <HostClaimsPanel claims={claims} onChanged={load} />}
         {data && tab === "services" && (
           <>
             <p className="text-[11px] text-gray-500 mb-2">Ushers, caterer, live band, security, decoration and anything else guests ask for. For each one, say whether you supply it, the guest arranges it, or you cannot. The guest sees your answer on their booking.</p>
