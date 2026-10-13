@@ -873,6 +873,25 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
     );
   }
 
+  // An event centre / hall listed under "Shortlet" (the listing form allows it) must still get the
+  // event booking form with ushers, caterer, live band, security and priced capacity/facilities,
+  // not the plain per-night shortlet form.
+  if (activeForm === "shortlet" && session && (property.hire_category === "event_centre" || /event|hall/i.test(property.property_type || ""))) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <VerifiedOnly session={session} propertyId={property.id}>
+          <HireBookingForm
+            propertyId={property.id}
+            pricePerDay={property.price_per_night || property.price}
+            hireCategoryLabel={property.property_type || "Event Centre / Hall"}
+            session={session}
+            onSuccess={(r) => { setBookingResult(r); setShortletSuccess(true); }}
+          />
+        </VerifiedOnly>
+      </div>
+    );
+  }
+
   if (activeForm === "shortlet" && session) {
     return (
       <div className="bg-white rounded-xl border border-gray-100 p-4">

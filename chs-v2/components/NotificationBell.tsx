@@ -106,6 +106,20 @@ export default function NotificationBell() {
     return roleHome(role);
   }
 
+  // Booking notifications from the database all point at /host?tab=requests; open the tab that matches the
+  // notification (a payment opens "Paid & deposits", a change request opens "Changes", and so on).
+  function refineHostLink(link: string, n: Notification): string {
+    if (!link.startsWith("/host?tab=requests")) return link;
+    const title = n.title.toLowerCase();
+    let tab = "requests";
+    if (/change/.test(title)) tab = "changes";
+    else if (/service/.test(title)) tab = "services";
+    else if (/paid|payment|released|message/.test(title)) tab = "paid";
+    else if (/problem|arriv/.test(title)) tab = "stays";
+    else if (/cancel|closed|declin|expired|lapsed/.test(title)) tab = "history";
+    return `/host?tab=${tab}`;
+  }
+
   function handleNotificationClick(e: React.MouseEvent, n: Notification) {
     e.preventDefault();
     e.stopPropagation();
@@ -113,7 +127,7 @@ export default function NotificationBell() {
     setToast(null);
     setOpen(false);
     {
-      const link: string = n.link || fallbackLink(n);
+      const link: string = refineHostLink(n.link || fallbackLink(n), n);
       // Real, seventh and decisive fix to this same handler, after a
       // direct, confirmed report that the "splash screen" problem
       // continued even after removing the service worker entirely —

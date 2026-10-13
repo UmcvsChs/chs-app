@@ -10,7 +10,7 @@ import { formatNaira } from "@/lib/format";
 interface Quote {
   id: string; status: string; title: string | null; note: string | null; valid_until: string; total: number;
   lines: { label: string; qty: number; unit_price: number }[];
-  milestones: { id: string; label: string; amount: number; due_date: string; paid_at: string | null; paid_method: string | null }[];
+  milestones: { id: string; label: string; amount: number; due_date: string; paid_at: string | null; paid_method: string | null; payment_ref?: string | null }[];
 }
 interface L { label: string; qty: string; price: string }
 interface M { label: string; amount: string; due: string }
@@ -93,6 +93,7 @@ export default function EventQuoteHost({ bookingId, canSend }: { bookingId: stri
   return (
     <div className="space-y-1.5">
       <p className="text-[11px] font-bold text-chs-charcoal">Quotation for extra services</p>
+      <p className="text-[10px] text-gray-500">The guest pays each instalment from their CHS wallet straight into yours: no escrow and no CHS commission, withdraw any time. If you cancel the booking, paid instalments return to the guest automatically.</p>
       {quote === undefined && <p className="text-[10px] text-gray-400">Loading…</p>}
       {quote && !editing && (
         <div className="border border-gray-200 rounded p-2 text-[11px] space-y-0.5">
@@ -100,10 +101,13 @@ export default function EventQuoteHost({ bookingId, canSend }: { bookingId: stri
           {quote.lines.map((l, i) => <p key={i} className="text-gray-600">{l.qty} × {l.label} @ {formatNaira(l.unit_price)}</p>)}
           {quote.milestones.map((m) => (
             <div key={m.id} className="flex justify-between items-center gap-2 border-t border-gray-100 pt-0.5">
-              <span>{m.label}: {formatNaira(m.amount)} by {day(m.due_date)}{m.paid_at ? ` · received (${m.paid_method})` : ""}</span>
+              <span>{m.label}: {formatNaira(m.amount)} by {day(m.due_date)}{m.paid_at ? (m.paid_method === "wallet" ? ` · paid to your wallet (${m.payment_ref})` : ` · received outside CHS (${m.paid_method})`) : ""}</span>
+              {canSend && m.paid_at && m.paid_method === "wallet" && (
+                <button disabled={busy} onClick={() => { const r = window.prompt("Reason for the refund (the guest will see it):"); if (r && r.trim()) run(supabase.rpc("host_refund_service_payment", { p_milestone: m.id, p_reason: r.trim() }), "Refunded to the guest's wallet."); }} className="text-[10px] px-1.5 py-0.5 rounded-full border border-red-300 text-red-600">Refund</button>
+              )}
               {canSend && quote.status === "accepted" && !m.paid_at && (
-                <span className="flex gap-1">{["cash", "transfer", "pos"].map((x) => (
-                  <button key={x} disabled={busy} onClick={() => run(supabase.rpc("mark_quote_milestone_paid", { p_milestone_id: m.id, p_method: x }), "Payment recorded in your income.")} className="text-[10px] px-1.5 py-0.5 rounded-full border border-green-600 text-green-700">{x}</button>
+                <span className="flex gap-1 items-center"><span className="text-[10px] text-gray-500">Paid outside CHS:</span>{["cash", "transfer", "pos"].map((x) => (
+                  <button key={x} disabled={busy} onClick={() => { if (window.confirm("Record this as already received outside CHS? The guest can instead pay from their CHS wallet, which is safer for both of you.")) run(supabase.rpc("mark_quote_milestone_paid", { p_milestone_id: m.id, p_method: x }), "Payment recorded in your income."); }} className="text-[10px] px-1.5 py-0.5 rounded-full border border-gray-400 text-gray-600">{x}</button>
                 ))}</span>
               )}
             </div>

@@ -14,6 +14,7 @@ import BookingStageCard from "@/components/BookingStageCard";
 import GuestArrivalPass from "@/components/GuestArrivalPass";
 import GuestRoomMenu from "@/components/GuestRoomMenu";
 import GuestEventQuote from "@/components/GuestEventQuote";
+import GuestBookingExtras from "@/components/GuestBookingExtras";
 
 interface Booking {
   id: string;
@@ -44,6 +45,17 @@ export default function MyBookingsPage() {
   const [roomLabel, setRoomLabel] = useState<Record<string, string>>({});
   const [typeName, setTypeName] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  // A notification can open one booking (/my-bookings?b=<id>): scroll to it and open its services panel.
+  const [focusId, setFocusId] = useState<string | null>(null);
+  useEffect(() => {
+    const b = new URLSearchParams(window.location.search).get("b");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (b) setFocusId(b);
+  }, []);
+  useEffect(() => {
+    if (!focusId || loading) return;
+    document.getElementById(`booking-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [focusId, loading]);
 
   async function loadBookings() {
     if (!session) return;
@@ -95,7 +107,7 @@ export default function MyBookingsPage() {
         ) : (
           <div className="space-y-3">
             {bookings.map((b) => (
-              <div key={b.id} className="bg-white rounded-xl border border-gray-200 p-4">
+              <div key={b.id} id={`booking-${b.id}`} className={`bg-white rounded-xl border p-4 ${focusId === b.id ? "border-chs-red ring-2 ring-chs-red/30" : "border-gray-200"}`}>
                 <p className="text-sm font-bold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
                 <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>
                 <p className="text-xs text-gray-500">{formatNaira(b.total_price)} stay</p>
@@ -111,6 +123,7 @@ export default function MyBookingsPage() {
                 {b.status === "confirmed" && <GuestArrivalPass bookingId={b.id} />}
                 {b.status === "confirmed" && <GuestRoomMenu bookingId={b.id} />}
                 {b.status !== "cancelled" && <GuestEventQuote bookingId={b.id} />}
+                <GuestBookingExtras bookingId={b.id} status={b.status} checkIn={b.check_in} startOpen={focusId === b.id} />
                 <GuestShortletConfirmation bookingId={b.id} />
                 <ShortletMessageThread bookingId={b.id} viewerRole="guest" />
               </div>

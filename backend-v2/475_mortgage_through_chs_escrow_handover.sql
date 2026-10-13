@@ -529,3 +529,4 @@ end $$;
 -- 475ab (Oct 12 2026) AGENT BADGE HARD REQUIREMENTS (applied live): see 485_agent_badge_requirements.sql. Supersedes the light approval in 483.
 -- 475ac (Oct 12 2026) MANAGED-STAMP RULE AND 6.5% SALE CAP (applied live): see 486_managed_rules_and_sale_cap.sql.
 -- 475ad (Oct 12 2026) TERMS V9 ACTIVATION (NOT APPLIED, prepared): see 487_terms_v9_activation.sql. Run only together with CURRENT_TERMS_VERSION=9 in code.
+-- 488/489/490 notes: 488 host console (booking_services, booking_change_requests); 489 date moves + CHS top-ups; 490 venue service payments via wallet, no escrow/commission (service_payment_log, setting event_quote_manual_payment). All applied live.

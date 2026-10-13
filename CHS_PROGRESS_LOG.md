@@ -536,3 +536,23 @@ The first badge build only checked that an agent was registered and verified. Re
 
 ## Managed-stamp rule, 6.5% sale cap, Terms V9 prepared (Oct 12, 2026)
 "Managed & Advertised by CHS" can now be set only where CHS holds an approved management agreement for that property; removing the stamp ends the open agreement. The managed-sale seller fee is capped at 6.5% (tiers 6 / 5 / 4 / 3 above that). Tested in rolled-back runs. Terms V9 is written and staged but NOT active: code still at version 8 until the switch-over steps in lib/termsVersion.ts are done together with backend-v2/487_terms_v9_activation.sql.
+
+
+## Event centre listed as shortlet showed no event services (Oct 13, 2026)
+"Event Centre / Hall, Independence Way" (Round 2 host) was saved as purpose shortlet with no hire category, so guests got the plain per-night form: no ushers, caterer, live band, security, capacity tiers or facilities, although the tiers (3) and facilities (11) existed. Data fixed live (purpose hire, category event_centre). Code guard added in PropertyActions: any shortlet-purpose listing that is an event centre/hall now opens the event booking form. Root cause: the listing form offers "Event centre" under Shortlet as well as Hire.
+
+
+## Host console, notification landing, service answers, change requests (Oct 13, 2026)
+Booking notifications to hosts used to open /owner (booking_request_link), never the request. They now open /host?tab=..., and the bell picks the tab (requests, paid, changes, services, stays, history). The host page is rebuilt as a console of tabs: Overview, Requests, Awaiting payment, Paid & deposits, Changes, Services, Stays & check-in, Events, History, My listings, Team & work, with a filter for shortlet / hotel & lodge / event centre. Hosts answer each requested service (we supply / guest arranges / cannot provide, with provider, price and note) and the guest sees the answer on My Bookings; guests can add services and ask to change guest numbers, which hosts approve or decline. Migration 488. Rolled-back tests passed (stranger refused, decline needs a reason, over-tier flagged, guest sees answers).
+
+
+## Date moves and CHS top-ups (Oct 13, 2026)
+Guests can ask to move a booking to another date (same length of stay; free dates only; peak-priced dates for shortlets and hotels refused; at most two moves). Hosts approve and the calendar moves. When a change costs more (bigger hall tier chosen by the host, or an extra amount), the guest pays the difference plus CHS's fee from their wallet into escrow; CHS commission rows grow by the same amounts, and the host's payout includes it. The change takes effect only once paid; unpaid top-ups lapse after 24 hours (setting booking_topup_pay_hours) and the booking stays as it was. Unpaid bookings simply cost more when paid. Migration 489. Rolled-back test: taken date refused, tier required when over capacity, top-up 265,000 charged (250,000 + 6%), booking, calendar and both commission rows updated, stranger and double payment refused, lapse works.
+
+## 13 Oct 2026 — Venue service payments through CHS, no escrow, no commission (migration 490, LIVE)
+- Guests pay each instalment of the venue's quotation (caterer, ushers, band, security...) from their CHS wallet straight into the venue's wallet, in order. Not escrowed, no CHS commission, withdrawable at once. Receipt SVC-xxxxxxxx. Logged in service_payment_log (the separate category).
+- Commission stays only on the booking itself (hall / deposit / upfront payment).
+- Venue can refund an instalment in one step (host_refund_service_payment, reason required; ref SVR-). If the venue cancels the booking (cancelled_by = owner), paid instalments auto-refund from the venue wallet; shortfall alerts admins.
+- Admin switch: platform_settings event_quote_manual_payment = 'off' stops "paid outside CHS" recording.
+- Screens: GuestEventQuote (Pay from wallet, fund-wallet link), EventQuoteHost (wallet-paid shown, Refund, outside-CHS buttons behind a confirm).
+- Tested rolled back: order, stranger, low balance, exact debit/credit, commission rows unchanged, refund, host-cancel trigger, manual-off, summary.

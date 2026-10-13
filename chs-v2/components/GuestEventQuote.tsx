@@ -9,7 +9,7 @@ import { formatNaira } from "@/lib/format";
 interface Quote {
   id: string; status: string; note: string | null; valid_until: string; total: number;
   lines: { label: string; qty: number; unit_price: number }[];
-  milestones: { id: string; label: string; amount: number; due_date: string; paid_at: string | null }[];
+  milestones: { id: string; label: string; amount: number; due_date: string; paid_at: string | null; paid_method?: string | null; payment_ref?: string | null }[];
 }
 const day = (iso: string) => new Date(iso + "T12:00:00+01:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Lagos" });
 
@@ -35,23 +35,38 @@ export default function GuestEventQuote({ bookingId }: { bookingId: string }) {
     if (error) setErr(error.message); else load();
   }
 
+  async function pay(id: string) {
+    setBusy(true); setErr(null);
+    const { error } = await supabase.rpc("pay_quote_milestone", { p_milestone: id });
+    setBusy(false);
+    if (error) setErr(error.message === "insufficient_balance" ? "NEEDS_FUNDS" : error.message); else load();
+  }
+
   return (
     <div className="mt-3 border border-gray-200 rounded-xl p-3 text-xs space-y-1">
       <p className="text-sm font-semibold">📄 Quotation for extra services · <span className="capitalize">{q.status}</span></p>
       {q.lines.map((l, i) => <p key={i}>{l.qty} × {l.label} · {formatNaira(l.unit_price)}</p>)}
       <p className="font-semibold">Total {formatNaira(q.total)}{q.status === "sent" ? ` · valid until ${day(q.valid_until)}` : ""}</p>
       {q.note && <p className="italic text-gray-600">“{q.note}”</p>}
-      <div className="border-t border-gray-100 pt-1">
-        {q.milestones.map((m) => <p key={m.id}>{m.label}: {formatNaira(m.amount)} by {day(m.due_date)}{m.paid_at ? " ✓ received" : ""}</p>)}
+      <div className="border-t border-gray-100 pt-1 space-y-1">
+        {q.milestones.map((m) => {
+          const next = q.status === "accepted" && !m.paid_at && q.milestones.find((x) => !x.paid_at)?.id === m.id;
+          return (
+            <div key={m.id} className="flex justify-between items-center gap-2">
+              <span>{m.label}: {formatNaira(m.amount)} by {day(m.due_date)}{m.paid_at ? ` ✓ paid${m.payment_ref ? ` · receipt ${m.payment_ref}` : m.paid_method ? ` (${m.paid_method}, recorded by the venue)` : ""}` : ""}</span>
+              {next && <button disabled={busy} onClick={() => pay(m.id)} className="px-2.5 py-1 rounded-full bg-chs-charcoal text-white font-semibold whitespace-nowrap">Pay {formatNaira(m.amount)} from wallet</button>}
+            </div>
+          );
+        })}
       </div>
-      <p className="text-[11px] text-gray-500">You pay these amounts to the venue directly. They are separate from your CHS booking payment, which CHS holds until you arrive.</p>
+      <p className="text-[11px] text-gray-500">Once you accept, pay each instalment from your CHS wallet straight to the venue, in order. It is not held in escrow and CHS takes no fee on it, so agree any refund with the venue; CHS can help if you report a problem on this booking. It is separate from your CHS booking payment, which CHS holds until you arrive.</p>
       {q.status === "sent" && (
         <div className="flex gap-2 pt-1">
           <button disabled={busy} onClick={() => respond(true)} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white font-semibold">Accept</button>
           <button disabled={busy} onClick={() => respond(false)} className="px-3 py-1.5 rounded-full border border-gray-300">Decline</button>
         </div>
       )}
-      {err && <p className="text-red-600">{err}</p>}
+      {err === "NEEDS_FUNDS" ? <p className="text-red-600">Your wallet balance is too low. <a href="/wallet" className="underline font-semibold">Fund your wallet</a>, then pay.</p> : err && <p className="text-red-600">{err}</p>}
     </div>
   );
 }
