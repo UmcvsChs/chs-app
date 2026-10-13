@@ -80,16 +80,20 @@ function Card({ r, onChanged }: { r: Row; onChanged: () => void }) {
   );
 }
 
-interface Payout { id: string; status: string; provider_name: string | null; provider_contact: string | null; amount_due: number; paid_at: string | null; paid_ref: string | null; note: string | null; label: string; property_title: string; check_in: string; reference: string; payment_status: string }
+interface Payout { id: string; status: string; provider_name: string | null; provider_contact: string | null; amount_due: number; advance_status?: string; advance_due?: number; advance_paid_at?: string | null; advance_paid_ref?: string | null; balance_due?: number; paid_at: string | null; paid_ref: string | null; note: string | null; label: string; property_title: string; check_in: string; reference: string; payment_status: string }
 interface Payouts { payouts: Payout[]; revenue: { held: number; earned: number; owed_to_providers: number; pending_to_providers: number } }
 
 function PayoutRow({ p, onChanged }: { p: Payout; onChanged: () => void }) {
   const [ref, setRef] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const advOwed = p.advance_status === "owed";
+  const advPaid = p.advance_status === "paid";
   async function pay() {
     setBusy(true); setErr(null);
-    const { error } = await supabase.rpc("admin_mark_provider_paid", { p_payout: p.id, p_ref: ref });
+    const { error } = advOwed
+      ? await supabase.rpc("admin_mark_provider_advance_paid", { p_payout: p.id, p_ref: ref })
+      : await supabase.rpc("admin_mark_provider_paid", { p_payout: p.id, p_ref: ref });
     setBusy(false);
     if (error) setErr(error.message); else onChanged();
   }
@@ -97,15 +101,18 @@ function PayoutRow({ p, onChanged }: { p: Payout; onChanged: () => void }) {
     <div className="bg-white rounded-lg border border-gray-200 p-2 space-y-1">
       <div className="flex justify-between gap-2">
         <p className="text-xs font-semibold text-chs-charcoal">{p.provider_name || "Provider"} · {p.label} · {formatNaira(p.amount_due)}</p>
-        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${p.status === "owed" ? "bg-red-100 text-red-700" : p.status === "pending" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>{p.status === "owed" ? "Pay now" : p.status === "pending" ? "Event not yet held" : "Paid"}</span>
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap ${p.status === "owed" ? "bg-red-100 text-red-700" : p.status === "pending" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>{advOwed ? "Pay advance now" : p.status === "owed" ? "Pay balance now" : p.status === "pending" ? "Event not yet held" : "Paid"}</span>
       </div>
       <p className="text-[10px] text-gray-500">{p.property_title} · {p.check_in} · {p.reference}{p.provider_contact ? ` · ${p.provider_contact}` : ""}</p>
+      {(advOwed || advPaid) && (
+        <p className="text-[10px] text-gray-700">Advance {formatNaira(p.advance_due || 0)}{advPaid ? ` — paid ${p.advance_paid_at ? formatDateTime(p.advance_paid_at) : ""} · ${p.advance_paid_ref}` : " — to transfer now"} · Balance after the event {formatNaira(p.balance_due ?? 0)}</p>
+      )}
       {p.note && <p className="text-[10px] text-amber-800">{p.note}</p>}
       {p.status === "paid" && <p className="text-[10px] text-green-700">Paid {p.paid_at ? formatDateTime(p.paid_at) : ""} · {p.paid_ref}</p>}
-      {(p.status === "owed" || p.status === "pending") && (
+      {(p.status === "owed" || p.status === "pending" || advOwed) && (
         <div className="flex gap-1">
           <input value={ref} onChange={(e) => setRef(e.target.value)} placeholder="Transfer reference" className="flex-1 border border-gray-300 rounded px-2 py-1 text-[11px]" />
-          <button disabled={busy || !ref.trim()} onClick={pay} className="px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Mark paid</button>
+          <button disabled={busy || !ref.trim()} onClick={pay} className="px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">{advOwed ? "Mark advance paid" : p.status === "pending" ? "Mark paid in full" : "Mark balance paid"}</button>
         </div>
       )}
       {err && <p className="text-[10px] text-red-600">{err}</p>}
@@ -135,7 +142,7 @@ function PayoutsSection() {
         <div className="bg-white border border-gray-200 rounded-lg p-2"><p className="text-gray-500">Providers, after their event</p><p className="font-bold">{formatNaira(r.pending_to_providers)}</p></div>
       </div>
       {d.payouts.length === 0 && <p className="text-[11px] text-gray-400">No provider payouts yet.</p>}
-      {d.payouts.map((p) => <PayoutRow key={p.id + p.status} p={p} onChanged={load} />)}
+      {d.payouts.map((p) => <PayoutRow key={p.id + p.status + (p.advance_status || "")} p={p} onChanged={load} />)}
     </div>
   );
 }

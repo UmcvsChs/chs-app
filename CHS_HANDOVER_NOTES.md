@@ -243,3 +243,7 @@ See CHS_PROGRESS_LOG.md. Test on the Royal Garden Events Centre (Test): Event Pr
 
 ## 496 service payments escrow (Oct 13 2026)
 Replaces direct-to-venue (490). See CHS_PROGRESS_LOG.md. Open: lawyer review of Terms V9 service wording; platform earnings tab does not yet include service fees (use Admin > Service sourcing > Service money).
+
+
+## 500 note
+Event advance: see CHS_PROGRESS_LOG 500. Change % in platform_settings `event_advance_pct`. Migration was applied in parts (a, c_admin, plus execute_sql patches); file 500_event_advance_payments.sql is the full reference.

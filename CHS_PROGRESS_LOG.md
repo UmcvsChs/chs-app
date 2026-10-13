@@ -625,3 +625,13 @@ Guests can ask to move a booking to another date (same length of stay; free date
 ## 499 – Category tags everywhere and a Hotels & Lodges view (Oct 13 2026)
 - Category tags (Shortlet / Hotel & Lodge / Event Centre) now also on deposits, "guest arrived, payout held", pending guest/host messages and correspondence rows.
 - New admin tab "Hotels & Lodges (live)": per hotel, requests to relay, host answers to release, urgent arrivals, in-house/arriving, payouts held, calendar freshness. Function admin_get_hotels.
+
+
+## 500 — Event advance payments (60%)
+- Setting `event_advance_pct` (default 60, 0 = off, max 90) and `event_advance_release_hours` (default 48). Event centres only.
+- Guest still pays everything into CHS escrow. At T-48h (sweep `_sweep_event_advances`, or admin `admin_release_event_advance`) CHS pays the advance: venue = 60% of (hall price − CHS commission) into the host wallet (ref ADV-); venue-supplied services 60% of (price − 4%) (ref SVA-); CHS-sourced providers get an advance record (advance_due, status owed) that admin pays by transfer and records (`admin_mark_provider_advance_paid`).
+- Balance after the event: `release_booking_payout` / `_service_release` pay only what remains; provider balance = amount_due − advance.
+- Cancellations: `_advance_clawback` (guest cancel, host cancel, admin refund) takes the advance back from the host wallet first, then the normal cancellation maths apply; any shortfall is stored (advance_recover_due) and admin is notified. `_svc_advance_unwind` does the same per service. Provider advance already paid → admin note + alert to recover or absorb.
+- Services paid after the venue advance went out are advanced at once (triggers on service_payments / service_provider_payouts).
+- Tested in rolled-back runs: full path (advance + balance totals match), guest cancel <48h, host cancel with empty wallet.
+- Screen: Admin → Service sourcing → payouts show Advance / Balance with separate Mark paid buttons. Terms V9 draft updated.
