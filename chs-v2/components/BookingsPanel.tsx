@@ -49,6 +49,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
   const [roomLabel, setRoomLabel] = useState<Record<string, string>>({});
   const [typeName, setTypeName] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   // A notification can open one booking (/my-bookings?b=<id>): scroll to it and open its services panel.
   const [focusId, setFocusId] = useState<string | null>(null);
   useEffect(() => {
@@ -63,11 +64,19 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
 
   async function loadBookings() {
     if (!session) return;
-    const { data } = await supabase
+    const query = () => supabase
       .from("shortlet_bookings")
       .select("id, check_in, check_out, time_slots, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
       .eq("guest_id", session.user.id)
       .order("check_in", { ascending: false });
+    let { data, error } = await query();
+    if (error) {
+      // A failed read must never look like "no bookings": try once more, and if it still fails keep what is on screen and say so.
+      await new Promise((r) => setTimeout(r, 1200));
+      ({ data, error } = await query());
+    }
+    if (error) { setLoadError(true); setLoading(false); return; }
+    setLoadError(false);
     const list = (data as unknown as Booking[]) || [];
     setBookings(list);
     const unitIds = list.map((b) => b.unit_id).filter(Boolean) as string[];
@@ -111,7 +120,13 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
         </Link>
 
         </>)}
-        {shown.length === 0 ? (
+        {loadError && (
+          <div className="mb-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+            We could not load your bookings just now. Your bookings are safe.{" "}
+            <button onClick={() => { setLoading(true); loadBookings(); }} className="font-semibold underline">Try again</button>
+          </div>
+        )}
+        {shown.length === 0 && !loadError ? (
           <p className="text-sm text-gray-400 text-center py-10">No shortlet bookings yet.</p>
         ) : (
           <div className="space-y-3">
