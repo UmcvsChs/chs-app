@@ -665,3 +665,9 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - In-app Guide section 19C and 9 new FAQ items. Feature catalog section 19 (18 features) and 18 glossary entries with tap-to-explain tips on the new screens.
 - CHS_USERS_GUIDE.docx regenerated from GuideContent.tsx (the docx had fallen behind the in-app guide). Feature catalog PDF and xlsx regenerated in full (they stopped at section 16; 17 and 18 were missing).
 - Explainer list, both demo guides, Property Manager Guide (new section 8), System Documentation and Fix Tracker (addenda), Handover Notes (503-508 section), new Test Checklist. All copied to chs-v2/public/documents and listed on /admin/document-site.
+
+## 509 — Escrow Oversight shows event centres split 60/40 (14 Oct 2026, later)
+- Problem: the advance existed in the database but Admin → Escrow Oversight still listed an event booking as one amount with "Release to host", which paid the whole host payout at once; host screens said the whole payout comes on arrival.
+- Fix: get_held_shortlet_bookings returns split_release, advance_pct, advance_expected, advance_paid, advance_released, host_net. release_shortlet_funds_to_host now releases ONLY the advance when the booking is an event centre, the advance is on and not yet paid, and the event day has not arrived; afterwards it releases the balance. get_arrival_state returns the split fields. Admin screen shows the split line and button label ("Release advance (60%) ₦x", then "Release balance ₦y"); HostPayoutStatus explains the two parts.
+- Timing of the automatic advance is the setting event_advance_release_hours (48 = two days before the event). Raise it (for example 720) to pay the advance almost as soon as the guest pays; 0 percent in event_advance_pct switches the whole system off.
+- Tested (rolled back): admin release on booking 018429ef paid the host ₦781,632 and left the payment held.

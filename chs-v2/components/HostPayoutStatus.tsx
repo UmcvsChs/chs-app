@@ -10,6 +10,7 @@ import { formatNaira, formatDateTime } from "@/lib/format";
 interface ArrivalState {
   state: string; host_net: number; auto_release_at: string | null; confirmed_at: string | null;
   issue_note: string | null; release_requested_at: string | null; check_in: string;
+  split?: boolean; advance_pct?: number; advance_paid?: number; advance_released?: boolean; advance_expected?: number;
 }
 
 export default function HostPayoutStatus({ bookingId }: { bookingId: string }) {
@@ -41,6 +42,17 @@ export default function HostPayoutStatus({ bookingId }: { bookingId: string }) {
   }
 
   const box = "mt-2 rounded-lg px-2.5 py-2 text-[11px]";
+  // Event centres: the payout comes in two parts, so say so instead of one lump sum.
+  if (s.split && ["awaiting_arrival_day", "release_requested"].includes(s.state)) {
+    const adv = s.advance_released ? s.advance_paid || 0 : s.advance_expected || 0;
+    return (
+      <p className={`${box} text-gray-700 bg-gray-50`}>
+        💰 Your net payout is {formatNaira(s.host_net)}, paid in two parts. <b>{s.advance_pct}% advance ({formatNaira(adv)})</b>:{" "}
+        {s.advance_released ? "already in your wallet." : "released to your wallet shortly before the event (CHS can release it earlier) so you can prepare."}{" "}
+        <b>Balance ({formatNaira(s.host_net - adv)})</b>: held by CHS and released after the event, when your guest confirms or automatically {autoAt ? `at ${autoAt}` : "after check-in"}.
+      </p>
+    );
+  }
   if (s.state === "guest_confirmed") return <p className={`${box} text-green-700 bg-green-50`}>✓ Paid — your guest arrived and confirmed everything is as described. {formatNaira(s.host_net)} was released to your wallet.</p>;
   if (s.state === "auto_released") return <p className={`${box} text-green-700 bg-green-50`}>✓ Paid — {formatNaira(s.host_net)} was released to your wallet automatically (no problem reported within 24 hours of check-in).</p>;
   if (s.state === "released") return <p className={`${box} text-green-700 bg-green-50`}>✓ Paid — {formatNaira(s.host_net)} has been released to your wallet.</p>;
@@ -48,11 +60,12 @@ export default function HostPayoutStatus({ bookingId }: { bookingId: string }) {
   if (s.state === "awaiting_arrival_day") return <p className={`${box} text-gray-600 bg-gray-50`}>💰 {formatNaira(s.host_net)} (your net payout) is held safely by CHS. It is released to you the moment your guest arrives on {s.check_in} and confirms everything is as described.</p>;
   if (s.state === "release_requested") return <p className={`${box} text-amber-700 bg-chs-amber-light`}>⏳ You asked CHS to release your {formatNaira(s.host_net)}. We have asked your guest to confirm{autoAt ? `; otherwise it is released automatically at ${autoAt}` : ""}.</p>;
 
-  // awaiting_guest_confirmation
+  // awaiting_guest_confirmation (for an event centre whose advance is paid, only the balance is left)
+  const left = s.host_net - (s.split && s.advance_released ? s.advance_paid || 0 : 0);
   return (
     <div className={`${box} bg-chs-amber-light`}>
       <p className="font-semibold text-chs-charcoal">💰 Your guest&apos;s check-in day has arrived.</p>
-      <p className="text-gray-600 mt-0.5">{formatNaira(s.host_net)} (your net payout) is released as soon as your guest confirms they have arrived{autoAt ? `, or automatically at ${autoAt}` : ""}. If your guest is already in, you can ask CHS to release it now.</p>
+      <p className="text-gray-600 mt-0.5">{formatNaira(left)} {s.split && s.advance_released ? "(the balance of your payout)" : "(your net payout)"} is released as soon as your guest confirms they have arrived{autoAt ? `, or automatically at ${autoAt}` : ""}. If your guest is already in, you can ask CHS to release it now.</p>
       <input type="text" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="Optional note to CHS (e.g. guest checked in at 3pm)" className="w-full mt-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
       {error && <p className="text-chs-red mt-1">{error}</p>}
       <button onClick={ask} disabled={busy} className="w-full mt-1.5 py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">{busy ? "Sending…" : "My guest has arrived — ask CHS to release my payment"}</button>

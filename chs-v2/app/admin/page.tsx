@@ -635,6 +635,7 @@ function AdminDashboardInner() {
     id: string; guest_full_name: string; guest_phone: string; total_price: number; guest_commission_amount: number;
     host_commission_amount: number; status: string; check_in: string; check_out: string; created_at: string;
     property_title: string; owner_id: string; host_name: string;
+    split_release?: boolean; advance_pct?: number; advance_expected?: number; advance_paid?: number; advance_released?: boolean; host_net?: number;
   }[]>([]);
   // Real refund controls on the Escrow Oversight screen.
   const [refundOpenKey, setRefundOpenKey] = useState<string | null>(null);
@@ -798,9 +799,13 @@ function AdminDashboardInner() {
   }
   async function handleReleaseShortletBooking(id: string) {
     setEscrowNotice(null);
+    const bk = heldShortletBookings.find((x) => x.id === id);
+    const advanceOnly = !!bk?.split_release && !bk?.advance_released && new Date(bk.check_in + "T00:00:00") > new Date();
     const { error } = await supabase.rpc("release_shortlet_funds_to_host", { p_booking_id: id });
     if (error) { setActionError(error.message); return; }
-    setEscrowNotice("Released to the host. They have been notified of the exact amount and the commission deducted.");
+    setEscrowNotice(advanceOnly
+      ? `Advance released: ${formatNaira(bk?.advance_expected || 0)} (${bk?.advance_pct}% of the host's payout) is in the host's wallet. The balance of ${formatNaira((bk?.host_net || 0) - (bk?.advance_expected || 0))} stays held until the event.`
+      : "Released to the host. They have been notified of the exact amount and the commission deducted.");
     await loadEscrowData();
   }
   // Real, new: one shared refund action for every payer type (tenant,
@@ -4855,7 +4860,7 @@ function AdminDashboardInner() {
               type RefundRun = (reason: string) => PromiseLike<{ error: { message: string } | null }>;
               type UnifiedItem = {
                 key: string; label: string; category: string; amount: number; date: string;
-                action: string; onRelease: () => void; releaseBlockedNote?: string;
+                action: string; onRelease: () => void; releaseBlockedNote?: string; detail?: string;
                 refund?: { run: RefundRun; opensAt: string | null; defaulterLabel: string };
               };
               const unified: UnifiedItem[] = [
@@ -4872,7 +4877,9 @@ function AdminDashboardInner() {
                 ...heldShortletBookings.map((b) => ({
                   key: `booking-${b.id}`, label: `${b.property_title} — ${b.guest_full_name}`, category: b.status === "confirmed" ? "Booking (confirmed)" : "Booking (awaiting host)",
                   amount: Number(b.total_price), date: b.created_at,
-                  action: "Release to host", onRelease: () => handleReleaseShortletBooking(b.id),
+                  action: b.split_release && !b.advance_released && new Date(b.check_in + "T00:00:00") > new Date() ? `Release advance (${b.advance_pct}%) ${formatNaira(b.advance_expected || 0)}` : b.split_release && b.advance_released ? `Release balance ${formatNaira((b.host_net || 0) - (b.advance_paid || 0))}` : "Release to host",
+                  detail: b.split_release ? `Event centre: host payout ${formatNaira(b.host_net || 0)} = ${b.advance_pct}% advance ${formatNaira(b.advance_expected || 0)} (${b.advance_released ? "already paid" : "not yet released"}) + balance ${formatNaira((b.host_net || 0) - (b.advance_expected || 0))} (held until the event). The rest of the amount shown is CHS's commission and fees.` : undefined,
+                  onRelease: () => handleReleaseShortletBooking(b.id),
                   releaseBlockedNote: b.status !== "confirmed" ? "Not releasable yet — the host has not accepted this booking." : undefined,
                   refund: { run: (reason: string) => supabase.rpc("refund_shortlet_booking", { p_booking_id: b.id, p_reason: reason }), opensAt: null, defaulterLabel: "host" },
                 })),
@@ -4917,6 +4924,7 @@ function AdminDashboardInner() {
                               <span className="text-[11px] font-bold text-chs-amber-dark whitespace-nowrap ml-2">{formatNaira(u.amount)}</span>
                             </div>
 
+                            {u.detail && <p className="text-[9px] text-chs-charcoal bg-chs-amber-light rounded px-1.5 py-1 mt-1">{u.detail}</p>}
                             <div className="flex gap-1.5 mt-1.5">
                               <button onClick={u.onRelease} disabled={!!u.releaseBlockedNote}
                                 className="flex-1 py-1 rounded-full bg-chs-charcoal text-white text-[9px] font-semibold disabled:opacity-40">

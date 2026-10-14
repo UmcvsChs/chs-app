@@ -4,7 +4,7 @@ Deploy the zip first (the database changes are already live). Test accounts: hos
 
 ## A. Event centre advance (admin + host + guest)
 1. Guest: open booking 018429ef (already paid). Confirm it shows confirmed and paid.
-2. Admin → Event Centres → find the booking → press **Release advance now**.
+2. Admin → Escrow Oversight (or Event Centres) → find the booking. It shows the split: 60% advance now, 40% balance after the event. Press **Release advance (60%)** (Event Centres has the same as "Release advance now").
 3. Expected: the host wallet is credited ₦781,632 with a reference starting ADV-. The balance (₦521,088) is paid after the event.
 4. Press it again: expected "Nothing was released (already paid)".
 5. Admin → Service sourcing → payouts: for CHS-sourced providers, check the advance and balance buttons.
