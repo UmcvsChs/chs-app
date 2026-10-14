@@ -412,6 +412,10 @@ export const SERVICE_TNC: Record<string, ServiceTnc> = {
         "body": "The initial term is 3 years, renewable by agreement in 2-year periods. After the first 12 months either side may end the arrangement with 90 days' written notice. If you end it early without cause, a termination fee of 12 months' average fees applies in the first two years and 6 months' in the third. Either side may end it at once for fraud, insolvency or serious breach. On ending, CHS hands over all records, accounts, keys and funds within 30 days."
       },
       {
+        "h": "6A. Event Centres, Halls and Open Venues",
+        "body": "If the property is an event centre, hall, open field, stadium or similar venue, you must give CHS, before approval, the venue's operating permit or licence (which states its licensed capacity), a fire safety certificate and a public liability insurance certificate, and you must keep them valid for as long as CHS manages the venue. CHS may refuse to relay or confirm an event that would exceed the licensed capacity or that needs a permit, clearance or insurance the organiser has not shown. Event payments are paid through CHS: after a guest pays, CHS releases an advance (currently 60% of what the venue earns, after CHS's fee) shortly before the event and the balance after it, and takes the advance back first if the event is cancelled. On a managed venue the management fee replaces the host-side booking commission, so the booking commission is not charged as well; the guest-side fee and the fees on extra services stay as published."
+      },
+      {
         "h": "7. Liability and Insurance",
         "body": "The Management Agreement states the insurance each side must carry, including property, public-liability and fire cover for the hotel. CHS is not liable for losses from events outside its control or from conditions it was not told about. Its liability is limited to direct loss caused by its own proven negligence or fraud."
       },

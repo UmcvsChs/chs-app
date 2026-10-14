@@ -35,6 +35,11 @@ Deploy the zip first (the database changes are already live). Test accounts: hos
 2. For a test only: enter a test tax ID, rate 7.5, switch on, make a small test booking, check the report shows the fee and its VAT (a ₦107.50 fee shows ₦7.50 VAT). Then switch it OFF again.
 3. A refund of that booking shows the entry as reversed.
 
+## E2. Managing a hotel / event centre
+1. Host page → the event centre → "Ask CHS to manage this property". Choose capacity "I am the owner". Upload only proof of ownership: the form should list the permit/licence, fire certificate and insurance as required (the submit button stays off until all are attached).
+2. Submit with all four. Admin → CHS stamp: open the request, tick documents checked, enter base fee 5, incentive 10, term 36, approve.
+3. Book the venue as a guest and check the price: the host commission is 0 and the host payout equals the full booking price. Compare with an unmanaged venue (4%).
+
 ## F. Documents
 Admin → Documents page lists Terms V9 draft, security audit, feature catalog, explainer list, handover notes and the rest. Open each.
 

@@ -189,6 +189,10 @@ const FAQ_ITEMS = [
     a: "Yes. Open fields and stadiums are listed under Hire. The page shows the ground details (surface, floodlights, toilets, safe crowd limit, rain plan, curfew). You must keep to the crowd limit and the curfew.",
   },
   {
+    q: "What does CHS need before it can manage my hotel or event centre, and what does it cost?",
+    a: "Proof of ownership, the venue's operating permit or licence (it states the licensed capacity), a public liability insurance certificate and, for event centres and open venues, a fire safety certificate, plus company papers or a power of attorney if you are not the owner. CHS checks them. The fee is 5% of gross revenue plus 10% of gross operating profit, which replaces the usual host-side booking commission (guests still pay the published guest-side fee). The full terms are shown before you accept them.",
+  },
+  {
     q: "Does CHS charge VAT on top of its fees?",
     a: "Not at present. If CHS becomes required to charge or account for VAT on its own fees, the amount shown to you already includes it unless CHS tells you before you pay (term 46). CHS will tell you first if this ever changes what you pay.",
   },

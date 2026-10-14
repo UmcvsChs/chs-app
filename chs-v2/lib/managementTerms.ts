@@ -2,7 +2,11 @@ import { SERVICE_TNC } from "@/types/serviceTnc";
 
 // What an owner agrees to when handing a property to CHS. The full terms live in types/serviceTnc.ts and are shown in
 // a scroll-to-the-end screen. The version is stored with each request. NOT yet reviewed by a lawyer.
-export const MANAGEMENT_TERMS_VERSION = "2";
+export const MANAGEMENT_TERMS_VERSION = "3";
+
+// Hire categories that CHS manages under the hotel / commercial terms.
+export const COMMERCIAL_HIRE_CATEGORIES = ["hotel_lodge", "event_centre", "open_field", "stadium", "cinema_entertainment", "recreational_sports"];
+export const EVENT_VENUE_CATEGORIES = ["event_centre", "open_field", "stadium", "cinema_entertainment", "recreational_sports"];
 
 export const MANAGEMENT_PURPOSES = [
   { value: "rent", label: "Rent (long-term letting)", tnc: "Managed letting (rent)" },
@@ -31,12 +35,16 @@ export const CAPACITIES = [
 ] as const;
 
 // The documents CHS needs before it can take a property. One upload box per line.
-export function requiredDocuments(capacity: string, purposes: string[]): string[] {
+export function requiredDocuments(capacity: string, purposes: string[], hireCategory?: string | null): string[] {
   const docs: string[] = ["Proof of ownership (title document, deed, or purchase agreement)"];
   if (capacity === "co_owned") docs.push("Written consent of all co-owners or family members");
   if (capacity === "attorney") docs.push("Power of attorney (notarised) in CHS's favour or the agent's", "Valid ID of the owner");
   if (capacity === "company") docs.push("CAC registration certificate", "Board resolution authorising CHS to manage or sell");
-  if (purposes.includes("hotel")) docs.push("Operating licences and certificates (tourism, fire, business premises)");
+  if (hireCategory && EVENT_VENUE_CATEGORIES.includes(hireCategory)) {
+    docs.push("Venue operating permit or licence (it must state the licensed capacity)", "Fire safety certificate", "Public liability insurance certificate");
+  } else if (hireCategory === "hotel_lodge") {
+    docs.push("Operating licences and certificates (tourism, fire, business premises)", "Public liability insurance certificate");
+  } else if (purposes.includes("hotel")) docs.push("Operating licences and certificates (tourism, fire, business premises)");
   return docs;
 }
 

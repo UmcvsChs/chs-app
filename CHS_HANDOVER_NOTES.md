@@ -294,3 +294,10 @@ Read CHS_PROGRESS_LOG.md for the order. Everything below is applied to the live 
 - Platform earnings tab excludes service fees (use Admin > Service sourcing > Service money). Change-request answers and host-initiated chat skip the admin relay. Host calendar grid does not draw event sessions; iCal ignores sessions.
 - Rain plan and safe crowd limit on open grounds are shown but not enforced. Seating diagrams are illustrations only.
 - Launch items: lawyer, CAC, launch switches, SMS secret rotation, WhatsApp provider, Netlify redirect URLs, WebAuthn and Paystack for the new address.
+
+
+## 510 (14 October 2026): management of hotels and event centres
+- Host page and Owner page now show "Ask CHS to manage this property" for hotel_lodge, event_centre, open_field, stadium, cinema_entertainment and recreational_sports (it was hidden for every hire property). Purpose is hotel only for these. `lib/managementTerms.ts`: COMMERCIAL_HIRE_CATEGORIES, EVENT_VENUE_CATEGORIES, `requiredDocuments(capacity, purposes, hireCategory)`; management terms version 3 with section 6A.
+- `request_chs_management_v2` refuses a commercial venue without documents whose labels match permit or licence, fire (event/open venues), and insurance (all commercial). Labels come from the frontend list; keep them in step.
+- `_chs_managed_hospitality(property)` is true when the property is chs_managed and has an approved mandate whose purposes include shortlet or hotel. Trigger `managed_no_host_commission_t` (before insert on shortlet_bookings) sets host_commission_amount to 0 for such properties; `get_real_shortlet_pricing` shows host pct 0. A 0-value host commission row is still written (harmless). Service fees (6% guest, 4% host) unchanged. The event advance base (total_price less host commission) therefore becomes the full price on a managed venue.
+- Open: no expiry tracking on the uploaded permit, fire and insurance documents; renewal-year rent commission on managed rentals unchanged.

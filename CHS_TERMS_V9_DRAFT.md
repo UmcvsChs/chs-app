@@ -270,6 +270,8 @@ This applies to every listing that carries a CHS stamp, to owners who ask CHS to
 
 - Handing a property to CHS. An owner asks CHS to manage a property through the app, says in what capacity they are acting, uploads the documents CHS asks for and accepts the management terms for that service. CHS checks the documents before approving. The stamp is awarded only when CHS approves. Either side may end the arrangement under the management terms, and the stamp is then removed.
 
+- Hotels, lodges, event centres and other venues. A commercial venue is handed to CHS under the hotel and commercial management terms. Before CHS can approve it the owner must give proof of ownership, the venue's operating permit or licence (which states its licensed capacity) and a public liability insurance certificate, and for an event centre or open venue also a fire safety certificate, and must keep them valid while CHS manages the venue. On a managed venue the management fee replaces the host-side booking commission, so that commission is not charged as well; the guest-side fee and the fees on extra services stay as published.
+
 - Misuse. Using a CHS stamp, tag, name or logo on a property CHS has not stamped, copying or changing a stamp, or using it on a sign, advert or document without CHS's written approval is misuse. It can lead to suspension, removal of listings and a report to the police.
 
 42. CHS-approved agents

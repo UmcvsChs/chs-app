@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { uploadDocument } from "@/lib/storage";
 import ServiceTncGate from "@/components/ServiceTncGate";
 import { SERVICE_TNC } from "@/types/serviceTnc";
-import { CAPACITIES, COMPREHENSION, MANAGEMENT_PURPOSES, MANAGEMENT_TERMS_VERSION, feeLineFor, feeTermsFor, requiredDocuments, tncKeyFor } from "@/lib/managementTerms";
+import { CAPACITIES, COMPREHENSION, MANAGEMENT_PURPOSES, MANAGEMENT_TERMS_VERSION, feeLineFor, feeTermsFor, requiredDocuments, tncKeyFor, COMMERCIAL_HIRE_CATEGORIES } from "@/lib/managementTerms";
 
 // On each of an owner's properties: ask CHS to manage it, see where the request stands, or ask CHS to stop.
 // The owner picks what CHS should manage it for, says in what capacity, uploads the required documents, reads the full
@@ -14,11 +14,12 @@ import { CAPACITIES, COMPREHENSION, MANAGEMENT_PURPOSES, MANAGEMENT_TERMS_VERSIO
 // approves; approval, not the owner, turns on the "Managed & Advertised by CHS" stamp.
 interface Mandate { id: string; property_id: string; purposes: string[]; status: string; admin_note: string | null; tag: string | null }
 
-export default function ManageByChs({ propertyId, defaultPurpose }: { propertyId: string; defaultPurpose?: string }) {
+export default function ManageByChs({ propertyId, defaultPurpose, hireCategory }: { propertyId: string; defaultPurpose?: string; hireCategory?: string | null }) {
+  const commercial = !!hireCategory && COMMERCIAL_HIRE_CATEGORIES.includes(hireCategory);
   const { session } = useAuth();
   const [m, setM] = useState<Mandate | null | undefined>(undefined);
   const [open, setOpen] = useState(false);
-  const [purposes, setPurposes] = useState<string[]>(defaultPurpose && ["rent", "shortlet", "sale"].includes(defaultPurpose) ? [defaultPurpose] : []);
+  const [purposes, setPurposes] = useState<string[]>(commercial ? ["hotel"] : defaultPurpose && ["rent", "shortlet", "sale"].includes(defaultPurpose) ? [defaultPurpose] : []);
   const [capacity, setCapacity] = useState("");
   const [files, setFiles] = useState<Record<string, File | null>>({});
   const [note, setNote] = useState("");
@@ -41,7 +42,7 @@ export default function ManageByChs({ propertyId, defaultPurpose }: { propertyId
     load();
   }, [load]);
 
-  const docSlots = capacity ? requiredDocuments(capacity, purposes) : [];
+  const docSlots = capacity ? requiredDocuments(capacity, purposes, hireCategory) : [];
   const docsReady = docSlots.length > 0 && docSlots.every((d) => files[d]);
   const quizPassed = COMPREHENSION.every((c, i) => answers[i] === c.correct);
   const canSubmit = purposes.length > 0 && !!capacity && docsReady && termsRead && quizPassed && accept && !busy;
@@ -121,7 +122,7 @@ export default function ManageByChs({ propertyId, defaultPurpose }: { propertyId
           <div>
             <p className="font-bold text-chs-charcoal mb-1">1. What should CHS manage this property for?</p>
             <div className="space-y-1">
-              {MANAGEMENT_PURPOSES.map((p) => (
+              {MANAGEMENT_PURPOSES.filter((p) => !commercial || p.value === "hotel").map((p) => (
                 <label key={p.value} className="flex items-start gap-2"><input type="checkbox" checked={purposes.includes(p.value)} onChange={() => toggle(p.value)} className="mt-0.5" />
                   <span><b>{p.label}</b><span className="block text-[10px] text-gray-500">{feeLineFor(p.value)}</span></span></label>
               ))}

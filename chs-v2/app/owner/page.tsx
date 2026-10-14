@@ -911,6 +911,7 @@ export default function OwnerDashboard() {
               )}
 
               {property.purpose !== "hire" && !property.hire_category && <ManageByChs propertyId={property.id} defaultPurpose={property.purpose} />}
+              {property.hire_category && ["hotel_lodge", "event_centre", "open_field", "stadium", "cinema_entertainment", "recreational_sports"].includes(property.hire_category) && <ManageByChs propertyId={property.id} defaultPurpose="hotel" hireCategory={property.hire_category} />}
               {property.purpose === "rent" && property.chs_service === "chs_managed" && <RentPlanSettings propertyId={property.id} />}
               {property.purpose !== "hire" && !property.hire_category && <ViewingSlotsEditor propertyId={property.id} />}
 

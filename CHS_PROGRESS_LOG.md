@@ -671,3 +671,7 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - Fix: get_held_shortlet_bookings returns split_release, advance_pct, advance_expected, advance_paid, advance_released, host_net. release_shortlet_funds_to_host now releases ONLY the advance when the booking is an event centre, the advance is on and not yet paid, and the event day has not arrived; afterwards it releases the balance. get_arrival_state returns the split fields. Admin screen shows the split line and button label ("Release advance (60%) ₦x", then "Release balance ₦y"); HostPayoutStatus explains the two parts.
 - Timing of the automatic advance is the setting event_advance_release_hours (48 = two days before the event). Raise it (for example 720) to pay the advance almost as soon as the guest pays; 0 percent in event_advance_pct switches the whole system off.
 - Tested (rolled back): admin release on booking 018429ef paid the host ₦781,632 and left the payment held.
+
+
+## 510 — Managing hotels and event centres (14 Oct 2026)
+- Management request now available for hotels, event centres and other commercial venues (Host and Owner pages). Required documents enforced in request_chs_management_v2. Management terms v3 section 6A. Host-side booking commission removed on managed hotels/shortlets/event centres (trigger plus pricing). Terms V9 term 41 bullet, Guide 19C, FAQ, catalog and glossary updated. Tested in rolled-back runs.

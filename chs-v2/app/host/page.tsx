@@ -1,6 +1,7 @@
 "use client";
 
 import HostStayOffers from "@/components/HostStayOffers";
+import ManageByChs from "@/components/ManageByChs";
 import OpenVenueProfile from "@/components/OpenVenueProfile";
 import NotificationBell from "@/components/NotificationBell";
 import { useEffect, useState } from "react";
@@ -135,6 +136,7 @@ export default function HostDashboardPage() {
             <div className="mt-2"><HouseRulesUpload propertyId={l.id} session={session} /></div>
             <HostHotelTools propertyId={l.id} />
             <HostStayOffers propertyId={l.id} />
+            {["hotel_lodge", "event_centre", "open_field", "stadium", "cinema_entertainment", "recreational_sports"].includes(l.hire_category || "") && <div className="mt-2 border border-gray-200 rounded-xl bg-white p-3"><ManageByChs propertyId={l.id} defaultPurpose="hotel" hireCategory={l.hire_category} /></div>}
             {(l.hire_category === "open_field" || l.hire_category === "stadium") && <OpenVenueProfile propertyId={l.id} editable />}
             {l.hire_category === "hotel_lodge" && <HotelOperations propertyId={l.id} />}
             <Link href={`/host/calendar/${l.id}`} className="mt-2 block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
