@@ -45,3 +45,7 @@ Admin → Documents page lists Terms V9 draft, security audit, feature catalog, 
 
 ## Report back
 For each failed step note: the step number, what you saw, a screenshot.
+
+
+## Booking messages
+1. Guest sends a message on a booking: it appears in Admin > Bookings tab (amber box). 2. Admin approves: host gets a notification and a Messages tab badge. 3. Host opens it and replies; badge clears. 4. Guest taps 'Open the change request form', asks for more guests; host answers in Changes.

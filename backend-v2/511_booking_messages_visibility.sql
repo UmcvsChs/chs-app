@@ -1,0 +1,3 @@
+-- Applied via Supabase migration 511_booking_messages_visibility.
+-- mark_shortlet_messages_read(booking); get_host_console now returns unread_msgs + last_msg;
+-- host notification link -> /host?tab=messages; shortlet_message_moderation set to 'always' (every booking message reviewed by CHS before delivery).

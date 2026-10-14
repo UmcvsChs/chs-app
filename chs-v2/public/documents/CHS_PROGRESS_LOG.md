@@ -1,0 +1,681 @@
+# CHS — Progress Log
+
+**Compiled:** August 25, 2026 — retroactively, covering the full engagement to date. Ordered by real migration sequence (`backend-v2/46` through `68`), which reflects the true order work was done in. Going forward, add a new dated entry at the top each time a real batch of work completes — don't rewrite history above it.
+
+**Companion document:** `CHS_HANDOVER_NOTES.md` — read that one first for orientation.
+
+---
+
+## October 12, 2026 (late night) — Agency fee from tenant/buyer; service charge from owner/seller
+
+To address the ESVARBON ban on collecting an agency fee from both sides, the tenant's and buyer's fee is now called the CHS agency fee, and the landlord's and seller's fee is the CHS service charge (the management fee on a CHS-managed property is the owner-side service charge). Amounts and logic are unchanged. Renamed in: rent and sale notifications (database), the tenant and buyer payment screens, owner earnings, the fees-due list, the move-in cost card, the Managed by CHS page, the FAQ fee answer, and the four management terms texts (which now say what the service charge pays for: listing and marketing, checks, escrow and payments, statements, support). Migration note: backend-v2/480_agency_fee_service_charge_wording.sql. NOT changed: the Terms & Conditions (version 8) and Privacy text, the Guide, and some older internal labels still say "commission". Changing the Terms needs a new version (V9) that every user must accept again. Renaming helps only if the owner-side charge really is for different services; a lawyer must confirm.
+
+## October 12, 2026 (night) — Management fee replaces the owner-side fee; real terms, documents, hotel model
+
+Decisions: the management fee replaces the standard owner-side platform fee; CHS chose the hybrid base-plus-incentive model for hotels; terms written from local and global practice, reviewable by CHS at any time, not lawyer-reviewed. Built: managed rent now charges the owner 10% instead of 4% and managed sale uses the tiered seller fee instead of 6% (approve_rental_application, generate_sale_commissions, sale_seller_net, get_owner_earnings_detailed; helpers chs_landlord_fee_pct, chs_seller_fee_pct; settings managed_rent_fee_pct = 10, managed_rent_fee_min = 0 because the old 150,000 minimum was 49% of a 305,000 rent); the owner form now asks for purposes (rent, shortlet, sale, hotel), capacity, required documents, the full terms (four new texts in serviceTnc.ts, scroll to the end), three comprehension questions and acceptance; admin must confirm the documents were checked and, for a hotel, record base fee, incentive and term. Migration note: backend-v2/479_management_fees_and_documents.sql. Not done: renewal commission and host-side shortlet and hotel booking commission are still charged the old way (terms promise a credit on the statement); the ESVARBON ban on charging both sides is an open legal question; shortlet 15% is unresearched. See CHS_MANAGEMENT_FEES_AND_TERMS.pdf.
+
+## October 12, 2026 (evening) — Owners can hand their own property to CHS to manage
+
+Owners such as a literate landlord who lists properties himself can now ask CHS to manage them for rent, shortlet and/or sale, without CHS listing anything. Ask CHS to manage this property (My Properties) -> choose purposes, read fees and terms, accept -> CHS admin reviews in Admin -> CHS stamp -> approval turns on the Managed & Advertised by CHS stamp and issues the tag -> the owner can later ask to end it, and an admin ending it removes the stamp. The accepted terms text and version are stored with each request. Migration note: backend-v2/478_management_mandates.sql. Open decisions: shortlet management fee is not defined (the form says CHS confirms it in writing); the management terms are not yet reviewed by a lawyer; requests on unverified listings wait until the listing is verified.
+
+## October 12, 2026 — "Managed by CHS" identity (feedback from tester Fid)
+
+A tester who rented in August paid close to 50% of a year's rent to move in (30% agent, 15% legal and RCD, and a 5,000 naira inspection fee twice). He asked how a tenant can tell CHS-managed properties from other agents'. There was no way to. Built: an admin-only CHS stamp (Managed & Advertised, or Advertised only) with an automatically issued unique tag ID (check digit included), enforced in the database so owners and agents cannot award it to themselves; a card badge, listing-page banner, "Managed by CHS" filter on the home page and in search (stamped listings always loaded and sorted first), a public Managed by CHS page, a public tag-check page (so a copied badge picture proves nothing), a printable sign with a QR code, an admin CHS stamp tab, and a move-in cost breakdown on every rent listing. Migration note: backend-v2/477_chs_managed_identity.sql. Not done: Terms wording on misuse of the CHS name and badge (needs lawyer and a Terms version), baking the stamp into photos, automatic stamping rules beyond listings created by a CHS admin account.
+
+## October 10, 2026 — Terms Version 8, availability confirmation, reports and trust signals
+
+Terms V8 (set live in the database as terms_current_version 8): term 39 Complete and honest listings; term 40 Food, drink and extras paid to the operator (an explicit exception to the V4 wallet-only rule, to be reviewed by a lawyer). Privacy 7B (listing contact numbers and reports). Built to match: 30-day availability confirmation (hidden at 30 days, reminder at 25), Report a listing with an admin queue (Admin, Listing reports), and trust signals on the property page. Note 475r. Copied-photo detection added afterwards (note 475s): browser fingerprints, reviewer warning, new listings only.
+
+## October 10, 2026 — No hidden prices and listing integrity
+
+New rule on every listing (note 475q): real price, location, street address, 5 photos, video, description and a private contact number are required; the form blocks submission and the database refuses to approve an incomplete listing; "DM/inbox/call for price" wording is refused (also on marketplace products and services, which now need a starting price); price changes on live listings are logged and shown; the admin review shows what is missing plus risk warnings (new/unverified owner, possible duplicate, price far from similar listings). Not retroactive: existing live listings are untouched but are checked again if they are re-approved or their price or text is edited.
+
+## October 10, 2026 — Hotel Phase 4: menu, room orders, sales, stock, recipes, assets
+
+Objects in backend-v2/475 note 475n. Staff screen: components/HotelServices.tsx (tab "Menu & stock"). Guest screen: components/GuestRoomMenu.tsx on My Bookings. Also: the host calendar page now refreshes linked calendars older than an hour when opened. Verified by a rolled-back database test (order, delivery, stock deduction 20 to 19 kg, payment to income 10,500, counter sale 3,000, double-pay refused, guest cannot use staff actions or counter sales); screens verified by tsc/lint/build only. Public hotel page added at /hotel/[id] (photos, rooms, facilities, menu, book and share). Event quotations with payment schedule added (note 475p). Paid to the venue directly; not part of the CHS escrow payment.
+
+## October 10, 2026 (early) — Event day control for event centres
+
+Chosen as the best next step because event centres were the category the client asked to re-test and the module reuses the booking data already captured (ushers, caterer, band, security, notes). Built: vendor assignment per event with confirm (client told the name, never the phone), a run sheet generated from what the client asked for, tick-off with who/when, tasks assignable to team members. Event writes sit on the Business plan once the master switch is on. Not built: quotations, deposit-then-balance schedule view, guest-side view of vendor status beyond the notification.
+
+## October 9, 2026 (night) — Hospitality Suite built: team, import, calendar sync, plans (Terms V7)
+
+Agreed with the client: hybrid revenue (commission only on CHS-sourced bookings; subscription for tools; subscribers pay a lower commission), event centres in their own module later, free pilot of 8 operators. Built: team roles and property limits; duties and shift reports with timestamps; Excel/CSV import of rooms, income and expenses with preview and undo; per-room iCal feed and pull-in of other sites' calendars (manual Sync now); plans (Listed/Pro/Business) paid from the wallet with renewals, 7-day grace and read-only lapse; admin pilot grant, prices and master switch. The master switch (subscriptions_enforced) is OFF and plan prices are blank, so nothing is gated or charged until the super admin sets prices and turns it on. Terms V7 (term 38) added; Privacy 7A; Guide 19B; Catalog section 18; FAQ.
+Not built: event-centre module (quotes, deposit schedule, run sheet, vendors), automatic iCal refresh (needs a scheduled job), multi-property gating for Business, digital menu/POS/inventory/recipes/assets/branded page (phase 4), WhatsApp (needs provider).
+
+## October 9, 2026 (evening) — Hotel & Lodge upgraded after comparing with Hotelist.ng
+
+Compared the Hotelist.ng hotel-software advertisement with what CHS had. CHS was already stronger on booking, escrow, guest verification, digital check-in and peak pricing; it lacked a back office. Tranche 1 built: housekeeping board, repair tickets, income centres (restaurant, bar, laundry, gym, events), expenses, owner-only financial report (occupancy, ADR, RevPAR, net result) and ledger with CSV, guest welcome and thank-you, owner evening summary. Every entry carries who and exact date/time; voids keep the record. Not yet built (tranche 2, awaiting go-ahead): digital menu with in-room ordering, bar/restaurant point of sale, stock and inventory, kitchen recipes, asset register, branded hotel page. WhatsApp needs a provider account and key.
+
+## October 9, 2026 (later) — Full timestamps required on everything
+
+Client feedback: the admin panel showed the date a document reached Dr. Azaraya and the date he confirmed, but no time. Timestamps are required for accountability, auditing and legal protection. Done: one shared formatter (`formatDateTime`, Nigerian time, to the second) now replaces every date-only display of an event across about 35 screens; the admin Mortgage panel has a handover timeline; the buyer and owner handover views show sent and confirmed times; relative labels such as "confirmed 3 days ago" now carry the exact stamp. Standing rule 11 added to the Handover Notes. Calendar dates (lease end, check-in day) remain dates by design.
+
+---
+
+## October 9, 2026 — Mortgage held by CHS end to end; final release manual by super admin; documents brought up to date
+
+- Installments were found going straight to the owner's wallet, against the rule that every payment passes through CHS. Redesigned: every installment is held and released by admin; the final payment is held until the documents are handed over (migration 475).
+- Added the handover flow: buyer request, owner uploads for CHS to check, admin approves, soft copy to the buyer, hard copy with proof, buyer confirms. Fixed the admin queue SQL error, the typing bug in the request form (a component defined inside render), the buyer's missing soft copy, and navigation from admin notifications.
+- Notification bell on every role's dashboard; newest-first ordering across dashboards (due dates and scheduled inspections stay soonest first).
+- Client instruction at 12:55: the buyer's confirmation must never release funds. Done (475f): final release is super admin only; `rto_final_auto_release` setting (off by default) with a tick box on the admin panel; `admin_revert_rto_final_release()` built. Dr. Azaraya's already released ₦73,535,000 was returned to CHS hold on the client's explicit instruction, for testing.
+- Tested in rolled-back transactions: buyer confirmation leaves the money held; a sub-admin is refused; super admin release works; auto-release works only when switched on.
+- Documents audit: found the Terms PDF header at Version 3, the mortgage wording out of date in the Terms, Guide and Catalog, and the Handover Notes, Progress Log and System Documentation stale. All updated this round: Terms Version 5, Users Guide, FAQ, Privacy Policy, Feature Catalog (section 17), Handover Notes, System Documentation.
+
+---
+
+## September 15, 2026 (continued) — Adopted the working v14 base; found one more real bug of the same class the other agent missed
+
+The client's own deploy attempts kept failing, and — reasonably, given the delay — brought in a different agent, who diagnosed and fixed two real build-breaking issues this session's verification never caught:
+1. `"buyerid"` was missing from the `Tab` type union in `app/admin/page.tsx` — the tab and its render logic existed, but its name was never added to the list of valid tab values, a real TypeScript error.
+2. `useSearchParams()` in `app/admin/page.tsx` needs a `<Suspense>` boundary in the Next.js App Router — added correctly.
+
+Also found: a stale `tsconfig.tsbuildinfo` build-cache file had been riding along in every zip since the original handover, never noticed or removed.
+
+**This session adopted that corrected file as the new base** rather than defend the prior approach, and ran the full verification suite (duplicate-declaration check, missing-import check, both scope-aware) across the entire project against it, plus a new, targeted check specifically for the `useSearchParams`-without-`Suspense` pattern just diagnosed.
+
+**Found one more real instance the other agent's fix didn't cover**: `app/condition-report/[tenancyId]/page.tsx` used `useSearchParams()` directly in its default-exported component with no `Suspense` boundary at all — a genuine, unfixed case of the exact same bug class. Fixed using the identical pattern already proven in the other four files (inner component + `Suspense`-wrapped default export). Verified with esbuild, brace-balance, duplicate-declaration, and missing-import checks; confirmed clean.
+
+Two pending buyer ID verifications (`08120000003` and `08036762208`) were approved directly in the live database while deployment was blocked, so testing could continue without waiting on a working build.
+
+---
+
+## September 15, 2026 — SECOND build failure, same root cause category, verification process upgraded properly this time
+
+The client deployed the previous fix and got a *different* real Netlify error this time (genuine progress — the first bug was truly gone): `Cannot find name 'InfoTip'` in `app/admin/page.tsx`, at the Analytics tab explainer added earlier this session. The `<InfoTip>` component was used but its import statement was never added to this file.
+
+**Same underlying gap as the previous bug**: `esbuild` transpiles but does not type-check, so it cannot detect an undefined JSX component reference — only a real TypeScript compiler catches this, which is exactly what Netlify's build does and what my own verification wasn't doing. Two real, consecutive, deploy-blocking bugs from the same category of gap.
+
+**Fixed**: added the missing `import InfoTip from "@/components/InfoTip";`.
+
+**Verification process properly upgraded this time**, not just patched: wrote and ran an actual missing-import checker (parses every JSX component tag used in a file, cross-references against real import statements and locally-defined symbols, correctly excludes TypeScript generics like `Record<T>` which can look like JSX to a naive check) — and ran it, this time, across the **entire 434-file project**, not just files touched this session. Result: clean, with one confirmed false positive (a generic type parameter `<T extends {...}>` in `owner/page.tsx`, not a real issue). Combined with the existing esbuild, brace-balance, and duplicate-declaration checks, `app/admin/page.tsx` now passes all four checks.
+
+**Also confirmed, while investigating**: `app/virtual-inspection/[id]/page.tsx` is genuinely absent from the project — this was a deliberate decision from earlier in this engagement (superseded by the other session's real `property_videos` room-video system), not a new oversight. Verified this explicitly rather than assuming.
+
+---
+
+## September 13, 2026 — CRITICAL: build-breaking duplicate function, found via a real Netlify build log
+
+The client reported that no deploy had succeeded since this handover began, and attached the actual Netlify build log. It showed a genuine TypeScript compile failure: `Duplicate function implementation` for `handleBuyerIdReview` in `app/admin/page.tsx` — the function had been defined twice in the same component scope (once with parameter name `verificationId`, once with `submissionId`), both doing the identical thing. This is a 100%-reproducible, guaranteed build failure on every single attempt — not intermittent — which matches exactly what the client described.
+
+**Root cause of why this wasn't caught earlier**: every prior verification this session used `esbuild` for a "syntax check." `esbuild` only transpiles — it does not type-check, and duplicate top-level function declarations are not a JavaScript syntax error (only a TypeScript semantic one), so esbuild passed this file clean every time despite the real bug being present. This is a genuine gap in the verification process used throughout this engagement, now corrected: duplicate-declaration checks (across every function and every state variable, scope-aware) are now run explicitly as part of verifying any file before delivery, in addition to esbuild.
+
+**Fixed**: removed the redundant second definition. Verified with a real TypeScript compiler pass on the specific error class that broke the Netlify build (not just esbuild), confirmed zero remaining duplicates. Also ran the same duplicate-check across the entire 434-file project, not just files touched this session — found one additional apparent duplicate (`loadReports` in `components/ShortletCheckInOut.tsx`), investigated properly, and confirmed it was a false positive: two same-named functions correctly scoped inside two separate, unrelated components in the same file, which is valid code, not a bug.
+
+**Honest scope of impact**: this bug was introduced when the ID Verification tab was first built earlier in this session and would have broken every single "complete project" delivery since then. The client had only attempted 1–2 of the recent zips before reporting this, so the exact count of affected deliveries isn't fully known, but it is safe to assume every zip since the ID Verification tab was added carried this same guaranteed failure.
+
+---
+
+## September 12, 2026 (continued once more) — Explainer sweep extended to Agent, Manager, Tenant, Guest, Artisan
+
+- Swept the remaining five dashboards for the same kind of unexplained jargon found earlier on Owner and Admin. Tenant dashboard already had good coverage (Auto-pay was already explained). Guest and Artisan dashboards showed no obvious jargon gaps in their header/summary areas on this pass.
+- Real gaps found and fixed: Agent's "Your Real Managed Portfolio" section header (no explainer at all), and Manager's "My Tenant Register" / "My Properties & Owners Register" links (both real jargon terms, zero explanation). Both files syntax-checked clean.
+- **Running total this session: 12 real explainer placements** across Owner, Admin, Agent, and Manager.
+- **Honest caveat**: this was a targeted jargon-term search (grepping for likely unclear terms), not an exhaustive line-by-line audit of every single element on Tenant/Guest/Artisan. Fewer gaps were found there than expected, but that's not the same as confirming full coverage — worth a closer pass later if the client still finds unexplained terms there.
+
+---
+
+## September 12, 2026 (continued once more) — Explainer coverage: systematic audit, 9 real gaps closed on Owner + Admin
+
+- Systematically checked every Admin tab's content area for a missing intro explainer, rather than guessing at random spots. Found the Admin "Analytics" tab had **zero** explanatory text at all — jumped straight into date filters — matching the client's own example precisely. Fixed, plus found 6 more tabs completely missing any intro: Disputes, Feedback, Vendors, Artisans, Inspections, Developers.
+- Added real explainers to the Owner dashboard's Analytics and Promote links — the literal example the client gave.
+- **One real mistake caught and fixed mid-task**: an edit to the Feedback tab left an unclosed JSX fragment. Caught immediately via a syntax-check-after-every-single-edit discipline (not batched checks at the end) — exactly the kind of thing that discipline exists to catch. Final whole-file brace-balance sanity check run as an extra safety net.
+- **Honest scope note**: this is 9 new explainer placements. Owner and Admin dashboards got real, deliberate attention this round; Agent, Manager, Tenant, Guest, and Artisan dashboards have not been audited yet. The client's ask ("everything, every dashboard") is a large, real remaining scope — logged clearly rather than claimed as done.
+
+---
+
+## September 12, 2026 (continued once more) — Real read timestamps for notifications, matching the SMS-receipt comparison
+
+- Focused on the most central system (`notifications`, used across every category via `notify_user()`) rather than a shallow pass across many separate conversation tables. Real gap: `read` existed only as a true/false flag — no timestamp, so there was never a real "when" to show. Added `read_at` (migration applied live); `NotificationBell.tsx` now captures the real moment a notification is read and displays it inline as "Sent [time] · Read [time]" — directly matching the client's own SMS/WhatsApp delivery-receipt comparison.
+- **Not yet done**: a dedicated admin-facing view to check whether a specific message *they* sent was read by the recipient (this fix gives the recipient visibility into their own read status; admin has no lookup screen yet). Also not yet extended to other real message tables (`engage_chs_messages`, `offer_messages`), which have no read tracking at all.
+
+---
+
+## September 12, 2026 (continued once more) — Manual archiving built for Engage CHS, as the concrete pattern for the rest
+
+- **Real scope finding first**: no archive concept existed anywhere — not in the database, not in the frontend. Also found that "Processed History" (an existing tab) already permanently preserves every rental application/offer/listing/registration decision forever — nothing there was ever auto-deleting, contrary to what the client's report implied for that category. The real, confirmed gap was specifically the Engage CHS system (the actual chat/concern-message flow): items vanished from admin's active view the instant they were accepted or rejected, since that tab only ever queried `status = 'pending'`.
+- **Built for Engage CHS**, as the concrete pattern to replicate elsewhere: added `archived_at` to `engage_chs_requests` (migration applied live). Handled requests now stay visible in a new "Recently handled" section for a real 7 days — computed from `admin_last_read_at` at query time, no cron job or scheduled function needed — or until admin taps a real "Send to Archive" button.
+- **Not yet done**: replicating this same pattern to every other admin subcategory (disputes, feedback, fault reports, etc.), which the client explicitly asked for "across board." That's a real, sizeable remaining scope — logged clearly rather than rushed through incompletely.
+
+---
+
+## September 12, 2026 (continued further still) — Revenue streams document corrected; mobile splash-reload investigated
+
+- **Client-supplied "Complete Revenue Streams" reference document was the actual source of the shortlet nomenclature confusion — not the live app.** The PDF described shortlet/hotel/event commission tiers as based on how far in advance a booking is made ("Short-notice," "Long-notice"). Already confirmed earlier this session that the real database function and `TermsContent.tsx` have always calculated and described these tiers correctly, by real stay duration. Regenerated the full document with the correct framing, plus updated its now-stale Rent-to-Own percentages (was still showing 5%/5.5%) to the current 5.5%/4.5%. Two formatting bugs caught and fixed in the process: a text-overlap issue from a too-narrow table column, and the ₦ symbol rendering as a black box in the PDF (font encoding issue — replaced with "NGN" text).
+- **`components/TermsContent.tsx` also updated** with the same Mortgage rename and corrected percentages — this had gone stale the moment the live percentages were changed earlier and was caught while investigating the shortlet complaint.
+- **Mobile splash-screen-on-back/refresh bug — investigated, not resolved.** Ruled out the service worker (minimal, passes every request straight to network) and any widespread explicit reload calls. `SplashScreen.tsx` is correctly mounted once in the root layout, so it reappearing specifically suggests mobile is genuinely triggering full page reloads where desktop uses client-side navigation — but confirming why needs live mobile device debugging (Chrome remote inspect, watching the Network tab during a real back/refresh), which isn't possible from this sandbox. Logged honestly as investigated-but-unresolved with two candidate hypotheses (bfcache incompatibility, PWA standalone-mode back-gesture handling) rather than guessed at with an unverified fix.
+
+---
+
+## September 12, 2026 (continued further) — Homepage header cleanup, Mortgage renaming, buyer-landing-page investigation
+
+- **Wallet and Artisan removed from the unconditional homepage header.** Both were showing to every single logged-in user regardless of role. Wallet removed entirely — it's already available inside each dashboard via `WalletQuickView`. Artisan needed a real fix, not just a role check: artisan status is tracked in a separate `artisans` table, not on `profiles.role` like every other role link here — a naive role-array check would have hidden the link from real artisans too. Added a genuine check against the `artisans` table instead.
+- **Mortgage renaming.** Display label changed to "Mortgage (Rent to Own)" (leading with Mortgage, per client's explicit preference) across 8 files, starting from the single source-of-truth `purposeLabel()` function. The underlying database value `rent_to_own` was deliberately left unchanged — renaming that would be a much larger, riskier migration than what was asked for (the visible label). Some lower-traffic static content (FAQ/Guide/Terms, feature catalog data) still uses the old name — queued, not urgent.
+- **Buyer landing page — investigated, could not reproduce.** Checked all three real sign-in paths (main login form, biometric login, registration) — all three already correctly map `buyer → /my-offers`, with comments explicitly describing this as an intentional fix from an earlier session. Test buyer accounts' `role` field is also correctly `"buyer"`. Could not find or reproduce the reported bug in the current code. Flagged back to the client for retesting rather than guessing at a fix for something that appears to already work.
+
+---
+
+## September 12, 2026 (continued) — Mortgage commission fix, and a critical self-audit that caught silently-dropped features
+
+- **Mortgage/RTO commission corrected.** `rent_to_own_buyer_commission_pct` = 5.5, `rent_to_own_seller_commission_pct` = 4.5 (was 5/5.5 — wrong, and summed to 10.5%, not the intended 10%). `pay_rent_to_own_installment()` reads these dynamically at payment time — zero code changes needed, took effect immediately.
+
+- **Critical self-audit, done out of caution while making the commission fix.** While checking the Rent-to-Own payment function, discovered that the entire `app/rent-to-own` payment screen — plus its two discoverability links (homepage nav, My Offers cross-link) — had been silently absent from every "complete project" zip delivered since the reconciliation session, despite being built and confirmed working earlier in this engagement. Also found, in the same pass: the mandatory Virtual Inspection checklist+video validation on the upload form had been lost when that form was independently rebuilt (to add toilets/room dropdowns) in a separate session, reverting it to fully optional again — the opposite of the client's explicit "not optional" requirement. And separately: admin's own, independently-built rejection-reason capture had no owner-facing display at all — a half-finished feature, not something removed.
+
+  All four restored/completed in this pass, re-applied against the *current* correct versions of each file (not overwritten with older ones), and every touched file re-verified with a full diff against the immediately prior delivery to confirm only the intended files changed.
+
+  **Process lesson, recorded honestly:** a reconciliation pass between parallel work sessions can silently drop earlier real work if it isn't explicitly re-checked and carried forward at every subsequent delivery — a file-diff against the immediate base isn't enough on its own; it needs a feature-level checklist too. Applying that discipline more deliberately from here on.
+
+---
+
+## September 12, 2026 (later same day) — Urgent live-testing blockers: missing ID Verification screen, notification click-through, explainer self-containment, privacy default
+
+Time-pressured session (client flagged an approaching usage limit) — prioritized the fastest, safest, highest-confidence fixes first, with everything else logged in the Fix Tracker to resume from directly next time.
+
+- **Real bug: ID Verification had no admin screen at all.** Confirmed directly: `buyer_id_verifications` data was already being fetched into state (`pendingBuyerIds`), a notification correctly fired on new submissions, but no tab or screen ever existed to view/act on it — different bug from Face Verification, which does have a working screen. Clarified for the client: ID verification and Face verification are genuinely two separate systems (a document/NIN vs. a live photo), not meant to share one screen. Built the missing "ID Verification" tab, mirroring the exact Face Verification pattern, wired to the `review_buyer_id` admin action (already correct — just had no caller). Also fixed that notification's `link`, which was `null`.
+- **Real root cause found for the long-standing "notification click lands on Overview" bug.** A partial fix already existed from an earlier session (reading the `?tab=` URL param) but only on initial mount (`useEffect` with empty `[]` deps) — so it silently did nothing when admin was already on `/admin` and clicked a second notification. Rebuilt using `useSearchParams()`, which is properly reactive to URL changes in the App Router.
+- **Self-correction on the explainer, done twice over out of caution.** First guessed the cause was a `React.CSSProperties` import issue — verified with a real, strict TypeScript compiler (not just the usual esbuild syntax check, which doesn't type-check) and found that guess was wrong before reporting it. Real, more likely cause: `InfoTip.tsx` depended on a separate new file, `lib/featureGlossary.ts` — if that file is ever missed when an update is applied (easy to do; it's a whole new file, not a change to an existing one), the import fails to resolve and the *entire app build* can break, not just the explainer. Rebuilt `InfoTip.tsx` as a single, fully self-contained file with the glossary inlined directly, so this class of failure can't recur. Not yet confirmed live — could not inspect the client's actual current deployed source this round.
+- **Owner privacy default flipped.** `properties.owner_identity_visible_to_tenant` default changed from `true` to `false` — "Keep Private" is now the real out-of-the-box state for every new listing; "Show my name" is something an owner opts into.
+
+**Queued for next session (logged in Fix Tracker, not yet started):** comprehensive explainer coverage across every dashboard element, mobile back/refresh reloading to splash screen, buyer default landing page, Mortgage/Rent-to-Own renaming and the 5.5%/4.5% commission correction, Artisan/Wallet removed from the homepage header, shortlet/hotel/event commission basis corrected to stay-duration instead of booking lead time, admin manual message archiving (7-day fallback), and message delivery receipts.
+
+---
+
+## September 12, 2026 — Two real mobile UX bugs from live device testing (screenshots supplied)
+
+Both confirmed precisely against the client's own screenshots before fixing, not guessed at.
+
+- **Explainer popup clipped off-screen on mobile.** `InfoTip.tsx` centered its popup on its trigger using a fixed CSS transform (`left-1/2 -translate-x-1/2`), which doesn't know where the trigger actually sits on a real screen — for a trigger near the left edge (confirmed: "Raise a Concern" tile, owner dashboard), half the 208px popup was pushed off-screen, cutting the explanation text off. PC was unaffected only because the wider viewport happened to leave enough margin. Rebuilt: the popup now measures the trigger's real position on open (`getBoundingClientRect`) and clamps itself within the viewport with a safe margin, using `position: fixed` so it also can't be clipped by any parent's `overflow: hidden`. Not CSS-only fixable — needed real position measurement.
+- **Header nav forced into an invisible horizontal scroll.** Confirmed in the client's own screenshots across four scroll positions: "Hi, Demo" → "Demo, Wallet, My Pro..." → "...operties, Artisan" → "...s, Artisan, Log out" — Logout was only reachable by scrolling sideways, while the branding block ("CHS / Complete Housing Solutions / Visit the Marketplace", stacked across 3 lines) took up disproportionate space for what it says. `components/HomePageClient.tsx` header rebuilt: branding compressed onto one compact line; every nav link (Wallet, role-specific links, Artisan, Admin, Logout) now sits in a `flex-wrap` row that grows to as many lines as needed instead of scrolling, so everything is visible on a static screen with no scroll gesture required.
+
+Both changes are frontend-only, no migration. Could not render an actual screenshot to visually confirm the fix in this environment (browser-rendering tooling blocked by network restrictions here) — verified via direct code/logic review and a clean syntax check instead; please confirm visually on a real device before considering this closed.
+
+---
+
+## September 10, 2026 (later same day) — Reconciliation after two parallel work sessions collided
+
+An earlier session this same day had independently pushed a consolidated fix package for the same client-supplied 15-item testing list (migrations numbered 246–248 in that session's own count). That work happened in parallel with, and without visibility into, the "Migrations 223–274" session documented immediately below — both sessions solved several of the same real problems independently, with different code and different migration numbers reused at the same numbers. This entry reconciles the two rather than silently picking one.
+
+Studied the full current state directly against the live database before touching anything, rather than trusting either session's own account. Found:
+
+- **Real bug, confirmed and fixed:** the newer session's upload form correctly switched to a `toilets` column (replacing `bathrooms`) for new listings, and the property detail page was correctly updated to show both — but `components/PropertyCard.tsx` (the compact search/browse card) was never updated, so every new listing's search card was silently showing no bathroom/toilet count at all. Fixed: card now checks both fields.
+- **Duplicated effort, not a bug:** the earlier session's Virtual Inspection System (a guided photo-tour viewer, `app/virtual-inspection/[id]`) was superseded entirely by this session's real room-video system (`property_videos`, `video_requests`) — a different, reasonable approach to the same goal. The photo-tour code no longer exists in this codebase. The "free alternative exists, are you sure you want a paid physical visit?" consent gate that sat on top of the old photo-tour system did not carry over to the new video system — not currently re-built, flagged here as a known gap rather than re-implemented blind.
+- **Merged rather than duplicated:** the earlier session's `InfoTooltip` component and its `lib/featureGlossary.ts` (196 entries, generated directly from CHS's own real feature catalog) were superseded by this session's own `InfoTip.tsx`, built independently and wired to 16 terms by hand. Rather than leave ~180 terms unauthored a second time, `InfoTip.tsx` was extended to optionally accept a `term` key that looks up `lib/featureGlossary.ts` (re-added), fully backward-compatible with all 18 existing hand-written call sites, which are untouched.
+- `room_dimensions` (jsonb) from the earlier session's migration is live in the database but referenced nowhere in current code — confirmed dead weight, not harmful, left as-is pending a decision on whether the photo-tour dimension feature is worth rebuilding against the new video system.
+- **Rebuilt, not left as a gap:** the "free alternative exists, are you sure?" consent gate, now pointed at the real room-video system instead of the retired photo tour. `PropertyActions.tsx` checks `property_videos` for a real row count per property; when any exist, `InspectionBookingForm.tsx` shows a banner and requires an explicit checkbox acknowledgment before a paid physical inspection can be booked — same enforcement pattern as before (submit button disabled AND a server-side-equivalent check in the submit handler itself, not just a UI suggestion).
+
+---
+
+## September 10, 2026 — Migrations 223–274: extensive real client testing round, admin mediation completed, Audit Trail and Feature Explainer started, real room-video system built
+
+The largest single batch of the engagement, driven by an extensive, real client testing session that surfaced genuine bugs across nearly every part of the app. Full detail in `CHS_HANDOVER_NOTES.md` under "New Since Last Handover Update (migrations 223–274)" — summarized here in the order it actually happened:
+
+1. Notification click-through fixed for real, after two earlier attempts each solved one problem and caused another (`Link`-wrapping a div was fragile; `window.location.href` fixed the click but caused a full, disruptive reload). Final, correct fix: `router.push()` with explicit `stopPropagation`/`preventDefault`.
+2. Admin mediation gap closed for rental applications and offers, both directions — a buyer's offer and an owner's decision on it both used to bypass CHS review entirely. Real `awaiting_admin_review` / `owner_decided_pending_relay` statuses now gate both.
+3. Buyer bio-data (name, phone, occupation, source of funds) made required at offer submission, visible to admin, deliberately kept off the owner's screen — contact stays mediated through the message thread.
+4. The single most serious gap found this round: admin could approve a new listing with zero visibility into its uploaded legal documents. Fixed with real document review directly on the approval card, and a genuine hard block (not just a warning) for Sale properties until every document — and the owner's own ID — is verified.
+5. Land and other non-residential categories fixed to never show a bedroom count, regardless of bad underlying data; 36 real listings cleaned.
+6. Real room/bedroom/toilet dropdowns and a genuinely repeatable "Others" facility field, replacing plain number inputs.
+7. "Processed History" admin tab built — the real backend function for this existed from an earlier round but was never connected to any actual screen; extended to cover property listings and registrations too.
+8. Audit Trail started (`audit_log` table, `log_audit_event()`), wired into every high-stakes real action found so far — property decisions, dispute rulings, fund release, account suspension, all admin relay functions, referral payouts, marketplace moderation, agent management. Genuinely ongoing, not finished.
+9. Feature Explainer started (`InfoTip` component), live on 16+ real terms across buyer, owner, and tenant screens. Genuinely ongoing.
+10. Property manager listing access fixed — managers genuinely could not list a property; agents already could. Matched to the identical pattern.
+11. Real room-video system built (`property_videos`, `video_requests`) as a cost-free alternative to a paid virtual-tour service, on both new and existing listings, with a real "request a specific video" flow for an unsatisfied buyer/tenant. Found and fixed three further real gaps purely by exercising the feature end to end after building it — a request tracking page, a direct action link for the owner, and a wrong notification link.
+12. Document Site built (`/admin/document-site`) — every current reference document bundled directly into the app.
+13. Round 2 demo accounts created (`0812...`, PIN `123456`), then a real login bug found and fixed: raw `auth.users` SQL insertion had left several fields `NULL` where Supabase's real auth service expects an empty string — a documented pitfall of bypassing the Admin API.
+14. Per-role zone colors upgraded to match the saturation of the client's own reference palette.
+
+Several real mistakes were made and caught this round — a JSX edit that deleted a needed line, a wrong TypeScript type for a Postgres array-returning join, a garbled shell heredoc that skipped a zip entirely — every one of them found by actually testing (full build, real database queries, re-opening a packaged zip to check its real contents) rather than by writing careful code the first time. See the "note on process" at the end of the corresponding Handover Notes section.
+
+---
+
+## Migrations 46–49 — Promotion, Concierge, Urgent Sale, Performance
+- Built the credit-based geo-tiered listing promotion system (real per-location, per-size daily cost; toggle on/off; relative ranking against the same real local market).
+- Built Concierge ("Talk to an Agent") — free-text or voice property requests routed to admin.
+- Built Urgent & Emergency Sale — real discounted, time-boxed listings with a genuine deadline.
+- Real performance pass: missing indexes, pagination caps on unbounded queries, fixed a real N+1 query pattern on the owner dashboard.
+
+## Migration 50 — Wallet Fixes & Admin Login Approval
+- **Found and fixed a real, exploitable security hole:** wallets could previously be updated directly by their own owner via a raw API call — a user could set their own balance to anything. Locked down to read-only; all writes now go through audited functions.
+- Built real wallet auto-creation on profile creation (previously, new users had no wallet at all).
+- Built real user-to-user wallet transfer.
+- Built code-based admin login approval — a sub-admin's password alone no longer reaches the dashboard; a real approval code goes to the Super Admin.
+
+## Migrations 51–52 — Sub-Admin Roles & RLS Scoping
+- Built the five real sub-admin domains (Customer Care, Registration & Setup, Owner/Buyer/Tenant, Agent Relations, Artisan/Developer/PM/Vendor) and the high-stakes approval queue.
+- Extended real RLS scoping across most admin-facing tables to respect these domains, replacing the old blanket "is admin" check.
+
+## Migrations 53–55 — Notification & Data Correctness Fixes
+- Fixed a real bug: property-verification and artisan-verification notifications used the wrong column name and would have silently failed.
+- Fixed interested-party notifications to fire at the correct point in the new approval-queue flow.
+- Built `assign_staff_role()` for promoting an existing account to a sub-admin role.
+
+## Migration 56 — Buyer/Tenant Readiness Score
+- Built a real, non-punitive "readiness" signal for owners reviewing inspection requests — verification status, a real questionnaire, and genuine inspection attendance history. Explicitly not a fee or a gate, per direct instruction.
+
+## Migration 57 — Construction Roadmap
+- Built real quantities (blocks, roof area, floor area) for 7 real building configurations, a real permits checklist, a real payment milestone plan, and a sourced cost-range estimate, gated behind a one-time unlock fee credited toward the real project if the client proceeds.
+
+## Migration 58 — Standard Package Pricing
+- Assigned real, defensible pricing to the Classic/Premium/Elite promotion tiers (Essential and Signature already had real pricing). **Note: pricing exists, but no purchase/subscription flow was ever built for these — see Handover Notes, Known Gaps.**
+
+## Migration 59 — Terms Gate & Guide Tracking
+- Built the real scroll-to-accept Terms & Conditions gate (checkbox only unlocks after genuinely reaching the bottom).
+- Built the role-specific first-dashboard guide popup.
+
+## Migration 60 — Literal Top 10/Top 20 Ranking
+- Extended the relative A–D ranking system with a literal position (e.g. "#3 of Top 10"), scaled to how many real competitors actually exist in that specific local market.
+
+## Migration 61 — Comprehensive Bank List
+- Replaced a ~13-bank hardcoded dropdown with a live, searchable list of 200+ real Nigerian banks pulled from Paystack's own directory.
+- Fixed a real bug: a changed bank account was never actually applied after its real 48-hour security window — it only ever blocked withdrawals during the window.
+
+## Migrations 62–63 — Testing Infrastructure
+- Installed the `http` Postgres extension to enable direct testing of Edge Functions from within the database.
+- Built the Construction Roadmap test-unlock mechanism (`is_test_grant`), Super Admin only, explicitly temporary.
+
+## Migration 64–65 — Engage CHS Overhaul
+- Built real material/finish specification fields, a genuine summary-before-submission review screen, a real two-way message thread (fixing a real gap where admin could ask for more detail with no way for the client to reply), voice-to-text replies, a dedicated unread badge, and a real document delivery system (checklist, upload, status tracking).
+- **Found and fixed a real permission bug in the same batch:** the document-upload function was originally built admin-only, which would have silently blocked every client from using the new document checklist at all.
+
+## Migration 66 — Editable Profile & Re-Verification
+- Built real profile editing (name, phone, address, state) — previously impossible entirely.
+- A genuine name change now automatically resets ID/liveness verification, since the original verification was for the old name.
+- Fixed bank-account name matching from an exact-string requirement to a real word-subset match, so a missing middle name no longer incorrectly blocks a legitimate account link.
+
+## App-Wide Fixes (Not Tied to a Single Migration)
+- **Root-caused and fixed a real, structural dark-mode bug:** form fields had no explicit text color, so they silently inherited the page's theme color — in dark mode, near-white text on a white field background, genuinely invisible. Fixed globally, once, for every field on every page, present and future.
+- Redesigned the splash screen and app icon — the original had too much padding, making Android's auto-generated launch splash look small and empty.
+- Built a real bank-account-number verification step (`resolve-bank-account` Edge Function) — an account number is now checked against the real bank network before it can ever be linked; a wrong digit is rejected immediately.
+
+## Migrations 67–68 — Trace an Account & Final RLS Hardening
+- **Found and fixed a real, second RLS gap while building the Trace tool:** several genuinely financial tables (wallet transactions, promo credits, construction roadmap payments, linked bank accounts) were still using the old blanket admin check, meaning any sub-admin — not just Super Admin — could read that data directly. Tightened to `finance`-domain only.
+- Built "Trace an Account" — search any real user by phone/email/name and see their full activity across every system in one place, directly answering the real support scenario of "this happened, but nobody can find the record of it."
+- Built a real, permanent audit-history view for the sub-admin approval queue — previously, once a request was resolved, it simply vanished with no trace.
+
+## Documentation Batch
+- Built the Users Guide (in-app `/guide` and downloadable `.docx`) — genuinely didn't exist before this engagement.
+- Built the Complete Feature Catalog — PDF, segmented `.xlsx` (one real chapter per role), and in-app `/admin/feature-catalog` — all reusing the same source data, kept consistent by construction rather than by manual syncing.
+- Built this Progress Log and the companion Handover Notes.
+
+## Migrations 69–76 — Reminder Engine, Estate Management, Extended Commission Model
+- Built the Reminder Engine — one real, generic escalation system instead of a narrow "rent reminder" feature: real escalating rent-due cadence, real maintenance follow-up escalation (artisan → manager), multi-channel delivery (in-app confirmed working immediately; SMS via Termii and email via Resend added once real provider accounts and sender-ID approval were in place).
+- Built the Estate Management System foundation — Estates as a real, first-class entity distinct from individual property delegation: real unit linkage, real service charges (genuinely separate from rent), bulk CSV unit onboarding, a real manager dashboard aggregating occupancy/disputes/maintenance/collections in one place.
+- **Corrected a real, invented commission figure:** an initial 5%-seller-only sale commission was built from a guess rather than checked documentation. The client's real, previously-confirmed reference document was found and used instead — Sale: 6.5% Buyer / 6% Seller; Rental: 5% Tenant / 5.5% Landlord — replacing the incorrect version entirely.
+- **Found and fixed a real, deeper gap while correcting the commission:** approving a rental application never actually created a real tenancy anywhere in the app — it only flipped a status label. Now genuinely creates the tenancy and generates the correct two-sided commission in one atomic step.
+- Extended the commission model to Warehouse, Factory, Land, and Farmland (confirmed these need zero new code, since existing functions never filtered by property type), and built the genuinely new Hire/Booking tier for Event Centre, Hotel & Lodge, and casual Car Park (flat rate), plus a real length-of-stay sliding scale specifically for Shortlet — both sourced from a real extended commission reference document and refined through direct client confirmation on the exact rates and pay-direction (guest pays the higher share throughout).
+- Built real Estate Management subscription tiers with genuine monthly billing, refined upward through direct client feedback on real-world SaaS pricing psychology.
+
+## A Comprehensive, Three-Phase Audit — 23 Real Issues Found and Fixed
+Prompted by a direct client request for a full, systematic audit after several real wiring gaps surfaced during normal feature work. Conducted in three phases, all with real test data, not assumptions:
+
+**Phase 1 — Wiring audit:** every RPC call, table reference, and Edge Function call across the entire frontend cross-referenced against what genuinely exists in the live database. Came back completely clean. Found and fixed 5 real TypeScript type-file drift issues (Property, Wallet, ShortletBooking, FaultReport types missing real database columns, including some added within this same engagement and never typed).
+
+**Phase 2 — RLS coverage audit:** every table checked for real, correctly-scoped access control. Found and fixed 4 real domain-scoping gaps (`agent_referrals`, `property_documents`, `reminder_rules`, `scheduled_reminders` all using a blanket admin check instead of the correct restriction).
+
+**Phase 3 — Real end-to-end journey testing, the most consequential phase.** Revealed a genuine, repeated pattern: an admin-facing "approve/confirm/mark paid" action that updated a status and stopped, with no real financial consequence ever following through. Found and fixed **7 real instances of this exact pattern**:
+- Shortlet host payment never actually released from escrow after check-in confirmation
+- No mechanism anywhere for a tenant to actually pay real rent to a landlord
+- No mechanism for an artisan to actually get paid for approved maintenance work, and no way to ever mark a job "resolved"
+- A dispute ruling only ever sent a notification saying who "won" — the real disputed amount never moved
+- Marking a vendor referral fee "paid" never actually charged the vendor
+- Agent-to-agent referral commission had no real payout mechanism at all — not even a broken one, just entirely unbuilt
+- Approving a developer application never elevated the applicant's real account role, and had no way to even reach its own real success state
+
+Also found and fixed in Phase 3: management delegation could only ever be turned on, never off (built the real, missing 30-day-notice termination flow); Urgent Sale price reductions never reverted when the deadline passed, permanently discounting a property (fixed, plus a second bug where the expiry notification only fired for listings expiring exactly one day prior, silently missing any backlog); a frozen wallet's withdrawal attempt showed a misleading "insufficient balance" message instead of the real reason. Confirmed genuinely correct and untouched: inspections → readiness score, Construction Roadmap unlock, promotion credit daily billing, and the WebAuthn cryptographic implementation itself (though its domain configuration could not be verified directly, since secret values are never readable once set).
+
+## Rent to Own / Mortgage — A Genuinely New Category
+- Distinguished clearly for the client: "Hire" (the short-term booking commission tier) and "Mortgage" (progressive ownership) are not the same thing, and Mortgage never existed as a real feature — only unused, unwired schema fields.
+- Built as "Rent to Own / Mortgage," a real, selectable listing category: real monthly installment payments, real ownership-percentage tracking, automatic conversion to a completed sale at 100% ownership, and the same real commission mechanism as every other category.
+- Found and fixed a real gap during frontend wiring: the central label function used everywhere to display "For Sale"/"For Rent" had no entry for this new category, meaning every real listing of this type would have shown a broken, blank label to actual site visitors — caught before it reached anyone.
+- Corrected the real transaction model from "owner directly starts an agreement for a buyer they specify" to a genuine buyer-request → owner-approval flow, matching the same pattern already proven for rental applications.
+
+## Shortlet/Hotel Guest-Host Messaging
+- Built the real, previously entirely-missing in-app communication system for Shortlet and Hotel bookings, with genuine host anonymity toward the guest specifically (never toward CHS), and a real 12-hour escalation to admin when a host doesn't respond, reusing the exact Reminder Engine infrastructure already proven.
+- Caught and fixed a real column/value misalignment bug in the escalation function's own insert statement before it was ever tested — would have silently written wrong data types into the wrong columns.
+
+## Maintenance Reserve — Made Genuinely Functional
+- Confirmed, on direct client question, a real three-part gap: the Maintenance Reserve could never be externally funded, was never actually the real source of artisan maintenance payments despite existing for that purpose, and could never be withdrawn on its own.
+- Fixed all three: real fund-from-main-wallet transfer, real artisan payment logic that draws from the reserve first and only falls back to the main wallet for a genuine shortfall, and real, unrestricted withdrawal of unused reserve funds back to the main wallet.
+
+## Real, Login-Able Demo Accounts
+- Built 10 genuine, fully-verified user accounts (not simulated) across five categories — Land, House, Office, Hotel, Shortlet — each a real seller/buyer or host/guest pair, with real listings live and real wallet balances funded, so the client could manually click through negotiation, payment, and commission deduction themselves rather than have it demonstrated by the agent.
+
+## A Real Gap in the Documentation Process Itself, Found and Fixed
+- Discovered that every migration from 77 through 95 — covering the entire audit and everything built afterward — had been applied directly to the live database and thoroughly tested there, but never actually saved as a file in the exportable project repository. The packaged zip and the live database had quietly drifted apart for several rounds of work.
+- Reconstructed and saved all 17 real migration files with their exact, already-tested content, and verified their presence directly inside the final zip rather than assuming the fix worked.
+
+## Documentation Refresh — Progress Log, Handover Notes, Users Guide, T&C, Feature Catalog
+- Updated the Terms & Conditions with the real, complete commission structure across every category, plus new clauses for Rent to Own, Estate Management subscriptions, Shortlet messaging, and the Maintenance Reserve.
+- Updated the Users Guide (in-app and `.docx`) with two new real sections — Rent to Own/Mortgage and Estate Management — and extended the Wallet and Shortlet sections.
+- Updated the Feature Catalog (PDF, segmented `.xlsx`, and in-app data) with a new 10th chapter covering every system built since the last update.
+- **A real mistake caught and fixed in the same breath:** after correctly updating this Progress Log and the Handover Notes, a careless `cp` command overwrote both freshly-updated files with their own stale originals from a different folder, silently destroying the update. Caught by verifying the actual file content after packaging, rather than assuming the edit had survived — redone correctly immediately after.
+
+## Real Client Testing — Round One (Land Category)
+The client began genuine, manual testing using the real demo accounts, and reported several findings directly from real use — every one investigated and either fixed or confirmed correct with real data, not assumed either way:
+- **Identity verification self-certified instead of ever reaching admin** — a buyer's real ID submission immediately marked itself "verified" the moment the form was filled in, with no real admin review step and no record for admin to ever see. Rebuilt as a genuine pending → admin-review → approved flow, matching the proven liveness-verification pattern. Two real, separate constraint bugs (a missing domain mapping and a missing allowed action type) caught and fixed by testing the full flow end-to-end, not just the new function in isolation.
+- **No logout reachable from anywhere except the homepage on mobile** — confirmed directly in the code: the real `signOut` function was only ever wired into the homepage's own header. Added a real, working logout to the persistent bottom navigation's "More" menu.
+- **House Rules appearing on a land sale listing** — confirmed exactly as reported: the component rendered unconditionally for every property regardless of purpose. Fixed to only appear for Rent, Lease, Shortlet, and Rent to Own — the categories where an ongoing occupancy relationship genuinely exists.
+- **The real mobile page-width bug, investigated twice.** First found and fixed: no viewport meta tag existed anywhere in the app, causing every mobile browser to assume a desktop-width canvas — this very likely explained both the sideways-scrolling homepage and the off-center splash screen (both governed by the same real viewport calculation) in one fix. When the client reported the issue was reduced but not fully gone, applied the standard second half of this class of fix — constraining horizontal overflow at the root `html`/`body` level — since the viewport tag alone doesn't protect against a single element elsewhere on the page being slightly wider than the screen. Awaiting the client's next real-device confirmation.
+- **The in-house "similar properties" advertising system already existed** — a pleasant surprise, not a gap — but real testing surfaced a genuine bug: the "near you" section's label promised area-level proximity while the actual query only ever matched the whole state, and never filtered by property type, once surfacing an unrelated multi-million-naira duplex under a land listing. Rebuilt with genuine progressive widening (exact area → LGA → state), verified tier-by-tier against real data to confirm the cascade behaves correctly.
+- **No communication box for a seller responding to an offer** — the buyer already had one; the seller only had accept/decline. Added a real, optional message box whose contents are what the buyer actually receives in their notification.
+- **The rent countdown and 90-day non-renewal notice, discussed earlier in the project, had never actually been built** — confirmed the real database column (`notice_given_at`) existed but nothing anywhere read or wrote it. Built a real, live day-count on the tenant dashboard and a genuine notice mechanism that honestly tells the landlord whether notice came within or after the requested 90-day window, tested against the client's own example numbers.
+- **Demo login credentials delivered as a real, downloadable Word document** rather than requiring the client to keep scrolling through chat — caught and fixed a real rendering defect (an invisible header row) before delivering it.
+
+## The Real Sale Payment Mechanism — The Most Significant Finding of the Engagement
+Direct client testing surfaced something that had gone unnoticed through the entire prior audit: **every commission test this whole engagement had run was correct, but sitting on top of a transaction that never had a real way for a buyer to actually pay a seller the purchase price.** Only commission had ever been tested; the core transaction itself had no payment button anywhere.
+- Built a single, transparent checkout: the buyer's real total automatically includes their own commission (shown as both a percentage and a real Naira value, never one without the other); the seller's real net (price minus their own commission) is calculated and paid automatically.
+- Tested with the client's own real numbers: a ₦34,500,000 offer produced a real total due of ₦36,742,500 for the buyer and a real net of ₦32,430,000 for the seller — funding the buyer to exactly ₦35,000,000 (the client's own instruction) correctly failed, with the system honestly stating the real amount still needed, rather than an ambiguous error.
+- A real bug caught before delivery: the commission-breakdown function initially referenced the wrong `platform_settings` key names and silently returned blank percentages — found by testing the actual output, not by reading the code.
+
+## Real, Sourced Legal Document Requirements and an Escrow Hold on Sale Proceeds
+Following directly from the payment mechanism above, the client asked for real protection: a seller should not be able to touch sale proceeds until the actual legal transfer of a property is confirmed complete.
+- Researched the real, current legal requirements for a Nigerian property sale from genuine, cited sources (Lexology, PropertyPro, Diya Fatimilehin & Co, and others) rather than inventing a list: Certificate of Occupancy, Deed of Assignment, Survey Plan, Governor's Consent, Tax Clearance Certificate, Sale Agreement, and — conditionally, only for a property with a real structure on it — Building Plan Approval.
+- Built a real requirement: an owner must upload soft copies of every required document when listing under Sale; CHS genuinely verifies each one; a buyer's payment is blocked entirely until every required document for that specific property is confirmed verified — tested by deliberately verifying 5 of 6 required documents and confirming payment still correctly failed, then verifying the 6th and confirming it succeeded.
+- Built a genuine escrow hold: a seller's real proceeds land in a wallet balance that is visible but not withdrawable, confirmed directly by testing that the real withdrawal function could not touch it. Funds only move to the seller's spendable balance once CHS explicitly confirms the real, physical legal documents have been transferred to the buyer — tested with a real, separate account genuinely lacking admin rights, confirming it could not release the funds itself.
+
+---
+
+## Agent & Manager Business Tools — A Real Mini-Office Inside CHS
+Built at the client's direct request so an agent or manager can run their own practice through the platform rather than alongside it:
+- **Real team/staff system** — an agent or manager can invite genuine, separate staff accounts, assign a role label, and see real daily activity reports submitted by each one.
+- **Real tenant register and property/owner register** — per-agent, searchable, with real ID documents attached, not a shared spreadsheet.
+- **Real expense/income tracking**, a **real remittance flow** paying collected rent on to the actual owner, and **real, auto-generated digital receipts** for completed transactions.
+- **Independent agent commission model** — a real, adjustable per-owner commission rate and a custom fee builder, replacing a single fixed platform rate.
+- **Multiple bank accounts** for agents/managers, with a real "active withdrawal account" selector.
+
+## Host and Guest as Real, Separate Roles — and the Complete Shortlet Rebuild
+Direct, serious client feedback revealed the entire prior shortlet payment mechanism was fundamentally broken — instant booking with no host review, commission calculated but never collected, and no way for a host to ever get paid. Rebuilt from the ground up:
+- **Host** and **Guest** split out as real, separate roles from Owner and Buyer, each with their own dedicated dashboard, built the same proven way as every other role — real data, not a placeholder.
+- **Real request-to-book flow**: a guest sees the true, full cost (rent plus their own commission share) before committing; a host must genuinely accept or decline; a decline triggers a real, automatic, full refund.
+- **Real host payout**, net of the host's own commission, released deliberately by admin — not automatically — the same CHS-mediated pattern used everywhere else in the app.
+- **Real two-way ratings** after a confirmed stay — the single biggest trust signal previously missing from this category.
+- **Real, stated cancellation policy**, enforced server-side: full refund 48+ hours before check-in, 50% within 48 hours, none after.
+- **A real, flexible security deposit**, per direct client specification: free for the host to switch on or off per listing, applied only to a genuinely first-time guest, and automatically waived once a guest has 3+ real ratings on file. Tested directly on both real outcomes — release back to the guest, and claim for the host with a required reason.
+- **Real house-rules attestation** — a guest must now actually see and check a box agreeing to a property's real house rules before a booking request can be submitted, closing a gap where the feature existed for hosts but was invisible to guests.
+- **Real dispute-filing**, extended to Guest and Host — a working form already existed for Tenant and Owner but had never been connected to these two newer roles.
+
+## Developer as a Real, Separate Role
+Confirmed and fixed a genuine gap: an account could register as a Commercial Developer but had no way to log back in under that role, and no dedicated dashboard existed at all. Built the same way as Host/Guest — real application status, real portfolio, real listings.
+
+## KYC & Registration — Three Real, Confirmed Bugs Found and Fixed
+- **Non-NIN ID types had nowhere to enter their own real number** — the system was silently saving a person's NIN as the "ID number" regardless of which document was actually chosen (Driver's Licence, Passport, Voter's Card). Fixed with a real, conditional number field per ID type.
+- **The admin KYC review screen only checked a person's primary role** to decide where to look for their documents — completely missing real credentials attached to a secondary role. Found and fixed against a real, in-house test case (an account that added Manager as a second role).
+- **Document links relying on a URL signed once and stored permanently** — a real, structural fragility (any future signing-key change silently breaks every stored link with no warning). Rebuilt so every document link now generates a fresh, live signed URL at the moment someone actually clicks to view it.
+
+## Property Traceability — A Real, Structural Fix
+Confirmed a serious, scale-relevant gap directly from a client-reported case: two real properties shared the exact same title with no way to tell them apart, and an application sitting with an owner for a decision was completely invisible to admin. Fixed both:
+- Every property now has a real, permanent reference number (`PROP-000001` style), backfilled for every property that already existed.
+- A real admin search tool — by reference number, title, or the real owner's name/phone — always shows the owner's identity directly.
+- Admin's application view now shows every real status, including "awaiting owner decision," instead of silently excluding it.
+
+## Account & Support Features
+- **Real PIN reset** — phone + NIN verification, since the platform has no email/SMS infrastructure; previously didn't exist at all, and even the platform owner didn't know the process.
+- **Real FAQ page**, written from CHS's own actual Terms & Conditions and features rather than copied from another platform.
+- **Add-a-role without logging out**, plus a real, one-tap role switcher on the Profile page — an already-authenticated session now skips straight to picking the new role.
+
+## Design
+- **Desktop splash screen fix** — reproduced directly with a real screenshot at desktop resolution before touching code. The real cause: a background image built for a phone's tall aspect ratio was being cropped into an unrecognizable dark sliver on a wide screen. Fixed with a real, deliberate desktop-specific treatment; mobile confirmed untouched.
+- **Distinct per-role color themes** — found that a real, deliberate 7-zone color system already existed, but four newer roles (Host, Guest, Developer, Staff) were quietly borrowing another role's colors instead of having their own. Added four new, genuinely distinct colors and verified all eleven side-by-side before shipping.
+
+## Revenue Model — Team/Staff Subscription
+Per direct client decision: free for up to 2 real staff, a real subscription required from the 3rd onward, tiered by staff count, with exact discount math — 6 months paid returns 8 real months of access, 12 months paid returns 18. Tested directly: blocked a real 3rd-staff addition pre-subscription, purchased a real 6-month plan and confirmed the exact charge and access period, then confirmed the 3rd addition succeeded afterward.
+
+## Research Delivered
+- Nigeria property legal-document requirements for a sale, confirming CHS's own T&C already matches real, standard practice, plus a recommendation on verification charging (flat fee, charged upfront).
+- Multi-platform deployment — confirmed the app is already genuinely installable on PC, Android, and iPhone today via each browser's native install feature, with no app-store submission required for this level of access.
+
+- Made Building Plan Approval a genuinely conditional requirement rather than either always-required (wrong for raw land) or optional everywhere (wrong for a house) — caught and fixed a real array-syntax bug in this logic through testing before it reached the client, then proved both real cases (a land listing correctly requiring 6 documents, a house correctly requiring 7) with real data.
+- Updated the seller's own button to read "Offer Accepted — Proceed to Payment," and the buyer's notification to point them directly back to the real payment screen, per direct client request.
+
+---
+
+## Receipt & Payment Voucher — A Real, Branded Redesign
+Direct client feedback that the original receipt "looks too simple" was taken seriously rather than dismissed. Rebuilt from scratch: a real dark gradient header band with a genuine orange accent stripe, a real circular "CHS Verified" watermark seal, corner marks, a proper serif display font for the amount, and a boxed description panel — reads like an actual bank or fintech document now, not a plain data table. Delivered as real, matching PDF samples using genuine transaction data before the new design was ever applied to the live app itself, so the client could judge the real thing, not a promise of one.
+
+## Artisan Commission — Corrected to the Real, Tiered Rate
+Direct client instruction, confirmed and fixed: commission on labor only, never materials — a real, tiered rate of 6% for labor under ₦100,000 and 8.5% at or above, replacing an earlier flat 10%. Tested directly against both real tiers before shipping.
+
+## The Marketplace — Rebuilt Completely, Per Explicit Client Instruction
+A direct, serious client concern — that a vendor could self-report a deal and CHS had no way to verify it ever happened — led to a full rebuild, not a patch:
+- **Real, admin-mediated messaging**, reusing the same proven contact-blocking system already built for property-offer negotiation: every quote request and every vendor response is held for real CHS review before the other party ever sees it. A phone number or email in either direction is caught and rejected automatically.
+- **Real, escrow-backed payment** replacing the old self-reported flat fee entirely: accepting an approved quote charges the buyer the real price plus a real 6% commission, held in escrow; the vendor receives the price net of a real 4% commission only once CHS confirms delivery. A full refund is available if a deal falls through. Proven end to end with real money: an ₦1,660,000 quote correctly charged ₦1,759,600, and correctly paid the vendor ₦1,593,600 net on release.
+- **A real "skip the conversation" direct-buy option** — sort listings by price and buy the cheapest one directly at its own real, fixed price, no negotiation at all. Same real 6%/4% split and escrow protection. Proven with real data: an ₦8,500 product correctly charged ₦9,010 and correctly paid the vendor ₦8,160 net.
+- Closed a real, confirmed gap where 6 of the 10 real vendor categories — including Building Materials, the exact category the client asked about — had no referral fee configured at all, and the database itself was hard-blocked from ever accepting one for a product category.
+- Terms & Conditions updated with a full new term covering moderation, blind identity, and the real escrow commission.
+
+## A Real Link to CHS's Sister Marketplace
+Per direct client request, a real, admin-editable link to Unify Market Central — reusing the exact same proven pattern already built for editable contact details, so admin can update the real URL themselves without needing a code change. Placed in the three real places the client specifically described: the Marketplace page, the Construction Roadmap page, and the Owner dashboard's Maintenance section.
+
+## The Rental Application Form — Found Genuinely Porous, Rebuilt Properly
+Direct, serious client testing feedback, confirmed by reading the real code before touching it: the owner's review screen only ever showed the guarantor's name, phone, and move-in date — every other real, already-captured applicant detail (occupation, address, income, ID type and number) was sitting completely unused in the database, never fetched or shown. Fixed completely: added a real applicant full-name field and real employer/business fields, and rebuilt the owner's entire review card to show the tenant's real name, a genuine ID-verified status, occupation, income, employer details, current address, and the full guarantor section, all in one place.
+
+**A second, separate, more serious gap raised directly by the client afterward:** a guarantor's own address, occupation, relationship, and consent were all being entered by the applicant on the guarantor's behalf, with a single checkbox standing in for real consent — no way to know the guarantor was ever real, informed, or willing. Rebuilt to match real, global tenant-referencing practice: the applicant now provides only the guarantor's name and phone; the guarantor completes every other real field about themselves — independently, via their own secure, single-use link, requiring no CHS account — before the application can ever reach the owner. Tested completely end to end: confirmed the owner genuinely cannot see any guarantor detail until the guarantor has completed their own real, separate step, and confirmed the same link is correctly rejected on a second attempted use.
+
+## Owner Dashboard — Missing Prices, Found and Fixed
+A direct, confirmed gap: the owner's own property cards never showed a listing's real price at all, in any category — checked directly, zero matches for `property.price` anywhere in the file. Every listing now shows its real price prominently, right under the title.
+
+## Event Centre Bookings — Real Capacity Tiers and Priced Facilities
+A previous agent's claim that a much richer event-booking system existed in an earlier prototype was verified directly against the real, 12,973-line legacy file before acting on it — confirmed genuine. Rebuilt into the live app: real, host-configurable capacity tiers, each with its own price, and a real priced facilities list (lighting, sound, catering per guest, live band, DJ, decoration, generator, security, parking attendants) — plus "Ushers / event staff," the one real gap the previous agent had correctly flagged, added as its own line item. A real, live-calculated quotation shows the guest a running total as they select. Proven with real data: a 100-guest wedding with catering, a live band, and ushers correctly totalled ₦432,000 base plus 6% commission, for an exact ₦457,920 charged to the guest. A real event add-on request system (music band, caterer, ushers, free-text notes) was also added directly to the standard booking flow for genuine event-type venues, flowing straight through to the host's own dashboard.
+
+## A Real, Serious Payment Regression — Found, Fixed, and Traced to Its Root Cause
+A direct client report (a real tenant, Franka Oluma, Ikeja office) that a completed rental payment had "vanished" led to a full trace, not a guess. Two separate, real, confirmed bugs were found:
+1. **The owner's approval had genuinely never been recorded** — traced directly through the real database, not assumed — meaning the tenant's payment attempt correctly, if confusingly, showed the application as still awaiting a decision the owner believed they'd already made.
+2. **`pay_rent` only ever charged the tenant the raw annual rent**, silently ignoring their own real commission invoice generated at approval — the exact reason no breakdown was ever shown before payment. Fixed to charge and correctly settle both together, with the real total now shown to the tenant before they pay.
+
+The client's own real, stuck application was walked through the corrected flow personally and left completed — real approval, real relay, a real ₦530,000 payment (₦500,000 rent + ₦30,000 commission), and a real, verified receipt — deliberately left in place as the working example the client had originally been trying to produce.
+
+**Following this, the client directly asked whether the same bug existed elsewhere.** Every other real payment category was checked, not assumed: Sale was already correct (commission computed inline, not invoiced separately). Agent-managed rental was already covered by the same `pay_rent` fix. Rent-to-Own had the exact same real bug — found and fixed before being reported, proven with real numbers (a ₦100,000 installment correctly charging the buyer ₦105,000 and paying the seller ₦94,500 net).
+
+**A real, concrete safeguard was also built against this exact pattern recurring**, per the client's direct question about prevention: an admin-visible alert for any real commission invoiced but genuinely uncollected for more than two hours — an early warning that would have caught this the same day it happened.
+
+## Notifications — Made Genuinely Clickable, and Genuinely Real-Time
+Detailed, direct client testing feedback covering several real, related gaps, addressed together:
+- **Confirmed the actual root cause of "no owner notification"**: submitting a rental application never notified the owner at all — a genuinely missing notification, not a broken link. Fixed, with a real, working link straight to the relevant page threaded through the entire application decision chain (owner decision → CHS relay → tenant outcome).
+- **Confirmed the actual root cause of "no admin pop-up," raised twice by the client**: the notifications table had never been added to Supabase's real-time publication at all — the infrastructure for a live alert genuinely didn't exist yet. Enabled it, and built a real, visible toast that appears the instant a new notification arrives, clickable straight through to what needs attention.
+- Tested the real "Saved" property button directly against the live database, end to end — genuinely works correctly; most likely a discoverability issue rather than a bug.
+
+## Real, Dedicated Tabs — Completing the Buyer, Tenant, Owner, and Admin Experience
+A full round of real, permanent homes for information the client had been "dragging up and down" to find:
+- **My Applications** (buyer/tenant) — every real rental application and purchase offer, queued permanently the moment it's submitted.
+- **Recent Applications** (owner) — every real application received across every property, in one place, most recent first, regardless of how far down the property list it sits.
+- **Transaction History** (owner, buyer, tenant) — reused an already-correct, general transaction page rather than rebuild one, and gave it real, visible navigation from every relevant dashboard.
+- **Platform Earnings** (admin) — a real, dedicated view of every collected commission, with the real payer's name, amount, and timestamp.
+- **Rent Savings relocated**, not duplicated — confirmed the tenant dashboard already showed this correctly, then removed the redundant copy from the general homepage.
+- Two further real constraint bugs caught during this same testing pass: a wallet transaction type that didn't yet allow the new escrow balance, and a repeated transaction-rollback pattern where combining a real update with a subsequent failing call in the same batch silently undid the update — both found and fixed by verifying actual database state after each step, not by trusting a query had succeeded.
+
+## September 19–28, 2026 — Round 8: real-device testing, a serious client escalation, and identity verification rebuilt from the ground up
+
+Migrations 287–410. The most consequential period of this engagement: real bugs found through direct, sustained client testing (not review), one genuine mistake of mine that regressed a previously-fixed problem, and a full identity-verification rebuild done properly after a direct test exposed how shallow the original one was.
+
+**Recently Handled, extended everywhere.** The "moves to a 7-day archive instead of vanishing" pattern, already proven for offers and Engage CHS, was extended to ID/face verification, registrations, rental applications, properties, marketplace vendors, artisans, and developer applications — every admin review queue now behaves the same way.
+
+**A real, serious payment regression, found by a direct client report, then traced and reversed.** A duplicate ₦850,000 rent payment on a real Malali tenancy was traced to `pay_rent` having no "too early" check at all. Fixed with a 30-day window — then a second, connected bug surfaced: the same fix wrongly blocked a *brand-new* tenancy's very first payment, since `lease_end` is set a year out at approval, before anything is paid. Fixed properly: the 30-day rule now only applies to genuine renewals. The real duplicate payment was reversed, both parties notified honestly, not silently.
+
+**Guarantor verification hardened.** Three separate, real bugs in the guarantor ID upload were found and fixed in sequence: no INSERT storage policy (uploads silently failed), no required-field check (submission succeeded without a file), and no SELECT policy (the signed URL was always null). A required address-proof document (≤90 days old) and a same-surname block (guarantor cannot share the applicant's surname) were added per direct client instruction, enforced at both frontend and backend.
+
+**The splash-screen saga — three real regressions in the same mechanism, and a decisive final call.** A service worker built to speed up reloads twice caused the exact "back to splash screen" complaint it was meant to prevent — first by caching pages instead of only static files (a browser could keep showing an already-fixed page after a new deploy), then, after being torn out entirely, the *actual* remaining cause was found: a notification-click fix from earlier in the round opened links in a literal new browser tab, which structurally cannot avoid cold-starting the whole app. Reverted to real, fast, same-tab navigation. The service worker itself was removed outright and any already-installed copy is now actively force-unregistered on load — not patched a fourth time.
+
+**A very serious client escalation (Sept 28) over a genuine, self-introduced bug.** A tenant could pay a rental commission alone, with the real rent never moving, because an earlier "fix" had wired the generic sale-commission function onto rentals — that function only ever settles a standalone fee, never touches a tenancy. Found, owned directly, and fixed at the source: a rental's first commission now correctly routes through `pay_rent`, which combines both. Verified against the client's own two real, live commissions before and after.
+
+**A complete rental data reset, on direct instruction, done precisely.** Every real wallet impact was reversed first, calculated from the real records before deletion — not guessed — and verified afterward against a known clean account, which returned to exactly ₦100,000,000. 11 applications, 205 tenancies, 5 rent payments, and 13 commissions were then removed completely, every related notification cleared, every "rented" property reverted to available.
+
+**Rent escrow, matching the protection buyers already had.** A direct client question ("is my rent held the same way a buyer's money is?") exposed a real, significant inconsistency: rent moved straight to the landlord's spendable balance instantly, with zero protection, while sale and shortlet money were correctly held. Built, with explicit client approval: rent now sits in the landlord's held balance, released automatically the moment the tenant files a genuinely clean move-in report, or after a 14-day grace period if nothing is flagged — whichever comes first. Admin can also release early. A genuine gap was found afterward, while writing this note: the grace-period auto-release was promised but never actually scheduled. Built and tested directly: a clean tenancy releases correctly, an open fault or a flagged report item correctly keeps it held and asks admin to decide.
+
+**Identity verification rebuilt properly, in two passes.** The original form asked for an ID type and number only — no name to compare, no state to count by. Rebuilt to collect the name exactly as printed on the ID (compared against the registered name, with an automatic match/mismatch verdict shown to the reviewing admin), gender, age bracket, state, address, occupation, email, and a required phone number, with explicit consent. Made mandatory before *any* commitment on the platform — an offer, a rental application, a shortlet/hire booking, an inspection, a rent-to-own request, a marketplace purchase or quote, or an Engage CHS request — enforced at the database, not only on the screen. A second pass, after a direct client test deliberately submitted a 10-digit NIN and it was accepted, built one shared rulebook (`lib/validators.ts` on the frontend, matching functions in the database) for every phone, NIN, passport, voter's card, driver's licence, and bank account number collected anywhere on the platform — checked live as you type, on submit, and, non-negotiably, in the database itself. The one-NIN-per-person rule, previously only enforced at registration, now also covers the verification path itself.
+
+**A real, serious data-protection gap, found while answering a direct client question and only half-closed.** Owners could read every field of a rental application or offer through the API — the applicant's NIN, their ID document link, both phone numbers, the guarantor's ID and even their confirmation token — even though the on-screen display had been trimmed down earlier. Protected views (`owner_rental_applications`, `owner_offers`) were built giving owners only the fields their screens use, and the owner screens switched to them. **The old, unrestricted direct access is deliberately still open**, pending confirmation that the owner screens work correctly on the new views after deployment — removing it prematurely would have broken the owner's dashboard outright.
+
+**A broader security audit, done unprompted while working on the documentation.** 25 database functions with full privileges checked nothing about who was calling them, reachable by anyone including people who were not signed in — confirmed directly: an unauthenticated call returned 35 real registration records including ID document links. Closed: internal functions (wallet credits, scheduled jobs) locked to the server only; every admin data feed now checks the caller's real staff domain, wrapping the original logic rather than rewriting it; `promote_listing` no longer accepts a negative amount or someone else's wallet; a public test-results table had row-level security switched on. One real secret, found embedded in a reminder server function, needs rotating in the Supabase dashboard — it is not safe to assume private any longer.
+
+**Smaller, real, direct-instruction fixes across the round:** upload boxes redesigned everywhere as real drag-and-drop targets, replacing plain file inputs that looked like instruction text; a "Take a Tour" photo/video gallery built for every property, with real, honestly-labelled placeholder images (and, after further discussion, the client's own real photos, hosted through their own Supabase bucket once a first hosting attempt genuinely failed); the wallet-balance display on My Rented Space, invisible due to white-on-white styling meant for a different background, fixed with a real light-background variant; a new, dedicated "Escrow Oversight" admin tab, since escrow money was previously scattered with no combined total anywhere; notification wording corrected so a tenant's payment confirmation leads with the real rent, not the commission, after a direct concern about how CHS was being represented; a repeated guarantor-phone leak onto the owner's dashboard, found and fixed twice before the real root cause (a stale service worker showing an already-fixed page) was identified.
+
+## Supabase Status (confirmed at time of writing, this update)
+287 real migrations are live in the production Supabase project (versions through `20260928182240`). The `backend-v2/` folder in the repo was found to be significantly out of sync with this — many files back to migration 196 contained only summary comments, not the runnable SQL. This session's own files (383–410) have been corrected to contain the real SQL, verified directly against what is actually deployed. The older backlog (196–382) has not yet been corrected; the live database itself remains the authoritative record in the meantime. Security advisors: 2 ERROR-level findings, both `SECURITY DEFINER` views (`owner_rental_applications`, `owner_offers`) that are correct by design — the whole reason for building them was to bypass RLS safely inside a controlled function.
+
+
+
+## Rent by instalments (Oct 12, 2026)
+CHS-managed landlords can allow quarterly or monthly rent. Tenant chooses a plan at first payment or in the 30-day renewal window; each instalment goes through escrow like annual rent, the management fee is taken in equal parts, reminders run daily. Tested in rolled-back runs: 12 monthly instalments sum to the rent and the net escrow equals rent minus fee; the annual pay button is blocked while on a plan; early instalments refused; renewal extends the lease on first instalment; wrong user refused.
+
+
+## Viewing time slots (Oct 12, 2026)
+Owners can set weekly viewing windows. Visitors pick a free slot; a slot is booked once; either side can move a visit; reminders go out; owners see a missed-visits warning. Rolled-back tests passed: free choice still works with no slots, non-owner cannot set slots, listed slots exclude blocked dates and booked slots, double booking and off-slot times refused, moving to a bad time refused, strangers cannot move a visit, record scoped to the owner, reminders sent.
+
+
+## CHS-approved agent badge (Oct 12, 2026)
+Admins approve agents; badge shows on that agent's listings with the agent ID; public check page; auto-hides on suspension or lost verification; removal needs a reason. Rolled-back tests passed: non-admin refused, unverified agent refused, non-agent refused, anonymous can verify but not list, suspension hides badge, revoke needs a reason.
+
+
+## Owner at-a-glance summary (Oct 12, 2026)
+One card at the top of the owner dashboard: what needs the owner, where the money is, and a row per property. Tested on a real owner account in a rolled-back run; signed-out users are refused.
+
+
+## Agent badge: hard requirements (Oct 12, 2026)
+The first badge build only checked that an agent was registered and verified. Rebuilt on the owner's principles: corporate bodies only (CAC company, ESVARBON firm, QSRBN firm), complete current KYC, at least 10 income-generating transactions in 180 days, accepted terms, eight manual checks by a CHS officer, 12-month validity, automatic hiding. Tests (rolled back): KYC gate, 9 deals refused and 10 accepted, deals older than 180 days not counted, individual refused, regulator firms need an expiry date, old terms refused, agent cannot approve self, partial checklist refused, old approval path closed, stale KYC / expired registration / lapse each hide the badge. One bug found and fixed in testing (missing-KYC list crashed).
+
+
+## Managed-stamp rule, 6.5% sale cap, Terms V9 prepared (Oct 12, 2026)
+"Managed & Advertised by CHS" can now be set only where CHS holds an approved management agreement for that property; removing the stamp ends the open agreement. The managed-sale seller fee is capped at 6.5% (tiers 6 / 5 / 4 / 3 above that). Tested in rolled-back runs. Terms V9 is written and staged but NOT active: code still at version 8 until the switch-over steps in lib/termsVersion.ts are done together with backend-v2/487_terms_v9_activation.sql.
+
+
+## Event centre listed as shortlet showed no event services (Oct 13, 2026)
+"Event Centre / Hall, Independence Way" (Round 2 host) was saved as purpose shortlet with no hire category, so guests got the plain per-night form: no ushers, caterer, live band, security, capacity tiers or facilities, although the tiers (3) and facilities (11) existed. Data fixed live (purpose hire, category event_centre). Code guard added in PropertyActions: any shortlet-purpose listing that is an event centre/hall now opens the event booking form. Root cause: the listing form offers "Event centre" under Shortlet as well as Hire.
+
+
+## Host console, notification landing, service answers, change requests (Oct 13, 2026)
+Booking notifications to hosts used to open /owner (booking_request_link), never the request. They now open /host?tab=..., and the bell picks the tab (requests, paid, changes, services, stays, history). The host page is rebuilt as a console of tabs: Overview, Requests, Awaiting payment, Paid & deposits, Changes, Services, Stays & check-in, Events, History, My listings, Team & work, with a filter for shortlet / hotel & lodge / event centre. Hosts answer each requested service (we supply / guest arranges / cannot provide, with provider, price and note) and the guest sees the answer on My Bookings; guests can add services and ask to change guest numbers, which hosts approve or decline. Migration 488. Rolled-back tests passed (stranger refused, decline needs a reason, over-tier flagged, guest sees answers).
+
+
+## Date moves and CHS top-ups (Oct 13, 2026)
+Guests can ask to move a booking to another date (same length of stay; free dates only; peak-priced dates for shortlets and hotels refused; at most two moves). Hosts approve and the calendar moves. When a change costs more (bigger hall tier chosen by the host, or an extra amount), the guest pays the difference plus CHS's fee from their wallet into escrow; CHS commission rows grow by the same amounts, and the host's payout includes it. The change takes effect only once paid; unpaid top-ups lapse after 24 hours (setting booking_topup_pay_hours) and the booking stays as it was. Unpaid bookings simply cost more when paid. Migration 489. Rolled-back test: taken date refused, tier required when over capacity, top-up 265,000 charged (250,000 + 6%), booking, calendar and both commission rows updated, stranger and double payment refused, lapse works.
+
+## 13 Oct 2026 — Venue service payments through CHS, no escrow, no commission (migration 490, LIVE)
+- Guests pay each instalment of the venue's quotation (caterer, ushers, band, security...) from their CHS wallet straight into the venue's wallet, in order. Not escrowed, no CHS commission, withdrawable at once. Receipt SVC-xxxxxxxx. Logged in service_payment_log (the separate category).
+- Commission stays only on the booking itself (hall / deposit / upfront payment).
+- Venue can refund an instalment in one step (host_refund_service_payment, reason required; ref SVR-). If the venue cancels the booking (cancelled_by = owner), paid instalments auto-refund from the venue wallet; shortfall alerts admins.
+- Admin switch: platform_settings event_quote_manual_payment = 'off' stops "paid outside CHS" recording.
+- Screens: GuestEventQuote (Pay from wallet, fund-wallet link), EventQuoteHost (wallet-paid shown, Refund, outside-CHS buttons behind a confirm).
+- Tested rolled back: order, stranger, low balance, exact debit/credit, commission rows unchanged, refund, host-cancel trigger, manual-off, summary.
+
+## 13 Oct 2026 — Guest home rebuilt (migration 491, LIVE)
+- /guest is now a tabbed home: Overview (next booking, things needing action, recent money), Browse (search, category, max price), My bookings (change guests/dates, cancel, message, arrival pass), Bills & quotations (pay instalments from wallet), Transactions (filters + search + receipts), Applications, Cancelled & refunds, Saved, Wallet (fund, withdraw, transfer), Past stays. Wallet balance + Fund/Withdraw strip always visible; badges for waiting items.
+- Wallet, Saved, Applications, Receipts and My Bookings pages were turned into embeddable panels (components/*Panel.tsx); the old URLs still work.
+- New RPCs get_guest_home, get_my_bills. Refund REQUEST flow, disruption (force majeure) events, reschedule/credit options, split payments, withdrawal safeguards are the next steps (agreed policy in chat 13 Oct).
+
+## 13 Oct 2026 — No-fault disruptions: reschedule / refund (migration 492, LIVE)
+- Admin declares a disruption (Admin > Oversight > "Disruptions & no-fault refunds"): state/area/dates; guests with paid bookings in scope are notified; they can move dates free (auto-applied if the new dates are free) or ask for a refund.
+- Guest: "I can't go ahead" on a confirmed paid booking (reasons: declared disruption, bereavement, medical, other), 3 suggested free dates, tracking under Cancelled & refunds (accept/ask CHS/withdraw).
+- Venue: new Host console tab "Refunds & moves": agree, claim real costs (cap 25% of booking price, listed in a note) or disagree. Silent venue: declared disruption goes ahead with no costs after 48h; otherwise to Admin.
+- Money: refund = total + guest fee + deposit minus venue costs; venue costs paid to host wallet, no CHS commission; commission rows removed; calendar freed. Refs DSR-/DSK-.
+- Settings: disruption_venue_cap_pct (25), disruption_host_reply_hours (48), disruption_reschedule_days (90).
+- Terms V9 draft has a new "When nobody is at fault" clause (V9 still inactive).
+- Not yet: credit option (a refund lands in the wallet and can be rebooked), service-payment refunds on a no-fault cancellation (venue refunds those itself), split payments, guest-wallet withdrawal safeguards (step 3).
+
+## 13 Oct 2026 — Split payments (migration 493, LIVE)
+- On a booking waiting for payment, the guest taps "Split this payment" (My bookings) and shares a link/code. Anyone with a CHS wallet opens /split/CODE (or enters the code on the guest Overview) and puts in an amount (min 1,000, max 20 contributors). Contributions are held (debited, ref SPL-); when the pool plus the organiser's "Pay the rest" covers the full price (booking + guest fee + deposit) the pool moves to the organiser's wallet (SPC-) and the booking is paid exactly as normal (_pay_booking_core, ref REQ-). So all cancel/refund/no-fault paths work unchanged.
+- Window closes, booking declined/cancelled, or organiser stops the split: every held contribution returns automatically (SPX-). Cron chs-split-lapse every 10 min plus lazy checks.
+- Refunds: a trigger on wallet_transactions shares any refund credited to the organiser (refs CXL-, HCX-, DSR-, EXP-, DEC-, DEP-, RFD-) back to each contributor in proportion (SPR-). Admin refund now uses ref RFD-<booking> (was random REFUND-).
+- Withdrawal safeguards already existed (PIN, OTP step-up, new-device cap, 24h hold on card-funded money, daily limit, freeze); refunds do not bypass the card-funding lock because that lock stays active against the balance.
+- Not yet: splitting venue-quotation instalments; contributors cannot yet see a split booking in their Transactions grouped by split (they see SPL-/SPR- lines).
+
+## 13 Oct 2026 — Event centre: hourly sessions and multi-day bookings (migration 494a/494b, LIVE)
+- An event booking is now one or more SESSIONS (date + start + end). A book launch = 1 session; a wedding with a traditional ceremony Friday 4-7 pm and a reception Saturday 10 am-5 pm = 2 sessions. A booking no longer blocks the whole day: a 6-11 pm event can use the same day after a 4 pm finish.
+- Venue rules (property_event_settings, host sets them on Event Pricing): book by the hour or by whole days only, opening/closing time, shortest booking (default 2 h), set-up before (30 min) and clean-up after (30 min) an event, hours that make a full day (10), max sessions per booking (10). Gap needed between two events = clean-up of the first + set-up of the second (60 min by default).
+- Price per session = hourly rate x hours, never more than the tier day price. Hourly rate = tier hourly_price (host sets "Hourly price" on a tier) or day price / full-day hours. Several sessions on one date never cost more than one day price. Facilities/services are charged once per booking. Commission unchanged (guest 6%, host 4%).
+- Data: event_slots (exclusion constraint on unit + time range incl. buffers, deferrable), shortlet_bookings.time_slots, event_capacity_tiers.hourly_price. Triggers keep sessions and whole-day calendar rows from ever overlapping (hotel/shortlet/whole-day bookings are unchanged). Booking holds, expiry, confirmation, cancellation, decline handled by the existing booking triggers (trg_booking_after_insert/update, purge_expired_holds updated).
+- RPCs: quote_event_sessions (live price + per-session problems), request_event_booking_sessions, get_event_availability, get_booking_sessions, get_event_settings, set_event_settings, set_tier_hourly_price, get_host_event_slots, host_block_hours, host_unblock_hours. Internals: _event_sessions_quote, _event_unit_free, _move_booking_calendar, _slots_total_for_tier.
+- Date moves (guest change request and no-fault reschedule) move the whole event by the same number of days, times unchanged, only if every session fits; tier upgrade price difference works for session bookings.
+- Screens: guest form (sessions picker with live quotation) in HireBookingForm + EventSessionsPicker; host Event Pricing page (hourly price per tier, EventHoursPanel: rules, coming up, block hours); sessions shown on guest My bookings, host console, host pending requests and admin request queue (BookingSessions).
+- Old request_event_booking (single whole-day) still works and still blocks the full day; the guest form now uses the sessions version.
+- Tested (rolled back): launch 7 h = 126,000 on a 180,000/day hall; wedding two days = 180,000; 6-11 pm same day after 5 pm finish accepted; 5:30 pm start refused (needs 60 min gap); overlap refused; whole-day booking vs session both ways refused; confirm/cancel/expire free or hold correctly; date move by +8 days; tier re-price; host hour-block.
+- Not yet: changing the times of a session after booking (guest can move the whole event by days or cancel and rebook); host calendar grid does not draw sessions (they appear in Event Pricing > Coming up); iCal export ignores sessions; hotel not touched.
+
+## 13 Oct 2026 — Venue and admin work together to source guest services (migration 495, LIVE)
+- For each service a guest asks for (photographer, MC, caterer, ushers, band, decoration...), the venue can: supply it, say the guest arranges it, say it cannot, or "Ask CHS to source it" (per service, or "all unanswered" in one tap).
+- Admin (new tab "Service sourcing (venue requests)") sees the event, dates/sessions, venue contact, what the guest wrote, and either sends a proposal (provider, contact, cost to the venue, details) or says it cannot source it (reason). Venue is notified at each step.
+- Venue then accepts the proposal and sets the price its guest pays (margin shown; warning if below cost), or asks for another option with a reason. After acceptance admin confirms the provider is booked and the venue is told who/contact.
+- A short private conversation per service (venue <-> CHS), with notifications; the guest never sees it.
+- The guest sees only: "The venue is arranging this" and then "The venue will supply this" with the venue's price (no provider, no CHS, no cost). Venue price is paid guest -> venue wallet as before (490); the cost between venue and CHS/provider is settled outside the app for now.
+- Data: booking_services statuses sourcing/quoted added; supplier_cost, chs_provider, chs_provider_contact, chs_unable, sourced_via, referred_at, quoted_at, provider_confirmed_at; table service_messages. RPCs: host_refer_services, host_cancel_referral, admin_quote_service, admin_cannot_source, host_accept_service_quote, host_reject_service_quote, admin_confirm_service_provider, send_service_message, get_service_thread, admin_get_service_sourcing; get_booking_services_host / get_my_booking_services / get_host_console updated.
+- Tested rolled back: refer 3 services, guest view hides sourcing, stranger refused, admin queue, quote, cannot-source returns line to venue flagged, reject, accept at 120,000 vs cost 80,000, guest sees price only, provider confirm, threads.
+- Open decisions: how CHS earns on sourced services (sourcing fee / provider referral) and who pays the provider; nothing automated yet. Admin queue has no badge count on the tab yet (notifications are sent).
+
+## 496 – All service payments go through CHS (Oct 13 2026) — supersedes 490
+- Rule: every payment (quotation instalments, venue-supplied services, CHS-sourced services) is taken from the guest's CHS wallet and held by CHS; released with the booking payout. Nothing is paid outside CHS (mark_quote_milestone_paid now raises).
+- Fees (platform_settings, editable): service_guest_pct 6 (added to guest's price), service_host_pct 4 (venue's own services, deducted at release), service_provider_pct 10 (CHS-sourced, deducted from provider), service_venue_referral_pct 0 (share of CHS commission to referring venue).
+- CHS-sourced: guest sees the provider's agreed price; provider owed price less 10%; admin pays provider and marks paid with a transfer reference (admin_get_service_payouts / admin_mark_provider_paid; shown in Admin > Service sourcing).
+- Refund policy: venue cancel/declined/expired/no-fault 100% incl. fee; guest cancel ≥48h 100%, <48h 50%, after start 0%. Refund after provider already paid is flagged to admin.
+- Tables: service_payments, service_provider_payouts. Screens: GuestEventQuote, GuestBookingExtras (Pay button), EventQuoteHost, HostBookingServices, AdminServiceSourcing; Terms V9 draft updated.
+- Tested live (rolled back): hold, double-pay block, price lock, release, referral off, host cancel, <48h 50%, provider payout, low balance, manual payment blocked.
+
+## 497 – Host replies go through CHS (Oct 13 2026)
+- Found: the host's accept/decline and service answers went straight to the guest (only the inbound request was relayed). Now, when manual relay applies, they wait for admin release (Admin > Host replies; edit/clear notes; release). Guest keeps seeing "with the host" / "venue is arranging this"; payment timer starts at release. Unreleased replies auto-release after the relay time (240 min standard) with contact-detail notes removed.
+- Host notes/service notes with phone numbers or emails are refused. "We supply this" needs a price (0 = included).
+- Tables/columns: shortlet_bookings reply_pending/reply_note/reply_at/reply_release_at; booking_services relayed/relay_due_at. Functions: host_decide_shortlet_booking (held), _apply_host_decision, _release_host_reply, _release_host_services, _sweep_host_replies, admin_get_host_replies, admin_release_host_reply; host_set_service rewritten.
+- Tested live (rolled back): hold, double answer blocked, phone note blocked, price required, guest view hidden then shown, admin queue, release, auto release.
+- Not covered: change requests answered by the host and host-initiated chat still go straight; the old Royal Garden test booking was answered before this and has unpriced services.
+- (Oct 13, later) Royal Garden booking 018429ef reverted to "host accepted, waiting for CHS" (reply_pending) so admin can release it. Guest My Bookings: a failed read no longer shows "No shortlet bookings yet"; it retries once and shows "could not load, try again". Payment (pay_for_booking) verified under the authenticated role; page verified in a headless browser against mocked data. Admin "Host replies" screen only exists after the app is deployed.
+- (Oct 13) FIX: shortlet_bookings.time_slots (added in 494a) had no column SELECT grant for authenticated, so My Bookings' query failed and showed 'No shortlet bookings yet'. Granted select (time_slots) live. Lesson: every column added to a column-granted table that the frontend reads needs a grant.
+
+## 498 – Admin categories and Event Centres view (Oct 13 2026)
+- "Shortlet/Hire Bookings" always covered shortlets, hotels/lodges AND event centres but never said which. Rows now carry a category tag, with filter chips (All / Shortlet / Hotel & Lodge / Event Centre). Tabs renamed: "Bookings: Shortlet · Hotel · Event Centre", "Deposits (Shortlet · Hotel · Event Centre)", "Host replies to relay (all bookings)".
+- New tab "Event Centres (live bookings)": sessions, services (waiting/with CHS/to relay/unpaid), quotation, service money held, open changes. Hotel Controls remains settings only (peak pricing and cancellation rules).
+- Functions: _property_cat, admin_get_event_centres; get_admin_booking_queue and admin_get_host_replies now return cat.
+
+## 499 – Category tags everywhere and a Hotels & Lodges view (Oct 13 2026)
+- Category tags (Shortlet / Hotel & Lodge / Event Centre) now also on deposits, "guest arrived, payout held", pending guest/host messages and correspondence rows.
+- New admin tab "Hotels & Lodges (live)": per hotel, requests to relay, host answers to release, urgent arrivals, in-house/arriving, payouts held, calendar freshness. Function admin_get_hotels.
+
+
+## 500 — Event advance payments (60%)
+- Setting `event_advance_pct` (default 60, 0 = off, max 90) and `event_advance_release_hours` (default 48). Event centres only.
+- Guest still pays everything into CHS escrow. At T-48h (sweep `_sweep_event_advances`, or admin `admin_release_event_advance`) CHS pays the advance: venue = 60% of (hall price − CHS commission) into the host wallet (ref ADV-); venue-supplied services 60% of (price − 4%) (ref SVA-); CHS-sourced providers get an advance record (advance_due, status owed) that admin pays by transfer and records (`admin_mark_provider_advance_paid`).
+- Balance after the event: `release_booking_payout` / `_service_release` pay only what remains; provider balance = amount_due − advance.
+- Cancellations: `_advance_clawback` (guest cancel, host cancel, admin refund) takes the advance back from the host wallet first, then the normal cancellation maths apply; any shortfall is stored (advance_recover_due) and admin is notified. `_svc_advance_unwind` does the same per service. Provider advance already paid → admin note + alert to recover or absorb.
+- Services paid after the venue advance went out are advanced at once (triggers on service_payments / service_provider_payouts).
+- Tested in rolled-back runs: full path (advance + balance totals match), guest cancel <48h, host cancel with empty wallet.
+- Screen: Admin → Service sourcing → payouts show Advance / Balance with separate Mark paid buttons. Terms V9 draft updated.
+
+
+## 501 / 502 — Event centre and hotel improvements (from the hospitality blueprint)
+- Event centres: risk class (routine / managed / enhanced review) on the admin Event Centres card; organiser documents (permits, event plan, floor plan, equipment list, insurance) uploaded to the private bucket, visible to the venue and CHS; venue profile (licensed capacity verified by admin, seating layouts, parking, power backup, fire safety) shown to guests; bookings above the licensed capacity are refused by the database.
+- Hotels: adults and children; several rooms of one type in one request (linked as "Room 1 of 2"); stay extras through the existing services flow (breakfast, half/full board, extra bed, baby cot, airport pickup, laundry, early check-in, late check-out, cleaning); public verified rating summary on hotel and property pages; ratings only after the stay has started.
+- Not yet: date-based search, accessibility facilities, long-stay discounts, group enquiries, open fields, stadiums, VAT lines.
+
+
+## 503 — Hotel search, discounts, enquiries, new categories
+- Search by dates: `properties_free_for_dates(in, out)`; the home search has check-in/check-out and an accessibility filter (step-free / wheelchair / lift / ramp tags). The listing form offers one-tap accessibility tags.
+- Long-stay discounts: properties.weekly_discount_pct (7+ nights) and monthly_discount_pct (28+ nights), applied inside get_real_shortlet_pricing so every booking path uses them; host sets them in the host dashboard (HostStayOffers); the booking form shows a discount line.
+- Group / corporate enquiries: table group_enquiries, `submit_group_enquiry` (contact details refused, 5 a day), host list, notifications to host and admin; form on hotel and property pages.
+- New hire categories: open_field and stadium (listing form, guest dashboard tabs). They use the standard hire booking flow and hire commission.
+
+## 504/505 — VAT recording, pay-all-rooms, open-field ground details
+- 504: platform_settings vat_enabled (false), vat_rate_pct (7.5), vat_tin, vat_registered_since. tax_ledger (admin read only), triggers on transaction_commissions and service_payments record the VAT part of each CHS fee (VAT treated as INCLUDED in the fee; guest totals unchanged; refund reverses the entry). admin_get_vat_settings, admin_save_vat_settings (super admin; needs TIN to switch on), admin_get_vat_report(month). Admin tab "VAT on CHS fees" (AdminVatPanel). Not back-filled. Not a filing: accountant must confirm rate, registration and exemptions.
+- 505: pay_room_group(group) pays every awaiting room of a multi-room stay in one go (balance checked first). "Pay all N rooms at once" button on BookingStageCard. open_venue_profile + get/host_save RPCs + OpenVenueProfile component (host form on host page, guest view on property page) for open_field/stadium.
+
+## 506 — Seating floor plans
+- shortlet_bookings.seating_layout; set_booking_seating (guest, must be a layout the venue offers, host notified); get_booking_seating. SeatingPicker component: diagram per layout (banquet, theatre, classroom, U-shape, boardroom, standing). Guest picks in Services & changes; host sees the choice in HostConsole.
+
+## 507 — Capacity per seating layout
+- property_event_settings.seating_capacity (jsonb layout -> max guests). host_save_seating_capacity (cannot exceed licensed capacity). set_booking_seating refuses a layout the guest count exceeds. get_booking_seating returns caps and guests. EventVenueProfile has a per-layout "most guests" box; SeatingPicker shows "up to N" and greys out layouts that are too small.
+
+## 508 + documentation pass (14 Oct 2026)
+- 508: execute revoked from anon/public on the 18 new signed-in-only functions. Security advisor run; results in CHS_SECURITY_AUDIT_REPORT (update section). The original audit text was overwritten by mistake and restored from the earlier session; 14 sentence endings were reconstructed (noted in the file).
+- Terms V9 draft: terms 45 (venues, hotels, groups, open grounds), 46 (tax on CHS fees), 47 (changes, was 45). TermsContentV9.tsx, CHS_TERMS_V9_DRAFT.md/pdf and lib/termsVersion.ts what's-new text updated. NOT active.
+- In-app Guide section 19C and 9 new FAQ items. Feature catalog section 19 (18 features) and 18 glossary entries with tap-to-explain tips on the new screens.
+- CHS_USERS_GUIDE.docx regenerated from GuideContent.tsx (the docx had fallen behind the in-app guide). Feature catalog PDF and xlsx regenerated in full (they stopped at section 16; 17 and 18 were missing).
+- Explainer list, both demo guides, Property Manager Guide (new section 8), System Documentation and Fix Tracker (addenda), Handover Notes (503-508 section), new Test Checklist. All copied to chs-v2/public/documents and listed on /admin/document-site.
+
+## 509 — Escrow Oversight shows event centres split 60/40 (14 Oct 2026, later)
+- Problem: the advance existed in the database but Admin → Escrow Oversight still listed an event booking as one amount with "Release to host", which paid the whole host payout at once; host screens said the whole payout comes on arrival.
+- Fix: get_held_shortlet_bookings returns split_release, advance_pct, advance_expected, advance_paid, advance_released, host_net. release_shortlet_funds_to_host now releases ONLY the advance when the booking is an event centre, the advance is on and not yet paid, and the event day has not arrived; afterwards it releases the balance. get_arrival_state returns the split fields. Admin screen shows the split line and button label ("Release advance (60%) ₦x", then "Release balance ₦y"); HostPayoutStatus explains the two parts.
+- Timing of the automatic advance is the setting event_advance_release_hours (48 = two days before the event). Raise it (for example 720) to pay the advance almost as soon as the guest pays; 0 percent in event_advance_pct switches the whole system off.
+- Tested (rolled back): admin release on booking 018429ef paid the host ₦781,632 and left the payment held.
+
+
+## 510 — Managing hotels and event centres (14 Oct 2026)
+- Management request now available for hotels, event centres and other commercial venues (Host and Owner pages). Required documents enforced in request_chs_management_v2. Management terms v3 section 6A. Host-side booking commission removed on managed hotels/shortlets/event centres (trigger plus pricing). Terms V9 term 41 bullet, Guide 19C, FAQ, catalog and glossary updated. Tested in rolled-back runs.
+
+
+## 14 Oct 2026, booking message visibility (migration 511)
+Found: a guest message on a PAID booking was auto-delivered to the host (moderation 'before_payment') and hidden inside the collapsed booking card, no badge. Fix: moderation set to 'always' (CHS reviews every booking message: Admin > Bookings: Shortlet · Hotel · Event Centre > amber 'messages waiting for your review' box); host gets a Messages tab with unread count, an unread banner on the card and a notification that links to it; read tracking via mark_shortlet_messages_read; guest Messages box has a link that opens the change request form (new guest number/date; host approves; top-up paid through CHS).

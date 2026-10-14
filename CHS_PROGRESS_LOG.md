@@ -675,3 +675,7 @@ Guests can ask to move a booking to another date (same length of stay; free date
 
 ## 510 — Managing hotels and event centres (14 Oct 2026)
 - Management request now available for hotels, event centres and other commercial venues (Host and Owner pages). Required documents enforced in request_chs_management_v2. Management terms v3 section 6A. Host-side booking commission removed on managed hotels/shortlets/event centres (trigger plus pricing). Terms V9 term 41 bullet, Guide 19C, FAQ, catalog and glossary updated. Tested in rolled-back runs.
+
+
+## 14 Oct 2026, booking message visibility (migration 511)
+Found: a guest message on a PAID booking was auto-delivered to the host (moderation 'before_payment') and hidden inside the collapsed booking card, no badge. Fix: moderation set to 'always' (CHS reviews every booking message: Admin > Bookings: Shortlet · Hotel · Event Centre > amber 'messages waiting for your review' box); host gets a Messages tab with unread count, an unread banner on the card and a notification that links to it; read tracking via mark_shortlet_messages_read; guest Messages box has a link that opens the change request form (new guest number/date; host approves; top-up paid through CHS).

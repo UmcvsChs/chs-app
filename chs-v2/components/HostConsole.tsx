@@ -35,7 +35,7 @@ interface HB {
   event_type: string | null; tier: string | null; facilities_total: number | null; expires_at: string | null; created_at: string; paid_at: string | null;
   arrived_at: string | null; checked_in_at: string | null; expected_arrival_time: string | null; lane: string | null;
   wants_band: boolean | null; wants_caterer: boolean | null; wants_ushers: boolean | null; ushers: number | null; wants_security: boolean | null; security: number | null; extra: string | null;
-  quote: Quote | null; services_open: number; changes_open: number; reply_pending?: string | null; reply_release_at?: string | null;
+  quote: Quote | null; services_open: number; changes_open: number; unread_msgs?: number; last_msg?: string | null; reply_pending?: string | null; reply_release_at?: string | null;
 }
 interface Chg {
   id: string; booking_id: string; property_title: string; cat: string; my_role: string; guest_name: string; check_in: string; old_guests: number | null; new_guests: number | null;
@@ -50,7 +50,7 @@ const CAT_LABEL: Record<string, string> = { event: "Event centre", hotel: "Hotel
 const CAT_ICON: Record<string, string> = { event: "🎉", hotel: "🏨", shortlet: "🏠", other: "📦" };
 const todayLagos = () => new Date(Date.now() + 3600000).toISOString().slice(0, 10);
 
-type TabKey = "overview" | "requests" | "payment" | "paid" | "changes" | "refunds" | "services" | "stays" | "events" | "history" | "listings" | "work";
+type TabKey = "overview" | "requests" | "payment" | "paid" | "changes" | "messages" | "refunds" | "services" | "stays" | "events" | "history" | "listings" | "work";
 
 function timeLeft(expiresAt: string | null): string | null {
   if (!expiresAt) return null;
@@ -83,7 +83,7 @@ function ServiceChips({ b, svcs }: { b: HB; svcs: Svc[] }) {
 }
 
 function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]; session: Session; mode: TabKey; onChanged: () => void }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(mode === "messages");
   const [disputing, setDisputing] = useState(false);
   const [disputed, setDisputed] = useState(false);
   const lead = b.my_role === "owner" || b.my_role === "manager";
@@ -123,6 +123,13 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
         <p className="text-[10px] text-gray-600">📄 Quotation {b.quote.status}: {formatNaira(b.quote.total)} · received {formatNaira(b.quote.paid)} ({b.quote.milestones_paid}/{b.quote.milestones} instalments)</p>
       )}
       <ServiceChips b={b} svcs={svcs} />
+      {(b.unread_msgs ?? 0) > 0 && (
+        <button type="button" onClick={() => setOpen(true)} className="mt-1.5 w-full text-left text-[11px] bg-amber-50 border border-amber-300 rounded-lg p-2">
+          <span className="font-bold text-chs-red">💬 {b.unread_msgs} new message{(b.unread_msgs ?? 0) > 1 ? "s" : ""} from the guest</span>
+          {b.last_msg && <span className="block text-gray-700 mt-0.5">“{b.last_msg}”</span>}
+          <span className="block text-[10px] text-gray-500 mt-0.5 underline">Tap to open and reply</span>
+        </button>
+      )}
       {(b.services_open > 0 || b.changes_open > 0) && (
         <p className="text-[10px] font-bold text-chs-red mt-1">
           {b.services_open > 0 && `${b.services_open} service request${b.services_open > 1 ? "s" : ""} to answer`}{b.services_open > 0 && b.changes_open > 0 ? " · " : ""}{b.changes_open > 0 && `${b.changes_open} change${b.changes_open > 1 ? "s" : ""} to answer`}
@@ -269,7 +276,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab") as TabKey | null;
-    const valid: TabKey[] = ["overview", "requests", "payment", "paid", "changes", "refunds", "services", "stays", "events", "history", "listings", "work"];
+    const valid: TabKey[] = ["overview", "requests", "payment", "paid", "changes", "messages", "refunds", "services", "stays", "events", "history", "listings", "work"];
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (t && valid.includes(t)) setTab(t);
     load();
@@ -292,6 +299,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
   const live = bookings.filter((b) => b.status === "confirmed" && b.check_out >= today);
   const stays = live.filter((b) => b.check_in <= new Date(Date.parse(today) + 7 * 86400000).toISOString().slice(0, 10));
   const history = bookings.filter((b) => ["cancelled", "declined", "expired"].includes(b.status) || (b.status === "confirmed" && b.check_out < today));
+  const msgBookings = bookings.filter((b) => b.status !== "cancelled" && b.status !== "declined" && b.status !== "expired" && (b.unread_msgs ?? 0) > 0);
   const openServices = svcsAll.filter((s) => s.status === "requested");
   const eventProps = (data?.properties || []).filter((p) => p.cat === "event" && inCat(p.cat));
   const cats = data?.categories || [];
@@ -301,6 +309,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
     { key: "requests", label: "Requests", count: requests.length, hot: true },
     { key: "payment", label: "Awaiting payment", count: payment.length },
     { key: "paid", label: "Paid & deposits", count: live.length },
+    { key: "messages", label: "Messages", count: msgBookings.reduce((n, b) => n + (b.unread_msgs ?? 0), 0), hot: true },
     { key: "changes", label: "Changes", count: changes.filter((c) => c.status === "pending").length, hot: true },
     { key: "refunds", label: "Refunds & moves", count: claims.filter((c) => c.status === "awaiting_host").length, hot: true },
     { key: "services", label: "Services", count: openServices.length, hot: true },
@@ -437,6 +446,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
             ))}
           </>
         )}
+        {data && tab === "messages" && bookingList(msgBookings, "messages", "No new guest messages. Messages you have already read stay inside each booking under “Details, services, messages & more”.")}
         {data && tab === "history" && bookingList(history, "history", "Nothing here yet.")}
         {tab === "listings" && listingsNode}
         {tab === "work" && workNode}

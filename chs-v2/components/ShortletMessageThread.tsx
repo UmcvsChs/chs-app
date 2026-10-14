@@ -53,6 +53,7 @@ export default function ShortletMessageThread({
       .eq("shortlet_booking_id", bookingId)
       .order("created_at", { ascending: true });
     setMessages((data as ShortletMessage[]) || []);
+    if (viewerRole !== "admin") supabase.rpc("mark_shortlet_messages_read", { p_booking: bookingId }).then(() => {});
   }
 
   async function handleSend() {
@@ -102,6 +103,11 @@ export default function ShortletMessageThread({
         )}
         <div ref={bottomRef} />
       </div>
+      {viewerRole === "guest" && (
+        <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("chs-open-changes", { detail: bookingId }))} className="mb-2 text-[10px] font-semibold text-chs-red underline">
+          👥 Need more guests or a new date? Open the change request form
+        </button>
+      )}
       {error && <p className="text-[10px] text-chs-red mb-1">{error}</p>}
       <div className="flex gap-1.5">
         <input type="text" value={text} onChange={(e) => setText(e.target.value)}

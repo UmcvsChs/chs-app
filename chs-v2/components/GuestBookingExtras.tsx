@@ -61,6 +61,16 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
     load();
   }, [load]);
 
+  useEffect(() => {
+    const h = (e: Event) => {
+      if ((e as CustomEvent).detail !== bookingId) return;
+      setOpen(true);
+      setTimeout(() => document.getElementById(`extras-${bookingId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 100);
+    };
+    window.addEventListener("chs-open-changes", h);
+    return () => window.removeEventListener("chs-open-changes", h);
+  }, [bookingId]);
+
   if (!live && lines.length === 0) return null;
   const waiting = lines.filter((l) => l.status === "requested").length;
   const answered = lines.length - waiting;

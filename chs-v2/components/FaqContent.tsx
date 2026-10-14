@@ -217,6 +217,10 @@ const FAQ_ITEMS = [
     a: "From your Profile page, you can deactivate your account at any time. This genuinely hides your account and listings from CHS immediately — nothing is deleted, and logging back in reactivates it instantly.",
   },
   {
+    q: "Where do my booking messages go, and where does the host see them?",
+    a: "Every booking message goes through CHS first. CHS passes it on, and the other person is notified. The host finds it in Host console > Messages (with a number badge) and inside the booking under \"Details, services, messages & more\". The guest finds replies on My Bookings under the booking's Messages box. To ask for more guests or a new date, use the \"Open the change request form\" link in that Messages box.",
+  },
+  {
     q: "I forgot my PIN. How do I reset it?",
     a: "Use \"Forgot your PIN?\" on the login screen. Since CHS doesn't use email or SMS codes for this, you verify your identity with the real phone number and NIN you registered with, then set a brand new PIN immediately.",
   },
