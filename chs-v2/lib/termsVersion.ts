@@ -38,7 +38,7 @@
 //   Version 9 — PREPARED, NOT ACTIVE. Text is in components/TermsContentV9.tsx. It renames the fees (an "agency fee" from
 //               the tenant, buyer or guest; a "service charge" from the landlord, seller or host), adds term 41 (the CHS stamp,
 //               tag and CHS-managed properties, with the management fee replacing the owner-side fee), term 42 (CHS-approved
-//               agents), term 43 (viewing slots), term 44 (rent by instalments) and term 45 (CHS may change these Terms with or
+//               agents), term 43 (viewing slots), term 44 (rent by instalments), term 45 (event centres, hotels, group stays and open venues), term 46 (tax on CHS fees) and term 47 (CHS may change these Terms with or
 //               without prior notice). TO SWITCH IT ON, in this order of preparation and then together at deploy time:
 //                 1. set CURRENT_TERMS_VERSION below to 9 and TERMS_WHATS_NEW to TERMS_WHATS_NEW (old text) + TERMS_V9_WHATS_NEW;
 //                 2. run backend-v2/487_terms_v9_activation.sql (sets platform_settings.terms_current_version to 9);
@@ -58,7 +58,7 @@ export const TERMS_WHATS_NEW =
 
 // What is new in version 9. Append this to TERMS_WHATS_NEW when switching version 9 on.
 export const TERMS_V9_WHATS_NEW =
-  " New in Version 9: the fees have clearer names. You pay an agency fee if you are the tenant, buyer or guest, and a service charge if you are the landlord, seller or host; the amounts are unchanged. Term 41 explains the CHS stamp and tag (anyone can check a tag), what a CHS-managed property costs, and how an owner hands a property to CHS. Term 42 explains the CHS-approved agent badge. Term 43 explains viewing slots. Term 44 explains paying rent monthly or quarterly where the landlord allows it. Term 45 says CHS may change these Terms, with or without prior notice, and will ask you to accept a changed version.";
+  " New in Version 9: the fees have clearer names. You pay an agency fee if you are the tenant, buyer or guest, and a service charge if you are the landlord, seller or host; the amounts are unchanged. Term 41 explains the CHS stamp and tag (anyone can check a tag), what a CHS-managed property costs, and how an owner hands a property to CHS. Term 42 explains the CHS-approved agent badge. Term 43 explains viewing slots. Term 44 explains paying rent monthly or quarterly where the landlord allows it. Term 45 covers event centres, hotels, group stays and open venues: the advance paid to a venue before an event, event documents, venue capacity, seating layouts, booking several rooms, long-stay discounts, group enquiries, ratings, and open fields and stadiums. Term 46 explains how tax on CHS's own fees is handled. Term 47 says CHS may change these Terms, with or without prior notice, and will ask you to accept a changed version.";
 
 type TermsFields = {
   terms_accepted_at: string | null;

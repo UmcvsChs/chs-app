@@ -13,6 +13,8 @@ import { HostShortletCheckInOut } from "@/components/ShortletCheckInOut";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import ShortletRating from "@/components/ShortletRating";
 import EventQuoteHost from "@/components/EventQuoteHost";
+import EventDocuments from "@/components/EventDocuments";
+import SeatingPicker from "@/components/SeatingPicker";
 import EventOperations from "@/components/EventOperations";
 import RaiseDisputeForm from "@/components/RaiseDisputeForm";
 import HostClaimsPanel from "@/components/HostClaimsPanel";
@@ -157,6 +159,8 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
             </div>
           )}
           {confirmed && <HostPayoutStatus bookingId={b.id} />}
+          {b.cat === "event" && <SeatingPicker bookingId={b.id} editable={false} />}
+          {b.cat === "event" && <EventDocuments bookingId={b.id} canAdd={false} />}
           {confirmed && b.cat === "event" && <EventQuoteHost bookingId={b.id} canSend={lead} />}
           {confirmed && lead && <HostBookingControls bookingId={b.id} checkIn={b.check_in} onChanged={onChanged} />}
           {confirmed && mode !== "stays" && <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.property_title} />}

@@ -14,7 +14,11 @@ import { useAuth } from "@/contexts/AuthContext";
 // separate storage service staying online.
 const DOCUMENTS = [
   { file: "CHS_USERS_GUIDE.docx", label: "User's Guide", description: "Full, real walkthrough of every role's real workflow — buyer, tenant, owner, agent, host, and more." },
-  { file: "CHS_TERMS_AND_CONDITIONS.pdf", label: "Terms & Conditions", description: "The real, current terms governing use of the CHS platform." },
+  { file: "CHS_TERMS_AND_CONDITIONS.pdf", label: "Terms & Conditions", description: "The terms currently in force on the CHS platform (Version 8)." },
+  { file: "CHS_TERMS_V9_DRAFT.pdf", label: "Terms & Conditions Version 9 (draft, not active)", description: "The next version of the Terms, including terms 45 (venues, hotels, groups, open grounds), 46 (tax on CHS fees) and 47 (changes). Not lawyer-reviewed. The live Terms above stay in force until Version 9 is switched on." },
+  { file: "CHS_SECURITY_AUDIT_REPORT.pdf", label: "Security Audit", description: "The data-protection audit (3 September) and the 14 October update covering the new features and the platform-wide advisor results." },
+  { file: "CHS_EXPLAINER_LIST.pdf", label: "Feature Explainer List", description: "The plain-language explanation of each feature term used in the app's tap-to-explain tips." },
+  { file: "CHS_OCT14_TEST_CHECKLIST.pdf", label: "Test Checklist (14 October batch)", description: "Step-by-step tests for the event advance, documents, capacity, seating, hotel rooms, discounts, enquiries, open grounds and VAT." },
   { file: "CHS_System_Documentation.pdf", label: "System Documentation", description: "The real, technical reference — architecture, real database schema, and a genuine inventory of every shared component in the app." },
   { file: "CHS_COMPLETE_FEATURE_CATALOG.pdf", label: "Complete Feature Catalog", description: "Every real feature built so far, organized by category." },
   { file: "CHS_FEATURE_CATALOG_SEGMENTED.xlsx", label: "Feature Catalog (Spreadsheet)", description: "The same real catalog, as a working spreadsheet — sortable and filterable." },

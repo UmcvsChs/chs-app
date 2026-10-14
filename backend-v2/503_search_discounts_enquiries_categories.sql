@@ -1,0 +1,6 @@
+-- 503: reference listing only (real SQL applied via Supabase migrations)
+-- properties_free_for_dates(p_in, p_out)
+-- properties.weekly_discount_pct / monthly_discount_pct + host_save_long_stay_discount
+-- get_real_shortlet_pricing patched: long-stay discount (7+ nights weekly, 28+ monthly)
+-- group_enquiries table, submit_group_enquiry, get_property_group_enquiries
+-- properties_hire_category_check now allows open_field and stadium

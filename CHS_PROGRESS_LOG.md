@@ -635,3 +635,33 @@ Guests can ask to move a booking to another date (same length of stay; free date
 - Services paid after the venue advance went out are advanced at once (triggers on service_payments / service_provider_payouts).
 - Tested in rolled-back runs: full path (advance + balance totals match), guest cancel <48h, host cancel with empty wallet.
 - Screen: Admin → Service sourcing → payouts show Advance / Balance with separate Mark paid buttons. Terms V9 draft updated.
+
+
+## 501 / 502 — Event centre and hotel improvements (from the hospitality blueprint)
+- Event centres: risk class (routine / managed / enhanced review) on the admin Event Centres card; organiser documents (permits, event plan, floor plan, equipment list, insurance) uploaded to the private bucket, visible to the venue and CHS; venue profile (licensed capacity verified by admin, seating layouts, parking, power backup, fire safety) shown to guests; bookings above the licensed capacity are refused by the database.
+- Hotels: adults and children; several rooms of one type in one request (linked as "Room 1 of 2"); stay extras through the existing services flow (breakfast, half/full board, extra bed, baby cot, airport pickup, laundry, early check-in, late check-out, cleaning); public verified rating summary on hotel and property pages; ratings only after the stay has started.
+- Not yet: date-based search, accessibility facilities, long-stay discounts, group enquiries, open fields, stadiums, VAT lines.
+
+
+## 503 — Hotel search, discounts, enquiries, new categories
+- Search by dates: `properties_free_for_dates(in, out)`; the home search has check-in/check-out and an accessibility filter (step-free / wheelchair / lift / ramp tags). The listing form offers one-tap accessibility tags.
+- Long-stay discounts: properties.weekly_discount_pct (7+ nights) and monthly_discount_pct (28+ nights), applied inside get_real_shortlet_pricing so every booking path uses them; host sets them in the host dashboard (HostStayOffers); the booking form shows a discount line.
+- Group / corporate enquiries: table group_enquiries, `submit_group_enquiry` (contact details refused, 5 a day), host list, notifications to host and admin; form on hotel and property pages.
+- New hire categories: open_field and stadium (listing form, guest dashboard tabs). They use the standard hire booking flow and hire commission.
+
+## 504/505 — VAT recording, pay-all-rooms, open-field ground details
+- 504: platform_settings vat_enabled (false), vat_rate_pct (7.5), vat_tin, vat_registered_since. tax_ledger (admin read only), triggers on transaction_commissions and service_payments record the VAT part of each CHS fee (VAT treated as INCLUDED in the fee; guest totals unchanged; refund reverses the entry). admin_get_vat_settings, admin_save_vat_settings (super admin; needs TIN to switch on), admin_get_vat_report(month). Admin tab "VAT on CHS fees" (AdminVatPanel). Not back-filled. Not a filing: accountant must confirm rate, registration and exemptions.
+- 505: pay_room_group(group) pays every awaiting room of a multi-room stay in one go (balance checked first). "Pay all N rooms at once" button on BookingStageCard. open_venue_profile + get/host_save RPCs + OpenVenueProfile component (host form on host page, guest view on property page) for open_field/stadium.
+
+## 506 — Seating floor plans
+- shortlet_bookings.seating_layout; set_booking_seating (guest, must be a layout the venue offers, host notified); get_booking_seating. SeatingPicker component: diagram per layout (banquet, theatre, classroom, U-shape, boardroom, standing). Guest picks in Services & changes; host sees the choice in HostConsole.
+
+## 507 — Capacity per seating layout
+- property_event_settings.seating_capacity (jsonb layout -> max guests). host_save_seating_capacity (cannot exceed licensed capacity). set_booking_seating refuses a layout the guest count exceeds. get_booking_seating returns caps and guests. EventVenueProfile has a per-layout "most guests" box; SeatingPicker shows "up to N" and greys out layouts that are too small.
+
+## 508 + documentation pass (14 Oct 2026)
+- 508: execute revoked from anon/public on the 18 new signed-in-only functions. Security advisor run; results in CHS_SECURITY_AUDIT_REPORT (update section). The original audit text was overwritten by mistake and restored from the earlier session; 14 sentence endings were reconstructed (noted in the file).
+- Terms V9 draft: terms 45 (venues, hotels, groups, open grounds), 46 (tax on CHS fees), 47 (changes, was 45). TermsContentV9.tsx, CHS_TERMS_V9_DRAFT.md/pdf and lib/termsVersion.ts what's-new text updated. NOT active.
+- In-app Guide section 19C and 9 new FAQ items. Feature catalog section 19 (18 features) and 18 glossary entries with tap-to-explain tips on the new screens.
+- CHS_USERS_GUIDE.docx regenerated from GuideContent.tsx (the docx had fallen behind the in-app guide). Feature catalog PDF and xlsx regenerated in full (they stopped at section 16; 17 and 18 were missing).
+- Explainer list, both demo guides, Property Manager Guide (new section 8), System Documentation and Fix Tracker (addenda), Handover Notes (503-508 section), new Test Checklist. All copied to chs-v2/public/documents and listed on /admin/document-site.

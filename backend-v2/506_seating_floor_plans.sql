@@ -1,0 +1,1 @@
+-- 506: seating_layout column, set_booking_seating, get_booking_seating

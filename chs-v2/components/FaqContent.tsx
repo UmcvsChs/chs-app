@@ -157,6 +157,42 @@ const FAQ_ITEMS = [
     a: "Yes. When you request an event centre, tick the services you want (ushers, caterer, live band, security, with numbers where it matters) or write anything else you need. Your request goes through CHS to the venue, who tells you what is possible. Nothing is charged until the venue confirms, and you pay from your CHS Wallet.",
   },
   {
+    q: "When does an event centre get paid, and what is the 60% advance?",
+    a: "After you pay, CHS holds the money. About 48 hours before the event CHS pays the venue an advance (currently 60% of what it earns) so it can prepare, and the balance after the event. If the event is cancelled after the advance, CHS takes the advance back from the venue first and then refunds you under the cancellation rules in term 11 (and term 40 where it applies).",
+  },
+  {
+    q: "Do I need documents for my event, and is there a limit on guests?",
+    a: "Larger or higher-risk events (such as concerts, festivals, political events or 200+ guests) may need documents like a permit or police clearance, which you can attach to the booking; only you, the venue and CHS can see them. Each venue states its licensed capacity, and a booking for more guests than that is refused.",
+  },
+  {
+    q: "Can I choose how the hall is set up?",
+    a: "Yes. If the venue has listed seating layouts (banquet, theatre, classroom, U-shape, boardroom, standing), open your booking, go to Services and changes and tap the one you want. A layout that cannot hold your number of guests is greyed out. The diagrams are illustrations, not a plan of the hall.",
+  },
+  {
+    q: "Can I book more than one hotel room and pay once?",
+    a: "Yes. Choose the number of rooms, adults and children. Each room is requested separately and the host confirms them; then \"Pay all rooms at once\" pays for all of them together from your wallet.",
+  },
+  {
+    q: "Is there a discount for a long stay?",
+    a: "Hosts can offer a weekly discount (7+ nights) and a monthly one (28+ nights). If the property has one, you see it as its own line in the price before you pay.",
+  },
+  {
+    q: "Can I search by dates, or for step-free access?",
+    a: "Yes. Pick check-in and check-out dates on the home page to see only places free on those dates, and use the accessibility filter for features like step-free access.",
+  },
+  {
+    q: "I am bringing a group or company. Can I ask for a rate?",
+    a: "Use the group enquiry form on the hotel or lodge page. It goes to the host through CHS. It is not a booking, and phone numbers or links are not allowed in it.",
+  },
+  {
+    q: "Can I hire a field or a stadium?",
+    a: "Yes. Open fields and stadiums are listed under Hire. The page shows the ground details (surface, floodlights, toilets, safe crowd limit, rain plan, curfew). You must keep to the crowd limit and the curfew.",
+  },
+  {
+    q: "Does CHS charge VAT on top of its fees?",
+    a: "Not at present. If CHS becomes required to charge or account for VAT on its own fees, the amount shown to you already includes it unless CHS tells you before you pay (term 46). CHS will tell you first if this ever changes what you pay.",
+  },
+  {
     q: "Why was I asked to accept the Terms & Conditions again?",
     a: "Because the Terms changed. Each version of the Terms has a number, and when it changes everyone is asked to read and accept the new one once. You are shown what is new — for version 3 it is the request-first way of booking hotels, lodges and venues (term 11) together with term 36, refunds when the other side defaults — and then asked to scroll through and accept. Your acceptance is recorded permanently with the version number and the exact time, so there is always a clear record of what you agreed to and when. You will not be asked again unless the Terms change again. Version 4 (October 2026) adds the wallet-only payment rule, the wallet protections, the inspection cost rule, the release of sale money and the Rent to Own changes. Version 5 (October 2026) makes every Mortgage (Rent to Own) payment pass through CHS and holds the final payment until the property documents are handed over. Version 6 (October 2026) adds term 37: CHS keeps an exact date-and-time record of important events, and those records can be relied on as evidence in a dispute.",
   },

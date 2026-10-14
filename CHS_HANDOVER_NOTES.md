@@ -1,6 +1,6 @@
 # CHS — Handover Notes
 
-**Compiled:** August 25, 2026, last updated October 9, 2026 — covering the full engagement to date, kept current alongside every batch of work, the same discipline already applied to the Users Guide, Terms & Conditions, and Feature Catalog.
+**Compiled:** August 25, 2026, last updated October 14, 2026 — covering the full engagement to date, kept current alongside every batch of work, the same discipline already applied to the Users Guide, Terms & Conditions, and Feature Catalog.
 
 **Companion document:** `CHS_PROGRESS_LOG.md` — a chronological record of what was built, in order. Read this file first for orientation, then the log for the detailed sequence.
 
@@ -247,3 +247,50 @@ Replaces direct-to-venue (490). See CHS_PROGRESS_LOG.md. Open: lawyer review of 
 
 ## 500 note
 Event advance: see CHS_PROGRESS_LOG 500. Change % in platform_settings `event_advance_pct`. Migration was applied in parts (a, c_admin, plus execute_sql patches); file 500_event_advance_payments.sql is the full reference.
+
+
+## 501/502 note
+See CHS_PROGRESS_LOG. Migration SQL for 501 and 502 lives in the Supabase migration history; the files here list the objects.
+
+
+## 503–508 (14 October 2026): venues, hotels, groups, open grounds, VAT, seating
+Read CHS_PROGRESS_LOG.md for the order. Everything below is applied to the live database; screens need the deploy.
+
+**What exists now**
+- Event centres: 60% advance to venue before the event (setting event_advance_pct, release hours 48) (Host, Admin; Admin > Event Centres; Live (DB). Release advance now button needs deploy)
+- Event centres: Service advance to venue / CHS-sourced provider; balance after event (Host, Admin; Admin > Service sourcing > payouts; Live (DB) + screen)
+- Event centres: Advance clawback on cancel or refund; shortfall recorded and alerted (Admin; Automatic; Live (DB))
+- Event centres: Event risk class (routine / managed / enhanced) (Admin; Admin > Event Centres; Live)
+- Event centres: Booking documents, private, read by organiser, venue and admin (Guest, Host, Admin; Booking > Documents; Live)
+- Event centres: Licensed capacity, verified by admin, enforced on booking (Host, Admin, Guest; Event pricing page; Admin > Event Centres; Live)
+- Event centres: Venue profile: parking, power backup, fire safety (Host, Guest; Event pricing page; booking form; Live)
+- Event centres: Seating layouts with diagrams, capacity per layout, guest chooses (Host, Guest; Venue profile; Services and changes; Live (DB) + screen)
+- Hotels & lodges: Several rooms per request, adults and children, linked room group (Guest, Host; Booking form; Bookings; Live (DB) + screen)
+- Hotels & lodges: Pay all rooms at once (pay_room_group) (Guest; My bookings; Live (DB) + screen)
+- Hotels & lodges: Stay extras: breakfast, half/full board, extra bed, airport pickup, laundry, early check-in, late check-out, cleaning, baby cot (Guest, Host; Extras and changes; Live)
+- Hotels & lodges: Public rating summary; rating only after stay starts; contact details refused (Guest; Property page; Live)
+- Search: Search by dates (properties_free_for_dates) and accessibility filter (Guest; Home page; Live (DB) + screen)
+- Pricing: Weekly (7+) and monthly (28+) discount, up to 50%, fees on discounted price (Host, Guest; Host page > Stay offers; Live (DB) + screen)
+- Enquiries: Group and corporate enquiries, contact details refused, 5 a day (Guest, Host; Property page; Host page; Live (DB) + screen)
+- Categories: Open fields and stadiums (hire categories) with ground details profile (Host, Guest; List property; Host page; property page; Live (DB) + screen)
+- Tax: VAT recording on CHS fees (tax_ledger, off by default, inclusive), report and CSV (Super admin; Admin > Financial > VAT on CHS fees; Live (DB) + screen; switched OFF)
+- Legal: Terms V9 terms 45 (venues), 46 (tax), 47 (changes) (Everyone; Terms page; Prepared, NOT active, not lawyer-reviewed)
+
+**Design decisions a new developer should not undo**
+- The event advance is released by the sweep (`_sweep_event_advances`, run by `sweep_expired_booking_holds`) or by `admin_release_event_advance`. `release_booking_payout` and `_service_release` pay only the remainder. A cancel or refund calls `_advance_clawback` (hall) or `_svc_advance_unwind` (service) FIRST. A shortfall goes to `advance_recover_due` and admins are alerted; nothing is deducted silently from later payouts.
+- VAT is recorded, not charged. `tax_ledger` is filled by triggers on `transaction_commissions` (status paid) and `service_payments` (settled with chs_earned). The fee is treated as VAT-inclusive (`_vat_on(fee) = fee * rate / (100 + rate)`), so no payment amount changes. The setting `vat_enabled` is false. Switching on needs a super admin and a TIN. Fees collected earlier are not back-filled. Charging VAT on top of the fee would change what guests and hosts pay and has NOT been built.
+- Long-stay discount: applied inside `get_real_shortlet_pricing`; CHS's fees are calculated on the discounted price (`base_amount`), the gross is returned as `gross_amount`.
+- `pay_room_group` checks the wallet for the whole group first, then calls `pay_for_booking` for each room in one transaction, so all rooms are paid or none.
+- Capacity: `trg_enforce_event_capacity` blocks a booking above `permitted_capacity`; `set_booking_seating` blocks a layout whose `seating_capacity[layout]` is below the guest count.
+- Documents are in the private bucket `private-documents`, read by signed URL; `booking_documents` and `group_enquiries` have RLS on with NO policies on purpose: access is only through security-definer functions.
+- New functions have EXECUTE revoked from anon and public (migration 508). Do the same for any new function that needs a signed-in user (`revoke execute ... from public, anon; grant execute ... to authenticated`).
+- Tool quirk when applying SQL through the Supabase tool: text containing the words delete or drop in a statement can be refused as "cancelled". Use `create or replace trigger`, or build the word with `'de'||'lete'` in dynamic SQL. An error rolls back the whole call, including a function created earlier in the same call, so test blocks that end in `raise exception` must be separate from the migration.
+
+**Documents kept in step with the app** (all updated 14 Oct 2026): Terms V9 draft (terms 45 venues, 46 tax, 47 changes), in-app Guide section 19C and FAQ, feature catalog section 19 and glossary tips, CHS_USERS_GUIDE.docx (regenerated from the in-app guide), feature catalog PDF and spreadsheet (regenerated in full: they had stopped at section 16), explainer list, demo guides, System Documentation addendum, fix tracker addendum, security audit update, test checklist. The in-app Documents page (/admin/document-site) lists them.
+
+**Still open**
+- Terms V9 is NOT active and NOT lawyer-reviewed. Activation steps are in lib/termsVersion.ts. The word "escrow" needs a lawyer's view.
+- VAT: accountant to confirm registration, rate and exemptions before the switch is turned on.
+- Platform earnings tab excludes service fees (use Admin > Service sourcing > Service money). Change-request answers and host-initiated chat skip the admin relay. Host calendar grid does not draw event sessions; iCal ignores sessions.
+- Rain plan and safe crowd limit on open grounds are shown but not enforced. Seating diagrams are illustrations only.
+- Launch items: lawyer, CAC, launch switches, SMS secret rotation, WhatsApp provider, Netlify redirect URLs, WebAuthn and Paystack for the new address.

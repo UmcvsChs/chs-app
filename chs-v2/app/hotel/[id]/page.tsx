@@ -1,3 +1,5 @@
+import GroupEnquiryForm from "@/components/GroupEnquiryForm";
+import PropertyRatingSummary from "@/components/PropertyRatingSummary";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -54,6 +56,8 @@ export default async function HotelPublicPage({ params }: { params: Promise<{ id
         {place && <p className="text-sm text-gray-500">{place}</p>}
         <p className="text-xs text-green-700 mt-1">✔ Verified by CHS</p>
         {h.description && <p className="text-sm text-gray-700 mt-3">{h.description}</p>}
+        <div className="mt-3"><PropertyRatingSummary propertyId={id} /></div>
+        <div className="mt-3"><GroupEnquiryForm propertyId={id} /></div>
 
         {photos.length > 1 && (
           <div className="flex gap-2 overflow-x-auto mt-4">

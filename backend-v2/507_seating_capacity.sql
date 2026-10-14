@@ -1,0 +1,1 @@
+-- 507: seating_capacity column, host_save_seating_capacity, set/get_booking_seating updates

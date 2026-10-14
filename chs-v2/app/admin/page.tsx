@@ -33,6 +33,7 @@ import AdminDisruptions from "@/components/AdminDisruptions";
 import AdminServiceSourcing from "@/components/AdminServiceSourcing";
 import AdminHostReplies from "@/components/AdminHostReplies";
 import AdminEventCentres from "@/components/AdminEventCentres";
+import AdminVatPanel from "@/components/AdminVatPanel";
 import AdminHotels from "@/components/AdminHotels";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
 
@@ -82,7 +83,7 @@ interface PendingProperty {
 
 const CAT_TAG: Record<string, string> = { shortlet: "🏠 Shortlet", hotel: "🏨 Hotel & Lodge", event: "🎉 Event Centre", other: "Hire" };
 
-export type Tab = "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "vat" | "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2525,6 +2526,7 @@ function AdminDashboardInner() {
           { key: "disruptions", label: "⚠️ Disruptions & no-fault refunds", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelsview", label: "🏨 Hotels & Lodges (live)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "eventcentres", label: "🎉 Event Centres (live bookings)", domain: "owner_buyer_tenant", group: "Financial" },
+          { key: "vat", label: "🧾 VAT on CHS fees", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "hostreplies", label: "📨 Host replies to relay (all bookings)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "servicesourcing", label: "🤝 Service sourcing (venue requests)", domain: "owner_buyer_tenant", group: "Financial" },
           { key: "walletsecurity", label: `Wallet Security (${walletSecurityOpen})`, domain: "owner_buyer_tenant", group: "Oversight" },
@@ -4551,6 +4553,7 @@ function AdminDashboardInner() {
         {activeTab === "disruptions" && <AdminDisruptions />}
         {activeTab === "hotelsview" && <AdminHotels />}
         {activeTab === "eventcentres" && <AdminEventCentres />}
+        {activeTab === "vat" && <AdminVatPanel />}
         {activeTab === "hostreplies" && <AdminHostReplies />}
         {activeTab === "servicesourcing" && <AdminServiceSourcing />}
 
@@ -5848,6 +5851,7 @@ function AdminDashboardInner() {
                     { key: "disruptions" as Tab, label: "Disruptions & no-fault refunds" },
                     { key: "hotelsview" as Tab, label: "Hotels & Lodges (live)" },
                     { key: "eventcentres" as Tab, label: "Event Centres (live bookings)" },
+                    { key: "vat" as Tab, label: "VAT on CHS fees" },
                     { key: "hostreplies" as Tab, label: "Host replies to relay (all bookings)" },
                     { key: "servicesourcing" as Tab, label: "Service sourcing (venue requests)" },
                     { key: "walletsecurity" as Tab, label: `Wallet Security (${walletSecurityOpen})` },

@@ -2,6 +2,8 @@
 
 **Prepared:** 2026-09-06, for a full agent/conversation transition. Everything below is verified against the real, live codebase and the real, live Supabase project at the time of writing — not reconstructed from memory.
 
+> **Update, 14 October 2026:** this package was prepared on 6 September and describes the project as it stood then. For the current state read `CHS_HANDOVER_NOTES.md` (latest section: 503–508), `CHS_PROGRESS_LOG.md`, the Terms V9 draft, and `CHS_SECURITY_AUDIT_REPORT.md` (14 October update). Since September the project added: hotel operations and the Hospitality Suite, event-centre sessions, host console and services, the event advance, event documents, capacity and seating, multi-room hotel bookings, date search, long-stay discounts, group enquiries, open fields and stadiums, VAT recording (off), CHS stamp/managed properties, CHS-approved agents, viewing slots and rent by instalments.
+
 ---
 
 ## 1. Project Overview

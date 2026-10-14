@@ -9,7 +9,9 @@ Status: prepared for review. Not lawyer-reviewed. Currently live: Version 8.
 - Term 42: CHS-approved agents (corporate bodies only; KYC, 10 income-generating deals in 180 days, registration, checks).
 - Term 43: viewings and time slots.
 - Term 44: rent by instalments (no premium, no guarantee).
-- Term 45: CHS may change these Terms with or without prior notice.
+- Term 45: event centres, hotels, group stays and open venues (advance to the venue, documents, capacity, seating layouts, several rooms, long-stay discounts, group enquiries, ratings, open fields and stadiums).
+- Term 46: tax (VAT) on CHS fees.
+- Term 47: CHS may change these Terms with or without prior notice.
 
 Activating V9 makes every user accept once more.
 
@@ -304,7 +306,39 @@ This applies to CHS-managed rentals where the landlord has allowed quarterly or 
 
 - CHS does not lend or guarantee. CHS is not a lender and does not guarantee an instalment a tenant fails to pay. The landlord keeps their rights under the tenancy.
 
-45. Changes to these Terms
+45. Event centres, hotels, group stays and open venues
+
+This applies to hosts and guests of event centres, hotels, lodges, open fields and stadiums.
+
+- Advance to the venue. After you pay for an event centre booking, CHS holds the money. Shortly before the event (currently 48 hours before) CHS pays the venue an advance (currently 60%) of what the venue will earn from the booking, meaning the booking price less the venue's service charge, so that it can prepare. The balance is paid after the event under term 11. CHS may change the advance (never above 90%) or switch it off; a change applies to bookings paid after it.
+
+- If an event is cancelled after the advance. The advance is taken back from the venue first, and the guest's refund is then worked out under term 11 and, where it applies, term 40. If the venue's wallet cannot cover it, the venue owes CHS the difference and CHS may recover it.
+
+- Documents for events. For larger or higher-risk events (for example political events, concerts and festivals, or an event of 200 or more guests), CHS and the venue may ask the organiser for documents such as a permit, a police clearance or an organiser's ID. Documents are private: only the organiser, the venue and CHS can see them, and contact details are not allowed in a document title. An event whose required documents are not provided may be declined; an unpaid request that is declined costs nothing (term 11).
+
+- Capacity. A venue states its licensed capacity and CHS checks it against the operating permit. A booking for more guests than the capacity is refused. You must give the real number of guests, and ask the venue through the app if it changes.
+
+- Seating layouts. A venue lists the layouts it can set up and may state the most guests each can hold. The guest chooses one for the event and the venue is told. A layout that cannot hold the guest count cannot be chosen. The diagrams are illustrations, not a plan of the actual hall.
+
+- Hotels and lodges: more than one room. A guest may request several rooms together, and says how many adults and children are staying. Each room is its own booking that the host confirms, and the guest may pay for all of them in one step. Extras such as breakfast, airport pickup, laundry, early check-in or late check-out are requested and paid through CHS under term 40.
+
+- Long-stay discounts. A host may offer a weekly discount (stays of 7 nights or more) and a monthly discount (28 nights or more), of up to 50%. The discount is shown in the price before you pay, and CHS's fees are worked out on the price after the discount.
+
+- Group and corporate enquiries. A guest may send a host a group or corporate enquiry through CHS. An enquiry is not a booking, it must not contain phone numbers, emails or links, and a person may send a limited number each day. Any booking that follows is made and paid on CHS (term 2).
+
+- Ratings and accessibility. A property shows a summary of its ratings. A guest can rate only after the stay has started, and a rating must not contain contact details. Accessibility features that a host ticks (for example step-free access) must be true; term 39 applies.
+
+- Open fields and stadiums. The host describes the ground: surface, floodlights, toilets, changing rooms, safe crowd limit, rain plan and noise or curfew rules. The guest must keep to the crowd limit and the curfew. Booking, payment and fees are the same as for other hire bookings (terms 3 and 11). Weather is dealt with as the venue's rain plan says; where something beyond both sides' control stops the event, term 40 may apply.
+
+46. Tax on CHS fees
+
+- What CHS's fees include. The fees shown to you are the amounts you pay. Where CHS must charge or account for Value Added Tax (VAT) or another tax on its own fees, the fee shown includes it unless CHS tells you otherwise before you pay. Whether and from when a tax applies depends on the law and on CHS's tax registration. If a change would alter what you pay, CHS will tell you first (term 47).
+
+- Your own taxes. You are responsible for any tax on your own rent, sale, hire or other income. CHS is not your tax adviser.
+
+- Records. CHS records each fee it collects, and the tax part of it where one applies, and a refund reverses that record.
+
+47. Changes to these Terms
 
 CHS may review and change these Terms, its fees and the services described in them at any time, with or without prior notice. When a change affects your rights or what you pay, CHS will ask you to read and accept the new version before you continue. Fees already charged on a deal that was agreed before a change are not changed by it.
 

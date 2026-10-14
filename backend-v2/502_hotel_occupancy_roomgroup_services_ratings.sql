@@ -1,0 +1,8 @@
+-- 502: Hotels and lodges.
+-- shortlet_bookings.{adults, children, room_group, room_no, room_count} (+ column select grants);
+-- set_booking_occupancy(booking, adults, children); link_room_group(ids[]) (2-10 rooms booked together);
+-- get_property_rating_summary(property) (public, verified guest ratings only);
+-- guest_add_service now accepts stay extras: breakfast, half_board, full_board, extra_bed, airport_pickup, laundry,
+--   early_checkin, late_checkout, cleaning, baby_cot (they use the existing service-pricing and CHS-escrow payment flow);
+-- _service_label knows their names; submit_shortlet_rating now requires the stay to have started and refuses contact details.
+-- Applied as migration "hotel_occupancy_roomgroup_ratings" plus exact-text patches to the functions above.

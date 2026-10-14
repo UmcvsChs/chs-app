@@ -1,3 +1,6 @@
+import OpenVenueProfile from "@/components/OpenVenueProfile";
+import GroupEnquiryForm from "@/components/GroupEnquiryForm";
+import PropertyRatingSummary from "@/components/PropertyRatingSummary";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -493,6 +496,8 @@ export default async function PropertyDetailPage({
             </div>
           </div>
         )}
+
+        {(property.purpose === "shortlet" || property.purpose === "hire") && <div className="mb-4 space-y-3"><PropertyRatingSummary propertyId={property.id} /><GroupEnquiryForm propertyId={property.id} />{(property.hire_category === "open_field" || property.hire_category === "stadium") && <OpenVenueProfile propertyId={property.id} />}</div>}
 
         <PropertyVideos propertyId={property.id} />
 

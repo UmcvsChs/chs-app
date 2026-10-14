@@ -56,6 +56,11 @@ export default function HireBookingForm({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [attendees, setAttendees] = useState(1);
+  const [venue, setVenue] = useState<{ permitted_capacity: number | null; capacity_verified: boolean; seating_layouts: string[]; parking_spaces: number | null; power_backup: string | null; fire_safety_note: string | null } | null>(null);
+  useEffect(() => {
+    supabase.rpc("get_event_venue_profile", { p_property: propertyId }).then(({ data }) => setVenue((data as typeof venue) ?? null));
+  }, [propertyId]);
+  const overCapacity = !!venue?.permitted_capacity && attendees > venue.permitted_capacity;
   const [wantsMusicBand, setWantsMusicBand] = useState(false);
   const [wantsCaterer, setWantsCaterer] = useState(false);
   const [wantsUshers, setWantsUshers] = useState(false);
@@ -433,6 +438,16 @@ export default function HireBookingForm({
         <label className="text-xs font-semibold text-gray-600">Expected attendees / guests <Req /></label>
         <input type="number" min={1} value={attendees} onChange={(e) => setAttendees(parseInt(e.target.value) || 1)}
           className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm" />
+        {venue && (venue.permitted_capacity || venue.seating_layouts?.length > 0 || venue.parking_spaces || venue.power_backup) && (
+          <div className="mt-1.5 bg-gray-50 rounded-lg px-3 py-2 text-[11px] text-gray-600 space-y-0.5">
+            {venue.permitted_capacity && <p>🏛️ Licensed for up to <b>{venue.permitted_capacity}</b> guests{venue.capacity_verified ? " (verified by CHS)" : ""}.</p>}
+            {venue.seating_layouts?.length > 0 && <p>🪑 Seating: {venue.seating_layouts.join(", ")}</p>}
+            {venue.parking_spaces ? <p>🅿️ Parking: {venue.parking_spaces} spaces</p> : null}
+            {venue.power_backup && <p>⚡ Power backup: {venue.power_backup}</p>}
+            {venue.fire_safety_note && <p>🧯 Safety: {venue.fire_safety_note}</p>}
+          </div>
+        )}
+        {overCapacity && <p className="text-[11px] text-red-600 mt-1">This venue is licensed for up to {venue?.permitted_capacity} guests, so a booking for {attendees} cannot be taken.</p>}
       </div>
 
       {isEventVenue && renderEventServices("Event-day services (optional)")}
@@ -507,7 +522,7 @@ export default function HireBookingForm({
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
-      <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
+      <button type="submit" disabled={submitting || overCapacity || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
         {submitting ? "Sending your request..." : "Send request — nothing is charged now"}
       </button>

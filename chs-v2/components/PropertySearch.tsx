@@ -26,11 +26,14 @@ export interface SearchFilters {
   propertyType: string;
   minBedrooms: string;
   chsOnly: boolean;
+  checkIn: string;
+  checkOut: string;
+  accessible: boolean;
 }
 
 const EMPTY_FILTERS: SearchFilters = {
   purpose: "", state: "", lga: "", area: "", landmark: "",
-  minPrice: "", maxPrice: "", propertyType: "", minBedrooms: "", chsOnly: false,
+  minPrice: "", maxPrice: "", propertyType: "", minBedrooms: "", chsOnly: false, checkIn: "", checkOut: "", accessible: false,
 };
 
 const PURPOSES = [
@@ -50,9 +53,11 @@ const BEDROOM_OPTIONS = ["Any", "1+", "2+", "3+", "4+"];
 // actually selected when listing.
 const ALL_PROPERTY_TYPES = PROPERTY_TYPE_CATEGORIES.flatMap((c) => c.options);
 
-export function applyPropertyFilters(properties: Property[], filters: SearchFilters | null): Property[] {
+export function applyPropertyFilters(properties: Property[], filters: SearchFilters | null, freeIds: Set<string> | null = null): Property[] {
   if (!filters) return properties;
   return properties.filter((p) => {
+    if (freeIds && filters.checkIn && filters.checkOut && (p.purpose === "shortlet" || p.purpose === "hire") && !freeIds.has(p.id)) return false;
+    if (filters.accessible && !((p as unknown as { other_facilities?: string[] | null }).other_facilities || []).some((f) => /step-free|wheelchair|lift|elevator|ramp|accessible|ground floor/i.test(f))) return false;
     if (filters.chsOnly && !isChsStamped(p.chs_service)) return false;
     if (filters.purpose && p.purpose !== filters.purpose) return false;
     if (filters.state && p.location_state !== filters.state) return false;
@@ -152,6 +157,15 @@ export default function PropertySearch({
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">📅 Free on my dates (hotels, lodges, shortlets, venues)</p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="text-[10px] text-gray-500">Check-in<input type="date" value={filters.checkIn} onChange={(e) => setFilters({ ...filters, checkIn: e.target.value })} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs" /></label>
+              <label className="text-[10px] text-gray-500">Check-out<input type="date" value={filters.checkOut} min={filters.checkIn || undefined} onChange={(e) => setFilters({ ...filters, checkOut: e.target.value })} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs" /></label>
+            </div>
+            <label className="flex items-center gap-2 text-[11px] text-gray-600 mt-2"><input type="checkbox" checked={filters.accessible} onChange={(e) => setFilters({ ...filters, accessible: e.target.checked })} /> ♿ Step-free / wheelchair-accessible facilities</label>
           </div>
 
           <div>

@@ -36,6 +36,16 @@ export default function HomePageClient({ properties, platformStats, promotedTick
   const [activePurpose, setActivePurpose] = useState<PropertyPurpose | "all">("all");
   const [activeType, setActiveType] = useState("all");
   const [searchFilters, setSearchFilters] = useState<Parameters<typeof applyPropertyFilters>[1]>(null);
+  const [freeIds, setFreeIds] = useState<Set<string> | null>(null);
+  useEffect(() => {
+    const ci = searchFilters?.checkIn; const co = searchFilters?.checkOut;
+    if (!ci || !co || co <= ci) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFreeIds(null);
+      return;
+    }
+    supabase.rpc("properties_free_for_dates", { p_in: ci, p_out: co }).then(({ data }) => setFreeIds(new Set((data as string[]) || [])));
+  }, [searchFilters?.checkIn, searchFilters?.checkOut]);
   const [diasporaActive, setDiasporaActive] = useState(false);
   const [chsOnly, setChsOnly] = useState(false);
   const { session, profile, signOut, loading } = useAuth();
@@ -105,7 +115,7 @@ export default function HomePageClient({ properties, platformStats, promotedTick
         });
 
   const chsFiltered = chsOnly ? typeFiltered.filter((p) => isChsStamped(p.chs_service)) : typeFiltered;
-  const filteredProperties = applyPropertyFilters(chsFiltered, searchFilters);
+  const filteredProperties = applyPropertyFilters(chsFiltered, searchFilters, freeIds);
 
   // Real promoted-listing sort — genuinely checks the actual expiry,
   // not just whether a promotion was ever purchased at some point.

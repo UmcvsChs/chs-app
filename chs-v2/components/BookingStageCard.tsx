@@ -28,6 +28,8 @@ export interface StageBooking {
   security_deposit_amount: number | null;
   check_in: string;
   check_out: string;
+  room_group?: string | null;
+  room_count?: number | null;
 }
 
 const IN_FLIGHT = ["awaiting_admin_relay", "pending_host_review", "awaiting_payment"];
@@ -86,6 +88,18 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
     onChanged();
   }
 
+  async function payAll() {
+    setPaying(true);
+    setError(null);
+    const { error: rpcError } = await supabase.rpc("pay_room_group", { p_group: b.room_group });
+    setPaying(false);
+    if (rpcError) {
+      setError(rpcError.message.includes("insufficient_balance") ? "Your wallet does not hold enough for all the rooms. Top up your wallet, then come back to pay — your dates stay held until the time runs out." : rpcError.message);
+      return;
+    }
+    onChanged();
+  }
+
   const chip = (label: string, tone: "amber" | "green" | "red" | "grey") => {
     const cls = { amber: "text-chs-red bg-chs-amber-light", green: "text-green-700 bg-green-50", red: "text-chs-red bg-red-50", grey: "text-gray-500 bg-gray-100" }[tone];
     return <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full inline-block mt-1 ${cls}`}>{label}</span>;
@@ -138,6 +152,12 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
             className="w-full mt-2 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
             {paying ? "Paying…" : left?.over ? "Time is up" : `Pay ${formatNaira(due)} now`}
           </button>
+          {b.room_group && (b.room_count || 0) > 1 && (
+            <button onClick={payAll} disabled={paying || !!left?.over}
+              className="w-full mt-1.5 py-2.5 rounded-full border border-chs-red text-chs-red text-sm font-semibold disabled:opacity-50">
+              {paying ? "Paying…" : `Pay all ${b.room_count} rooms at once`}
+            </button>
+          )}
         </div>
       )}
 

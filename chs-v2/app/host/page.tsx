@@ -1,5 +1,7 @@
 "use client";
 
+import HostStayOffers from "@/components/HostStayOffers";
+import OpenVenueProfile from "@/components/OpenVenueProfile";
 import NotificationBell from "@/components/NotificationBell";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -132,6 +134,8 @@ export default function HostDashboardPage() {
             <p className={`text-[10px] font-semibold mt-1 ${calendarFreshness(l.calendar_confirmed_at).className}`}>{calendarFreshness(l.calendar_confirmed_at).text}</p>
             <div className="mt-2"><HouseRulesUpload propertyId={l.id} session={session} /></div>
             <HostHotelTools propertyId={l.id} />
+            <HostStayOffers propertyId={l.id} />
+            {(l.hire_category === "open_field" || l.hire_category === "stadium") && <OpenVenueProfile propertyId={l.id} editable />}
             {l.hire_category === "hotel_lodge" && <HotelOperations propertyId={l.id} />}
             <Link href={`/host/calendar/${l.id}`} className="mt-2 block text-center py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">
               Rooms &amp; calendar →

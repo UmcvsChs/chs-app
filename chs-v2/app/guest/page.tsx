@@ -31,6 +31,8 @@ const GUEST_CATEGORIES = [
   { key: "hotel_lodge", label: "🏨 Hotels & Lodges", match: (p: Property) => p.purpose === "hire" && p.hire_category === "hotel_lodge" },
   { key: "event_centre", label: "🎪 Event Centres & Halls", match: (p: Property) => p.hire_category === "event_centre" },
   { key: "recreational_sports", label: "⚽ Recreational & Sports", match: (p: Property) => p.purpose === "hire" && p.hire_category === "recreational_sports" },
+  { key: "open_field", label: "🌳 Open Fields & Grounds", match: (p: Property) => p.purpose === "hire" && p.hire_category === "open_field" },
+  { key: "stadium", label: "🏟️ Stadiums & Sports Grounds", match: (p: Property) => p.purpose === "hire" && p.hire_category === "stadium" },
   { key: "car_park_casual", label: "🚗 Casual Car Parks", match: (p: Property) => p.purpose === "hire" && p.hire_category === "car_park_casual" },
   { key: "cinema_entertainment", label: "🎬 Cinema & Entertainment", match: (p: Property) => p.purpose === "hire" && p.hire_category === "cinema_entertainment" },
 ];

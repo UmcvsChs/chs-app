@@ -77,7 +77,7 @@ export interface Property {
   estate_id: string | null;
   unit_label: string | null;
   availability_confirmed_at?: string | null;
-  hire_category: "shortlet" | "event_centre" | "hotel_lodge" | "car_park_casual" | "cinema_entertainment" | "recreational_sports" | null;
+  hire_category: "shortlet" | "event_centre" | "hotel_lodge" | "car_park_casual" | "cinema_entertainment" | "recreational_sports" | "open_field" | "stadium" | null;
 }
 
 export type PropertyPurpose = Property["purpose"];

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import EventHoursPanel from "@/components/EventHoursPanel";
+import EventVenueProfile from "@/components/EventVenueProfile";
 
 interface Tier { id: string; label: string; max_guests: number; price: number; hourly_price?: number | null; }
 interface Facility { id: string; name: string; price: number; per_guest: boolean; }
@@ -133,6 +134,8 @@ export default function EventPricingPage({ params }: { params: Promise<{ propert
           </div>
           <button onClick={handleAddTier} className="w-full mt-2 py-2 rounded-full bg-chs-charcoal text-white text-xs font-semibold">+ Add tier</button>
         </div>
+
+        <EventVenueProfile propertyId={propertyId} canEdit />
 
         <EventHoursPanel propertyId={propertyId} />
 

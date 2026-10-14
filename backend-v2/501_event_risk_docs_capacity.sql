@@ -1,0 +1,9 @@
+-- 501: Event centres: risk class, organiser documents, venue profile and verified capacity.
+-- Applied to production as migration "event_risk_docs_capacity" (+ booking_event_context, and a patch adding
+-- risk_class / docs_count / permitted_capacity / capacity_verified / property_id to admin_get_event_centres).
+-- Objects: property_event_settings.{permitted_capacity, capacity_verified_at/by, seating_layouts, parking_spaces, power_backup, fire_safety_note};
+-- _event_risk_class(type, guests) -> routine|managed|enhanced; table booking_documents (RLS on, RPC-only, soft remove);
+-- event_doc_can_read + storage policy private_docs_event_host_read; add_booking_document, get_booking_documents, remove_booking_document,
+-- get_event_venue_profile, host_save_event_venue_profile, admin_verify_event_capacity, booking_event_context (is_event, cat, risk_class, closed);
+-- trigger trg_enforce_event_capacity (refuses a booking above the licensed capacity).
+-- The full SQL lives in the Supabase migration history (list_migrations) under the name above.

@@ -14,6 +14,7 @@ import BookingStageCard from "@/components/BookingStageCard";
 import GuestArrivalPass from "@/components/GuestArrivalPass";
 import GuestRoomMenu from "@/components/GuestRoomMenu";
 import GuestEventQuote from "@/components/GuestEventQuote";
+import EventDocuments from "@/components/EventDocuments";
 import GuestBookingExtras from "@/components/GuestBookingExtras";
 import GuestDisruptionClaim from "@/components/GuestDisruptionClaim";
 import SplitPayment from "@/components/SplitPayment";
@@ -24,6 +25,11 @@ interface Booking {
   check_in: string;
   check_out: string;
   time_slots?: boolean | null;
+  adults?: number | null;
+  children?: number | null;
+  room_no?: number | null;
+  room_count?: number | null;
+  room_group?: string | null;
   total_price: number;
   status: string;
   payment_status: string | null;
@@ -66,7 +72,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
     if (!session) return;
     const query = () => supabase
       .from("shortlet_bookings")
-      .select("id, check_in, check_out, time_slots, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
+      .select("id, check_in, check_out, time_slots, adults, children, room_no, room_count, room_group, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
       .eq("guest_id", session.user.id)
       .order("check_in", { ascending: false });
     let { data, error } = await query();
@@ -135,6 +141,8 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
                 <p className="text-sm font-bold text-chs-charcoal">{embeddedOne(b.properties)?.title || "Property"}</p>
                 {b.time_slots ? <BookingSessions bookingId={b.id} compact /> : <p className="text-xs text-gray-500">{b.check_in} → {b.check_out}</p>}
                 <p className="text-xs text-gray-500">{formatNaira(b.total_price)} stay</p>
+                {(b.room_count || 0) > 1 && <p className="text-[11px] font-semibold text-chs-charcoal">🛏️ Room {b.room_no} of {b.room_count}, booked together</p>}
+                {b.adults ? <p className="text-[11px] text-gray-500">👥 {b.adults} adult{b.adults > 1 ? "s" : ""}{b.children ? `, ${b.children} child${b.children > 1 ? "ren" : ""}` : ""}</p> : null}
                 <BookingStageCard booking={b} onChanged={loadBookings} />
                 {/* The room is only named once the host has confirmed: until
                     then it is a request, and the host may still move you. */}
@@ -147,6 +155,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
                 {b.status === "confirmed" && <GuestArrivalPass bookingId={b.id} />}
                 {b.status === "confirmed" && <GuestRoomMenu bookingId={b.id} />}
                 {b.status !== "cancelled" && <GuestEventQuote bookingId={b.id} />}
+                {b.status !== "cancelled" && <EventDocuments bookingId={b.id} canAdd />}
                 <GuestBookingExtras bookingId={b.id} status={b.status} checkIn={b.check_in} startOpen={focusId === b.id} />
                 <SplitPayment bookingId={b.id} status={b.status} onChanged={loadBookings} />
                 {b.status === "confirmed" && b.payment_status === "held_escrow" && <GuestDisruptionClaim bookingId={b.id} onDone={loadBookings} />}

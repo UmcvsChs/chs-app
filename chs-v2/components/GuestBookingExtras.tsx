@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import SeatingPicker from "@/components/SeatingPicker";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
 // The guest's side of the host's Services and Changes tabs. Whatever the host answers (we supply it, you arrange
@@ -23,6 +24,7 @@ const STATUS: Record<string, { text: string; cls: string }> = {
   cancelled: { text: "Withdrawn", cls: "bg-gray-100 text-gray-500" },
 };
 const CHG: Record<string, string> = { pending: "Waiting for the venue", approved: "Approved", declined: "Not approved", withdrawn: "Withdrawn", awaiting_topup: "Approved: pay the extra", lapsed: "Lapsed (not paid in time)" };
+const STAY_OPTIONS: [string, string][] = [["breakfast", "Breakfast"], ["half_board", "Half board (breakfast and dinner)"], ["full_board", "Full board (all meals)"], ["extra_bed", "Extra bed"], ["baby_cot", "Baby cot"], ["airport_pickup", "Airport pickup"], ["laundry", "Laundry"], ["early_checkin", "Early check-in"], ["late_checkout", "Late check-out"], ["cleaning", "Extra cleaning"], ["parking", "Parking"], ["other", "Something else"]];
 const OPTIONS: [string, string][] = [["ushers", "Ushers"], ["caterer", "Caterer"], ["band", "Live band / entertainment"], ["security", "Security"], ["decoration", "Decoration"], ["mc", "MC"], ["photographer", "Photographer"], ["dj", "DJ / sound"], ["parking", "Parking attendants"], ["other", "Something else"]];
 
 export default function GuestBookingExtras({ bookingId, status, checkIn, startOpen = false }: { bookingId: string; status: string; checkIn: string; startOpen?: boolean }) {
@@ -30,6 +32,7 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
   const [lines, setLines] = useState<Line[]>([]);
   const [changes, setChanges] = useState<Chg[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [cat, setCat] = useState<string | null>(null);
   const [svc, setSvc] = useState("caterer"); const [qty, setQty] = useState(""); const [svcNote, setSvcNote] = useState("");
   const [newGuests, setNewGuests] = useState(""); const [chgNote, setChgNote] = useState(""); const [newDate, setNewDate] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,14 +40,18 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
   const [msg, setMsg] = useState<string | null>(null);
   const [today] = useState(() => new Date(Date.now() + 3600000).toISOString().slice(0, 10));
 
+  const options = cat === "event" ? OPTIONS : STAY_OPTIONS;
+  const svcSel = options.some(([k]) => k === svc) ? svc : options[0][0];
   const live = ["pending_host_review", "awaiting_payment", "confirmed"].includes(status);
   const canChange = ["awaiting_payment", "confirmed"].includes(status) && checkIn >= today;
 
   const load = useCallback(async () => {
-    const [a, b] = await Promise.all([
+    const [a, b, c] = await Promise.all([
       supabase.rpc("get_my_booking_services", { p_booking: bookingId }),
       supabase.rpc("get_my_booking_changes", { p_booking: bookingId }),
+      supabase.rpc("booking_event_context", { p_booking: bookingId }),
     ]);
+    setCat((c.data as { cat?: string } | null)?.cat ?? null);
     setLines(((a.data as Line[]) || []).filter((l) => l.status !== "cancelled"));
     setChanges((b.data as Chg[]) || []);
     setLoaded(true);
@@ -69,17 +76,18 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
   return (
     <div id={`extras-${bookingId}`} className="mt-3 border border-gray-200 rounded-xl">
       <button type="button" onClick={() => setOpen((o) => !o)} className="w-full flex justify-between items-center px-3 py-2 text-xs font-bold text-chs-charcoal">
-        <span>🎉 Services &amp; changes{loaded && lines.length > 0 ? ` · ${answered} answered${waiting ? `, ${waiting} waiting` : ""}` : ""}</span>
+        <span>{cat === "event" ? "🎉" : "🛎️"} {cat === "event" ? "Services & changes" : "Extras & changes"}{loaded && lines.length > 0 ? ` · ${answered} answered${waiting ? `, ${waiting} waiting` : ""}` : ""}</span>
         <span>{open ? "−" : "+"}</span>
       </button>
       {open && (
         <div className="px-3 pb-3 space-y-3">
           {msg && <p className="text-[11px] text-green-700">{msg}</p>}
           {err && !/insufficient_balance/.test(err) && <p className="text-[11px] text-red-600">{err}</p>}
+          {cat === "event" && live && <SeatingPicker bookingId={bookingId} />}
 
           <div>
             <p className="text-[11px] font-bold text-chs-charcoal mb-1">What you asked for</p>
-            {lines.length === 0 && <p className="text-[11px] text-gray-400">Nothing yet. You can ask for ushers, a caterer, a live band, security and more below.</p>}
+            {lines.length === 0 && <p className="text-[11px] text-gray-400">{cat === "event" ? "Nothing yet. You can ask for ushers, a caterer, a live band, security and more below." : "Nothing yet. You can ask for breakfast, an extra bed, airport pickup, laundry, early check-in or late check-out below."}</p>}
             {lines.map((l) => {
               const st = STATUS[l.status] || STATUS.requested;
               return (
@@ -108,13 +116,13 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
             <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
               <p className="text-[11px] font-bold text-chs-charcoal">Ask for another service</p>
               <div className="flex gap-1">
-                <select value={svc} onChange={(e) => setSvc(e.target.value)} className="flex-1 border border-gray-300 rounded px-1 py-1 text-[11px] bg-white">
-                  {OPTIONS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                <select value={svcSel} onChange={(e) => setSvc(e.target.value)} className="flex-1 border border-gray-300 rounded px-1 py-1 text-[11px] bg-white">
+                  {options.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
                 <input value={qty} onChange={(e) => setQty(e.target.value.replace(/\D/g, ""))} placeholder="How many" className="w-20 border border-gray-300 rounded px-2 py-1 text-[11px]" />
               </div>
               <input value={svcNote} onChange={(e) => setSvcNote(e.target.value)} maxLength={300} placeholder="Details (no phone numbers or emails)" className="w-full border border-gray-300 rounded px-2 py-1 text-[11px]" />
-              <button disabled={busy} onClick={() => run(supabase.rpc("guest_add_service", { p_booking: bookingId, p_service: svc, p_quantity: qty ? Number(qty) : null, p_note: svcNote.trim() || null }), "Sent to the venue. You will be told their answer.", () => { setQty(""); setSvcNote(""); })}
+              <button disabled={busy} onClick={() => run(supabase.rpc("guest_add_service", { p_booking: bookingId, p_service: svcSel, p_quantity: qty ? Number(qty) : null, p_note: svcNote.trim() || null }), "Sent to the venue. You will be told their answer.", () => { setQty(""); setSvcNote(""); })}
                 className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Send to the venue</button>
             </div>
           )}

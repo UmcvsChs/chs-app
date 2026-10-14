@@ -614,6 +614,8 @@ export default function ListPropertyPage() {
                 <option value="car_park_casual">Casual/hourly car park</option>
                 <option value="cinema_entertainment">Cinema / entertainment centre</option>
                 <option value="recreational_sports">Recreational centre / sports facility</option>
+                <option value="open_field">Open field / outdoor grounds (events, sports, exhibitions)</option>
+                <option value="stadium">Stadium / sports ground (pitch, court, track)</option>
               </select>
             </div>
           )}
@@ -776,6 +778,11 @@ export default function ListPropertyPage() {
                 <button type="button" onClick={() => setOtherFacilities(otherFacilities.filter((_, idx) => idx !== i))} className="text-chs-red font-semibold">Remove</button>
               </div>
             ))}
+            <div className="flex flex-wrap gap-1 mb-1.5">
+              {["Step-free access", "Wheelchair accessible", "Lift / elevator", "Ground-floor room", "Ramp at entrance", "Accessible bathroom"].filter((t) => !otherFacilities.includes(t)).map((t) => (
+                <button key={t} type="button" onClick={() => setOtherFacilities([...otherFacilities, t])} className="text-[10px] px-2 py-1 rounded-full border border-gray-300 text-gray-600">♿ + {t}</button>
+              ))}
+            </div>
             <div className="flex gap-1.5">
               <input type="text" value={newFacilityInput} onChange={(e) => setNewFacilityInput(e.target.value)}
                 placeholder="e.g. Visitor's toilet" className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm" />

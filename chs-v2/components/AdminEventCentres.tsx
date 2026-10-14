@@ -11,7 +11,7 @@ import BookingSessions from "@/components/BookingSessions";
 
 interface Row {
   id: string; ref: string; property_title: string; host_name: string | null; guest_name: string | null; event_type: string | null; guests: number | null; tier: string | null;
-  check_in: string; check_out: string; status: string; payment_status: string | null; time_slots: boolean; reply_pending: string | null; amount: number; hold_expires_at: string | null; advance_paid?: number; advance_paid_at?: string | null; advance_pct?: number | null; advance_recover_due?: number;
+  check_in: string; check_out: string; status: string; payment_status: string | null; time_slots: boolean; reply_pending: string | null; amount: number; hold_expires_at: string | null; advance_paid?: number; advance_paid_at?: string | null; advance_pct?: number | null; advance_recover_due?: number; property_id?: string; risk_class?: string; docs_count?: number; permitted_capacity?: number | null; capacity_verified?: boolean | null; guests_n?: number | null;
   services_total: number; services_waiting_host: number; services_with_chs: number; services_to_relay: number; services_unpaid: number;
   quote_status: string | null; quote_total: number | null; service_money_held: number; changes_open: number;
 }
@@ -36,6 +36,12 @@ export default function AdminEventCentres() {
     if (error) { setNote(error.message); return; }
     setNote(Number(data) > 0 ? `Advance released: ${formatNaira(Number(data))} paid to the venue. Provider advances are in Service sourcing → payouts.` : "Nothing was released (already paid, not paid by the guest, or advance is switched off).");
     load();
+  }
+  async function verifyCapacity(r: Row) {
+    const v = window.prompt(`Verified capacity for ${r.property_title} (check the operating permit):`, r.permitted_capacity ? String(r.permitted_capacity) : "");
+    if (!v || !r.property_id) return;
+    const { error } = await supabase.rpc("admin_verify_event_capacity", { p_property: r.property_id, p_capacity: Number(v) });
+    if (error) setNote(error.message); else { setNote("Capacity verified."); load(); }
   }
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc("admin_get_event_centres");
@@ -69,6 +75,12 @@ export default function AdminEventCentres() {
             </div>
             <p className="text-[11px] text-gray-600">{r.event_type || "Event"}{r.guests ? ` · ${r.guests} guests` : ""}{r.tier ? ` · ${r.tier}` : ""} · Ref {r.ref}</p>
             {r.time_slots ? <BookingSessions bookingId={r.id} compact /> : <p className="text-[11px] text-gray-600">📅 {r.check_in}{r.check_out !== r.check_in ? ` to ${r.check_out}` : ""}</p>}
+            <div className="flex flex-wrap items-center gap-1">
+              {r.risk_class && <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${r.risk_class === "enhanced" ? "bg-red-100 text-red-700" : r.risk_class === "managed" ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}>{r.risk_class === "enhanced" ? "Enhanced review: ask for permits and a safety plan" : r.risk_class === "managed" ? "Managed event" : "Routine event"}</span>}
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-700">📎 {r.docs_count || 0} document{(r.docs_count || 0) === 1 ? "" : "s"}</span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${r.capacity_verified ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{r.permitted_capacity ? `Capacity ${r.permitted_capacity}${r.capacity_verified ? " ✓" : " (not verified)"}` : "Capacity not declared"}</span>
+              <button onClick={() => verifyCapacity(r)} className="text-[10px] underline text-chs-red">{r.capacity_verified ? "Change" : "Verify capacity"}</button>
+            </div>
             <p className="text-[11px] text-gray-500">Host: {r.host_name || "?"} · Guest: {r.guest_name || "?"}</p>
             <p className="text-sm font-bold text-chs-charcoal">{formatNaira(r.amount)} <span className="text-[10px] font-normal text-gray-500">{r.payment_status === "held_escrow" || r.payment_status === "released" ? "· hall paid" : "· hall not paid yet"}</span></p>
             {r.status === "confirmed" && r.payment_status === "held_escrow" && (
