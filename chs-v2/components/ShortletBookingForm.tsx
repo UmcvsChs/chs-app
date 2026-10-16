@@ -99,13 +99,15 @@ export default function ShortletBookingForm({
     Promise.all([
       supabase.from("room_types").select("id, name, max_guests, price_per_night, sort_order").eq("property_id", propertyId).eq("active", true).order("sort_order"),
       supabase.from("property_units").select("room_type_id").eq("property_id", propertyId).eq("active", true),
-    ]).then(([typesRes, unitsRes]) => {
+    ]).then(async ([typesRes, unitsRes]) => {
       const units = unitsRes.data || [];
+      const { data: capData } = await supabase.rpc("get_property_guest_cap", { p_property: propertyId, p_room_type: null });
+      const propertyCap = typeof capData === "number" ? capData : null;
       const options = (typesRes.data || [])
         .filter((t) => units.some((u) => u.room_type_id === t.id))
         .map((t) => ({ id: t.id as string, name: t.name as string, price: t.price_per_night as number | null, maxGuests: t.max_guests as number | null }));
       if (units.some((u) => !u.room_type_id)) {
-        options.push({ id: "", name: options.length > 0 ? "Standard room" : "Whole property", price: null, maxGuests: null });
+        options.push({ id: "", name: options.length > 0 ? "Standard room" : "Whole property", price: null, maxGuests: propertyCap });
       }
       setRoomOptions(options);
       if (options.length === 1) setRoomTypeId(options[0].id);

@@ -1,0 +1,1 @@
+-- Applied live: properties.max_guests; _guest_cap, get_property_guest_cap, host_set_property_capacity; guest-limit check in request_shortlet_booking and book_instant_shortlet; Savannah rooms renamed with floors; Hilltop Lodge (Test) rooms added.

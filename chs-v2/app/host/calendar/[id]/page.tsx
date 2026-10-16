@@ -90,6 +90,10 @@ export default function HostCalendarPage() {
   const [addTypeId, setAddTypeId] = useState("");
   const [addText, setAddText] = useState("");
   const [renaming, setRenaming] = useState<Record<string, string>>({});
+  const [capacity, setCapacity] = useState<string>("");
+  useEffect(() => {
+    supabase.rpc("get_property_guest_cap", { p_property: propertyId, p_room_type: null }).then(({ data }) => setCapacity(typeof data === "number" ? String(data) : ""));
+  }, [propertyId]);
 
   const today = useMemo(() => todayISO(), []);
   const from = useMemo(() => addDays(today, offset), [today, offset]);
@@ -361,6 +365,13 @@ export default function HostCalendarPage() {
 
           <div className="mt-3 space-y-4">
             <div>
+              <div className="mb-3 bg-gray-50 rounded-lg p-2">
+                <p className="text-[11px] font-bold text-chs-charcoal">How many guests does the whole place sleep?</p>
+                <p className="text-[10px] text-gray-500 mb-1">Guests cannot book more people than this unless they take more rooms. A room type below can set its own limit.</p>
+                <input type="number" min={1} max={60} value={capacity} disabled={busy} onChange={(e) => setCapacity(e.target.value)}
+                  onBlur={() => { const n = capacity.trim() === "" ? null : parseInt(capacity, 10); run(() => supabase.rpc("host_set_property_capacity", { p_property: propertyId, p_max: n }), "Guest limit saved."); }}
+                  className="w-24 px-2 py-1 rounded border border-gray-200 text-sm" placeholder="e.g. 4" />
+              </div>
               <p className="text-[11px] font-bold text-chs-charcoal mb-1">1. Room types</p>
               <p className="text-[10px] text-gray-500 mb-1.5">Group rooms the way guests think of them (Executive, Standard). Guests pick a type; CHS gives them a free room of that type. A price here overrides the listing price for that type.</p>
               {cal.room_types.length > 0 && (
