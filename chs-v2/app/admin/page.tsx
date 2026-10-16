@@ -5,7 +5,7 @@ import AdminChsStamp from "@/components/AdminChsStamp";
 import AdminAgentApproval from "@/components/AdminAgentApproval";
 import ListingRiskFlags from "@/components/ListingRiskFlags";
 import { embeddedOne } from "@/lib/embedded";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
 import { validateIdNumber } from "@/lib/validators";
 import Link from "next/link";
@@ -187,19 +187,26 @@ function IdSubmissionDetailsBlock({ sub }: { sub: { id_type: string; id_number: 
 interface TracePromotion { is_active: boolean; rank_category: string | null; properties: { title: string }[] | null; }
 interface TraceProperty { id: string; title: string; verification_status: string; status: string; property_sale_documents: { id: string; document_type: string; file_url: string; verification_status: string }[]; property_house_rules: { document_url: string }[]; }
 
+// One Refresh button for every admin tab: it re-opens the whole admin workspace (every list, total and queue is fetched
+// again) on the same tab, without the splash screen or signing in again. The workspace is simply re-created under a new key.
 export default function AdminDashboard() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [startTab, setStartTab] = useState<Tab | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<Date>(() => new Date());
   return (
     <Suspense fallback={null}>
-      <AdminDashboardInner />
+      <AdminDashboardInner key={refreshKey} startTab={startTab} updatedAt={updatedAt}
+        onRefresh={(tab) => { setStartTab(tab); setUpdatedAt(new Date()); setRefreshKey((k) => k + 1); }} />
     </Suspense>
   );
 }
 
-function AdminDashboardInner() {
+function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab | null; updatedAt: Date; onRefresh: (tab: Tab) => void }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, profile, signOut, setTestModeRole, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [activeTab, setActiveTab] = useState<Tab>(startTab || "overview");
+  const skipUrlTabOnce = useRef<string | null>(startTab ? searchParams.toString() : null);
 
   // Real, additional defense-in-depth fix, following the exact same
   // client-reported bug happening a second time via a different real
@@ -271,6 +278,8 @@ function AdminDashboardInner() {
   // loading, even if the first attempt was too early.
   useEffect(() => {
     const requestedTab = searchParams.get("tab") as Tab | null;
+    // right after a Refresh, stay on the tab the admin was on instead of jumping back to the one in the address
+    if (skipUrlTabOnce.current !== null && skipUrlTabOnce.current === searchParams.toString()) { if (profile?.role === "admin") loadData(); return; }
     if (requestedTab) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveTab(requestedTab);
@@ -2624,6 +2633,12 @@ function AdminDashboardInner() {
       {actionError && (
         <p className="text-xs text-chs-red bg-chs-amber-light mx-4 mt-3 rounded-lg px-3 py-2">{actionError}</p>
       )}
+
+      <div className="px-4 pt-3 flex items-center justify-end gap-2">
+        <span className="text-[10px] text-gray-400">Updated {updatedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+        <button type="button" onClick={() => onRefresh(activeTab)}
+          className="text-[11px] font-semibold text-white bg-chs-charcoal rounded-full px-3 py-1.5">🔄 Refresh this page</button>
+      </div>
 
       <div className="px-4 py-4 space-y-3">
         {activeTab === "overview" && (
