@@ -38,6 +38,7 @@ import AdminPaymentPinSwitch from "@/components/AdminPaymentPinSwitch";
 import AdminHotels from "@/components/AdminHotels";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
 import AdminRelayActions from "@/components/AdminRelayActions";
+import AdminPercentRelease from "@/components/AdminPercentRelease";
 
 interface DeveloperApplication {
   id: string;
@@ -4902,7 +4903,7 @@ function AdminDashboardInner() {
               type RefundRun = (reason: string) => PromiseLike<{ error: { message: string } | null }>;
               type UnifiedItem = {
                 key: string; label: string; category: string; amount: number; date: string;
-                action: string; onRelease: () => void; releaseBlockedNote?: string; detail?: string;
+                action: string; onRelease: () => void; releaseBlockedNote?: string; detail?: string; extra?: React.ReactNode;
                 refund?: { run: RefundRun; opensAt: string | null; defaulterLabel: string };
               };
               const unified: UnifiedItem[] = [
@@ -4922,6 +4923,7 @@ function AdminDashboardInner() {
                   action: b.split_release && !b.advance_released && new Date(b.check_in + "T00:00:00") > new Date() ? `Release advance (${b.advance_pct}%) ${formatNaira(b.advance_expected || 0)}` : b.split_release && b.advance_released ? `Release balance ${formatNaira((b.host_net || 0) - (b.advance_paid || 0))}` : "Release to host",
                   detail: b.split_release ? `Event centre: host payout ${formatNaira(b.host_net || 0)} = ${b.advance_pct}% advance ${formatNaira(b.advance_expected || 0)} (${b.advance_released ? "already paid" : "not yet released"}) + balance ${formatNaira((b.host_net || 0) - (b.advance_expected || 0))} (held until the event). The rest of the amount shown is CHS's commission and fees.` : undefined,
                   onRelease: () => handleReleaseShortletBooking(b.id),
+                  extra: b.status === "confirmed" ? <AdminPercentRelease bookingId={b.id} hostNet={Number(b.host_net || 0)} alreadyReleased={Number(b.advance_paid || 0)} defaultPct={Number(b.advance_pct || 60)} onDone={loadEscrowData} /> : undefined,
                   releaseBlockedNote: b.status !== "confirmed" ? "Not releasable yet — the host has not accepted this booking." : undefined,
                   refund: { run: (reason: string) => supabase.rpc("refund_shortlet_booking", { p_booking_id: b.id, p_reason: reason }), opensAt: null, defaulterLabel: "host" },
                 })),
@@ -4967,6 +4969,7 @@ function AdminDashboardInner() {
                             </div>
 
                             {u.detail && <p className="text-[9px] text-chs-charcoal bg-chs-amber-light rounded px-1.5 py-1 mt-1">{u.detail}</p>}
+                            {u.extra}
                             <div className="flex gap-1.5 mt-1.5">
                               <button onClick={u.onRelease} disabled={!!u.releaseBlockedNote}
                                 className="flex-1 py-1 rounded-full bg-chs-charcoal text-white text-[9px] font-semibold disabled:opacity-40">

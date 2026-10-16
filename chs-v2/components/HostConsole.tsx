@@ -164,7 +164,7 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
         <div className="mt-2 border-t border-gray-100 pt-2">
           {left && !b.reply_pending && <p className="text-[10px] font-semibold text-amber-700 mb-1">⏳ {left} to answer</p>}
           <p className="text-[10px] text-gray-500 mb-1">
-            {unpaidFlow ? "Confirm that the dates are free. The guest has not paid yet; they pay once you confirm." : "The guest has already paid; the money is held in escrow."}
+            {unpaidFlow ? "Confirm that the dates are free. The guest has not paid yet; they pay once you confirm." : "The guest has already paid; the money is held by CHS. A percentage can be released to you before arrival, and the balance follows when the guest arrives and confirms."}
           </p>
           {b.reply_pending
             ? <p className="text-[11px] bg-blue-50 text-blue-900 rounded-lg p-2">📨 You {b.reply_pending === "confirmed" ? "accepted" : "declined"} this request. CHS is confirming your answer to the guest. Nothing more is needed from you.</p>

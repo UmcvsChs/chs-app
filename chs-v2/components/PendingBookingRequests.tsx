@@ -89,8 +89,8 @@ export default function PendingBookingRequests() {
         </p>
         <p className="text-[11px] text-gray-600 mt-0.5 mb-2">
           {requests.some((r) => !r.is_paid)
-            ? "Confirm that the dates are free. The guest has not paid yet — they pay once you confirm, and the money is released to you as soon as the guest arrives and confirms everything is as described. Answer before the deadline or the request lapses (nothing is charged)."
-            : "Each guest has already paid — the money is held safely in escrow and released to you as soon as the guest arrives and confirms everything is as described. Answer before the deadline, or the request expires and the guest is refunded in full."}
+            ? "Confirm that the dates are free. The guest has not paid yet — they pay once you confirm. The money is held by CHS. As agreed in your host terms, CHS can release a percentage (normally 60% of your payout) to your wallet before arrival so you can prepare, and the balance is released when the guest arrives and confirms everything is as described. Answer before the deadline or the request lapses (nothing is charged)."
+            : "Each guest has already paid — the money is held by CHS. A percentage (normally 60%) can be released to you before arrival, as agreed in your host terms, and the balance when the guest arrives and confirms everything is as described. Answer before the deadline, or the request expires and the guest is refunded in full."}
           {requests.some((r) => r.is_paid) && requests.some((r) => !r.is_paid) ? " Requests marked “paid” were paid when sent, under the older order; the rest are unpaid." : ""}
         </p>
 

@@ -50,7 +50,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does booking a hotel, lodge, shortlet or event centre work — and when do I pay?",
-    a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely and is released to the host as soon as you arrive and confirm, with a short checklist in the app, that everything is as described (or automatically 24 hours after check-in if you do not respond). The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
+    a: "You send a request and nothing is charged. CHS passes it to the host, who confirms the dates are free. You are then notified and have a short window to pay from your CHS Wallet — your payment is held safely by CHS, CHS can release a percentage to the host (normally 60% of their payout) before you arrive so they can prepare for you, and the balance is released when you arrive and confirm, with a short checklist in the app, that everything is as described (or automatically 24 hours after check-in if you do not respond). The time allowed depends on how soon you arrive: for a stay more than 3 days away the host has 24 hours and you have 6 hours to pay; for a stay in 1 to 3 days, 6 hours and 2 hours; for a stay starting today, 30 minutes and 20 minutes. If the host can't take you, doesn't reply, or you don't pay in time, the request simply lapses and you pay nothing. For a stay starting within 3 days your wallet must already hold the full amount when you send the request, so a host is never asked to hold a room for someone who can't pay.",
   },
   {
     q: "Can I contact the host (or the guest) directly?",
@@ -58,7 +58,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "When does the host get paid for a hotel, lodge or shortlet stay?",
-    a: "As soon as you arrive. Booking is prepaid: you pay before your stay, CHS holds the money safely, and the moment you arrive and confirm in the app that the property is as described and each listed facility is present and working, the money is released to the host and both the host and CHS receive your confirmation. If you do not respond, it is released automatically 24 hours after check-in. If something is wrong, report a problem instead and the payment stays held while CHS looks into it. A host whose guest has arrived can also ask CHS to release it.",
+    a: "In two parts. Booking is prepaid: you pay before your stay and CHS holds the money safely. The money stays in CHS escrow. As agreed in the host terms, CHS can release a percentage to the host (normally 60% of their payout, after CHS commission) before you arrive so they can prepare for you; an admin does this by hand and can raise or lower the percentage. The balance is released the moment you arrive and confirm in the app that the property is as described and each listed facility is present and working, the money is released to the host and both the host and CHS receive your confirmation. If you do not respond, it is released automatically 24 hours after check-in. If something is wrong, report a problem instead and the payment stays held while CHS looks into it. A host whose guest has arrived can also ask CHS to release it.",
   },
   {
     q: "What is the difference between an Artisan, a Vendor and a Service Provider?",
@@ -239,6 +239,18 @@ const FAQ_ITEMS = [
   {
     q: "A request was not seen by the other person. What can CHS do?",
     a: "On every request that CHS relays (bookings, rental applications, offers, marketplace quotes, rent-to-own) the admin can Resend it to whoever is waiting, whether that is the host, owner, seller, vendor, guest, tenant or buyer. Make sure you are logged in with the phone number shown on the admin card. If a request is no longer needed, CHS can Withdraw it with a reason. Both sides are told and nothing is charged. Paid items are refunded through the normal refund process instead.",
+  },
+  {
+    q: "Can I choose my exact room, and keep my family on the same floor?",
+    a: "Yes, when the hotel has set up its rooms. After you choose your dates, the booking form lists every room by floor, showing which are free and which are taken. Tap the room or rooms you want, or tap Keep us together and the system suggests free rooms on the same floor and closest to each other. If you pick nothing, the hotel gives you the next free room. Rooms must be of the same type in one request.",
+  },
+  {
+    q: "When does the host get paid for a hotel or shortlet booking?",
+    a: "In two parts. Your payment stays in CHS escrow. As agreed in the host terms, CHS can release a percentage of the host’s payout (normally 60%) before you arrive so they can prepare for you, and the balance is released when you arrive and confirm everything is as described, or automatically 24 hours after check-in. If the stay is cancelled or refunded, what was released is taken back from the host.",
+  },
+  {
+    q: "What is the transaction PIN, and how is it different from my login PIN?",
+    a: "Your login PIN opens your account. Your transaction PIN is a second, separate 6-digit PIN that you type every time you pay from your wallet. You set it as soon as you join (or the next time you open the app, if you joined earlier). It must be different from your login PIN, so that someone who learns your login PIN still cannot spend your money. Never share either PIN with anyone, including CHS staff. After 5 wrong tries the transaction PIN locks for 30 minutes.",
   },
   {
     q: "I forgot my PIN. How do I reset it?",

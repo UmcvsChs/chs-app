@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import { GuestShortletConfirmation } from "@/components/ShortletCheckInOut";
+import { unitFloor, floorName } from "@/lib/roomFloor";
 import ShortletMessageThread from "@/components/ShortletMessageThread";
 import BookingStageCard from "@/components/BookingStageCard";
 import GuestArrivalPass from "@/components/GuestArrivalPass";
@@ -83,13 +84,16 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
     }
     if (error) { setLoadError(true); setLoading(false); return; }
     setLoadError(false);
-    const list = (data as unknown as Booking[]) || [];
+    // Whatever needs the guest's attention comes first (a host approval waiting to be paid), then requests still with the
+    // host, then confirmed stays, then the rest; inside each group the latest dates come first.
+    const rank = (st: string) => (st === "awaiting_payment" ? 0 : st === "pending_host_review" || st === "awaiting_admin_relay" ? 1 : st === "confirmed" ? 2 : 3);
+    const list = ((data as unknown as Booking[]) || []).slice().sort((x, y) => rank(x.status) - rank(y.status) || (x.status === "awaiting_payment" && y.status === "awaiting_payment" ? String(x.hold_expires_at || "").localeCompare(String(y.hold_expires_at || "")) : 0));
     setBookings(list);
     const unitIds = list.map((b) => b.unit_id).filter(Boolean) as string[];
     const typeIds = list.map((b) => b.room_type_id).filter(Boolean) as string[];
     if (unitIds.length > 0) {
-      const { data: units } = await supabase.from("property_units").select("id, label").in("id", unitIds);
-      setRoomLabel(Object.fromEntries((units || []).map((u) => [u.id, u.label])));
+      const { data: units } = await supabase.from("property_units").select("id, label, floor_no").in("id", unitIds);
+      setRoomLabel(Object.fromEntries((units || []).map((u) => { const f = unitFloor(u.label, u.floor_no); return [u.id, `${u.label}${f !== null ? ` · ${floorName(f)}` : ""}`]; })));
     }
     if (typeIds.length > 0) {
       const { data: types } = await supabase.from("room_types").select("id, name").in("id", typeIds);

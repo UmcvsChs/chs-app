@@ -1,0 +1,1 @@
+-- Applied live: stay advance for all categories (release_event_advance, _sweep_event_advances, pay_for_booking, _pay_booking_core, release_shortlet_funds_to_host patched); property_units.floor_no/features; get_available_units, choose_booking_room, host_set_room_details; get_host_calendar adds floor/features.

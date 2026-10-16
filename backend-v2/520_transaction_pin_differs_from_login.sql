@@ -1,0 +1,1 @@
+-- Applied live: _pin_equals_login(); set_transaction_pin and authorize_payment refuse a transaction PIN equal to the login PIN.

@@ -52,3 +52,6 @@ For each failed step note: the step number, what you saw, a screenshot.
 
 ## Resend / Withdraw on every flow (Admin)
 1. Admin > Bookings: on a request waiting for the guest to pay, open "Resend / Withdraw", Resend: the guest gets a reminder; the card shows who received it (name and phone). 2. Admin > Applications, Offers, Marketplace and Rent-to-Own: each card has the same buttons. Resend to an owner while they are deciding; resend to the tenant/buyer after the decision. 3. Withdraw with a reason on an unpaid item: both sides are notified, item closes. 4. Try Withdraw on a paid item: it must refuse and point to refund.
+
+## Advance and room picker
+1. Pay a hotel booking as a guest: the host wallet receives 60% of the net payout at once and sees "Advance paid"; Admin escrow oversight still holds the rest. 2. Guest arrives and confirms: the host receives only the remaining 40%. 3. Host > Calendar > My rooms: rename rooms to real numbers, set floors and features. 4. Guest booking form: pick dates, see rooms by floor, tap "Keep us together" for a family, send the request: the booking card shows the chosen rooms and floors. 5. Pick a room, then have someone else take it first: the request is refused with nothing charged.

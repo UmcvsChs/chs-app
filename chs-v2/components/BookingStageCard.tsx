@@ -141,7 +141,7 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
           </p>
           <p className="text-[10px] text-gray-500 mt-0.5">
             {formatNaira(b.total_price)} stay + {formatNaira(b.guest_commission_amount || 0)} CHS service fee
-            {(b.security_deposit_amount || 0) > 0 ? ` + ${formatNaira(b.security_deposit_amount || 0)} refundable deposit` : ""}. Held safely by CHS and released to the host as soon as you arrive and confirm everything is as described.
+            {(b.security_deposit_amount || 0) > 0 ? ` + ${formatNaira(b.security_deposit_amount || 0)} refundable deposit` : ""}. Held safely by CHS. As set out in the host agreement, CHS may release a part (normally 60% of the host’s payout) to the host before you arrive so they can prepare for you; the balance is released when you arrive and confirm everything is as described.
           </p>
           <PaymentSafetyNotice variant="compact" className="mt-1.5" />
           {error && (

@@ -11,6 +11,7 @@ import { BookingRequestResult, LaneInfo, friendlyBookingError } from "@/lib/book
 import { formatNaira } from "@/lib/format";
 import ValidatedInput from "@/components/ValidatedInput";
 import ConfirmPay from "@/components/ConfirmPay";
+import RoomPicker from "@/components/RoomPicker";
 import { validatePhone, validateFullName } from "@/lib/validators";
 
 interface ShortletBookingFormProps {
@@ -63,6 +64,7 @@ export default function ShortletBookingForm({
   // a type; the system assigns a free room of that type.
   const [roomOptions, setRoomOptions] = useState<{ id: string; name: string; price: number | null; maxGuests: number | null }[]>([]);
   const [roomTypeId, setRoomTypeId] = useState("");
+  const [pickedUnits, setPickedUnits] = useState<string[]>([]);
   const [calendarKey, setCalendarKey] = useState(0);
   // How soon the guest arrives decides how quickly each step must happen.
   const [laneInfo, setLaneInfo] = useState<LaneInfo | null>(null);
@@ -204,23 +206,37 @@ export default function ShortletBookingForm({
     const cleanPhone = validatePhone(guestPhone, { international: true }).value;
 
     if (isInstant) {
-      const { data: inst, error: instError } = await supabase.rpc("book_instant_shortlet", {
-        p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut, p_guests: guests,
-        p_guest_full_name: guestName.trim(), p_guest_phone: cleanPhone, p_guest_id_document_url: null,
-        p_house_rules_acknowledged: rulesAcknowledged, p_room_type_id: roomTypeId || null,
-        p_expected_arrival_time: arrivalTime || null,
-      });
-      if (instError || !inst) {
-        setError(friendlyBookingError(instError?.message, { lane: "express", total: pricing.real_total_guest_pays }, "Could not complete your booking. Nothing was charged. Please try again."));
-        setSubmitting(false);
-        setCalendarKey((k) => k + 1);
-        return;
+      const nInst = rooms;
+      const made: { booking_id: string; total_paid?: number }[] = [];
+      let adultsLeftI = adults; let childrenLeftI = children;
+      for (let i = 0; i < nInst; i++) {
+        const g = Math.floor(guests / nInst) + (i < guests % nInst ? 1 : 0);
+        const a = Math.max(1, Math.min(g, adultsLeftI - (nInst - 1 - i)));
+        const c = Math.min(g - a, childrenLeftI);
+        adultsLeftI -= a; childrenLeftI -= c;
+        const { data: inst, error: instError } = await supabase.rpc("book_instant_shortlet", {
+          p_property_id: propertyId, p_check_in: checkIn, p_check_out: checkOut, p_guests: a + c,
+          p_guest_full_name: guestName.trim(), p_guest_phone: cleanPhone, p_guest_id_document_url: null,
+          p_house_rules_acknowledged: rulesAcknowledged, p_room_type_id: roomTypeId || null,
+          p_expected_arrival_time: arrivalTime || null,
+        });
+        if (instError || !inst) {
+          const base = friendlyBookingError(instError?.message, { lane: "express", total: pricing.real_total_guest_pays * nInst }, "Could not complete your booking. Nothing was charged. Please try again.");
+          setError(made.length > 0 ? `Room ${i + 1} could not be booked (${base}) Your earlier ${made.length} room${made.length > 1 ? "s are" : " is"} confirmed and paid; see My bookings.` : base);
+          setSubmitting(false);
+          setCalendarKey((k) => k + 1);
+          break;
+        }
+        made.push(inst as { booking_id: string; total_paid?: number });
+        if (pickedUnits[i]) await supabase.rpc("choose_booking_room", { p_booking: (inst as { booking_id: string }).booking_id, p_unit: pickedUnits[i] });
+        supabase.rpc("set_booking_occupancy", { p_booking: (inst as { booking_id: string }).booking_id, p_adults: a, p_children: c });
       }
-      supabase.rpc("set_booking_occupancy", { p_booking: (inst as { booking_id: string }).booking_id, p_adults: adults, p_children: children });
+      if (made.length > 1) await supabase.rpc("link_room_group", { p_ids: made.map((x) => x.booking_id) });
+      if (made.length < nInst) return;
       onSuccess({
-        booking_id: (inst as { booking_id: string }).booking_id, status: "confirmed", lane: "instant",
+        booking_id: made[0].booking_id, status: "confirmed", lane: "instant",
         relay_minutes: null, host_minutes: 0, pay_minutes: 0,
-        total_to_pay: (inst as { total_paid?: number }).total_paid ?? pricing.real_total_guest_pays, instant: true,
+        total_to_pay: made.reduce((t, x) => t + (x.total_paid ?? pricing.real_total_guest_pays), 0), instant: true,
       });
       return;
     }
@@ -248,7 +264,7 @@ export default function ShortletBookingForm({
     }
 
     // One request per room, linked together. If a later room cannot be taken, the earlier ones are withdrawn.
-    const nRooms = !showExpress && rooms > 1 ? rooms : 1;
+    const nRooms = !(showExpress && alsoAsk.length > 0) && rooms > 1 ? rooms : 1;
     const created: BookingRequestResult[] = [];
     let adultsLeft = adults; let childrenLeft = children;
     for (let i = 0; i < nRooms; i++) {
@@ -267,6 +283,17 @@ export default function ShortletBookingForm({
         setSubmitting(false);
         setCalendarKey((k) => k + 1);
         return;
+      }
+      if (pickedUnits[i]) {
+        const { error: pickErr } = await supabase.rpc("choose_booking_room", { p_booking: (rr as BookingRequestResult).booking_id, p_unit: pickedUnits[i] });
+        if (pickErr) {
+          created.push(rr as BookingRequestResult);
+          for (const done of created) { await supabase.rpc("cancel_shortlet_booking", { p_booking_id: done.booking_id }); }
+          setError(`${pickErr.message} Nothing was charged.`);
+          setSubmitting(false);
+          setCalendarKey((k) => k + 1);
+          return;
+        }
       }
       created.push(rr as BookingRequestResult);
       await supabase.rpc("set_booking_occupancy", { p_booking: (rr as BookingRequestResult).booking_id, p_adults: a, p_children: c });
@@ -322,12 +349,28 @@ export default function ShortletBookingForm({
           </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Rooms</label>
-            <select value={rooms} onChange={(e) => setRooms(parseInt(e.target.value))} disabled={isInstant || showExpress || maxRooms < 2} className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white disabled:bg-gray-50">
+            <select value={rooms} onChange={(e) => { const n = parseInt(e.target.value); setRooms(n); setPickedUnits((pu) => pu.slice(0, n)); }} disabled={(showExpress && alsoAsk.length > 0) || maxRooms < 2} className="w-full mt-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white disabled:bg-gray-50">
               {Array.from({ length: maxRooms }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
         </div>
-        {tooManyForRooms && <p className="text-[11px] text-red-600 mt-1">This room type sleeps up to {roomCap} guests. Add a room or reduce the guests.</p>}
+        {maxRooms < 2 && validDateRange && <p className="text-[10px] text-gray-500 mt-1">Only 1 room of this type is free for your dates, so the number of rooms cannot be raised. Pick another room type above to take a second room there, or reduce the guests.</p>}
+        {showExpress && alsoAsk.length > 0 && <p className="text-[10px] text-gray-500 mt-1">Rooms are fixed at 1 while you are asking other hotels as well. Untick them to book more rooms here.</p>}
+        {tooManyForRooms && (
+          <p className="text-[11px] text-red-600 mt-1">
+            This room type sleeps up to {roomCap} guests, and you have {guests}.{" "}
+            {roomCap && Math.ceil(guests / roomCap) <= maxRooms && Math.ceil(guests / roomCap) <= adults
+              ? <button type="button" onClick={() => setRooms(Math.ceil(guests / roomCap))} className="underline font-semibold">Use {Math.ceil(guests / roomCap)} rooms</button>
+              : "Add a room (if more are free), choose a larger room type, or reduce the guests."}
+          </p>
+        )}
+        {validDateRange && !(showExpress && alsoAsk.length > 0) && (
+          <div className="mt-2">
+            <RoomPicker propertyId={propertyId} checkIn={checkIn} checkOut={checkOut} roomTypeId={roomTypeId || null}
+              selected={pickedUnits} roomsWanted={rooms}
+              onChange={(ids) => { setPickedUnits(ids); if (ids.length > 0) setRooms(Math.min(5, ids.length)); }} />
+          </div>
+        )}
         {rooms > 1 && <p className="text-[10px] text-gray-500 mt-1">{rooms} rooms of this type are requested together. Each is confirmed and paid separately, and the guests are shared between the rooms.</p>}
       </div>
 
@@ -410,7 +453,7 @@ export default function ShortletBookingForm({
           {isInstant ? (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
               <p className="text-xs font-bold text-green-800">⚡ Instant Confirm</p>
-              <p className="text-[11px] text-green-800 mt-0.5">This host confirms bookings automatically. You pay {formatNaira(pricing.real_total_guest_pays)} from your CHS wallet now and your room is confirmed straight away. The host is paid only after you arrive and confirm.</p>
+              <p className="text-[11px] text-green-800 mt-0.5">This host confirms bookings automatically. You pay {formatNaira(pricing.real_total_guest_pays * rooms)} from your CHS wallet now and your room is confirmed straight away. The host is paid only after you arrive and confirm.</p>
             </div>
           ) : (
             <BookingFlowNotice info={laneInfo} total={pricing.real_total_guest_pays * rooms} />
@@ -460,16 +503,16 @@ export default function ShortletBookingForm({
       {isInstant ? (
         <ConfirmPay onConfirm={() => handleSubmit()} busy={submitting}
           disabled={!pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
-          amountText={pricing ? formatNaira(pricing.real_total_guest_pays) : "the total"} whatFor="to book these dates now (held by CHS until you arrive)"
+          amountText={pricing ? formatNaira(pricing.real_total_guest_pays * rooms) : "the total"} whatFor="to book these dates now (held by CHS until you arrive)"
           className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
-          label={submitting ? "Confirming your booking..." : `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays) : ""} from wallet`} />
+          label={submitting ? "Confirming your booking..." : `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays * rooms) : ""} from wallet`} />
       ) : (
       <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
         {submitting
           ? (isInstant ? "Confirming your booking..." : "Sending your request...")
           : isInstant
-            ? `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays) : ""} from wallet`
+            ? `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays * rooms) : ""} from wallet`
             : alsoAsk.length > 0
               ? `Ask ${alsoAsk.length + 1} hotels at once — nothing is charged now`
               : "Send request — nothing is charged now"}

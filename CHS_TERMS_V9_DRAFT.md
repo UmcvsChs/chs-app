@@ -313,6 +313,7 @@ This applies to CHS-managed rentals where the landlord has allowed quarterly or 
 This applies to hosts and guests of event centres, hotels, lodges, open fields and stadiums.
 
 - Advance to the venue. After you pay for an event centre booking, CHS holds the money. Shortly before the event (currently 48 hours before) CHS pays the venue an advance (currently 60%) of what the venue will earn from the booking, meaning the booking price less the venue's service charge, so that it can prepare. The balance is paid after the event under term 11. CHS may change the advance (never above 90%) or switch it off; a change applies to bookings paid after it.
+- Part-release to hotel, lodge and shortlet hosts. For every other booking, CHS also holds the money until the guest arrives and confirms. Before that, CHS may, at its discretion and by a manual decision, release a percentage of the host's payout (normally 60%, after CHS commission) to the host's wallet so the host can prepare for the guest. CHS can set a different percentage where CHS and the host agree. The balance is released when the guest arrives and confirms, or automatically 24 hours after check-in. If the booking is cancelled or refunded, whatever was released is taken back from the host first (as for the event advance).
 
 - If an event is cancelled after the advance. The advance is taken back from the venue first, and the guest's refund is then worked out under term 11 and, where it applies, term 40. If the venue's wallet cannot cover it, the venue owes CHS the difference and CHS may recover it.
 

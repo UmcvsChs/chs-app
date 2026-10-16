@@ -1,0 +1,1 @@
+-- Applied live: reverted automatic release at payment; admin_release_booking_percentage(booking, pct, note); stay_advance_release_hours=-1; sweeper skips stays.

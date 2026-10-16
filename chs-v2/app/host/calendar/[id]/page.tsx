@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import RoleBadge from "@/components/RoleBadge";
 import { addDays, parseISO, todayISO } from "@/lib/availability";
 import { parseRoomLabels } from "@/lib/roomLabels";
+import { ROOM_FEATURES } from "@/lib/roomFloor";
 import { formatNaira, formatDateTime } from "@/lib/format";
 
 // The host's own view of their rooms and calendar — the hotel "tape chart":
@@ -20,7 +21,7 @@ import { formatNaira, formatDateTime } from "@/lib/format";
 // both rest on that one tap.
 
 interface RoomType { id: string; name: string; max_guests: number | null; price_per_night: number | null }
-interface Unit { id: string; label: string; room_type_id: string | null }
+interface Unit { id: string; label: string; room_type_id: string | null; floor_no?: number | null; features?: string[] }
 interface Entry {
   id: string; unit_id: string; start: string; end: string;
   state: "held" | "confirmed" | "blocked" | "walk_in";
@@ -400,8 +401,10 @@ export default function HostCalendarPage() {
                 <p className="text-[11px] font-bold text-chs-charcoal mb-1">3. Your rooms</p>
                 <div className="space-y-1.5">
                   {cal.units.map((u) => (
-                    <div key={u.id} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
-                      <span className="text-xs font-bold text-chs-charcoal w-16 truncate">{u.label}</span>
+                    <div key={u.id} className="flex flex-wrap items-center gap-2 bg-gray-50 rounded-lg px-2 py-1.5">
+                      <input defaultValue={u.label} disabled={busy} aria-label="Room number or name"
+                        onBlur={(e) => { const v = e.target.value.trim(); if (!v || v === u.label) return; run(() => supabase.rpc("host_update_room", { p_unit_id: u.id, p_label: v }), "Room renamed."); }}
+                        className="text-xs font-bold text-chs-charcoal w-24 px-1.5 py-0.5 rounded border border-transparent hover:border-gray-200 bg-transparent" />
                       <select value={u.room_type_id || ""} disabled={busy}
                         onChange={(e) => run(() => supabase.rpc("host_update_room", { p_unit_id: u.id, p_room_type_id: e.target.value || null, p_clear_type: !e.target.value }), "Room type updated.")}
                         className="flex-1 px-2 py-1 rounded border border-gray-200 text-[11px] bg-white">
@@ -410,6 +413,20 @@ export default function HostCalendarPage() {
                       </select>
                       <button disabled={busy} onClick={() => run(() => supabase.rpc("host_update_room", { p_unit_id: u.id, p_active: false }), `Room ${u.label} switched off.`)}
                         className="text-[10px] font-semibold text-gray-400 underline">Switch off</button>
+                      <div className="basis-full flex flex-wrap items-center gap-1.5 pt-1">
+                        <label className="text-[10px] text-gray-500">Floor</label>
+                        <input type="number" defaultValue={u.floor_no ?? ""} placeholder="auto" disabled={busy}
+                          onBlur={(e) => { const v = e.target.value.trim(); if ((v === "" ? null : parseInt(v, 10)) === (u.floor_no ?? null)) return; run(() => supabase.rpc("host_set_room_details", { p_unit_id: u.id, p_floor: v === "" ? null : parseInt(v, 10), p_features: null, p_clear_floor: v === "" }), "Floor saved."); }}
+                          className="w-14 px-1.5 py-0.5 rounded border border-gray-200 text-[11px]" />
+                        {ROOM_FEATURES.map((f) => {
+                          const on = (u.features || []).includes(f.key);
+                          return (
+                            <button key={f.key} type="button" disabled={busy}
+                              onClick={() => run(() => supabase.rpc("host_set_room_details", { p_unit_id: u.id, p_floor: null, p_features: on ? (u.features || []).filter((x) => x !== f.key) : [...(u.features || []), f.key] }), "Room details saved.")}
+                              className={`px-2 py-0.5 rounded-full border text-[10px] ${on ? "border-chs-red bg-chs-amber-light font-semibold" : "border-gray-200 text-gray-500"}`}>{f.label}</button>
+                          );
+                        })}
+                      </div>
                     </div>
                   ))}
                 </div>
