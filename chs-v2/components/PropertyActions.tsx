@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { Req, RequiredLegend } from "@/components/FormMarks";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -676,10 +677,9 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
               className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm mb-2" />
             <p className="text-[10px] text-gray-500 mb-3">After your final installment, your funds are held safely by CHS. We act on your behalf to ensure every real legal document is delivered within 14 working days — if not, you can request a refund: your full payment back, including CHS&apos;s commission, less only a small real bank processing fee (never more than ₦2,000).</p>
             {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
-            <button onClick={handlePaySaleInstallment} disabled={paying || !installmentAmount}
-              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-              {paying ? "Processing payment..." : "Pay this installment now"}
-            </button>
+            <ConfirmPay onConfirm={handlePaySaleInstallment} busy={paying} disabled={!installmentAmount} amountText="this installment" whatFor="toward your purchase" confirmLabel="Yes, pay this installment"
+              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+              label={paying ? "Processing payment..." : "Pay this installment now"} />
           </>
         ) : (
           <>
@@ -695,10 +695,9 @@ export default function PropertyActions({ property, isOwner }: { property: Prope
             </p>
             <RefundPolicyNotice className="mb-3" />
             {paymentError && <p className="text-xs text-chs-red mb-2">{paymentError}</p>}
-            <button onClick={handlePayForProperty} disabled={paying}
-              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-              {paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`}
-            </button>
+            <ConfirmPay onConfirm={handlePayForProperty} busy={paying} amountText={formatNaira(breakdown.buyer_total)} whatFor="for this property (held by CHS until the documents are handed over)"
+              className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+              label={paying ? "Processing payment..." : `Pay ${formatNaira(breakdown.buyer_total)} now`} />
           </>
         )}
       </div>

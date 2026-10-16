@@ -2,7 +2,7 @@
 
 import { formatDateTime } from "@/lib/format";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -19,6 +19,8 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<Notification | null>(null);
+  const limitRef = useRef(30);
+  const [canMore, setCanMore] = useState(false);
 
   async function loadNotifications() {
     if (!session) return;
@@ -27,7 +29,8 @@ export default function NotificationBell() {
       .select("*")
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
-      .limit(30);
+      .limit(limitRef.current);
+    setCanMore((data || []).length >= limitRef.current);
     setNotifications(data || []);
     setLoading(false);
   }
@@ -212,6 +215,7 @@ export default function NotificationBell() {
                 </div>
               ))
             )}
+            {canMore && <button onClick={() => { limitRef.current += 50; loadNotifications(); }} className="w-full py-2 text-[11px] font-semibold text-chs-red">Show older notifications</button>}
           </div>
         </>
       )}

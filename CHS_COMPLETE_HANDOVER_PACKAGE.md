@@ -346,3 +346,7 @@ Every one of the above has a real, matching, more detailed entry in `CHS_PROGRES
 - **`backend/` (the legacy, non-`v2` backend folder) was not audited file-by-file for this document** — it is explicitly superseded and, based on every real reference throughout this entire project's history, unused by the live app. If the new agent finds any live dependency on it, that would be a genuine surprise worth flagging back to the client.
 - **The real, live Netlify/GitHub state was not independently re-verified at the exact moment of writing this document** — it's described here based on the real, established pattern (client manually pushes zips in batches) documented throughout this project's history, not a fresh check of GitHub's current commit.
 - **No automated test coverage exists**, as stated in §6 — everything described as "tested" in this document and throughout the Progress Log was real, manual, direct testing (either by the client through the live UI, or by the working agent directly against the live Supabase database), not automated tests that can be re-run to confirm nothing has regressed.
+
+
+## Launch list additions (16 Oct 2026)
+- Also: payment fingerprint/face approval (WebAuthn for payments; needs a new server check and the final domain in WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN) and turning ON the Payment PIN switch (Admin > Settings) after deploying.

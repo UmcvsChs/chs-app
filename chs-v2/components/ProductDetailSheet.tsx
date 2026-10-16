@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { formatNaira } from "@/lib/format";
-import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import { Req } from "@/components/FormMarks";
 import { CONDITIONS } from "@/lib/marketplaceSpecs";
 import type { MarketplaceProduct } from "@/types/marketplace";
@@ -10,17 +9,15 @@ import type { MarketplaceProduct } from "@/types/marketplace";
 // Everything a buyer needs to decide, in one place: photographs, the vendor's specification, the options to choose
 // (colour, size …), how many are in stock, the warranty and delivery information — and the order itself: quantity,
 // chosen options and delivery address, paid from the wallet and held in escrow until delivery is confirmed.
-export default function ProductDetailSheet({ product, onClose, onBuy, bought }: {
+export default function ProductDetailSheet({ product, onClose, onAddToCart }: {
   product: MarketplaceProduct;
   onClose: () => void;
-  onBuy: (productId: string, quantity: number, options: Record<string, string>, address: string) => Promise<string | null>;
-  bought: boolean;
+  onAddToCart: (productId: string, quantity: number, options: Record<string, string>, goToCart: boolean) => void;
 }) {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [qty, setQty] = useState(1);
   const [picked, setPicked] = useState<Record<string, string>>({});
-  const [address, setAddress] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [added, setAdded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const stock = product.stock_quantity ?? null;
@@ -31,13 +28,11 @@ export default function ProductDetailSheet({ product, onClose, onBuy, bought }: 
   const photos = product.photos || [];
   const condition = CONDITIONS.find((c) => c.value === product.condition)?.label;
 
-  async function buy() {
+  function add(goToCart: boolean) {
     for (const g of groups) if (!picked[g.name]) { setError(`Please choose a ${g.name}.`); return; }
-    if (address.trim().length < 10) { setError("Please give your full delivery address (house number, street, area, town)."); return; }
-    setBusy(true); setError(null);
-    const message = await onBuy(product.id, qty, picked, address.trim());
-    setBusy(false);
-    if (message) setError(message);
+    setError(null);
+    onAddToCart(product.id, qty, picked, goToCart);
+    if (!goToCart) setAdded(true);
   }
 
   return (
@@ -91,40 +86,32 @@ export default function ProductDetailSheet({ product, onClose, onBuy, bought }: 
           </div>
         )}
 
-        {bought ? (
-          <p className="mt-4 text-sm text-green-700 font-semibold text-center">✓ Paid — held in escrow until delivery is confirmed.</p>
-        ) : (
-          <div className="mt-4 border-t border-gray-100 pt-3 space-y-2">
-            {groups.map((g) => (
-              <div key={g.name}>
-                <label className="text-[11px] font-semibold text-gray-600">{g.name}<Req /></label>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {g.values.map((v) => (
-                    <button key={v} type="button" onClick={() => setPicked({ ...picked, [g.name]: v })}
-                      className={`px-3 py-1.5 rounded-full border-2 text-[11px] font-semibold ${picked[g.name] === v ? "border-chs-red bg-chs-amber-light" : "border-gray-200"}`}>{v}</button>
-                  ))}
-                </div>
+        <div className="mt-4 border-t border-gray-100 pt-3 space-y-2">
+          {groups.map((g) => (
+            <div key={g.name}>
+              <label className="text-[11px] font-semibold text-gray-600">{g.name}<Req /></label>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {g.values.map((v) => (
+                  <button key={v} type="button" onClick={() => { setPicked({ ...picked, [g.name]: v }); setAdded(false); }}
+                    className={`px-3 py-1.5 rounded-full border-2 text-[11px] font-semibold ${picked[g.name] === v ? "border-chs-red bg-chs-amber-light" : "border-gray-200"}`}>{v}</button>
+                ))}
               </div>
-            ))}
-            <div className="flex items-center gap-3">
-              <label className="text-[11px] font-semibold text-gray-600">Quantity</label>
-              <button type="button" onClick={() => setQty(Math.max(1, qty - 1))} className="w-7 h-7 rounded-full border border-gray-200 text-sm">−</button>
-              <span className="text-sm font-bold w-6 text-center">{qty}</span>
-              <button type="button" onClick={() => setQty(Math.min(maxQty, qty + 1))} className="w-7 h-7 rounded-full border border-gray-200 text-sm">+</button>
             </div>
-            <div>
-              <label className="text-[11px] font-semibold text-gray-600">Delivery address<Req /></label>
-              <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} placeholder="House number, street, area, town and state. No phone numbers — CHS handles all contact."
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
-            </div>
-            <p className="text-xs text-chs-charcoal">Total: <b>{formatNaira(subtotal)}</b> <span className="text-gray-500">+ CHS commission (6%) = {formatNaira(Math.round(subtotal * 1.06))}</span></p>
-            <RefundPolicyNotice />
-            {error && <p className="text-xs text-chs-red">{error}</p>}
-            <button onClick={buy} disabled={busy} className="w-full py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-              {busy ? "Processing…" : "🛒 Pay from my wallet"}
-            </button>
+          ))}
+          <div className="flex items-center gap-3">
+            <label className="text-[11px] font-semibold text-gray-600">Quantity</label>
+            <button type="button" onClick={() => { setQty(Math.max(1, qty - 1)); setAdded(false); }} className="w-7 h-7 rounded-full border border-gray-200 text-sm">−</button>
+            <span className="text-sm font-bold w-6 text-center">{qty}</span>
+            <button type="button" onClick={() => { setQty(Math.min(maxQty, qty + 1)); setAdded(false); }} className="w-7 h-7 rounded-full border border-gray-200 text-sm">+</button>
           </div>
-        )}
+          <p className="text-xs text-chs-charcoal">Subtotal: <b>{formatNaira(subtotal)}</b> <span className="text-gray-500">(CHS fee is added at checkout)</span></p>
+          {error && <p className="text-xs text-chs-red">{error}</p>}
+          {added && <p className="text-xs text-green-700 font-semibold">✓ Added to your cart. Keep shopping, or open the cart from the bar at the bottom.</p>}
+          <div className="flex gap-2">
+            <button onClick={() => add(false)} className="flex-1 py-2.5 rounded-full border-2 border-chs-red text-chs-red text-sm font-semibold">Add to cart</button>
+            <button onClick={() => add(true)} className="flex-1 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold">Buy now</button>
+          </div>
+        </div>
       </div>
     </div>
   );

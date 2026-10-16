@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useCallback, useEffect, useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
@@ -138,9 +139,9 @@ export default function MyInspectionsPage() {
                   <p className="text-xs text-chs-charcoal">Pay <b>{formatNaira(i.transport_fee as number)}</b> from your wallet at least 2 hours before the visit, or it lapses and nothing is charged.</p>
                   <PaymentSafetyNotice variant="compact" className="mt-1" />
                   {message[i.id] && <p className="text-[11px] text-chs-red mt-1">{message[i.id]} {message[i.id].includes("wallet") && <Link href="/wallet" className="font-semibold underline">Top up →</Link>}</p>}
-                  <button onClick={() => pay(i.id, i.transport_fee as number)} disabled={busy === i.id} className="w-full mt-2 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-                    {busy === i.id ? "Paying…" : `Pay ${formatNaira(i.transport_fee as number)} from my wallet`}
-                  </button>
+                  <ConfirmPay onConfirm={() => pay(i.id, i.transport_fee as number)} busy={busy === i.id} amountText={formatNaira(i.transport_fee as number)} whatFor="for this inspection visit"
+                    className="w-full mt-2 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+                    label={busy === i.id ? "Paying…" : `Pay ${formatNaira(i.transport_fee as number)} from my wallet`} />
                 </div>
               )}
               {!needsPay && message[i.id] && <p className="text-[11px] text-gray-600 mt-1.5">{message[i.id]}</p>}

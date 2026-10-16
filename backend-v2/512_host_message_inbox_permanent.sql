@@ -1,0 +1,1 @@
+-- Applied via migration 512_host_message_inbox_permanent: get_host_console returns total_msgs + last_msg_at.

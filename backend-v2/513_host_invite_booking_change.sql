@@ -1,0 +1,1 @@
+-- Applied via migration 513_host_invite_booking_change.

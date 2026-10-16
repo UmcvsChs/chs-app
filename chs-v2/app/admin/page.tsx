@@ -34,8 +34,10 @@ import AdminServiceSourcing from "@/components/AdminServiceSourcing";
 import AdminHostReplies from "@/components/AdminHostReplies";
 import AdminEventCentres from "@/components/AdminEventCentres";
 import AdminVatPanel from "@/components/AdminVatPanel";
+import AdminPaymentPinSwitch from "@/components/AdminPaymentPinSwitch";
 import AdminHotels from "@/components/AdminHotels";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
+import AdminRelayActions from "@/components/AdminRelayActions";
 
 interface DeveloperApplication {
   id: string;
@@ -328,7 +330,10 @@ function AdminDashboardInner() {
     expected_arrival_time: string | null; amount_if_confirmed: number; payment_status: string; hold_expires_at: string | null;
     created_at: string; admin_relay_note: string | null; relay_mode: string | null; minutes_left: number | null;
     express_group_id?: string | null; instant_booked?: boolean; group_size?: number; cat?: string; event_type?: string | null; reply_pending?: string | null;
+    relay_resend_count?: number; relay_last_resent_at?: string | null; relay_history?: { action: string; at: string; note: string | null }[];
   }[]>([]);
+  const [queueInfo, setQueueInfo] = useState<string | null>(null);
+  const [reopenable, setReopenable] = useState<{ id: string; property_title: string; cat: string; guest_full_name: string; guest_phone: string; check_in: string; check_out: string; created_at: string; host_name: string; host_phone: string }[]>([]);
   const [relayNotes, setRelayNotes] = useState<Record<string, string>>({});
   const [bookingRejectReasons, setBookingRejectReasons] = useState<Record<string, string>>({});
   const [queueBusy, setQueueBusy] = useState<string | null>(null);
@@ -440,6 +445,39 @@ function AdminDashboardInner() {
   async function loadBookingQueue() {
     const { data } = await supabase.rpc("get_admin_booking_queue");
     setBookingQueue((data as unknown as typeof bookingQueue) || []);
+    const { data: ro } = await supabase.rpc("get_admin_reopenable_requests");
+    setReopenable((ro as unknown as typeof reopenable) || []);
+  }
+  // Resend (host did not see or answer it), withdraw (guest no longer needs it) and re-open (the window ran out):
+  // the three tools admin needs after a request has already been relayed.
+  async function handleResendBooking(id: string) {
+    setQueueBusy(id); setActionError(null); setQueueInfo(null);
+    const { data, error } = await supabase.rpc("admin_resend_booking_to_host", { p_booking_id: id, p_note: (relayNotes[id] || "").trim() || null });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    const r = data as { host_name: string; host_phone: string; minutes: number };
+    setQueueInfo(`Re-sent to ${r.host_name} (${r.host_phone}). The host has a fresh ${r.minutes} minutes. They must be logged in with that phone number to see it.`);
+    await loadBookingQueue();
+  }
+  async function handleRevokeBooking(id: string) {
+    const reason = (bookingRejectReasons[id] || "").trim();
+    if (!reason) { setActionError("Please write the reason before withdrawing this request."); return; }
+    if (!window.confirm("Withdraw this request? The host and the guest will both be told, and the dates are released.")) return;
+    setQueueBusy(id); setActionError(null); setQueueInfo(null);
+    const { error } = await supabase.rpc("admin_revoke_booking_request", { p_booking_id: id, p_reason: reason });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    setQueueInfo("Request withdrawn. The host and the guest have been told, and the dates are open again.");
+    await loadBookingQueue();
+  }
+  async function handleReinitiateBooking(id: string) {
+    setQueueBusy(id); setActionError(null); setQueueInfo(null);
+    const { data, error } = await supabase.rpc("admin_reinitiate_booking_request", { p_booking_id: id, p_note: (relayNotes[id] || "").trim() || null });
+    setQueueBusy(null);
+    if (error) { setActionError(error.message); return; }
+    const r = data as { host_name: string; host_phone: string; minutes: number };
+    setQueueInfo(`Re-opened and sent to ${r.host_name} (${r.host_phone}) with a fresh ${r.minutes} minutes.`);
+    await loadBookingQueue();
   }
   async function handleRelayBooking(id: string) {
     setQueueBusy(id); setActionError(null);
@@ -3841,6 +3879,7 @@ function AdminDashboardInner() {
                     ⏳ Sent to the real owner ({app.properties?.profiles?.full_name}) — awaiting their decision. Nothing for admin to do yet.
                   </p>
                 )}
+                <AdminRelayActions flow="application" id={app.id} onDone={loadData} />
 
                 {app.status === "pending" && (
                   <button onClick={() => handleApplicationScreened(app.id)}
@@ -3967,6 +4006,7 @@ function AdminDashboardInner() {
                     className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                     ✓ Reviewed — relay to owner
                   </button>
+                  <AdminRelayActions flow="offer" id={o.id} />
                 </div>
               ))
             )}
@@ -3993,6 +4033,7 @@ function AdminDashboardInner() {
                       className="w-full mt-2 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
                       ✓ Reviewed — relay to buyer
                     </button>
+                    <AdminRelayActions flow="offer" id={o.id} />
                   </div>
                 ))}
               </div>
@@ -4019,6 +4060,7 @@ function AdminDashboardInner() {
                       className="mt-2 w-full py-1.5 rounded-full bg-gray-200 text-gray-600 text-[10px] font-semibold">
                       🗄️ Send to Archive
                     </button>
+                    <AdminRelayActions flow="offer" id={o.id} canWithdraw={o.status !== "accepted" && o.status !== "rejected" && o.status !== "withdrawn"} />
                   </div>
                 ))}
               </div>
@@ -5220,6 +5262,8 @@ function AdminDashboardInner() {
               <p className="text-xs font-bold text-chs-charcoal">📋 Requests in progress ({bookingQueue.length})</p>
               <button onClick={loadBookingQueue} className="text-[10px] font-semibold text-chs-red underline">🔄 Refresh</button>
             </div>
+            {queueInfo && <p className="text-xs text-green-800 bg-green-50 rounded-lg px-2.5 py-2 mb-2">✓ {queueInfo}</p>}
+            {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-2.5 py-2 mb-2">{actionError}</p>}
             {bookingQueue.length === 0 ? (
               <p className="text-center text-sm text-gray-400 py-8">No booking requests are in progress right now.</p>
             ) : (
@@ -5249,7 +5293,10 @@ function AdminDashboardInner() {
                           )}
                           <p className="text-xs text-gray-600">{q.guest_full_name} · {q.guest_phone} · {q.check_in} → {q.check_out}{q.expected_arrival_time ? ` · arriving about ${q.expected_arrival_time}` : ""}</p>
                           <BookingSessions bookingId={q.id} compact />
-                          <p className="text-[11px] text-gray-500">Host: {q.host_name} · <b>{q.host_phone}</b></p>
+                          <p className="text-[11px] text-gray-500">Sent to host: {q.host_name} · <b>{q.host_phone}</b> <span className="text-gray-400">(the host must log in with this number)</span></p>
+                          {(q.relay_history || []).length > 0 && (
+                            <p className="text-[9px] text-gray-400 mt-0.5">History: {(q.relay_history || []).map((h) => `${h.action === "relayed_auto" ? "auto-relayed" : h.action === "relayed" ? "relayed" : h.action === "resent" ? "re-sent" : h.action === "reinitiated" ? "re-opened" : h.action} ${formatDateTime(h.at)}`).join(" → ")}</p>
+                          )}
                           <p className="text-sm font-bold text-chs-charcoal mt-1">
                             {formatNaira(q.amount_if_confirmed)}
                             <span className="text-[10px] font-normal text-gray-500"> {q.payment_status === "held_escrow" ? "— already paid, held in escrow" : "— not paid yet (nothing is held)"}</span>
@@ -5263,6 +5310,28 @@ function AdminDashboardInner() {
                           {q.reply_pending && <p className="text-[11px] text-blue-800 bg-blue-50 rounded px-2 py-1 mt-1">📨 The host has answered. Release it in <b>Host replies to relay</b>.</p>}
                           {q.relay_mode === "auto" && stage !== "awaiting_admin_relay" && <p className="text-[9px] text-gray-400 mt-0.5">Relayed to the host automatically</p>}
                           <p className="text-[9px] text-gray-400 mt-0.5">Requested {formatDateTime(q.created_at)}</p>
+
+                          {(stage === "pending_host_review" || stage === "awaiting_payment") && q.payment_status !== "held_escrow" && !q.reply_pending && (
+                            <div className="mt-2 space-y-1.5">
+                              {stage === "pending_host_review" && (
+                                <>
+                                  <input type="text" value={relayNotes[q.id] || ""} onChange={(e) => setRelayNotes({ ...relayNotes, [q.id]: e.target.value })}
+                                    placeholder="Optional note to the host when re-sending" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                                  <button onClick={() => handleResendBooking(q.id)} disabled={queueBusy === q.id}
+                                    className="w-full py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">
+                                    {queueBusy === q.id ? "Working…" : `🔁 Resend to the host${q.relay_resend_count ? ` (sent ${q.relay_resend_count + 1} times)` : ""}`}
+                                  </button>
+                                </>
+                              )}
+                              {stage === "awaiting_payment" && <AdminRelayActions flow="booking_guest" id={q.id} canWithdraw={false} />}
+                              <input type="text" value={bookingRejectReasons[q.id] || ""} onChange={(e) => setBookingRejectReasons({ ...bookingRejectReasons, [q.id]: e.target.value })}
+                                placeholder="Reason for withdrawing (e.g. guest no longer needs it)" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px]" />
+                              <button onClick={() => handleRevokeBooking(q.id)} disabled={queueBusy === q.id}
+                                className="w-full py-1.5 rounded-full bg-gray-200 text-gray-700 text-[11px] font-semibold disabled:opacity-50">
+                                ↩️ Withdraw this request (host and guest are told)
+                              </button>
+                            </div>
+                          )}
 
                           {stage === "awaiting_admin_relay" && (
                             <div className="mt-2">
@@ -5286,6 +5355,20 @@ function AdminDashboardInner() {
                   </div>
                 );
               })
+            )}
+            {reopenable.filter((r) => queueCat === "all" || r.cat === queueCat).length > 0 && (
+              <div className="mt-4">
+                <p className="text-[11px] font-bold text-chs-charcoal mb-1.5">⏱ Recently expired, can be re-opened ({reopenable.filter((r) => queueCat === "all" || r.cat === queueCat).length})</p>
+                {reopenable.filter((r) => queueCat === "all" || r.cat === queueCat).map((r) => (
+                  <div key={r.id} className="rounded-xl border-2 border-gray-100 bg-[var(--zone-card)] p-3 mb-2">
+                    <p className="text-sm font-semibold text-chs-charcoal">{r.property_title}</p>
+                    <p className="text-xs text-gray-600">{r.guest_full_name} · {r.guest_phone} · {r.check_in} → {r.check_out}</p>
+                    <p className="text-[11px] text-gray-500">Host: {r.host_name} · <b>{r.host_phone}</b></p>
+                    <input type="text" value={relayNotes[r.id] || ""} onChange={(e) => setRelayNotes({ ...relayNotes, [r.id]: e.target.value })} placeholder="Optional note to the host" className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 text-[11px] mt-1.5" />
+                    <button onClick={() => handleReinitiateBooking(r.id)} disabled={queueBusy === r.id} className="w-full mt-1.5 py-1.5 rounded-full bg-chs-red text-white text-[11px] font-semibold disabled:opacity-50">🔄 Re-open and send to the host again</button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
@@ -5375,6 +5458,7 @@ function AdminDashboardInner() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 mb-1">Vendor: {q.vendor_name}</p>
+                  <AdminRelayActions flow="quote" id={q.id} />
 
                   {q.moderation_status === "pending_review" && (
                     <>
@@ -5895,7 +5979,10 @@ function AdminDashboardInner() {
             {!profile?.is_super_admin ? (
               <p className="text-center text-sm text-gray-400 py-8">Real platform settings are visible to Super Admin only.</p>
             ) : (
-              <PlatformSettingsPanel />
+              <>
+                <AdminPaymentPinSwitch />
+                <PlatformSettingsPanel />
+              </>
             )}
           </div>
         )}

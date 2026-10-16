@@ -1,0 +1,1 @@
+-- Applied via migration 514_marketplace_cart_checkout: checkout_id column, get_cart_preview, checkout_cart.

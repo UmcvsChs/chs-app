@@ -293,7 +293,7 @@ Read CHS_PROGRESS_LOG.md for the order. Everything below is applied to the live 
 - VAT: accountant to confirm registration, rate and exemptions before the switch is turned on.
 - Platform earnings tab excludes service fees (use Admin > Service sourcing > Service money). Change-request answers and host-initiated chat skip the admin relay. Host calendar grid does not draw event sessions; iCal ignores sessions.
 - Rain plan and safe crowd limit on open grounds are shown but not enforced. Seating diagrams are illustrations only.
-- Launch items: lawyer, CAC, launch switches, SMS secret rotation, WhatsApp provider, Netlify redirect URLs, WebAuthn and Paystack for the new address.
+- Launch items: lawyer, CAC, launch switches, SMS secret rotation, WhatsApp provider, Netlify redirect URLs, WebAuthn and Paystack for the new address. Also: payment fingerprint/face approval (WebAuthn for payments; needs a new server check and the final domain in WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN) and turning ON the Payment PIN switch (Admin > Settings) after deploying.
 
 
 ## 510 (14 October 2026): management of hotels and event centres

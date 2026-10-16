@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
@@ -70,15 +71,15 @@ export default function RentInstalments({ tenancyId, onChanged }: { tenancyId: s
               {next.seq === 1 && !plan.is_renewal && plan.agency_fee_first > 0 && (
                 <p className="text-[10px] text-gray-500 mb-1">First instalment includes your one-time CHS agency fee of {formatNaira(plan.agency_fee_first)} (paid from your main wallet).</p>
               )}
-              <button disabled={busy} onClick={() => run(() => supabase.rpc("pay_rent_installment", { p_tenancy: tenancyId, p_wallet_source: "main" }), (d) => `✓ Instalment ${d.seq} paid. Ref: ${d.reference}`)}
-                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                {busy ? "Processing..." : `Pay instalment ${next.seq} from Main Wallet — ${formatNaira(next.amount + (next.seq === 1 && !plan.is_renewal ? plan.agency_fee_first : 0))}`}
-              </button>
+              <ConfirmPay busy={busy} amountText={formatNaira(next.amount + (next.seq === 1 && !plan.is_renewal ? plan.agency_fee_first : 0))} whatFor={`for rent instalment ${next.seq}`}
+                onConfirm={() => run(() => supabase.rpc("pay_rent_installment", { p_tenancy: tenancyId, p_wallet_source: "main" }), (d) => `✓ Instalment ${d.seq} paid. Ref: ${d.reference}`)}
+                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                label={busy ? "Processing..." : `Pay instalment ${next.seq} from Main Wallet — ${formatNaira(next.amount + (next.seq === 1 && !plan.is_renewal ? plan.agency_fee_first : 0))}`} />
               {!(next.seq === 1 && !plan.is_renewal && plan.agency_fee_first > 0) && (
-                <button disabled={busy} onClick={() => run(() => supabase.rpc("pay_rent_installment", { p_tenancy: tenancyId, p_wallet_source: "rent_savings" }), (d) => `✓ Instalment ${d.seq} paid from rent savings.`)}
-                  className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
-                  Pay from Rent Savings — {formatNaira(next.amount)}
-                </button>
+                <ConfirmPay busy={busy} amountText={formatNaira(next.amount)} whatFor="from your Rent Savings, for this instalment"
+                  onConfirm={() => run(() => supabase.rpc("pay_rent_installment", { p_tenancy: tenancyId, p_wallet_source: "rent_savings" }), (d) => `✓ Instalment ${d.seq} paid from rent savings.`)}
+                  className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50"
+                  label={`Pay from Rent Savings — ${formatNaira(next.amount)}`} />
               )}
             </div>
           )}

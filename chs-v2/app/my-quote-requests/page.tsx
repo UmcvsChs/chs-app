@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useEffect, useState } from "react";
 import RefundPolicyNotice from "@/components/RefundPolicyNotice";
 import { useRouter } from "next/navigation";
@@ -159,10 +160,9 @@ export default function MyQuoteRequestsPage() {
                   {r.payment_status === "unpaid" && (
                     <>
                     <RefundPolicyNotice className="mt-2" />
-                    <button onClick={() => handleAcceptAndPay(r.id)} disabled={payingId === r.id}
-                      className="w-full mt-2 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                      {payingId === r.id ? "Processing..." : "Accept & Pay (price + 6% real commission)"}
-                    </button>
+                    <ConfirmPay onConfirm={() => handleAcceptAndPay(r.id)} busy={payingId === r.id} amountText="the quoted price plus the CHS fee" whatFor="for this quote" confirmLabel="Yes, accept and pay"
+                      className="w-full mt-2 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                      label={payingId === r.id ? "Processing..." : "Accept & Pay (price + 6% real commission)"} />
                     </>
                   )}
                   {r.payment_status === "held_escrow" && (

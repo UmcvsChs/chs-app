@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira, formatDateTime } from "@/lib/format";
 import { getFreshDocumentUrl } from "@/lib/storage";
+import AdminRelayActions from "@/components/AdminRelayActions";
 
 // CHS's view of every Mortgage (Rent to Own) agreement, newest first. Nothing
 // ever drops out of this list: a request moves through its stages and stays
@@ -160,6 +161,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
               <p className="text-[11px] text-gray-500">{[r.applicant_occupation, r.applicant_source_of_funds && `funds: ${r.applicant_source_of_funds}`, r.applicant_address].filter(Boolean).join(" · ")}</p>
             )}
             <p className="text-[11px] text-gray-600">Owner: <b>{r.owner_name}</b> · {r.owner_phone}</p>
+            {(r.status === "awaiting_admin_relay" || r.status === "requested" || r.status === "owner_approved" || r.status === "owner_declined") && <AdminRelayActions flow="rto" id={r.id} onDone={() => load()} />}
             {r.owner_decision_at && <p className="text-[11px] text-gray-600">Owner answered {formatDateTime(r.owner_decision_at)}{r.owner_decision_note ? `: “${r.owner_decision_note}”` : ""}</p>}
             {r.competing_requests > 0 && <p className="text-[11px] text-chs-red mt-1">⚠ {r.competing_requests} other request(s) are also pending on this property. Starting one will decline the rest.</p>}
 

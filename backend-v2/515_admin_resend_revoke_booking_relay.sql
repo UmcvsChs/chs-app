@@ -1,0 +1,1 @@
+-- Applied via migration 515_admin_resend_revoke_booking_relay.

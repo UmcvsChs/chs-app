@@ -1,0 +1,1 @@
+-- Applied live: relay_events table; admin_resend_booking_to_guest, admin_resend_relay, admin_withdraw_relay, get_relay_events; rental_applications.status allows 'withdrawn'.

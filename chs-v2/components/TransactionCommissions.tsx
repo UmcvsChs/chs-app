@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
@@ -96,10 +97,9 @@ export default function TransactionCommissions({ session }: { session: Session }
               )}
               <div className="flex justify-between items-center mt-1.5">
                 <p className="text-sm font-bold text-chs-red">{formatNaira(realTotal)}</p>
-                <button onClick={() => handlePay(c)} disabled={payingId === c.id}
-                  className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
-                  {payingId === c.id ? "Paying..." : "Pay from wallet"}
-                </button>
+                <ConfirmPay onConfirm={() => handlePay(c)} busy={payingId === c.id} amountText={formatNaira(realTotal)} whatFor="for this CHS fee"
+                  className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50"
+                  label={payingId === c.id ? "Paying..." : "Pay from wallet"} />
               </div>
             </div>
           );

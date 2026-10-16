@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import SeatingPicker from "@/components/SeatingPicker";
@@ -33,6 +34,7 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
   const [changes, setChanges] = useState<Chg[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [cat, setCat] = useState<string | null>(null);
+  const [cur, setCur] = useState<{ guests: number | null; tier: string | null } | null>(null);
   const [svc, setSvc] = useState("caterer"); const [qty, setQty] = useState(""); const [svcNote, setSvcNote] = useState("");
   const [newGuests, setNewGuests] = useState(""); const [chgNote, setChgNote] = useState(""); const [newDate, setNewDate] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,6 +54,8 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
       supabase.rpc("booking_event_context", { p_booking: bookingId }),
     ]);
     setCat((c.data as { cat?: string } | null)?.cat ?? null);
+    const { data: cb } = await supabase.from("shortlet_bookings").select("guests, selected_tier_label").eq("id", bookingId).maybeSingle();
+    if (cb) setCur({ guests: cb.guests as number | null, tier: cb.selected_tier_label as string | null });
     setLines(((a.data as Line[]) || []).filter((l) => l.status !== "cancelled"));
     setChanges((b.data as Chg[]) || []);
     setLoaded(true);
@@ -110,7 +114,7 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
                     <p className="text-[10px] text-gray-600 mt-0.5">{l.provider_name ? `By ${l.provider_name}. ` : ""}{l.price != null ? `Price ${formatNaira(l.price)}${l.fee ? ` + ${formatNaira(l.fee)} CHS fee` : ""}${l.paid_at ? ` ✓ paid, held by CHS until your event (receipt ${l.payment_ref}). ` : ". "}` : ""}{l.note ? `“${l.note}”` : ""}</p>
                   )}
                   {live && l.status === "supplied" && l.price != null && l.price > 0 && !l.paid_at && ["awaiting_payment", "confirmed"].includes(status) && (
-                    <button disabled={busy} onClick={() => run(supabase.rpc("pay_service_line", { p_line: l.id }), "Paid. CHS holds it safely until your event.")} className="mt-1 px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Pay {formatNaira(l.price + (l.fee || 0))} from my wallet</button>
+                    <ConfirmPay busy={busy} amountText={formatNaira(l.price + (l.fee || 0))} whatFor="for this service (held by CHS until your event)" onConfirm={() => run(supabase.rpc("pay_service_line", { p_line: l.id }), "Paid. CHS holds it safely until your event.")} className="mt-1 px-3 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50" label={`Pay ${formatNaira(l.price + (l.fee || 0))} from my wallet`} />
                   )}
                   {err && /insufficient_balance/.test(err) && l.status === "supplied" && !l.paid_at && <p className="text-[10px] text-red-600 mt-1">Your wallet balance is too low. <a href="/wallet" className="underline font-semibold">Fund your wallet</a>, then pay.</p>}
                   {l.status === "requested" && l.note && <p className="text-[10px] italic text-gray-500 mt-0.5">“{l.note}”</p>}
@@ -140,6 +144,7 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
           {canChange && (
             <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
               <p className="text-[11px] font-bold text-chs-charcoal">Ask to change your booking</p>
+              {cur && <p className="text-[11px] bg-white border border-gray-200 rounded p-1.5 text-chs-charcoal">📋 Your booking now: <b>{cur.guests ?? "?"} guests</b>{cur.tier ? ` · hall tier ${cur.tier}` : ""} · {checkIn}. Your original booking stays on record; this sends a change request that the venue approves or declines. You can raise or lower the number.</p>}
               <p className="text-[10px] text-gray-500">Move to another date (same length of stay) or change the number of guests. The venue approves or declines. A bigger crowd may need a bigger hall: if it costs more, you pay the difference through your CHS wallet and the change takes effect once you have paid.</p>
               <label className="block text-[10px] text-gray-500">New date (leave empty to keep yours)</label>
               <input type="date" min={today} value={newDate} onChange={(e) => setNewDate(e.target.value)} className="w-full border border-gray-300 rounded px-2 py-1 text-[11px]" />
@@ -165,7 +170,7 @@ export default function GuestBookingExtras({ bookingId, status, checkIn, startOp
                     <div className="mt-1.5 bg-blue-50 rounded-lg p-2">
                       <p className="text-[11px] text-blue-900">The venue approved this. It costs <b>{formatNaira(c.to_pay)}</b> more (including CHS&apos;s fee){c.topup_expires_at ? `. Pay by ${formatDateTime(c.topup_expires_at)}` : ""}, or your booking stays as it was.</p>
                       <div className="flex gap-2 mt-1.5">
-                        <button disabled={busy} onClick={() => run(supabase.rpc("pay_booking_topup", { p_request: c.id }), "Paid. Your change is confirmed.")} className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">Pay {formatNaira(c.to_pay)} from my wallet</button>
+                        <ConfirmPay busy={busy} amountText={formatNaira(c.to_pay)} whatFor="for this change to your booking" onConfirm={() => run(supabase.rpc("pay_booking_topup", { p_request: c.id }), "Paid. Your change is confirmed.")} className="px-3 py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50" label={`Pay ${formatNaira(c.to_pay)} from my wallet`} />
                         <button disabled={busy} onClick={() => run(supabase.rpc("withdraw_booking_change", { p_request: c.id }), "Change cancelled. Your booking is as it was.")} className="text-[10px] underline text-gray-500">No thanks</button>
                       </div>
                       {err && /insufficient_balance/.test(err) && <p className="text-[10px] text-red-600 mt-1">Your wallet balance is too low. <a href="/wallet" className="underline font-semibold">Fund your wallet</a>, then try again.</p>}

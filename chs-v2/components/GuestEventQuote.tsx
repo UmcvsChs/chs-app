@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
@@ -54,7 +55,7 @@ export default function GuestEventQuote({ bookingId }: { bookingId: string }) {
           return (
             <div key={m.id} className="flex justify-between items-center gap-2">
               <span>{m.label}: {formatNaira(m.amount)}{m.fee ? ` + ${formatNaira(m.fee)} CHS fee` : ""} by {day(m.due_date)}{m.paid_at ? ` ✓ paid${m.payment_ref ? ` · receipt ${m.payment_ref}` : ""}` : ""}</span>
-              {next && <button disabled={busy} onClick={() => pay(m.id)} className="px-2.5 py-1 rounded-full bg-chs-charcoal text-white font-semibold whitespace-nowrap">Pay {formatNaira(m.amount + (m.fee || 0))} from wallet</button>}
+              {next && <ConfirmPay busy={busy} amountText={formatNaira(m.amount + (m.fee || 0))} whatFor="for this instalment of your quotation" onConfirm={() => pay(m.id)} className="px-2.5 py-1 rounded-full bg-chs-charcoal text-white font-semibold whitespace-nowrap" label={`Pay ${formatNaira(m.amount + (m.fee || 0))} from wallet`} />}
             </div>
           );
         })}

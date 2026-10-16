@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { useEffect, useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { useRouter } from "next/navigation";
@@ -184,15 +185,13 @@ export default function MyRentedSpacePage() {
           {paymentUrgent && (
             <div className="mt-2 space-y-1.5">
               <RefundPolicyNotice />
-              <button onClick={() => handlePayRent("main")} disabled={payingRent}
-                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                {payingRent ? "Processing…" : `Pay from Main Wallet — ${formatNaira(tenancy.annual_rent + pendingCommission)}`}
-              </button>
+              <ConfirmPay onConfirm={() => handlePayRent("main")} busy={payingRent} amountText={formatNaira(tenancy.annual_rent + pendingCommission)} whatFor="for your rent"
+                className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                label={payingRent ? "Processing…" : `Pay from Main Wallet — ${formatNaira(tenancy.annual_rent + pendingCommission)}`} />
               {pendingCommission === 0 && (
-                <button onClick={() => handlePayRent("rent_savings")} disabled={payingRent}
-                  className="w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
-                  Pay from Rent Savings — {formatNaira(tenancy.annual_rent)}
-                </button>
+                <ConfirmPay onConfirm={() => handlePayRent("rent_savings")} busy={payingRent} amountText={formatNaira(tenancy.annual_rent)} whatFor="from your Rent Savings, for your rent"
+                  className="w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50"
+                  label={`Pay from Rent Savings — ${formatNaira(tenancy.annual_rent)}`} />
               )}
             </div>
           )}

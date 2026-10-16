@@ -10,6 +10,7 @@ import BookingFlowNotice from "@/components/BookingFlowNotice";
 import { BookingRequestResult, LaneInfo, friendlyBookingError } from "@/lib/bookingLane";
 import { formatNaira } from "@/lib/format";
 import ValidatedInput from "@/components/ValidatedInput";
+import ConfirmPay from "@/components/ConfirmPay";
 import { validatePhone, validateFullName } from "@/lib/validators";
 
 interface ShortletBookingFormProps {
@@ -174,8 +175,8 @@ export default function ShortletBookingForm({
     setAlsoAsk((cur) => cur.includes(id) ? cur.filter((x) => x !== id) : cur.length >= 2 ? cur : [...cur, id]);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
     if (!validDateRange || !pricing) {
       setError("Please choose your check-in and check-out dates.");
       return;
@@ -456,6 +457,13 @@ export default function ShortletBookingForm({
 
       {error && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2">{error}</p>}
 
+      {isInstant ? (
+        <ConfirmPay onConfirm={() => handleSubmit()} busy={submitting}
+          disabled={!pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
+          amountText={pricing ? formatNaira(pricing.real_total_guest_pays) : "the total"} whatFor="to book these dates now (held by CHS until you arrive)"
+          className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+          label={submitting ? "Confirming your booking..." : `⚡ Book now — pay ${pricing ? formatNaira(pricing.real_total_guest_pays) : ""} from wallet`} />
+      ) : (
       <button type="submit" disabled={submitting || !pricing || !validDateRange || (!!houseRulesUrl && !rulesAcknowledged) || (laneInfo?.lane === "express" && !arrivalTime)}
         className="w-full py-3 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
         {submitting
@@ -465,7 +473,8 @@ export default function ShortletBookingForm({
             : alsoAsk.length > 0
               ? `Ask ${alsoAsk.length + 1} hotels at once — nothing is charged now`
               : "Send request — nothing is charged now"}
-      </button>
+        </button>
+      )}
     </form>
   );
 }

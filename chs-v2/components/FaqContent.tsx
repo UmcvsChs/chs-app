@@ -221,6 +221,26 @@ const FAQ_ITEMS = [
     a: "Every booking message goes through CHS first. CHS passes it on, and the other person is notified. The host finds it in Host console > Messages (with a number badge) and inside the booking under \"Details, services, messages & more\". The guest finds replies on My Bookings under the booking's Messages box. To ask for more guests or a new date, use the \"Open the change request form\" link in that Messages box.",
   },
   {
+    q: "How do I buy several things from the Marketplace and pay?",
+    a: "Open an item, choose its options and quantity, and tap Add to cart (or Buy now). Keep shopping; a cart bar stays at the bottom and your cart is kept on your phone even if you go back or close the page. Open the cart, check quantities, enter one delivery address and pay from your CHS wallet. If your wallet is short, tap Top up wallet inside the cart and come straight back. Your money is held by CHS until delivery is confirmed, and every order is listed under My Orders & Requests.",
+  },
+  {
+    q: "The host says they never saw a booking request. What can CHS do?",
+    a: "Once CHS has passed a request to the host, an admin can resend it from the Bookings tab. This gives the host a fresh reply window and a new notification. If the request is no longer needed, or the host has not answered, the admin can withdraw it, and both the host and the guest are told. If a request has expired, the admin can re-open it, provided the dates are still free. The admin screen shows the host's name and phone number, because the host must be logged in with that phone number to see the request.",
+  },
+  {
+    q: "Can a payment happen by accident?",
+    a: "No. Opening a page or a notification never pays anything. Every payment button first asks you to confirm the exact amount, and money leaves your wallet only after you tap \"Yes, pay\". If you did not tap it, nothing was charged. You can always check Wallet > history.",
+  },
+  {
+    q: "Why does CHS ask for my transaction PIN when I pay?",
+    a: "Paying from your wallet needs your 6-digit transaction PIN (the same PIN used to send money or withdraw), so nobody who picks up your unlocked phone can spend your money. If you have not set one yet, CHS asks you to create it at your first payment. Your approval lasts 2 minutes and works for one payment only. Five wrong tries lock the PIN for 30 minutes.",
+  },
+  {
+    q: "A request was not seen by the other person. What can CHS do?",
+    a: "On every request that CHS relays (bookings, rental applications, offers, marketplace quotes, rent-to-own) the admin can Resend it to whoever is waiting, whether that is the host, owner, seller, vendor, guest, tenant or buyer. Make sure you are logged in with the phone number shown on the admin card. If a request is no longer needed, CHS can Withdraw it with a reason. Both sides are told and nothing is charged. Paid items are refunded through the normal refund process instead.",
+  },
+  {
     q: "I forgot my PIN. How do I reset it?",
     a: "Use \"Forgot your PIN?\" on the login screen. Since CHS doesn't use email or SMS codes for this, you verify your identity with the real phone number and NIN you registered with, then set a brand new PIN immediately.",
   },

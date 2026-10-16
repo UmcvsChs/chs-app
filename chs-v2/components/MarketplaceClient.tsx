@@ -12,6 +12,8 @@ import InfoTip from "./InfoTip";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import IdentityVerificationGate from "./IdentityVerificationGate";
+import MarketplaceCart from "./MarketplaceCart";
+import { useCart } from "@/lib/cart";
 
 const CATEGORY_TABS: { value: MarketplaceCategory | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -30,7 +32,8 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   const [submittedFor, setSubmittedFor] = useState<string | null>(null);
 
   const [sortCheapest, setSortCheapest] = useState(false);
-  const [boughtFor, setBoughtFor] = useState<string | null>(null);
+  const cart = useCart(session?.user.id);
+  const [cartOpen, setCartOpen] = useState(false);
   const [detailFor, setDetailFor] = useState<string | null>(null);
 
   // Buying, and asking for a quote, are commitments — they now sit
@@ -70,19 +73,12 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
     activeCategory === "all" ? products : products.filter((p) => p.category === activeCategory)
   ).slice().sort((a, b) => (sortCheapest ? (a.price ?? Infinity) - (b.price ?? Infinity) : 0));
 
-  // Real, direct "skip the conversation" purchase — pays the
-  // product's own real, current price plus commission immediately, no
-  // negotiation, no messages to moderate, since nothing is being
-  // negotiated. The vendor only ever sees a real CHS reference number.
-  // Buying: quantity, the options chosen (colour, size …) and the delivery address are sent with the order; the server
-  // takes stock off and refuses more than is in stock. Returns an error message to show, or null on success.
-  async function handleBuyNow(productId: string, quantity: number, options: Record<string, string>, address: string): Promise<string | null> {
-    if (!session) return "Please log in first to buy directly.";
-    if (!requireVerified()) return "Before you can buy, CHS needs to verify your identity once — please complete the step at the top of the page.";
-    const { error: buyError } = await supabase.rpc("buy_product_direct", { p_product_id: productId, p_quantity: quantity, p_options: options, p_delivery_address: address });
-    if (buyError) return buyError.message.includes("insufficient_balance") ? "Insufficient wallet balance for this purchase. Top up your wallet and try again." : buyError.message;
-    setBoughtFor(productId);
-    return null;
+  // Shopping works like any marketplace: add items (with options and quantity) to a cart that is kept on this device,
+  // then check out once, with one delivery address, paying from the CHS wallet (topped up on the spot if needed).
+  // The money is held by CHS until delivery is confirmed.
+  function handleAddToCart(productId: string, quantity: number, options: Record<string, string>, goToCart: boolean) {
+    cart.add({ product_id: productId, quantity, options });
+    if (goToCart) { setDetailFor(null); setCartOpen(true); }
   }
 
   async function handleRequestQuote(productId: string) {
@@ -122,9 +118,12 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           <p className="text-xs text-white/70">Products and services for your property</p>
         </div>
         <div className="flex gap-1.5">
+          {cart.count > 0 && (
+            <button onClick={() => setCartOpen(true)} className="bg-white text-chs-charcoal text-[10px] font-bold px-3 py-1.5 rounded-full">🛒 {cart.count}</button>
+          )}
           {session && (
             <Link href="/my-quote-requests" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
-              My Requests
+              My Orders &amp; Requests
             </Link>
           )}
           <Link href="/choose-category" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
@@ -283,14 +282,10 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                       ) : null}
                     </p>
                     {product.status !== "sold_out" && (
-                      boughtFor === product.id ? (
-                        <p className="text-[10px] text-green-700 font-semibold mt-1.5">✓ Paid — held in escrow until delivery is confirmed.</p>
-                      ) : (
-                        <button onClick={() => { setDetailFor(product.id); setError(null); }}
-                          className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
-                          View details &amp; buy
-                        </button>
-                      )
+                      <button onClick={() => { setDetailFor(product.id); setError(null); }}
+                        className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
+                        View details &amp; add to cart
+                      </button>
                     )}
                   </>
                 )}
@@ -306,9 +301,19 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         )}
       </main>
       )}
+      {cart.count > 0 && !cartOpen && !detailFor && (
+        <div className="fixed bottom-0 inset-x-0 z-40 p-3 flex justify-center pointer-events-none">
+          <button onClick={() => setCartOpen(true)} className="pointer-events-auto w-full max-w-md py-3 rounded-full bg-chs-charcoal text-white text-sm font-semibold shadow-lg">
+            🛒 View cart · {cart.count} item{cart.count > 1 ? "s" : ""} · Check out
+          </button>
+        </div>
+      )}
+      {cartOpen && (
+        <MarketplaceCart items={cart.items} loggedIn={!!session} onClose={() => setCartOpen(false)} setQty={cart.setQty} remove={cart.remove} clear={cart.clear} requireVerified={requireVerified} />
+      )}
       {detailFor && (() => {
         const product = products.find((p) => p.id === detailFor);
-        return product ? <ProductDetailSheet product={product} onClose={() => setDetailFor(null)} onBuy={handleBuyNow} bought={boughtFor === product.id} /> : null;
+        return product ? <ProductDetailSheet product={product} onClose={() => setDetailFor(null)} onAddToCart={handleAddToCart} /> : null;
       })()}
     </div>
   );

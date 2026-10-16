@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { Fragment, useEffect, useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import Link from "next/link";
@@ -254,20 +255,20 @@ export default function RentToOwnPage() {
                         <div className="flex justify-between font-bold text-chs-charcoal border-t border-gray-100 pt-1 mt-1"><span>Total from your wallet</span><span>{formatNaira(installment + commissionOn(installment))}</span></div>
                       </div>
                       {payMessage[a.id] && <p className="text-[10px] text-gray-600 mt-1.5">{payMessage[a.id]}</p>}
-                      <button onClick={() => pay(a.id, null)} disabled={payingId === a.id} className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                        {payingId === a.id ? "Processing..." : `Pay next installment: ${formatNaira(installment + commissionOn(installment))}`}
-                      </button>
+                      <ConfirmPay onConfirm={() => pay(a.id, null)} busy={payingId === a.id} amountText={formatNaira(installment + commissionOn(installment))} whatFor="for your next installment"
+                        className="mt-2 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                        label={payingId === a.id ? "Processing..." : `Pay next installment: ${formatNaira(installment + commissionOn(installment))}`} />
                       <div className="mt-2 bg-white rounded-lg p-2.5">
                         <p className="text-[10px] font-bold text-chs-charcoal">Pay more, or pay it all off</p>
                         <p className="text-[10px] text-gray-500 mb-1.5">Any amount from one installment up to what you still owe ({formatNaira(remaining)}). Paying more shortens your agreement.</p>
                         <div className="flex gap-1.5">
                           <input type="number" min={installment} max={remaining} value={custom[a.id] || ""} onChange={(e) => setCustom({ ...custom, [a.id]: e.target.value })} placeholder={`${installment} to ${remaining}`} className="flex-1 px-2 py-1.5 rounded border border-gray-200 text-xs" />
-                          <button onClick={() => pay(a.id, customAmount)} disabled={payingId === a.id || !customAmount} className="px-3 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Pay this</button>
+                          <ConfirmPay onConfirm={() => pay(a.id, customAmount)} busy={payingId === a.id} disabled={!customAmount} amountText={formatNaira(customAmount + commissionOn(customAmount))} whatFor="toward your agreement" className="px-3 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50" label="Pay this" />
                         </div>
                         {customAmount > 0 && <p className="text-[10px] text-gray-500 mt-1">From your wallet: {formatNaira(customAmount + commissionOn(customAmount))} (includes {formatNaira(commissionOn(customAmount))} commission)</p>}
-                        <button onClick={() => pay(a.id, remaining)} disabled={payingId === a.id} className="mt-1.5 w-full py-1.5 rounded-full border border-chs-red text-chs-red text-[11px] font-semibold disabled:opacity-50">
-                          Pay everything now: {formatNaira(remaining + commissionOn(remaining))}
-                        </button>
+                        <ConfirmPay onConfirm={() => pay(a.id, remaining)} busy={payingId === a.id} amountText={formatNaira(remaining + commissionOn(remaining))} whatFor="to pay off the whole agreement"
+                          className="mt-1.5 w-full py-1.5 rounded-full border border-chs-red text-chs-red text-[11px] font-semibold disabled:opacity-50"
+                          label={`Pay everything now: ${formatNaira(remaining + commissionOn(remaining))}`} />
                         <p className="text-[9px] text-gray-400 mt-1">Your last payment is held by CHS until the owner hands over the property documents.</p>
                       </div>
                     </>))}</Fragment>

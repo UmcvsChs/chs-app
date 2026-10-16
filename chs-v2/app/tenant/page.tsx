@@ -1,5 +1,6 @@
 "use client";
 
+import ConfirmPay from "@/components/ConfirmPay";
 import { embeddedOne } from "@/lib/embedded";
 import { useEffect, useState } from "react";
 import { termsAcceptanceRequired } from "@/lib/termsVersion";
@@ -492,10 +493,9 @@ export default function TenantDashboard() {
                   return (
                     <>
                       <RefundPolicyNotice className="mt-1.5" />
-                      <button onClick={() => handlePayRent(t.id, "main")} disabled={payingRentId === t.id}
-                        className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">
-                        {payingRentId === t.id ? "Processing..." : `Pay from Main Wallet — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`}
-                      </button>
+                      <ConfirmPay onConfirm={() => handlePayRent(t.id, "main")} busy={payingRentId === t.id} amountText={formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))} whatFor="for your rent"
+                        className="mt-1.5 w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50"
+                        label={payingRentId === t.id ? "Processing..." : `Pay from Main Wallet — ${formatNaira(t.annual_rent + (pendingTenantCommission[t.id] || 0))}`} />
                     </>
                   );
                 })()}
@@ -511,10 +511,9 @@ export default function TenantDashboard() {
                   const daysUntilDue2 = Math.ceil((new Date(t.lease_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
                   if ((daysUntilDue2 > 30 && tenanciesWithPriorPayment.has(t.id)) || (pendingTenantCommission[t.id] || 0) > 0) return null;
                   return (
-                    <button onClick={() => handlePayRent(t.id, "rent_savings")} disabled={payingRentId === t.id}
-                      className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50">
-                      Pay from Rent Savings — {formatNaira(t.annual_rent)}
-                    </button>
+                    <ConfirmPay onConfirm={() => handlePayRent(t.id, "rent_savings")} busy={payingRentId === t.id} amountText={formatNaira(t.annual_rent)} whatFor="from your Rent Savings, for your rent"
+                      className="mt-1 w-full py-2 rounded-full bg-white border-2 border-chs-red text-chs-red text-xs font-semibold disabled:opacity-50"
+                      label={`Pay from Rent Savings — ${formatNaira(t.annual_rent)}`} />
                   );
                 })()}
                 <div className="mt-1.5 bg-white rounded-lg p-2">
@@ -708,10 +707,9 @@ export default function TenantDashboard() {
                     {c.status === "paid" ? (
                       <span className="text-[10px] font-bold text-green-700 bg-green-50 px-2 py-1 rounded-full">✓ Paid</span>
                     ) : (
-                      <button onClick={() => handlePayServiceCharge(c.id)} disabled={payingChargeId === c.id}
-                        className="px-3 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50">
-                        {payingChargeId === c.id ? "Paying..." : "Pay now"}
-                      </button>
+                      <ConfirmPay onConfirm={() => handlePayServiceCharge(c.id)} busy={payingChargeId === c.id} amountText="this service charge" whatFor="" confirmLabel="Yes, pay this charge"
+                        className="px-3 py-1 rounded-full bg-chs-red text-white text-[10px] font-semibold disabled:opacity-50"
+                        label={payingChargeId === c.id ? "Paying..." : "Pay now"} />
                     )}
                   </div>
                 </div>

@@ -1,0 +1,1 @@
+-- Applied via migration 516_payment_pin_authorization.

@@ -49,3 +49,6 @@ For each failed step note: the step number, what you saw, a screenshot.
 
 ## Booking messages
 1. Guest sends a message on a booking: it appears in Admin > Bookings tab (amber box). 2. Admin approves: host gets a notification and a Messages tab badge. 3. Host opens it and replies; badge clears. 4. Guest taps 'Open the change request form', asks for more guests; host answers in Changes.
+
+## Resend / Withdraw on every flow (Admin)
+1. Admin > Bookings: on a request waiting for the guest to pay, open "Resend / Withdraw", Resend: the guest gets a reminder; the card shows who received it (name and phone). 2. Admin > Applications, Offers, Marketplace and Rent-to-Own: each card has the same buttons. Resend to an owner while they are deciding; resend to the tenant/buyer after the decision. 3. Withdraw with a reason on an unpaid item: both sides are notified, item closes. 4. Try Withdraw on a paid item: it must refuse and point to refund.

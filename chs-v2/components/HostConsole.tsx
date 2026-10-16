@@ -35,7 +35,7 @@ interface HB {
   event_type: string | null; tier: string | null; facilities_total: number | null; expires_at: string | null; created_at: string; paid_at: string | null;
   arrived_at: string | null; checked_in_at: string | null; expected_arrival_time: string | null; lane: string | null;
   wants_band: boolean | null; wants_caterer: boolean | null; wants_ushers: boolean | null; ushers: number | null; wants_security: boolean | null; security: number | null; extra: string | null;
-  quote: Quote | null; services_open: number; changes_open: number; unread_msgs?: number; last_msg?: string | null; reply_pending?: string | null; reply_release_at?: string | null;
+  quote: Quote | null; services_open: number; changes_open: number; unread_msgs?: number; last_msg?: string | null; total_msgs?: number; last_msg_at?: string | null; reply_pending?: string | null; reply_release_at?: string | null;
 }
 interface Chg {
   id: string; booking_id: string; property_title: string; cat: string; my_role: string; guest_name: string; check_in: string; old_guests: number | null; new_guests: number | null;
@@ -58,6 +58,30 @@ function timeLeft(expiresAt: string | null): string | null {
   if (ms <= 0) return "expiring now";
   const h = Math.floor(ms / 3600000); const m = Math.floor((ms % 3600000) / 60000);
   return h > 0 ? `${h}h ${m}m left` : `${m} min left`;
+}
+
+function InviteChange({ bookingId, onDone }: { bookingId: string; onDone: () => void }) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  async function send() {
+    setBusy(true); setErr(null);
+    const { error } = await supabase.rpc("host_invite_booking_change", { p_booking: bookingId, p_note: note.trim() || null });
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setMsg("Done. The guest has been told they may change their guest number or date, and the invitation is saved in the conversation. Their request will appear under Changes for you to approve.");
+    setNote(""); onDone();
+  }
+  return (
+    <div className="bg-gray-50 rounded-lg p-2 space-y-1.5">
+      <p className="text-[11px] font-bold text-chs-charcoal">✏️ Let this guest review their booking</p>
+      <p className="text-[10px] text-gray-500">Use this when you agree the guest may change the number of guests or the date. They get a notification and the change form; you still approve their exact request.</p>
+      <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="Optional note to the guest (no phone numbers or emails)" className="w-full border border-gray-300 rounded px-2 py-1 text-[11px]" />
+      {err && <p className="text-[10px] text-red-600">{err}</p>}
+      {msg ? <p className="text-[10px] text-green-700 font-semibold">{msg}</p> : <button disabled={busy} onClick={send} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold disabled:opacity-50">Invite guest to change numbers or date</button>}
+    </div>
+  );
 }
 
 function ServiceChips({ b, svcs }: { b: HB; svcs: Svc[] }) {
@@ -123,11 +147,11 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
         <p className="text-[10px] text-gray-600">📄 Quotation {b.quote.status}: {formatNaira(b.quote.total)} · received {formatNaira(b.quote.paid)} ({b.quote.milestones_paid}/{b.quote.milestones} instalments)</p>
       )}
       <ServiceChips b={b} svcs={svcs} />
-      {(b.unread_msgs ?? 0) > 0 && (
-        <button type="button" onClick={() => setOpen(true)} className="mt-1.5 w-full text-left text-[11px] bg-amber-50 border border-amber-300 rounded-lg p-2">
-          <span className="font-bold text-chs-red">💬 {b.unread_msgs} new message{(b.unread_msgs ?? 0) > 1 ? "s" : ""} from the guest</span>
-          {b.last_msg && <span className="block text-gray-700 mt-0.5">“{b.last_msg}”</span>}
-          <span className="block text-[10px] text-gray-500 mt-0.5 underline">Tap to open and reply</span>
+      {(b.total_msgs ?? 0) > 0 && (
+        <button type="button" onClick={() => setOpen(true)} className={`mt-1.5 w-full text-left text-[11px] rounded-lg p-2 border ${(b.unread_msgs ?? 0) > 0 ? "bg-amber-50 border-amber-300" : "bg-gray-50 border-gray-200"}`}>
+          <span className={`font-bold ${(b.unread_msgs ?? 0) > 0 ? "text-chs-red" : "text-chs-charcoal"}`}>💬 {b.total_msgs} message{(b.total_msgs ?? 0) > 1 ? "s" : ""}{(b.unread_msgs ?? 0) > 0 ? ` · ${b.unread_msgs} new` : " · all read"}</span>
+          {b.last_msg && <span className="block text-gray-700 mt-0.5">Latest: “{b.last_msg}”</span>}
+          <span className="block text-[10px] text-gray-500 mt-0.5 underline">Open the conversation</span>
         </button>
       )}
       {(b.services_open > 0 || b.changes_open > 0) && (
@@ -171,6 +195,7 @@ function BookingCard({ b, svcs, session, mode, onChanged }: { b: HB; svcs: Svc[]
           {confirmed && b.cat === "event" && <EventQuoteHost bookingId={b.id} canSend={lead} />}
           {confirmed && lead && <HostBookingControls bookingId={b.id} checkIn={b.check_in} onChanged={onChanged} />}
           {confirmed && mode !== "stays" && <HostShortletCheckInOut bookingId={b.id} propertyTitle={b.property_title} />}
+          {lead && (b.status === "confirmed" || b.status === "awaiting_payment") && <InviteChange bookingId={b.id} onDone={onChanged} />}
           <ShortletMessageThread bookingId={b.id} viewerRole="host" guestName={b.guest_name} />
           {confirmed && <ShortletRating bookingId={b.id} label="Rate this guest" />}
           {disputed ? (
@@ -299,7 +324,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
   const live = bookings.filter((b) => b.status === "confirmed" && b.check_out >= today);
   const stays = live.filter((b) => b.check_in <= new Date(Date.parse(today) + 7 * 86400000).toISOString().slice(0, 10));
   const history = bookings.filter((b) => ["cancelled", "declined", "expired"].includes(b.status) || (b.status === "confirmed" && b.check_out < today));
-  const msgBookings = bookings.filter((b) => b.status !== "cancelled" && b.status !== "declined" && b.status !== "expired" && (b.unread_msgs ?? 0) > 0);
+  const msgBookings = bookings.filter((b) => (b.total_msgs ?? 0) > 0).sort((a, b) => (b.last_msg_at || "").localeCompare(a.last_msg_at || ""));
   const openServices = svcsAll.filter((s) => s.status === "requested");
   const eventProps = (data?.properties || []).filter((p) => p.cat === "event" && inCat(p.cat));
   const cats = data?.categories || [];
@@ -446,7 +471,7 @@ export default function HostConsole({ session, listingsNode, workNode, overviewE
             ))}
           </>
         )}
-        {data && tab === "messages" && bookingList(msgBookings, "messages", "No new guest messages. Messages you have already read stay inside each booking under “Details, services, messages & more”.")}
+        {data && tab === "messages" && bookingList(msgBookings, "messages", "No messages yet. Every message on your bookings stays here permanently, read or not.")}
         {data && tab === "history" && bookingList(history, "history", "Nothing here yet.")}
         {tab === "listings" && listingsNode}
         {tab === "work" && workNode}

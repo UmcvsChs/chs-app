@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import CancelBookingButton from "@/components/CancelBookingButton";
 import ArrivalConfirmation from "@/components/ArrivalConfirmation";
+import ConfirmPay from "@/components/ConfirmPay";
 
 // Where a guest's booking stands, in plain words, with a live countdown — and,
 // when the host has confirmed the dates, the PAY button.
@@ -148,15 +149,13 @@ export default function BookingStageCard({ booking: b, onChanged }: { booking: S
               {error} {error.includes("wallet") && <Link href="/wallet" className="font-semibold underline">Top up →</Link>}
             </p>
           )}
-          <button onClick={pay} disabled={paying || !!left?.over}
-            className="w-full mt-2 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50">
-            {paying ? "Paying…" : left?.over ? "Time is up" : `Pay ${formatNaira(due)} now`}
-          </button>
+          <ConfirmPay onConfirm={pay} busy={paying} disabled={!!left?.over} amountText={formatNaira(due)} whatFor="to secure these dates (held by CHS until you arrive)"
+            className="w-full mt-2 py-2.5 rounded-full bg-chs-red text-white text-sm font-semibold disabled:opacity-50"
+            label={paying ? "Paying…" : left?.over ? "Time is up" : `Pay ${formatNaira(due)} now`} />
           {b.room_group && (b.room_count || 0) > 1 && (
-            <button onClick={payAll} disabled={paying || !!left?.over}
-              className="w-full mt-1.5 py-2.5 rounded-full border border-chs-red text-chs-red text-sm font-semibold disabled:opacity-50">
-              {paying ? "Paying…" : `Pay all ${b.room_count} rooms at once`}
-            </button>
+            <ConfirmPay onConfirm={payAll} busy={paying} disabled={!!left?.over} amountText={`${b.room_count} rooms (all rooms in this booking)`} whatFor="for all of these rooms together" confirmLabel="Yes, pay for all rooms"
+              className="w-full mt-1.5 py-2.5 rounded-full border border-chs-red text-chs-red text-sm font-semibold disabled:opacity-50"
+              label={paying ? "Paying…" : `Pay all ${b.room_count} rooms at once`} />
           )}
         </div>
       )}
