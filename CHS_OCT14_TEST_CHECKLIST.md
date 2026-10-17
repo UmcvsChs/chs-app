@@ -83,3 +83,9 @@ For each failed step note: the step number, what you saw, a screenshot.
 1. Deliver to: choose Kaduna > Kaduna South > Barnawa. The area follows you into the cart, tracking and the seller's dispatch card.
 2. Open the Owner, Agent, Manager, Host, Guest, Artisan and Developer dashboards: a compact white "CHS Marketplace / Shop" tile sits near the top; tap it to open the Marketplace. Nothing floats over the page.
 3. Home page: the large banner and the red Marketplace button and tab.
+
+## Test store (17 Oct): follow CHS_TEST_STORE_GUIDE.pdf
+[ ] Buyer One buys the 20-item list in one checkout (8 parcels). [ ] Seller hands over / free local delivery code. [ ] Admin updates courier statuses. [ ] Release 60%, then balance after delivery. [ ] Report a problem and refund rules. [ ] Repeat on at least two real iPhones (SE-size and large): no zoom on typing, bottom bar clear of home bar, Add to Home Screen works.
+
+## Hotel in-house services (17 Oct)
+[ ] Host (Savannah Grand or Hilltop Lodge owner): Hotel operations > Services offered: add, edit, hide a service; leave a price empty. [ ] Hotel page shows "Services at this hotel", price only where entered. [ ] Guest with a booking: My bookings > Hotel services for your stay > reserve (no payment), withdraw. [ ] Host accepts and declines; guest is notified. [ ] Phone number in a note is refused. [ ] Check on a 360 px phone and on iPhone.

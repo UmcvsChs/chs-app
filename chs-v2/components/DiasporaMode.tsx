@@ -57,24 +57,24 @@ export default function DiasporaMode({
     <>
       <div
         onClick={handleBannerClick}
-        className={`px-4 py-3.5 flex justify-between items-center gap-2.5 cursor-pointer ${
+        className={`px-3 py-1.5 flex justify-between items-center gap-2 cursor-pointer ${
           active ? "bg-gradient-to-r from-chs-red to-chs-amber-dark" : "bg-gradient-to-r from-chs-amber to-chs-amber-dark"
         }`}
       >
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">🌍</span>
-          <div>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg shrink-0">🌍</span>
+          <div className="min-w-0 leading-tight">
             {active ? (
-              <p className="text-xs font-extrabold text-white">✓ Diaspora Mode active — tap to turn off</p>
+              <p className="text-[13px] font-black text-white">✓ Diaspora Mode active — tap to turn off</p>
             ) : (
               <>
-                <p className="text-[13px] font-extrabold text-white">Buying from abroad?</p>
-                <p className="text-[11px] text-white/90">Switch to Diaspora Mode — video inspections, extra document checks</p>
+                <p className="text-[15px] font-black text-white leading-tight">Buying from abroad?</p>
+                <p className="text-[11px] font-bold text-white leading-tight">Switch to Diaspora Mode: video inspection, extra document checks</p>
               </>
             )}
           </div>
         </div>
-        <span className="text-white text-lg shrink-0">→</span>
+        <span className="text-white text-base font-black shrink-0">→</span>
       </div>
 
       {showModal && (

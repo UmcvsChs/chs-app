@@ -324,7 +324,7 @@ This applies to hosts and guests of event centres, hotels, lodges, open fields a
 
 - Seating layouts. A venue lists the layouts it can set up and may state the most guests each can hold. The guest chooses one for the event and the venue is told. A layout that cannot hold the guest count cannot be chosen. The diagrams are illustrations, not a plan of the actual hall.
 
-- Hotels and lodges: more than one room. A guest may request several rooms together, and says how many adults and children are staying. Each room is its own booking that the host confirms, and the guest may pay for all of them in one step. Extras such as breakfast, airport pickup, laundry, early check-in or late check-out are requested and paid through CHS under term 40.
+- Hotels and lodges: more than one room. A guest may request several rooms together, and says how many adults and children are staying. Each room is its own booking that the host confirms, and the guest may pay for all of them in one step. Extras at an event centre are requested and paid through CHS under term 40. Hotels and lodges list their own in-house services (restaurant, bar, laundry, pickup and so on); a guest may reserve them in the app, but pays the hotel directly for them (see the Hotel in-house services clause at the end of these Terms).
 
 - Long-stay discounts. A host may offer a weekly discount (stays of 7 nights or more) and a monthly discount (28 nights or more), of up to 50%. The discount is shown in the price before you pay, and CHS's fees are worked out on the price after the discount.
 
@@ -348,4 +348,5 @@ CHS may review and change these Terms, its fees and the services described in th
 
 This is a summary for quick reference. The full CHS Terms & Conditions document is available on request from CHS support at support@completehousingsolutions.com.
 
-);
+
+Hotel in-house services (added 17 Oct 2026). Hotels and lodges may list their own services (restaurant, bar, laundry, pool, transport and so on) on their page, with an approximate price if they choose. A guest may reserve a service through the app, but a reservation is only a request to the hotel. CHS does not take, hold or process payment for these services; the guest pays the hotel directly, and the hotel is solely responsible for the service, its price and its quality. NOTE FOR THE LAWYER: this is a deliberate exception to "all payments through CHS", decided by the owner.

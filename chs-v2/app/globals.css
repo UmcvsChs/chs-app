@@ -169,3 +169,18 @@ input:disabled:not([type="checkbox"]):not([type="radio"]), select:disabled, text
   to { transform: translateX(-50%); }
 }
 
+
+/* ── iPhone / iOS Safari safety rules ─────────────────────────────────
+   1. iOS zooms the whole page when you tap a text box whose text is
+      smaller than 16px. Force 16px on iOS only so screens never jump.
+   2. viewport-fit=cover lets the app use the full screen, so keep the
+      bottom bar clear of the home indicator and (when installed to the
+      Home Screen) keep content clear of the clock/notch.
+   Android and desktop are not touched by any of this. */
+@supports (-webkit-touch-callout: none) {
+  input, select, textarea { font-size: 16px !important; }
+}
+nav.fixed.bottom-0 { padding-bottom: env(safe-area-inset-bottom); }
+@media (display-mode: standalone) {
+  body { padding-top: env(safe-area-inset-top); }
+}

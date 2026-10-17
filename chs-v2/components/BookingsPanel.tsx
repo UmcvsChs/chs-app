@@ -14,6 +14,7 @@ import ShortletMessageThread from "@/components/ShortletMessageThread";
 import BookingStageCard from "@/components/BookingStageCard";
 import GuestArrivalPass from "@/components/GuestArrivalPass";
 import GuestRoomMenu from "@/components/GuestRoomMenu";
+import GuestServiceReservations from "@/components/GuestServiceReservations";
 import GuestEventQuote from "@/components/GuestEventQuote";
 import EventDocuments from "@/components/EventDocuments";
 import GuestBookingExtras from "@/components/GuestBookingExtras";
@@ -23,6 +24,7 @@ import BookingSessions from "@/components/BookingSessions";
 
 interface Booking {
   id: string;
+  property_id: string;
   check_in: string;
   check_out: string;
   time_slots?: boolean | null;
@@ -73,7 +75,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
     if (!session) return;
     const query = () => supabase
       .from("shortlet_bookings")
-      .select("id, check_in, check_out, time_slots, adults, children, room_no, room_count, room_group, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
+      .select("id, property_id, check_in, check_out, time_slots, adults, children, room_no, room_count, room_group, total_price, status, payment_status, hold_expires_at, booking_lane, expected_arrival_time, guest_commission_amount, security_deposit_amount, unit_id, room_type_id, properties(title)")
       .eq("guest_id", session.user.id)
       .order("check_in", { ascending: false });
     let { data, error } = await query();
@@ -157,6 +159,7 @@ export default function BookingsPanel({ embedded = false, filter = "all" }: { em
                   <p className="text-[11px] text-gray-500 mt-0.5">Requested: {typeName[b.room_type_id]} room — a specific room is named once the host confirms.</p>
                 )}
                 {b.status === "confirmed" && <GuestArrivalPass bookingId={b.id} />}
+                {["awaiting_admin_relay", "pending_host_review", "awaiting_payment", "confirmed"].includes(b.status) && <GuestServiceReservations bookingId={b.id} propertyId={b.property_id} checkIn={b.check_in} checkOut={b.check_out} />}
                 {b.status === "confirmed" && <GuestRoomMenu bookingId={b.id} />}
                 {b.status !== "cancelled" && <GuestEventQuote bookingId={b.id} />}
                 {b.status !== "cancelled" && <EventDocuments bookingId={b.id} canAdd />}

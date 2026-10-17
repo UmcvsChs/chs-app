@@ -89,6 +89,14 @@ const FAQ_ITEMS = [
     a: "If it was you on a new phone or browser, nothing — for the first 24 hours, larger transfers and withdrawals from that device need extra confirmation, and then it is treated as your usual device. If it was NOT you, open your wallet and tap Freeze my wallet now, then contact CHS so we can verify you and help you secure your account. Never share your PIN or any code CHS texts you.",
   },
   {
+    q: "Can I use a hotel's laundry, restaurant, bar or pool through CHS?",
+    a: "Hotels and lodges list the services they offer (restaurant, bar, laundry, room cleaning, pool, airport pickup, conference room and more) on their hotel page, so you know what is available before you book. Some show an approximate price, some only say the service is available. After you book a room, open My bookings, then Hotel services for your stay, to reserve a service for a day and time. Reserving is free and nothing is charged. You pay the hotel directly, at the hotel, for what you use. CHS does not take, hold or process payment for these in-house services, and prices are the hotel's own guide.",
+  },
+  {
+    q: "I am a host or hotel owner. How do I show my in-house services?",
+    a: "Open Hotel operations on your Host page and tap Services offered. Add each service with a name, a short description, an optional approximate price, capacity and hours, and say whether guests may reserve it ahead. Leave the price empty to show only that the service exists. Guests' reservations arrive there for you to accept or decline. Payment for these services is between you and your guest, outside CHS.",
+  },
+  {
     q: "I sold a property and handed over the documents. How do I get my money?",
     a: "Your proceeds, after CHS's commission, are held safely from the moment the buyer pays. They are released when the buyer confirms in the app that they have the documents, or when CHS confirms delivery. If the buyer has not confirmed, open your Owner dashboard and tap Request release of my money, with a short note of how and when you delivered. CHS then verifies delivery from the platform's records or by contacting the buyer, tells the buyer you have asked, and either releases your money or tells you what is still outstanding. Only that sale's money is released, never anything else in your wallet.",
   },

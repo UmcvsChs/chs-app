@@ -5,12 +5,13 @@ import { supabase } from "@/lib/supabase";
 import { formatDateTime, formatNaira } from "@/lib/format";
 import HotelImportSync from "@/components/HotelImportSync";
 import HotelServices from "@/components/HotelServices";
+import HotelServicesOffered from "@/components/HotelServicesOffered";
 
 // Hotel back office for one listing: housekeeping board, maintenance tickets and money (other income
 // centres, expenses, owner report, ledger). Staff can run housekeeping, maintenance and record income;
 // expenses, voids, the report and the ledger are owner-only (enforced in the database, not just here).
 
-type Tab = "housekeeping" | "maintenance" | "money" | "services" | "import";
+type Tab = "housekeeping" | "maintenance" | "money" | "offered" | "services" | "import";
 
 interface Room { unit_id: string; label: string; room_type: string | null; effective_status: string; status_at: string | null; status_by_name: string | null; note: string | null; open_tickets: number; departing_today: boolean; arriving_today: boolean }
 interface HkBoard { summary: { rooms: number; dirty: number; occupied: number; clean: number; out_of_order: number; open_tickets: number }; rooms: Room[]; generated_at: string }
@@ -245,7 +246,7 @@ export default function HotelOperations({ propertyId, role = "owner" }: { proper
       {open && (
         <div className="px-3 pb-3 space-y-2">
           <div className="flex gap-1">
-            {([["housekeeping", "🧹 Housekeeping"], ["maintenance", "🔧 Repairs"], ["money", "💰 Money"], ["services", "🍽️ Menu & stock"], ["import", "📥 Import & sync"]] as [Tab, string][]).map(([k, label]) => (
+            {([["housekeeping", "🧹 Housekeeping"], ["maintenance", "🔧 Repairs"], ["money", "💰 Money"], ["offered", "🛎️ Services offered"], ["services", "🍽️ Menu & stock"], ["import", "📥 Import & sync"]] as [Tab, string][]).map(([k, label]) => (
               <button key={k} onClick={() => { setTab(k); setMsg(null); setErr(null); }} className={`flex-1 text-[11px] font-semibold py-1.5 rounded-full ${tab === k ? "bg-chs-charcoal text-white" : "border border-gray-300 text-chs-charcoal"}`}>{label}</button>
             ))}
           </div>
@@ -254,6 +255,7 @@ export default function HotelOperations({ propertyId, role = "owner" }: { proper
           {tab === "housekeeping" && renderHousekeeping()}
           {tab === "maintenance" && renderMaintenance()}
           {tab === "money" && renderMoney()}
+          {tab === "offered" && <HotelServicesOffered propertyId={propertyId} role={role} />}
           {tab === "services" && <HotelServices propertyId={propertyId} role={role} />}
           {tab === "import" && <HotelImportSync propertyId={propertyId} role={role} />}
         </div>

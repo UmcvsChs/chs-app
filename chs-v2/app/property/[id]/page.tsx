@@ -1,5 +1,6 @@
 import OpenVenueProfile from "@/components/OpenVenueProfile";
 import GroupEnquiryForm from "@/components/GroupEnquiryForm";
+import PropertyServicesList from "@/components/PropertyServicesList";
 import PropertyRatingSummary from "@/components/PropertyRatingSummary";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -497,7 +498,7 @@ export default async function PropertyDetailPage({
           </div>
         )}
 
-        {(property.purpose === "shortlet" || property.purpose === "hire") && <div className="mb-4 space-y-3"><PropertyRatingSummary propertyId={property.id} /><GroupEnquiryForm propertyId={property.id} />{(property.hire_category === "open_field" || property.hire_category === "stadium") && <OpenVenueProfile propertyId={property.id} />}</div>}
+        {(property.purpose === "shortlet" || property.purpose === "hire") && <div className="mb-4 space-y-3"><PropertyRatingSummary propertyId={property.id} /><GroupEnquiryForm propertyId={property.id} />{property.hire_category === "hotel_lodge" && <PropertyServicesList propertyId={property.id} />}{(property.hire_category === "open_field" || property.hire_category === "stadium") && <OpenVenueProfile propertyId={property.id} />}</div>}
 
         <PropertyVideos propertyId={property.id} />
 
