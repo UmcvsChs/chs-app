@@ -25,6 +25,7 @@ export const STATUS_LABEL: Record<string, string> = {
 };
 
 const KEY = "chs_delivery_city";
+const AKEY = "chs_delivery_area";
 
 export function etaText(minDays: number, maxDays: number): string {
   const f = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString("en-NG", { day: "numeric", month: "short" }); };
@@ -41,24 +42,25 @@ export function distanceLabel(km: number): string {
 export function useDeliveryCity(userId?: string) {
   const [cities, setCities] = useState<NgCity[]>([]);
   const [cityId, setCityIdState] = useState<number | null>(null);
+  const [area, setAreaState] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.from("ng_cities").select("id,state,name").order("state").order("name").then(({ data }) => setCities((data as NgCity[]) || []));
     try { const v = localStorage.getItem(KEY); // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (v) setCityIdState(Number(v)); } catch { /* ignore */ }
+      if (v) setCityIdState(Number(v)); const a = localStorage.getItem(AKEY); if (a) setAreaState(a); } catch { /* ignore */ }
   }, []);
   useEffect(() => {
     if (!userId) return;
-    supabase.from("user_delivery_prefs").select("city_id").eq("user_id", userId).maybeSingle().then(({ data }) => {
-      if (data?.city_id) { setCityIdState(data.city_id); try { localStorage.setItem(KEY, String(data.city_id)); } catch { /* ignore */ } }
+    supabase.from("user_delivery_prefs").select("city_id,area").eq("user_id", userId).maybeSingle().then(({ data }) => {
+      if (data?.city_id) { setCityIdState(data.city_id); setAreaState(data.area || null); try { localStorage.setItem(KEY, String(data.city_id)); if (data.area) localStorage.setItem(AKEY, data.area); } catch { /* ignore */ } }
     });
   }, [userId]);
 
-  const setCityId = useCallback((id: number) => {
-    setCityIdState(id);
-    try { localStorage.setItem(KEY, String(id)); } catch { /* ignore */ }
-    if (userId) supabase.rpc("set_my_delivery_city", { p_city_id: id }).then(() => {});
+  const setLocation = useCallback((id: number, a: string | null) => {
+    setCityIdState(id); setAreaState(a);
+    try { localStorage.setItem(KEY, String(id)); if (a) localStorage.setItem(AKEY, a); else localStorage.removeItem(AKEY); } catch { /* ignore */ }
+    if (userId) supabase.rpc("set_my_delivery_city", { p_city_id: id, p_area: a }).then(() => {});
   }, [userId]);
 
-  return { cities, cityId, setCityId, city: cities.find((c) => c.id === cityId) || null };
+  return { cities, cityId, area, setLocation, city: cities.find((c) => c.id === cityId) || null };
 }

@@ -14,6 +14,7 @@ import RoleBadge from "@/components/RoleBadge";
 import InfoTip from "@/components/InfoTip";
 import PostQuotationJob from "@/components/PostQuotationJob";
 import RateArtisanForm from "@/components/RateArtisanForm";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import GuidePrompt from "@/components/GuidePrompt";
 
 interface TenancyWithProperty {
@@ -244,6 +245,7 @@ export default function ManagerDashboard() {
         <Link href="/agent/tenant-register" className="text-[10px] font-semibold text-white/70 underline mt-1 inline-block">
           📋 My Tenant Register →
         </Link>
+        <div className="mt-2"><MarketplaceTile /></div>
         <InfoTip term="a_real_tenant_register" />
         <br />
         <Link href="/agent/property-register" className="text-[10px] font-semibold text-white/70 underline mt-1 ml-3 inline-block">

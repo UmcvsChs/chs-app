@@ -10,7 +10,7 @@ export interface ShipEvent { status: string; note: string | null; at: string; ro
 export interface Shipment {
   id: string; reference: string; status: string; mode: string; km: number; band: string; weight_kg: number; delivery_fee: number; insurance_fee: number;
   eta_min: string | null; eta_max: string | null; carrier: string | null; tracking_no: string | null; delivered_at: string | null; delivered_how: string | null; created_at: string;
-  dest_address: string | null; origin: string | null; dest: string | null; vendor: string; hub: { name: string; address: string | null; phone: string | null } | null;
+  dest_address: string | null; origin_area?: string | null; dest_area?: string | null; origin: string | null; dest: string | null; vendor: string; hub: { name: string; address: string | null; phone: string | null } | null;
   delivery_code: string | null; items: ShipItem[]; events: ShipEvent[]; buyer?: string;
 }
 
@@ -63,7 +63,7 @@ export default function ShipmentCard({ s, onChanged }: { s: Shipment; onChanged:
       <div className="flex justify-between gap-2">
         <div>
           <p className="text-xs font-bold text-chs-charcoal">{s.vendor}</p>
-          <p className="text-[10px] text-gray-500">{s.reference} · {s.origin} → {s.dest} · about {s.km} km</p>
+          <p className="text-[10px] text-gray-500">{s.reference} · {s.origin_area ? `${s.origin_area}, ` : ""}{s.origin} → {s.dest_area ? `${s.dest_area}, ` : ""}{s.dest} · about {s.km} km</p>
         </div>
         <span className={`self-start text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${s.status === "delivered" ? "bg-green-50 text-green-700" : s.status === "problem" ? "bg-red-50 text-chs-red" : "bg-chs-amber-light text-chs-amber-dark"}`}>{STATUS_LABEL[s.status] || s.status}</span>
       </div>

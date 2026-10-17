@@ -8,11 +8,12 @@ import DeliveryCityPicker from "@/components/DeliveryCityPicker";
 import { StatusBar, Timeline, type Shipment } from "@/components/ShipmentCard";
 
 // Seller side: where you are and whether you offer free local delivery, plus every parcel to hand over and its delivery code step.
-export default function VendorDeliveryPanel({ vendorCityId, freeLocal, freeMin, pickupAddress, onSaved }: {
-  vendorCityId: number | null; freeLocal: boolean; freeMin: number; pickupAddress: string | null; onSaved: () => void;
+export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLocal, freeMin, pickupAddress, onSaved }: {
+  vendorCityId: number | null; vendorArea: string | null; freeLocal: boolean; freeMin: number; pickupAddress: string | null; onSaved: () => void;
 }) {
   const { cities } = useDeliveryCity(undefined);
   const [city, setCity] = useState<number | null>(vendorCityId);
+  const [area, setArea] = useState<string | null>(vendorArea);
   const [free, setFree] = useState(freeLocal);
   const [min, setMin] = useState<number>(freeMin || 0);
   const [addr, setAddr] = useState(pickupAddress || "");
@@ -34,7 +35,7 @@ export default function VendorDeliveryPanel({ vendorCityId, freeLocal, freeMin, 
   async function save() {
     setMsg(null);
     if (!city) { setMsg("Please choose the city you ship from."); return; }
-    const { error } = await supabase.rpc("vendor_set_delivery_terms", { p_city_id: city, p_free_local: free, p_free_min: min, p_pickup_address: addr });
+    const { error } = await supabase.rpc("vendor_set_delivery_terms", { p_city_id: city, p_free_local: free, p_free_min: min, p_pickup_address: addr, p_area: area });
     setMsg(error ? error.message : "Saved. Buyers see these terms straight away."); if (!error) onSaved();
   }
   async function act(id: string, fn: string, args: Record<string, unknown>) {
@@ -50,8 +51,8 @@ export default function VendorDeliveryPanel({ vendorCityId, freeLocal, freeMin, 
   return (
     <div className="space-y-3">
       <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
-        <p className="text-xs font-bold text-chs-charcoal">📍 Where you ship from, and free local delivery</p>
-        <DeliveryCityPicker cities={cities} cityId={city} onChange={setCity} compact />
+        <p className="text-xs font-bold text-chs-charcoal">📍 Where you ship from (state, LGA and neighbourhood), and free local delivery</p>
+        <DeliveryCityPicker cities={cities} cityId={city} area={area} onChange={(id, a) => { setCity(id); setArea(a); }} compact />
         <p className="text-[10px] text-gray-500">Buyers see how far you are from them. Items from a seller in their own city arrive fastest and cheapest.</p>
         <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={free} onChange={(e) => setFree(e.target.checked)} /> I deliver for free to buyers in my own city (I deliver myself, or build the cost into my prices)</label>
         {free && <div className="flex items-center gap-2 text-xs"><span>Only for orders from</span><input type="number" min={0} value={min} onChange={(e) => setMin(Number(e.target.value))} className="w-28 px-2 py-1.5 rounded-lg border border-gray-200 text-xs" /><span>(0 = every order)</span></div>}
@@ -67,7 +68,7 @@ export default function VendorDeliveryPanel({ vendorCityId, freeLocal, freeMin, 
         return (
           <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-3">
             <div className="flex justify-between gap-2">
-              <div><p className="text-xs font-bold text-chs-charcoal">{s.reference} → {s.dest}</p><p className="text-[10px] text-gray-500">{MODE_LABEL[s.mode]} · about {s.km} km · {s.weight_kg} kg</p></div>
+              <div><p className="text-xs font-bold text-chs-charcoal">{s.reference} → {s.dest_area ? `${s.dest_area}, ` : ""}{s.dest}</p><p className="text-[10px] text-gray-500">{MODE_LABEL[s.mode]} · about {s.km} km · {s.weight_kg} kg</p></div>
               <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded-full bg-chs-amber-light text-chs-amber-dark whitespace-nowrap">{STATUS_LABEL[s.status] || s.status}</span>
             </div>
             <StatusBar status={s.status} />

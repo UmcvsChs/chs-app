@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import RoleBadge from "@/components/RoleBadge";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import InfoTip from "@/components/InfoTip";
 
 // Real, new dashboard completing a real, confirmed gap: a real
@@ -77,6 +78,7 @@ export default function DeveloperDashboardPage() {
         )}
       </div>
 
+      <div className="px-4 pt-3"><MarketplaceTile /></div>
       <div className="px-4 py-4 space-y-2">
         {application && (
           <div className="bg-white rounded-xl border border-gray-200 p-3">

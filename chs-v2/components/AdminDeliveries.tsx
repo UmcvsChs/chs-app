@@ -15,8 +15,50 @@ const SETTING_HELP: Record<string, string> = {
   delivery_intra_city_km: "Distance assumed inside one city", delivery_insurance_pct: "Transit insurance, % of goods value (intercity)",
   delivery_lastmile_pct: "Discount (%) when the buyer collects from a CHS centre", delivery_hub_pickup_fee: "Flat fee for centre pickup (₦)",
   delivery_auto_confirm_days: "Days after 'delivered by carrier' before it auto-confirms", delivery_handling_fragile_pct: "Extra % for fragile goods",
-  delivery_handling_bulky_pct: "Extra % for bulky goods", delivery_consolidation_days: "Days CHS holds goods at the centre to combine parcels",
+  delivery_handling_bulky_pct: "Extra % for bulky goods", delivery_consolidation_days: "Days CHS holds goods at the centre to combine parcels", delivery_same_state_km: "Distance assumed between two areas of one state when exact map points are missing",
 };
+interface Loc { id: number; name: string; lat: number | null; lng: number | null; capital: boolean; }
+const STATES = ["Abia","Adamawa","Akwa Ibom","Anambra","Bauchi","Bayelsa","Benue","Borno","Cross River","Delta","Ebonyi","Edo","Ekiti","Enugu","FCT","Gombe","Imo","Jigawa","Kaduna","Kano","Katsina","Kebbi","Kogi","Kwara","Lagos","Nasarawa","Niger","Ogun","Ondo","Osun","Oyo","Plateau","Rivers","Sokoto","Taraba","Yobe","Zamfara"];
+
+function LocationEditor() {
+  const [state, setState] = useState("");
+  const [rows, setRows] = useState<Loc[]>([]);
+  const [msg, setMsg] = useState<string | null>(null);
+  async function load(st: string) {
+    setState(st); setMsg(null);
+    if (!st) { setRows([]); return; }
+    const { data, error } = await supabase.rpc("admin_get_locations", { p_state: st });
+    if (error) { setMsg(error.message); return; }
+    setRows((data as Loc[]) || []);
+  }
+  const patch = (id: number, k: "lat" | "lng", v: string) => setRows(rows.map((r) => r.id === id ? { ...r, [k]: v === "" ? null : Number(v) } : r));
+  async function save(r: Loc) {
+    const { error } = await supabase.rpc("admin_set_location_coords", { p_id: r.id, p_lat: r.lat, p_lng: r.lng });
+    setMsg(error ? error.message : `Saved ${r.name}.`);
+  }
+  return (
+    <div>
+      <p className="text-xs font-bold text-chs-charcoal mb-1">Area map points (all 774 LGAs)</p>
+      <p className="text-[10px] text-gray-500 mb-1">Every area is already selectable. Areas without a map point are priced from their state capital, and two areas in one state without points are treated as 45 km apart by default (see the rules above). Add latitude and longitude to make a pair exact.</p>
+      <select value={state} onChange={(e) => load(e.target.value)} className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs mb-1">
+        <option value="">Choose a state…</option>
+        {STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+      </select>
+      {msg && <p className="text-[10px] font-semibold text-chs-charcoal">{msg}</p>}
+      <div className="max-h-64 overflow-y-auto space-y-1">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center gap-1 text-[11px]">
+            <span className="flex-1 min-w-0 truncate">{r.name}{r.capital ? " ★" : ""}</span>
+            <input type="number" step="any" value={r.lat ?? ""} placeholder="lat" onChange={(e) => patch(r.id, "lat", e.target.value)} className="w-20 px-1 py-1 rounded border border-gray-200 text-xs" />
+            <input type="number" step="any" value={r.lng ?? ""} placeholder="lng" onChange={(e) => patch(r.id, "lng", e.target.value)} className="w-20 px-1 py-1 rounded border border-gray-200 text-xs" />
+            <button onClick={() => save(r)} className="px-2 py-1 rounded bg-chs-charcoal text-white text-[10px]">Save</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const FILTERS = ["active", "problem", "delivered", "all"] as const;
 
 function ReleaseRow({ it, shipStatus, onDone }: { it: Shipment["items"][number]; shipStatus: string; onDone: () => void }) {
@@ -160,6 +202,7 @@ export default function AdminDeliveries() {
             ))}
             <p className="text-[10px] text-gray-400">Changes save when you leave the box.</p>
           </div>
+          <LocationEditor />
           <div>
             <p className="text-xs font-bold text-chs-charcoal mb-1">CHS collection & packaging centres</p>
             <p className="text-[10px] text-gray-500 mb-1">Switch a city on once the centre exists. Buyers there then get the “pick up at a CHS centre” option, and sellers can drop goods with you.</p>

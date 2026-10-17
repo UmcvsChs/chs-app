@@ -17,6 +17,7 @@ import HostHotelTools from "@/components/HostHotelTools";
 import HotelOperations from "@/components/HotelOperations";
 import HostPlans from "@/components/HostPlans";
 import HostConsole from "@/components/HostConsole";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import HostStaffManager from "@/components/HostStaffManager";
 
 // Real, new dashboard completing a direct, thorough client decision:
@@ -165,6 +166,7 @@ export default function HostDashboardPage() {
         )}
       </div>
 
+      <div className="px-4 pt-3"><MarketplaceTile /></div>
       <HostConsole session={session} listingsNode={listingsNode} workNode={workNode} overviewExtra={overviewExtra} moneyNode={moneyNode} />
     </div>
   );

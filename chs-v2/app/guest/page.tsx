@@ -17,6 +17,7 @@ import ApplicationsPanel from "@/components/ApplicationsPanel";
 import SavedPanel from "@/components/SavedPanel";
 import WalletPanel from "@/components/WalletPanel";
 import RefundsPanel from "@/components/RefundsPanel";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import SplitJoin from "@/components/SplitJoin";
 
 // The guest's home: everything a guest does, one tab each, with a badge where something is waiting on them.
@@ -119,6 +120,7 @@ export default function GuestDashboardPage() {
         </div>
       </div>
 
+      <div className="px-4 pt-3"><MarketplaceTile /></div>
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200 overflow-x-auto">
         <div className="flex px-2 min-w-max">
           {TABS.map((t) => (

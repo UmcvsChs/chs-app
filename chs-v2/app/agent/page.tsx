@@ -15,6 +15,7 @@ import InfoTip from "@/components/InfoTip";
 import MessageThread from "@/components/MessageThread";
 import IssueNoticeForm from "@/components/IssueNoticeForm";
 import WalletQuickView from "@/components/WalletQuickView";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import RoleBadge from "@/components/RoleBadge";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -324,6 +325,7 @@ export default function AgentDashboard() {
         <div className="flex justify-between items-end mt-1 gap-2">
           <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">Agent Dashboard</h1><NotificationBell /></div>
           {session && <WalletQuickView userId={session.user.id} extra="agent_earnings" />}
+          <div className="mt-2"><MarketplaceTile /></div>
         </div>
 
         {/* Real Agent ID card — restored, found missing during the

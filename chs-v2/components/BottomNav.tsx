@@ -20,6 +20,7 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
   const MORE_ITEMS = [
     { icon: "📊", label: "Average property prices", href: "/market-demand" },
     { icon: "📈", label: "Property demand trend", href: "/market-demand" },
+    { icon: "♡", label: "Saved properties", href: session ? "/saved" : "/login" },
     { icon: "📖", label: "Latest insights", href: "/blog" },
     { icon: "🏢", label: "About Us", href: "/about" },
     { icon: "📜", label: "Terms & Conditions", href: "/terms" },
@@ -53,9 +54,9 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
           <span className="text-lg">🔍</span>
           <span className="text-[9px] text-gray-500">Search</span>
         </button>
-        <button onClick={() => router.push(session ? "/saved" : "/login")} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
-          <span className="text-lg">♡</span>
-          <span className="text-[9px] text-gray-500">Saved</span>
+        <button onClick={() => router.push("/marketplace")} className="flex-1 py-1.5 flex flex-col items-center gap-0.5">
+          <span className="text-lg bg-chs-red rounded-full w-9 h-9 flex items-center justify-center -mt-4 border-2 border-white shadow-md">🛒</span>
+          <span className="text-[9px] font-extrabold text-chs-red">Marketplace</span>
         </button>
         <button onClick={() => router.push(session ? "/profile" : "/login")} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
           <span className="text-lg">👤</span>

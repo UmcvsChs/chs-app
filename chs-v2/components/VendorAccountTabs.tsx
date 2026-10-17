@@ -52,7 +52,7 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
   <div className="bg-white rounded-lg border border-gray-100 p-2.5"><p className="text-[9px] uppercase font-bold text-gray-400">{label}</p><p className={`text-sm font-bold ${tone || "text-chs-charcoal"}`}>{value}</p></div>
 );
 
-export default function VendorAccountTabs({ products, orders, subscriptions, delivery, onDeliverySaved }: { products: Product[]; orders: VendorOrder[]; subscriptions: VendorSubscription[]; delivery?: { city_id: number | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }; onDeliverySaved?: () => void }) {
+export default function VendorAccountTabs({ products, orders, subscriptions, delivery, onDeliverySaved }: { products: Product[]; orders: VendorOrder[]; subscriptions: VendorSubscription[]; delivery?: { city_id: number | null; area?: string | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }; onDeliverySaved?: () => void }) {
   const [tab, setTab] = useState<Tab>("Stock");
   const [range, setRange] = useState<RangeKey>("30d");
   const [from, setFrom] = useState("");
@@ -158,7 +158,7 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
         )}
 
         {tab === "Deliveries" && (
-          <VendorDeliveryPanel vendorCityId={delivery?.city_id ?? null} freeLocal={!!delivery?.free_local_delivery} freeMin={Number(delivery?.free_local_min_order || 0)} pickupAddress={delivery?.pickup_address ?? null} onSaved={() => onDeliverySaved?.()} />
+          <VendorDeliveryPanel vendorCityId={delivery?.city_id ?? null} vendorArea={delivery?.area ?? null} freeLocal={!!delivery?.free_local_delivery} freeMin={Number(delivery?.free_local_min_order || 0)} pickupAddress={delivery?.pickup_address ?? null} onSaved={() => onDeliverySaved?.()} />
         )}
 
         {tab === "Subscription" && (

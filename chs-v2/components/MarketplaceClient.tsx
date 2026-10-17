@@ -192,9 +192,9 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
       )}
 
       <div className="px-4 pt-2 space-y-1.5">
-        <DeliveryCityPicker cities={dcity.cities} cityId={dcity.cityId} onChange={dcity.setCityId} />
+        <DeliveryCityPicker cities={dcity.cities} cityId={dcity.cityId} area={dcity.area} onChange={dcity.setLocation} />
         {dcity.cityId && hintCount > 0 && (
-          <p className="text-[10px] text-gray-600">{nearbyCount} of {hintCount} items for sale are from sellers near {dcity.city?.name}. Each item shows how far it travels, the delivery cost and when it should arrive.</p>
+          <p className="text-[10px] text-gray-600">{nearbyCount} of {hintCount} items for sale are from sellers near {dcity.area ? `${dcity.area}, ` : ""}{dcity.city?.name}. Each item shows how far it travels, the delivery cost and when it should arrive.</p>
         )}
         {!dcity.cityId && <p className="text-[10px] text-gray-500">Choose your city to see how far each seller is and what delivery will cost.</p>}
       </div>
@@ -360,7 +360,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         </div>
       )}
       {cartOpen && (
-        <MarketplaceCart cities={dcity.cities} cityId={dcity.cityId} setCityId={dcity.setCityId} items={cart.items} loggedIn={!!session} onClose={() => setCartOpen(false)} setQty={cart.setQty} remove={cart.remove} clear={cart.clear} requireVerified={requireVerified} />
+        <MarketplaceCart cities={dcity.cities} cityId={dcity.cityId} area={dcity.area} setLocation={dcity.setLocation} items={cart.items} loggedIn={!!session} onClose={() => setCartOpen(false)} setQty={cart.setQty} remove={cart.remove} clear={cart.clear} requireVerified={requireVerified} />
       )}
       {detailFor && (() => {
         const product = products.find((p) => p.id === detailFor);

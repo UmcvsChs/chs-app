@@ -14,8 +14,8 @@ import { etaText, MODE_LABEL, type DeliveryPreview, type NgCity } from "@/lib/de
 interface PLine { product_id: string; name: string; photo: string | null; unit_price: number; quantity: number; options: Record<string, string>; stock: number | null; ok: boolean; problem: string | null; line_subtotal: number; }
 interface Preview { lines: PLine[]; subtotal: number; buyer_commission_pct: number; buyer_commission: number; total: number; wallet_balance: number; all_ok: boolean; }
 
-export default function MarketplaceCart({ cities, cityId, setCityId, items, loggedIn, onClose, setQty, remove, clear, requireVerified }: {
-  cities: NgCity[]; cityId: number | null; setCityId: (id: number) => void;
+export default function MarketplaceCart({ cities, cityId, area, setLocation, items, loggedIn, onClose, setQty, remove, clear, requireVerified }: {
+  cities: NgCity[]; cityId: number | null; area: string | null; setLocation: (id: number, area: string | null) => void;
   items: CartLine[]; loggedIn: boolean; onClose: () => void;
   setQty: (i: number, q: number) => void; remove: (i: number) => void; clear: () => void;
   requireVerified: () => boolean;
@@ -70,6 +70,7 @@ export default function MarketplaceCart({ cities, cityId, setCityId, items, logg
     if (!requireVerified()) { onClose(); return; }
     setBusy(true); setErr(null);
     try { localStorage.setItem("chs_cart_address", address.trim()); } catch { /* ignore */ }
+    await supabase.rpc("set_my_delivery_city", { p_city_id: cityId, p_address: address.trim(), p_area: area });
     const { data, error } = await supabase.rpc("checkout_cart", { p_items: items, p_address: address.trim(), p_city_id: cityId, p_methods: methods });
     setBusy(false);
     if (error) { setErr(error.message.includes("insufficient_balance") ? "Your wallet balance is not enough. Use “Top up wallet” below, then pay." : error.message); load(); return; }
@@ -139,7 +140,7 @@ export default function MarketplaceCart({ cities, cityId, setCityId, items, logg
                   <textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} placeholder="House number, street, area, town and state. No phone numbers: CHS handles all contact."
                     className="w-full mt-1 px-3 py-2 rounded-lg border border-gray-200 text-xs" />
                 </div>
-                <DeliveryCityPicker cities={cities} cityId={cityId} onChange={setCityId} />
+                <DeliveryCityPicker cities={cities} cityId={cityId} area={area} onChange={setLocation} />
                 {dpErr && <p className="text-xs text-chs-red">{dpErr}</p>}
                 {dp && (
                   <div className="space-y-2">

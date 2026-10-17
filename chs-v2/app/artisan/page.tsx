@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Artisan, ArtisanRating, ArtisanJobDispute } from "@/types/artisan";
 import GuidePrompt from "@/components/GuidePrompt";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import InfoTip from "@/components/InfoTip";
 
 interface OpenFault {
@@ -237,6 +238,8 @@ export default function ArtisanDashboard() {
           <p className="text-xs text-white/70 mt-1">⭐ {avgRating.toFixed(1)} average — {myRatings.length} completed job{myRatings.length !== 1 ? "s" : ""}<InfoTip term="ratings_received" /></p>
         )}
       </div>
+      <div className="px-4 pt-3"><MarketplaceTile /></div>
+
 
       <div className="px-4 py-4">
         {actionError && <p className="text-xs text-chs-red bg-chs-amber-light rounded-lg px-3 py-2 mb-3">{actionError}</p>}

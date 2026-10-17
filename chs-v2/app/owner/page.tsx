@@ -40,6 +40,7 @@ import WalletQuickView from "@/components/WalletQuickView";
 import RoleBadge from "@/components/RoleBadge";
 import OwnerAdminMessageThread from "@/components/OwnerAdminMessageThread";
 import OfferMessageThread from "@/components/OfferMessageThread";
+import MarketplaceTile from "@/components/MarketplaceTile";
 import MessageThread from "@/components/MessageThread";
 
 interface TenancyBasic {
@@ -664,6 +665,7 @@ export default function OwnerDashboard() {
         </div>
 
         {session && <div className="mt-3"><WalletQuickView userId={session.user.id} extra="escrow_held" /></div>}
+        <div className="mt-3"><MarketplaceTile /></div>
 
         {/* Real, new feature per direct client request: a genuine,
             date-range activity report an owner can generate themselves

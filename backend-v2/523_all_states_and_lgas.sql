@@ -1,0 +1,1 @@
+-- 523 (a to e): all 774 LGAs added to ng_cities (kind lga, nullable lat/lng), _loc_xy, _delivery_km (state-capital fallback, delivery_same_state_km), _guess_city, hubs matched by state, admin_get_locations, admin_set_location_coords. Applied live 17 Oct 2026; see Supabase migrations 523a to 523e5.

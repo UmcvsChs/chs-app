@@ -1,0 +1,1 @@
+-- 524a/524b applied live 17 Oct 2026: area columns; set_my_delivery_city(int,text,text); vendor_set_delivery_terms(...,p_area); checkout_cart and _ship_json record dest_area/origin_area.

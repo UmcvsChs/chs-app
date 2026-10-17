@@ -142,8 +142,8 @@ export default function HomePageClient({ properties, platformStats, promotedTick
         <div className="flex justify-between items-center gap-2">
           <div className="flex items-baseline gap-1.5 min-w-0">
             <h1 className="font-serif text-lg font-bold shrink-0">CHS</h1>
-            <Link href="/marketplace" className="text-[10px] text-white/60 underline truncate">
-              Visit the Marketplace →
+            <Link href="/marketplace" className="shrink-0 bg-chs-red text-white text-[11px] font-extrabold px-3 py-1 rounded-full">
+              🛒 Marketplace
             </Link>
           </div>
           {!loading && session && profile && (
@@ -319,15 +319,15 @@ export default function HomePageClient({ properties, platformStats, promotedTick
       {/* Real "Shop the CHS Marketplace" banner — restored, found
           missing on the real homepage during the same direct
           comparison. */}
-      <Link href="/marketplace" className="mx-4 mt-3 bg-white border border-gray-200 rounded-xl px-4 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">🛋️</span>
+      <Link href="/marketplace" className="mx-4 mt-3 bg-gradient-to-r from-chs-red to-chs-amber text-white rounded-2xl px-3 py-3 gap-2 flex justify-between items-center shadow-lg">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">🛒</span>
           <div>
-            <p className="text-xs font-extrabold text-chs-charcoal">Shop the CHS Marketplace</p>
-            <p className="text-[10px] text-gray-400">Furniture, interior design, bedding & building materials</p>
+            <p className="text-sm font-extrabold leading-tight">Shop the CHS Marketplace</p>
+            <p className="text-[11px] font-semibold text-white/90">Materials, furniture &amp; appliances, delivered.</p>
           </div>
         </div>
-        <span className="text-chs-red text-base">→</span>
+        <span className="shrink-0 bg-white text-chs-red text-xs font-extrabold px-3 py-2 rounded-full">Shop →</span>
       </Link>
 
 

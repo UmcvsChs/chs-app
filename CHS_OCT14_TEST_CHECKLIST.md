@@ -73,3 +73,13 @@ For each failed step note: the step number, what you saw, a screenshot.
 1. First visit shows "How do you want to search?" with three choices; close it and it does not return, but "How searching works" reopens it.
 2. Choose Kano. Near me shows only Kano sellers and a note about items in other towns. Cheapest overall ranks by total with delivery. Anywhere lists nearest first.
 3. A heavy item from far away shows the red "Delivery is N% of the price" warning.
+
+## Locations (all states and LGAs)
+1. Marketplace > Deliver to: choose any state (all 36 plus FCT) and then any LGA, for example Kaduna > Igabi. Delivery cost and dates appear for every seller.
+2. Vendor > Deliveries: choose your state and LGA and save.
+3. Admin > Deliveries > Rates, centres & rules > Area map points: pick Kaduna, add a latitude and longitude for Igabi, and see the distance change.
+
+## Areas and bold Marketplace
+1. Deliver to: choose Kaduna > Kaduna South > Barnawa. The area follows you into the cart, tracking and the seller's dispatch card.
+2. Open the Owner, Agent, Manager, Host, Guest, Artisan and Developer dashboards: a compact white "CHS Marketplace / Shop" tile sits near the top; tap it to open the Marketplace. Nothing floats over the page.
+3. Home page: the large banner and the red Marketplace button and tab.
