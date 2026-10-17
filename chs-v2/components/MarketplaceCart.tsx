@@ -1,5 +1,7 @@
 "use client";
 
+import QtyInput from "@/components/QtyInput";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -122,7 +124,7 @@ export default function MarketplaceCart({ cities, cityId, area, setLocation, ite
                     {!l.ok && <p className="text-[10px] font-semibold text-chs-red">⚠️ {l.problem}. Change the quantity or remove it.</p>}
                     <div className="flex items-center gap-2 mt-1">
                       <button type="button" onClick={() => setQty(i, l.quantity - 1)} className="w-6 h-6 rounded-full border border-gray-200 text-sm leading-none">−</button>
-                      <span className="text-xs font-bold w-5 text-center">{l.quantity}</span>
+                      <QtyInput size="sm" value={l.quantity} max={l.stock != null ? Math.max(1, Math.min(l.stock, 1000)) : 1000} onChange={(n) => setQty(i, n)} />
                       <button type="button" onClick={() => setQty(i, l.stock != null ? Math.min(l.stock, l.quantity + 1) : l.quantity + 1)} className="w-6 h-6 rounded-full border border-gray-200 text-sm leading-none">+</button>
                       <button type="button" onClick={() => remove(i)} className="ml-auto text-[10px] text-chs-red underline">Remove</button>
                     </div>

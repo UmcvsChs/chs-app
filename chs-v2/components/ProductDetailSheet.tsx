@@ -1,5 +1,7 @@
 "use client";
 
+import QtyInput from "@/components/QtyInput";
+
 import { useState } from "react";
 import { formatNaira } from "@/lib/format";
 import { Req } from "@/components/FormMarks";
@@ -24,7 +26,7 @@ export default function ProductDetailSheet({ product, hint, onClose, onAddToCart
   const [error, setError] = useState<string | null>(null);
 
   const stock = product.stock_quantity ?? null;
-  const maxQty = stock === null ? 99 : Math.max(1, stock);
+  const maxQty = stock === null ? 1000 : Math.max(1, Math.min(stock, 1000));
   const groups = product.option_groups || [];
   const specs = Object.entries(product.specs || {});
   const subtotal = (product.price || 0) * qty;
@@ -105,7 +107,7 @@ export default function ProductDetailSheet({ product, hint, onClose, onAddToCart
           <div className="flex items-center gap-3">
             <label className="text-[11px] font-semibold text-gray-600">Quantity</label>
             <button type="button" onClick={() => { setQty(Math.max(1, qty - 1)); setAdded(false); }} className="w-7 h-7 rounded-full border border-gray-200 text-sm">−</button>
-            <span className="text-sm font-bold w-6 text-center">{qty}</span>
+            <QtyInput value={qty} max={maxQty} onChange={(n) => { setQty(n); setAdded(false); }} />
             <button type="button" onClick={() => { setQty(Math.min(maxQty, qty + 1)); setAdded(false); }} className="w-7 h-7 rounded-full border border-gray-200 text-sm">+</button>
           </div>
           <p className="text-xs text-chs-charcoal">Subtotal: <b>{formatNaira(subtotal)}</b> <span className="text-gray-500">(CHS fee is added at checkout)</span></p>
