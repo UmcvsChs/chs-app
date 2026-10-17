@@ -1,0 +1,6 @@
+-- Migration 522 (a, b, c) applied live on 17 Oct 2026: marketplace delivery and logistics.
+-- Tables: ng_cities, delivery_hubs, delivery_rates, user_delivery_prefs, marketplace_shipments, shipment_events.
+-- Columns: marketplace_products.weight_kg/handling/dispatch_days; marketplace_vendors.free_local_delivery/free_local_min_order/pickup_address/city_id; marketplace_direct_orders.shipment_id/delivery_fee_share/vendor_paid_amount.
+-- Functions: get_product_delivery_hints, get_delivery_preview, _delivery_groups, _delivery_quote, checkout_cart(4 args; the 2-arg form wraps it), set_my_delivery_city, get_my_shipments, get_vendor_shipments, admin_get_shipments, vendor_dispatch_shipment, vendor_confirm_with_code, buyer_confirm_received, buyer_report_problem, admin_update_shipment, admin_release_order_percentage, vendor_set_delivery_terms, admin_set_delivery_rate, admin_set_delivery_setting, admin_set_hub, admin_get_delivery_config, _sweep_shipments (daily 06:15 UTC).
+-- release_direct_order_to_vendor now needs delivery confirmed and pays net minus any part already released; refund_direct_order_to_buyer refuses after a part release and returns the delivery charge if not yet dispatched.
+-- Full SQL is in the Supabase migrations list (522a_delivery_tables_and_cities, 522b_delivery_engine, 522c_vendor_delivery_terms_and_admin_settings).

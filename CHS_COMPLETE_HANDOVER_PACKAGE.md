@@ -350,3 +350,4 @@ Every one of the above has a real, matching, more detailed entry in `CHS_PROGRES
 
 ## Launch list additions (16 Oct 2026)
 - Also: payment fingerprint/face approval (WebAuthn for payments; needs a new server check and the final domain in WEBAUTHN_RP_ID / WEBAUTHN_ORIGIN) and turning ON the Payment PIN switch (Admin > Settings) after deploying.
+- Marketplace delivery (17 Oct 2026): before real orders, open Admin > Deliveries > Rates, centres & rules; set real rates; add the street address and phone of each CHS collection and packaging centre and switch the city on; check each seller's city in Vendor > Deliveries; agree courier partners (carrier and waybill are typed in by admin until an API is integrated).

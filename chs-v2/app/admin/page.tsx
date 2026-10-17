@@ -1,5 +1,6 @@
 "use client";
 
+import AdminDeliveries from "@/components/AdminDeliveries";
 import AdminListingReports from "@/components/AdminListingReports";
 import AdminChsStamp from "@/components/AdminChsStamp";
 import AdminAgentApproval from "@/components/AdminAgentApproval";
@@ -86,7 +87,7 @@ interface PendingProperty {
 
 const CAT_TAG: Record<string, string> = { shortlet: "🏠 Shortlet", hotel: "🏨 Hotel & Lodge", event: "🎉 Event Centre", other: "Hire" };
 
-export type Tab = "vat" | "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "deliveries" | "vat" | "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2575,6 +2576,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
           // Oversight
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "deliveries", label: "📦 Deliveries & shipments", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelcontrols", label: "🏨 Hotel Controls (peak & cancellations)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "disruptions", label: "⚠️ Disruptions & no-fault refunds", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelsview", label: "🏨 Hotels & Lodges (live)", domain: "owner_buyer_tenant", group: "Financial" },
@@ -5433,6 +5435,8 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
           </div>
         )}
 
+        {activeTab === "deliveries" && <AdminDeliveries />}
+
         {activeTab === "marketplacemoderation" && (
           <div>
             <p className="text-xs text-gray-500 mb-3">
@@ -5957,6 +5961,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                   { group: "Oversight", items: [
                     { key: "tenantregisteroversight" as Tab, label: "Tenant Register Oversight" },
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
+                    { key: "deliveries" as Tab, label: "📦 Deliveries & shipments" },
                     { key: "hotelcontrols" as Tab, label: "Hotel Controls (peak & cancellations)" },
                     { key: "disruptions" as Tab, label: "Disruptions & no-fault refunds" },
                     { key: "hotelsview" as Tab, label: "Hotels & Lodges (live)" },

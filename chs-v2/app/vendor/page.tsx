@@ -243,7 +243,7 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      <VendorAccountTabs products={products} orders={directOrders} subscriptions={subscriptions} />
+      <VendorAccountTabs products={products} orders={directOrders} subscriptions={subscriptions} delivery={vendor as unknown as { city_id: number | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }} onDeliverySaved={loadData} />
 
       <div className="px-4 py-4">
         {vendor.verification_status !== "verified" && (

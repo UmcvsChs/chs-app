@@ -1,5 +1,6 @@
 "use client";
 
+import VendorDeliveryPanel from "@/components/VendorDeliveryPanel";
 import { useMemo, useState } from "react";
 import { formatNaira, formatDateTime } from "@/lib/format";
 import type { MarketplaceProduct } from "@/types/marketplace";
@@ -26,7 +27,7 @@ const RANGES: { key: RangeKey; label: string }[] = [
   { key: "24h", label: "Last 24 hours" }, { key: "7d", label: "Last 7 days" }, { key: "30d", label: "Last 30 days" },
   { key: "quarter", label: "Last quarter" }, { key: "all", label: "All time" }, { key: "custom", label: "Custom" },
 ];
-const TABS = ["Stock", "Orders", "Subscription", "Sales", "Bids", "Earnings", "Commission", "Statistics"] as const;
+const TABS = ["Stock", "Orders", "Deliveries", "Subscription", "Sales", "Bids", "Earnings", "Commission", "Statistics"] as const;
 type Tab = typeof TABS[number];
 
 // one row per money event, from direct orders and from paid quotes
@@ -51,7 +52,7 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
   <div className="bg-white rounded-lg border border-gray-100 p-2.5"><p className="text-[9px] uppercase font-bold text-gray-400">{label}</p><p className={`text-sm font-bold ${tone || "text-chs-charcoal"}`}>{value}</p></div>
 );
 
-export default function VendorAccountTabs({ products, orders, subscriptions }: { products: Product[]; orders: VendorOrder[]; subscriptions: VendorSubscription[] }) {
+export default function VendorAccountTabs({ products, orders, subscriptions, delivery, onDeliverySaved }: { products: Product[]; orders: VendorOrder[]; subscriptions: VendorSubscription[]; delivery?: { city_id: number | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }; onDeliverySaved?: () => void }) {
   const [tab, setTab] = useState<Tab>("Stock");
   const [range, setRange] = useState<RangeKey>("30d");
   const [from, setFrom] = useState("");
@@ -154,6 +155,10 @@ export default function VendorAccountTabs({ products, orders, subscriptions }: {
             <p className="text-[10px] text-gray-500 mb-1">Orders and paid quotes that came through CHS. Newest first.</p>
             {ranged.length === 0 ? <Empty text="No orders in this period." /> : ranged.map((l) => <Row key={l.kind + l.id} l={l} />)}
           </>
+        )}
+
+        {tab === "Deliveries" && (
+          <VendorDeliveryPanel vendorCityId={delivery?.city_id ?? null} freeLocal={!!delivery?.free_local_delivery} freeMin={Number(delivery?.free_local_min_order || 0)} pickupAddress={delivery?.pickup_address ?? null} onSaved={() => onDeliverySaved?.()} />
         )}
 
         {tab === "Subscription" && (

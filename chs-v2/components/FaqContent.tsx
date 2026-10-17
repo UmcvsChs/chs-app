@@ -221,6 +221,22 @@ const FAQ_ITEMS = [
     a: "Every booking message goes through CHS first. CHS passes it on, and the other person is notified. The host finds it in Host console > Messages (with a number badge) and inside the booking under \"Details, services, messages & more\". The guest finds replies on My Bookings under the booking's Messages box. To ask for more guests or a new date, use the \"Open the change request form\" link in that Messages box.",
   },
   {
+    q: "How is delivery priced and how long will it take?",
+    a: "Choose your city on the Marketplace. Every item then shows how far the seller is, roughly what delivery will cost and when it should arrive. Delivery is priced from the distance, the weight and whether the item is fragile or bulky, and long journeys carry small transit insurance. At checkout you see the exact delivery cost and arrival dates for each seller before you pay, and you choose between free delivery by the seller (where offered, in your own city), CHS city delivery, door delivery, or picking up at a CHS centre in your city (where one is open). The seller's preparation time is included in the dates.",
+  },
+  {
+    q: "What is the difference between Near me, Cheapest overall and Anywhere?",
+    a: "Near me shows only sellers within about 30 km of your city: delivery is cheapest (often free) and fastest, which suits cement, iron rods, roofing sheets and other heavy materials. Cheapest overall ranks every seller in Nigeria by the price plus the delivery to you, so a low price far away does not fool you. Anywhere in Nigeria lists every seller, nearest first, for when you need a specific brand or specification such as electronics. Far items can take 3 to 8 days and delivery can cost more than the goods, so each item shows its total with delivery.",
+  },
+  {
+    q: "I bought from several sellers. How does my order get to me?",
+    a: "You get one parcel per seller, each with its own tracking and its own 6-digit delivery code. Sellers in your own city can hand over directly or through a CHS collection and packaging centre, and CHS combines nearby sellers into one delivery run. Sellers in other towns send their goods by road through CHS or a carrier. Follow every parcel under Marketplace, My deliveries. Give the delivery code only when you hold the goods, then tap 'I have received it'.",
+  },
+  {
+    q: "When does the seller get paid on the Marketplace?",
+    a: "Your money stays in CHS escrow. The seller is paid after delivery is confirmed, by you, by the delivery code, by CHS, or automatically three days after the carrier reports delivery. CHS may release a percentage earlier by manual decision so the seller can fulfil your order. If something is wrong, tap 'Report a problem' and the payment stays on hold while CHS investigates.",
+  },
+  {
     q: "How do I buy several things from the Marketplace and pay?",
     a: "Open an item, choose its options and quantity, and tap Add to cart (or Buy now). Keep shopping; a cart bar stays at the bottom and your cart is kept on your phone even if you go back or close the page. Open the cart, check quantities, enter one delivery address and pay from your CHS wallet. If your wallet is short, tap Top up wallet inside the cart and come straight back. Your money is held by CHS until delivery is confirmed, and every order is listed under My Orders & Requests.",
   },

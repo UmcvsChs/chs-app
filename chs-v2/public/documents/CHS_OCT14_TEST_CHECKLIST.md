@@ -55,3 +55,21 @@ For each failed step note: the step number, what you saw, a screenshot.
 
 ## Advance and room picker
 1. Pay a hotel booking as a guest: the host wallet receives 60% of the net payout at once and sees "Advance paid"; Admin escrow oversight still holds the rest. 2. Guest arrives and confirms: the host receives only the remaining 40%. 3. Host > Calendar > My rooms: rename rooms to real numbers, set floors and features. 4. Guest booking form: pick dates, see rooms by floor, tap "Keep us together" for a family, send the request: the booking card shows the chosen rooms and floors. 5. Pick a room, then have someone else take it first: the request is refused with nothing charged.
+
+
+## Marketplace delivery (new)
+1. Marketplace: choose your city (for example Kano). Every product shows "Nearby seller" or "Seller is far", km, delivery cost and arrival dates; the header says "N of M items are from sellers near you".
+2. Add items from two sellers. Open the cart: each seller has delivery choices; change a choice and watch the total change. A same-city CHS delivery for a second seller shows "shares one run".
+3. Pay with your PIN. "Track my deliveries" opens Marketplace > My deliveries: one parcel per seller, each with a 6-digit code.
+4. Seller account > Deliveries: set your city, switch free local delivery on, then mark a parcel handed over (carrier + waybill). The buyer gets a notification.
+5. Admin > Oversight > Deliveries & shipments: update the status to in transit and out for delivery; the buyer sees the history.
+6. Try Release balance before delivery: refused. Release 60% instead: the seller gets it and is told.
+7. Buyer taps "I have received it" twice: status delivered; admin releases the balance.
+8. Buyer "Report a problem" on another parcel: admin alerted, payment stays held. Try a refund after a part release: refused with a clear reason.
+9. Admin > Deliveries > Rates, centres & rules: change a rate and see the next cart quote change; switch on a centre with a street address and see "Pick up at a CHS centre" for far sellers.
+10. Seller product form: weight, handling and "ready to hand over in" are required.
+
+## Marketplace search scope
+1. First visit shows "How do you want to search?" with three choices; close it and it does not return, but "How searching works" reopens it.
+2. Choose Kano. Near me shows only Kano sellers and a note about items in other towns. Cheapest overall ranks by total with delivery. Anywhere lists nearest first.
+3. A heavy item from far away shows the red "Delivery is N% of the price" warning.

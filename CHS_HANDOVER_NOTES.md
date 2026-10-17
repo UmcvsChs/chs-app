@@ -301,3 +301,6 @@ Read CHS_PROGRESS_LOG.md for the order. Everything below is applied to the live 
 - `request_chs_management_v2` refuses a commercial venue without documents whose labels match permit or licence, fire (event/open venues), and insurance (all commercial). Labels come from the frontend list; keep them in step.
 - `_chs_managed_hospitality(property)` is true when the property is chs_managed and has an approved mandate whose purposes include shortlet or hotel. Trigger `managed_no_host_commission_t` (before insert on shortlet_bookings) sets host_commission_amount to 0 for such properties; `get_real_shortlet_pricing` shows host pct 0. A 0-value host commission row is still written (harmless). Service fees (6% guest, 4% host) unchanged. The event advance base (total_price less host commission) therefore becomes the full price on a managed venue.
 - Open: no expiry tracking on the uploaded permit, fire and insurance documents; renewal-year rent commission on managed rentals unchanged.
+
+
+- Marketplace delivery (17 Oct 2026): before real orders, open Admin > Deliveries > Rates, centres & rules; set real rates; add the street address and phone of each CHS collection and packaging centre and switch the city on; check each seller's city in Vendor > Deliveries; agree courier partners (carrier and waybill are typed in by admin until an API is integrated).

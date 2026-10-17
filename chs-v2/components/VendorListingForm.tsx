@@ -43,6 +43,9 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
   const [description, setDescription] = useState("");
   const [warranty, setWarranty] = useState("");
   const [deliveryInfo, setDeliveryInfo] = useState("");
+  const [weightKg, setWeightKg] = useState<number | "">("");
+  const [handling, setHandling] = useState<"standard" | "fragile" | "bulky">("standard");
+  const [dispatchDays, setDispatchDays] = useState<number>(1);
   const [photos, setPhotos] = useState<(File | null)[]>([null]);
   const [materialSection, setMaterialSection] = useState(MATERIAL_SECTIONS[0]);
   const [selectedMaterial, setSelectedMaterial] = useState("");
@@ -76,6 +79,7 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
       if (!price || price <= 0) { setError("Please enter a price."); return; }
       if (!finalUnit) { setError("Please enter the pricing unit."); return; }
       if (stock === "" || !Number.isInteger(stock) || stock < 1) { setError("Please enter how many you have in stock (1 or more)."); return; }
+      if (weightKg === "" || weightKg <= 0) { setError("Please enter the weight of one item in kilograms (a rough figure is fine). Delivery is priced by weight."); return; }
       if (photos.filter(Boolean).length < 1) { setError("Please add at least one clear photo of the product."); return; }
     }
     if (!isProduct && (!price || price <= 0)) { setError("Please enter the starting price for this service. Listings without a price cannot be submitted."); return; }
@@ -103,6 +107,7 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
       brand: isProduct ? brand.trim() || null : null, model: isProduct ? model.trim() || null : null,
       condition: isProduct ? condition : null, stock_quantity: isProduct ? stock : null, sku: isProduct ? sku.trim() || null : null,
       warranty: isProduct ? warranty.trim() || null : null, delivery_info: isProduct ? deliveryInfo.trim() || null : null,
+      weight_kg: isProduct ? weightKg || 1 : 1, handling: isProduct ? handling : "standard", dispatch_days: isProduct ? dispatchDays : 1,
       specs: cleanSpecs, option_groups: isProduct ? optionGroups : [], description: description.trim(), photos: [],
     }).select().single();
     if (insertError || !created) { setError("Could not add this listing. Please try again."); setSubmitting(false); return; }
@@ -255,6 +260,11 @@ export default function VendorListingForm({ vendor, userId, onAdded }: { vendor:
       {isProduct && (
         <>
           <div><label className={small}>Warranty<Opt /></label><input type="text" value={warranty} onChange={(e) => setWarranty(e.target.value)} className={field} placeholder="e.g. 12 months manufacturer warranty" /></div>
+          <div className="grid grid-cols-3 gap-2">
+            <div><label className={small}>Weight of one (kg)<Req /></label><input type="number" min={0.1} step="any" value={weightKg} onChange={(e) => setWeightKg(e.target.value === "" ? "" : Number(e.target.value))} className={field} placeholder="e.g. 25" /></div>
+            <div><label className={small}>Handling</label><select value={handling} onChange={(e) => setHandling(e.target.value as "standard" | "fragile" | "bulky")} className={field}><option value="standard">Normal</option><option value="fragile">Fragile</option><option value="bulky">Bulky / heavy</option></select></div>
+            <div><label className={small}>Ready to hand over in</label><select value={dispatchDays} onChange={(e) => setDispatchDays(Number(e.target.value))} className={field}>{[0,1,2,3,5,7,14].map((n) => <option key={n} value={n}>{n === 0 ? "Same day" : `${n} day${n > 1 ? "s" : ""}`}</option>)}</select></div>
+          </div>
           <div><label className={small}>Delivery information<Opt /></label><input type="text" value={deliveryInfo} onChange={(e) => setDeliveryInfo(e.target.value)} className={field} placeholder="e.g. Delivered within Kaduna in 2–3 days; other states 5–7 days" /></div>
         </>
       )}

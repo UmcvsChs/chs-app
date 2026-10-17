@@ -14,6 +14,10 @@ import { supabase } from "@/lib/supabase";
 import IdentityVerificationGate from "./IdentityVerificationGate";
 import MarketplaceCart from "./MarketplaceCart";
 import { useCart } from "@/lib/cart";
+import { useDeliveryCity, type DeliveryHint } from "@/lib/delivery";
+import DeliveryCityPicker from "./DeliveryCityPicker";
+import DeliveryBadge from "./DeliveryBadge";
+import SearchScopeGuide, { SCOPES, useScopeGuide, type Scope } from "./SearchScopeGuide";
 
 const CATEGORY_TABS: { value: MarketplaceCategory | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -31,10 +35,25 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
   const [error, setError] = useState<string | null>(null);
   const [submittedFor, setSubmittedFor] = useState<string | null>(null);
 
-  const [sortCheapest, setSortCheapest] = useState(false);
+  const [scope, setScope] = useState<Scope>("near");
+  const guide = useScopeGuide();
   const cart = useCart(session?.user.id);
   const [cartOpen, setCartOpen] = useState(false);
   const [detailFor, setDetailFor] = useState<string | null>(null);
+  const dcity = useDeliveryCity(session?.user.id);
+  const [hints, setHints] = useState<Record<string, DeliveryHint>>({});
+  useEffect(() => {
+    const ids = products.filter((p) => p.listing_type === "product").map((p) => p.id);
+    if (!dcity.cityId || ids.length === 0) { // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHints({}); return; }
+    supabase.rpc("get_product_delivery_hints", { p_product_ids: ids, p_city_id: dcity.cityId }).then(({ data }) => {
+      const m: Record<string, DeliveryHint> = {};
+      for (const h of (data as DeliveryHint[]) || []) m[h.product_id] = h;
+      setHints(m);
+    });
+  }, [dcity.cityId, products]);
+  const hintCount = Object.keys(hints).length;
+  const nearbyCount = Object.values(hints).filter((h) => h.nearby).length;
 
   // Buying, and asking for a quote, are commitments — they now sit
   // behind the same one-time identity verification as every other
@@ -69,9 +88,17 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
     supabase.rpc("get_sister_marketplace_link").then(({ data }) => setSisterLink(data));
   }, []);
 
-  const filtered = (
-    activeCategory === "all" ? products : products.filter((p) => p.category === activeCategory)
-  ).slice().sort((a, b) => (sortCheapest ? (a.price ?? Infinity) - (b.price ?? Infinity) : 0));
+  // landed cost = price + the estimated delivery to the buyer's city; items with no hint (services, or no city chosen) are never hidden
+  const landed = (p: MarketplaceProduct) => (p.price ?? Infinity) + (hints[p.id]?.est_fee ?? 0);
+  const inCategory = activeCategory === "all" ? products : products.filter((p) => p.category === activeCategory);
+  const hasCity = !!dcity.cityId && hintCount > 0;
+  const scoped = hasCity && scope === "near" ? inCategory.filter((p) => !hints[p.id] || hints[p.id].nearby) : inCategory;
+  const hiddenFar = inCategory.length - scoped.length;
+  const filtered = scoped.slice().sort((a, b) => {
+    if (!hasCity) return scope === "cheapest" ? (a.price ?? Infinity) - (b.price ?? Infinity) : 0;
+    if (scope === "cheapest") return landed(a) - landed(b);
+    return (hints[a.id]?.km ?? 99999) - (hints[b.id]?.km ?? 99999);
+  });
 
   // Shopping works like any marketplace: add items (with options and quantity) to a cart that is kept on this device,
   // then check out once, with one delivery address, paying from the CHS wallet (topped up on the spot if needed).
@@ -121,11 +148,14 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
           {cart.count > 0 && (
             <button onClick={() => setCartOpen(true)} className="bg-white text-chs-charcoal text-[10px] font-bold px-3 py-1.5 rounded-full">🛒 {cart.count}</button>
           )}
-          {session && (
+          {session && (<>
+            <Link href="/marketplace/orders" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
+              📦 My deliveries
+            </Link>
             <Link href="/my-quote-requests" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
               My Orders &amp; Requests
             </Link>
-          )}
+          </>)}
           <Link href="/choose-category" className="bg-white/15 text-[10px] font-semibold px-3 py-1.5 rounded-full">
             Sell here →
           </Link>
@@ -161,14 +191,28 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         </div>
       )}
 
-      <div className="px-4 pt-2">
-        <button
-          onClick={() => setSortCheapest(!sortCheapest)}
-          className={`w-full py-2 rounded-full text-xs font-semibold ${sortCheapest ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}
-        >
-          {sortCheapest ? "✓ Showing cheapest first" : "💰 Show cheapest first — skip the back-and-forth"}
-        </button>
+      <div className="px-4 pt-2 space-y-1.5">
+        <DeliveryCityPicker cities={dcity.cities} cityId={dcity.cityId} onChange={dcity.setCityId} />
+        {dcity.cityId && hintCount > 0 && (
+          <p className="text-[10px] text-gray-600">{nearbyCount} of {hintCount} items for sale are from sellers near {dcity.city?.name}. Each item shows how far it travels, the delivery cost and when it should arrive.</p>
+        )}
+        {!dcity.cityId && <p className="text-[10px] text-gray-500">Choose your city to see how far each seller is and what delivery will cost.</p>}
       </div>
+
+      <div className="px-4 pt-2">
+        <div className="flex gap-1.5">
+          {SCOPES.map((o) => (
+            <button key={o.value} onClick={() => setScope(o.value)} className={`flex-1 py-2 rounded-full text-[11px] font-semibold ${scope === o.value ? "bg-chs-red text-white" : "bg-gray-100 text-gray-600"}`}>{o.icon} {o.short}</button>
+          ))}
+        </div>
+        <p className="text-[10px] text-gray-600 mt-1.5 leading-snug">
+          {SCOPES.find((o) => o.value === scope)?.best} <button onClick={guide.show} className="underline font-semibold text-chs-charcoal">How searching works</button>
+        </p>
+        {scope === "near" && hasCity && hiddenFar > 0 && <p className="text-[10px] bg-chs-amber-light text-chs-amber-dark rounded-lg px-2 py-1.5 mt-1">{hiddenFar} more item{hiddenFar > 1 ? "s are" : " is"} sold from other towns. <button onClick={() => setScope("cheapest")} className="underline font-semibold">Compare with delivery included</button> or <button onClick={() => setScope("anywhere")} className="underline font-semibold">search anywhere</button>.</p>}
+        {scope !== "near" && hasCity && <p className="text-[10px] text-gray-500 mt-1">{scope === "cheapest" ? "Ranked by price plus delivery to " : "Nearest sellers first, delivering to "}{dcity.city?.name}.</p>}
+        {!hasCity && scope === "near" && <p className="text-[10px] text-chs-red mt-1">Choose your city above so “Near me” knows where you are. Until then everything is shown.</p>}
+      </div>
+      <SearchScopeGuide open={guide.open} onClose={guide.close} current={scope} onPick={setScope} />
 
       {sisterLink && (
         <div className="px-4 pt-2">
@@ -281,6 +325,13 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
                         <span className="font-normal text-[10px] text-gray-500"> {product.price_unit}</span>
                       ) : null}
                     </p>
+                    <div className="mt-1"><DeliveryBadge hint={hints[product.id]} /></div>
+                    {hints[product.id] && hints[product.id].est_fee > 0 && (
+                      <p className="text-[9px] text-chs-charcoal mt-0.5">Total with delivery: <b>{formatNaira(landed(product))}</b></p>
+                    )}
+                    {hints[product.id] && product.price && hints[product.id].est_fee / product.price > 0.25 && (
+                      <p className="text-[9px] text-chs-red font-semibold mt-0.5">⚠️ Delivery is {Math.round((hints[product.id].est_fee / product.price) * 100)}% of the price. Check nearer sellers.</p>
+                    )}
                     {product.status !== "sold_out" && (
                       <button onClick={() => { setDetailFor(product.id); setError(null); }}
                         className="mt-1.5 w-full py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">
@@ -309,11 +360,11 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
         </div>
       )}
       {cartOpen && (
-        <MarketplaceCart items={cart.items} loggedIn={!!session} onClose={() => setCartOpen(false)} setQty={cart.setQty} remove={cart.remove} clear={cart.clear} requireVerified={requireVerified} />
+        <MarketplaceCart cities={dcity.cities} cityId={dcity.cityId} setCityId={dcity.setCityId} items={cart.items} loggedIn={!!session} onClose={() => setCartOpen(false)} setQty={cart.setQty} remove={cart.remove} clear={cart.clear} requireVerified={requireVerified} />
       )}
       {detailFor && (() => {
         const product = products.find((p) => p.id === detailFor);
-        return product ? <ProductDetailSheet product={product} onClose={() => setDetailFor(null)} onAddToCart={handleAddToCart} /> : null;
+        return product ? <ProductDetailSheet product={product} hint={hints[product.id]} onClose={() => setDetailFor(null)} onAddToCart={handleAddToCart} /> : null;
       })()}
     </div>
   );

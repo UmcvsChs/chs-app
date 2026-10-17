@@ -5,12 +5,15 @@ import { formatNaira } from "@/lib/format";
 import { Req } from "@/components/FormMarks";
 import { CONDITIONS } from "@/lib/marketplaceSpecs";
 import type { MarketplaceProduct } from "@/types/marketplace";
+import DeliveryBadge from "@/components/DeliveryBadge";
+import type { DeliveryHint } from "@/lib/delivery";
 
 // Everything a buyer needs to decide, in one place: photographs, the vendor's specification, the options to choose
 // (colour, size …), how many are in stock, the warranty and delivery information — and the order itself: quantity,
 // chosen options and delivery address, paid from the wallet and held in escrow until delivery is confirmed.
-export default function ProductDetailSheet({ product, onClose, onAddToCart }: {
+export default function ProductDetailSheet({ product, hint, onClose, onAddToCart }: {
   product: MarketplaceProduct;
+  hint?: DeliveryHint;
   onClose: () => void;
   onAddToCart: (productId: string, quantity: number, options: Record<string, string>, goToCart: boolean) => void;
 }) {
@@ -42,6 +45,7 @@ export default function ProductDetailSheet({ product, onClose, onAddToCart }: {
           <h2 className="font-serif text-base font-bold text-chs-charcoal leading-tight">{product.name}</h2>
           <button onClick={onClose} className="text-gray-400 text-lg leading-none" aria-label="Close">✕</button>
         </div>
+        {hint ? <div className="mt-2"><DeliveryBadge hint={hint} big /></div> : <p className="mt-2 text-[10px] text-gray-500 bg-gray-50 rounded-lg px-2 py-1.5">Choose your city on the marketplace page to see how far this seller is and what delivery will cost.</p>}
 
         {photos.length > 0 ? (
           <>
