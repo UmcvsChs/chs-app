@@ -1,3 +1,5 @@
+-- SECURITY NOTE (18 Oct 2026): an earlier version of this file contained a hard-coded secret on the line below. That secret has been
+-- ROTATED in the database and is now read from the private_secrets table (key internal_function_secret). Never put a secret in a file.
 -- ═══════════════════════════════════════════════════════════════
 -- CHS v2 — Estate Management: The Reminder Engine
 -- ═══════════════════════════════════════════════════════════════
@@ -208,7 +210,7 @@ begin
     perform http((
       'POST',
       'https://havwhdgjqgtxtqklkqfm.supabase.co/functions/v1/send-multichannel-reminder',
-      ARRAY[http_header('x-internal-secret', '742885069319032bfb4d784ebb2fc62f1ec45445a2c5d4c2'), http_header('Content-Type', 'application/json')],
+      ARRAY[http_header('x-internal-secret', (select value from private_secrets where key = 'internal_function_secret')), http_header('Content-Type', 'application/json')],
       'application/json',
       json_build_object('userId', r.target_user_id, 'channels', r.channels, 'title', r.message_title, 'body', r.message_body)::text
     )::http_request);

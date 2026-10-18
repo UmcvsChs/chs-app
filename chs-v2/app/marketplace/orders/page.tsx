@@ -31,7 +31,7 @@ export default function MyDeliveries() {
     <div className="min-h-screen bg-chs-cream pb-10">
       <div className="bg-chs-charcoal text-white px-4 py-4 flex items-center justify-between">
         <div><p className="font-serif text-lg font-bold">📦 My deliveries</p><p className="text-[10px] text-white/70">One parcel per seller, tracked from payment to your door.</p></div>
-        <div className="flex gap-3 items-center"><button onClick={load} className="text-[11px] underline">Refresh</button><Link href="/marketplace" className="text-[11px] underline">Marketplace</Link></div>
+        <div className="flex gap-3 items-center"><button onClick={load} className="text-[11px] underline">Refresh</button><Link href="/claims" className="text-[11px] underline">Problem reports</Link><Link href="/marketplace" className="text-[11px] underline">Marketplace</Link></div>
       </div>
       <div className="px-4 py-4 space-y-3">
         {err && <p className="text-xs text-chs-red">{err}</p>}

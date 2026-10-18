@@ -4,6 +4,7 @@ import VendorDeliveryPanel from "@/components/VendorDeliveryPanel";
 import { useEffect, useMemo, useState } from "react";
 import { formatNaira, formatDateTime } from "@/lib/format";
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import { STATUS_LABEL } from "@/lib/delivery";
 import type { Shipment } from "@/components/ShipmentCard";
 import type { MarketplaceProduct } from "@/types/marketplace";
@@ -190,10 +191,10 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
                   {sh && (
                     <div className="flex items-center justify-between gap-2 pb-2 -mt-0.5 text-[11px]">
                       <span className="text-gray-600">Delivery: <b className="text-chs-charcoal">{STATUS_LABEL[sh.status] || sh.status}</b></span>
-                      <button type="button" onClick={() => document.getElementById("orders-to-send")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                      <Link href={`/vendor/orders/${sh.id}`}
                         className={`px-3 py-1 rounded-full font-semibold ${sh.status === "awaiting_dispatch" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-700"}`}>
-                        {sh.status === "awaiting_dispatch" ? "Send this order ↑" : "See delivery ↑"}
-                      </button>
+                        {sh.status === "awaiting_dispatch" ? "Pack & send this order →" : "Open order →"}
+                      </Link>
                     </div>
                   )}
                 </div>

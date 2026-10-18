@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
-import { useDeliveryCity, MODE_LABEL, STATUS_LABEL } from "@/lib/delivery";
+import { useDeliveryCity } from "@/lib/delivery";
 import DeliveryCityPicker from "@/components/DeliveryCityPicker";
-import { StatusBar, Timeline, type Shipment } from "@/components/ShipmentCard";
+import Link from "next/link";
+import type { Shipment } from "@/components/ShipmentCard";
+import { stageOf, parcelMoney, STAGE_STYLE, type Stage } from "@/lib/sellerOrders";
 
 // Seller side: where you are and whether you offer free local delivery, plus every parcel to hand over and its delivery code step.
 export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLocal, freeMin, pickupAddress, onSaved }: {
@@ -42,76 +44,46 @@ export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLoca
   );
 }
 
-// Every paid order the seller has to send, with the buttons to do it. Shown at the very top of the seller page.
-export function VendorParcels({ onChanged }: { onChanged?: () => void }) {
+// Top of the seller dashboard: how many orders need action, your held / paid money, and a way into each order.
+export function VendorParcels() {
   const [ships, setShips] = useState<Shipment[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [carrier, setCarrier] = useState<Record<string, string>>({});
-  const [track, setTrack] = useState<Record<string, string>>({});
-  const [code, setCode] = useState<Record<string, string>>({});
-  const [open, setOpen] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.rpc("get_vendor_shipments");
-    setShips((data as Shipment[]) || []); setLoaded(true);
+  useEffect(() => {
+    let live = true;
+    supabase.rpc("get_vendor_shipments").then(({ data }) => { if (live) { setShips((data as Shipment[]) || []); setLoaded(true); } });
+    return () => { live = false; };
   }, []);
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(); }, [load]);
-
-  async function act(id: string, fn: string, args: Record<string, unknown>) {
-    setBusyId(id); setMsg(null);
-    const { error } = await supabase.rpc(fn, args);
-    setBusyId(null);
-    if (error) { setMsg(error.message); return; }
-    setMsg("Done. The buyer and CHS have been notified.");
-    load(); onChanged?.();
-  }
-  const todo = ships.filter((s) => !["delivered", "cancelled"].includes(s.status));
-  const done = ships.filter((s) => ["delivered", "cancelled"].includes(s.status));
-  if (!loaded || ships.length === 0) return null;
+  if (!loaded) return null;
+  const count = (st: Stage[]) => ships.filter((x) => st.includes(stageOf(x))).length;
+  const newN = count(["new"]), packedN = count(["packed"]), onway = count(["onway"]), delivered = count(["delivered"]);
+  let held = 0, released = 0;
+  ships.forEach((x) => { const m = parcelMoney(x); held += m.heldNet; released += m.releasedNet; });
+  const action = ships.filter((x) => ["new", "packed", "problem"].includes(stageOf(x))).slice(0, 4);
 
   return (
-    <div id="orders-to-send" className="px-4 pt-4 space-y-3">
-      <p className="text-xs font-bold text-chs-charcoal">📦 Orders to send / in delivery ({todo.length})</p>
-      {todo.length === 0 && <p className="text-[11px] text-gray-400">Nothing waiting. New paid orders appear here the moment they are placed.</p>}
-      {[...todo, ...done].map((s) => {
-        const active = !["delivered", "cancelled"].includes(s.status);
-        return (
-          <div key={s.id} className="bg-white rounded-xl border border-gray-100 p-3">
-            <div className="flex justify-between gap-2">
-              <div><p className="text-xs font-bold text-chs-charcoal">{s.reference} → {s.dest_area ? `${s.dest_area}, ` : ""}{s.dest}</p><p className="text-[10px] text-gray-500">{MODE_LABEL[s.mode]} · about {s.km} km · {s.weight_kg} kg</p></div>
-              <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded-full bg-chs-amber-light text-chs-amber-dark whitespace-nowrap">{STATUS_LABEL[s.status] || s.status}</span>
-            </div>
-            <StatusBar status={s.status} />
-            <ul className="mt-2 text-[11px] text-gray-700">{s.items.map((it) => <li key={it.order_id}>• {it.quantity} × {it.name}{it.options && Object.keys(it.options).length ? ` (${Object.values(it.options).join(", ")})` : ""} · {formatNaira(it.amount)}</li>)}</ul>
-            <p className="mt-1 text-[10px] text-gray-500">Deliver to: {s.dest_address}</p>
-            {s.eta_max && active && <p className="text-[10px] text-gray-500">Buyer expects it by {new Date(s.eta_max).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}.</p>}
-            {active && s.status === "awaiting_dispatch" && (
-              <div className="mt-2 space-y-1.5">
-                {s.mode !== "vendor_free" && <div className="grid grid-cols-2 gap-2">
-                  <input value={carrier[s.id] || ""} onChange={(e) => setCarrier({ ...carrier, [s.id]: e.target.value })} placeholder="Carrier / CHS centre" className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
-                  <input value={track[s.id] || ""} onChange={(e) => setTrack({ ...track, [s.id]: e.target.value })} placeholder="Waybill no. (optional)" className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
-                </div>}
-                <button disabled={busyId === s.id} onClick={() => act(s.id, "vendor_dispatch_shipment", { p_shipment: s.id, p_carrier: carrier[s.id] || null, p_tracking: track[s.id] || null })}
-                  className="w-full py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">{s.mode === "vendor_free" ? "I am taking it to the buyer now" : "I have handed it over"}</button>
-              </div>
-            )}
-            {active && s.mode === "vendor_free" && s.status !== "awaiting_dispatch" && (
-              <div className="mt-2 flex gap-2">
-                <input value={code[s.id] || ""} onChange={(e) => setCode({ ...code, [s.id]: e.target.value })} inputMode="numeric" maxLength={6} placeholder="Buyer's 6-digit code" className="flex-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
-                <button disabled={busyId === s.id || (code[s.id] || "").length !== 6} onClick={() => act(s.id, "vendor_confirm_with_code", { p_shipment: s.id, p_code: code[s.id] })} className="px-3 py-1.5 rounded-full bg-green-600 text-white text-xs font-semibold disabled:opacity-50">Confirm delivery</button>
-              </div>
-            )}
-            {s.status === "delivered" && <p className="mt-2 text-[11px] text-green-700 font-semibold">✓ Delivered. CHS releases your payment next.</p>}
-            {s.status === "problem" && <p className="mt-2 text-[11px] text-chs-red font-semibold">The buyer reported a problem. CHS is looking into it and will contact you.</p>}
-            <button onClick={() => setOpen(open === s.id ? null : s.id)} className="mt-1 text-[10px] text-gray-500 underline">{open === s.id ? "Hide history" : "History"}</button>
-            {open === s.id && <Timeline events={s.events} />}
+    <div id="orders-to-send" className="px-4 pt-4">
+      <div className="flex items-center justify-between mb-1.5">
+        <p className="text-xs font-bold text-chs-charcoal">📦 My orders</p>
+        <Link href="/vendor/orders" className="text-[11px] font-semibold text-chs-red">See all orders →</Link>
+      </div>
+      <div className="grid grid-cols-4 gap-2 text-center mb-2">
+        {[["New", newN, "text-chs-red"], ["Packed", packedN, "text-amber-700"], ["On the way", onway, "text-blue-700"], ["Delivered", delivered, "text-green-700"]].map(([l, n, c]) => (
+          <Link href="/vendor/orders" key={String(l)} className="bg-white rounded-xl border border-gray-100 py-2"><p className={`text-lg font-bold ${c}`}>{n}</p><p className="text-[9px] uppercase font-bold text-gray-400">{l}</p></Link>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5"><p className="text-[9px] uppercase font-bold text-gray-400">Held by CHS (your share)</p><p className="text-sm font-bold text-amber-700">{formatNaira(held)}</p></div>
+        <div className="bg-white rounded-xl border border-gray-100 p-2.5"><p className="text-[9px] uppercase font-bold text-gray-400">Paid out to you</p><p className="text-sm font-bold text-green-700">{formatNaira(released)}</p></div>
+      </div>
+      {action.length === 0 ? <p className="text-[11px] text-gray-400">No order is waiting for you right now.</p> : action.map((x) => (
+        <Link key={x.id} href={`/vendor/orders/${x.id}`} className="flex items-center justify-between gap-2 bg-white rounded-xl border border-gray-100 p-3 mb-1.5 active:bg-gray-50">
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-chs-charcoal">{x.reference} · {x.items.length} {x.items.length === 1 ? "item" : "items"}</p>
+            <p className="text-[10px] text-gray-500 truncate">{x.items.map((it) => `${it.quantity} × ${it.name}`).join(", ")}</p>
           </div>
-        );
-      })}
-      {msg && <p className="text-[11px] font-semibold text-chs-charcoal bg-white rounded-lg border border-gray-100 px-3 py-2">{msg}</p>}
+          <span className={`shrink-0 text-[10px] font-bold px-2 py-1 rounded-full ${STAGE_STYLE[stageOf(x)]}`}>{stageOf(x) === "new" ? "Pack & send →" : stageOf(x) === "packed" ? "Dispatch →" : "View →"}</span>
+        </Link>
+      ))}
     </div>
   );
 }

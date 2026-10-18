@@ -802,3 +802,83 @@ Problem: a 20-item cart from 8 sellers sent 56 notifications (a vendor and an ad
 - Tester screenshot showed the live site still running the OLD seller screen (tab strip unchanged, no banner), so the previous two seller fixes were not deployed. Production build verified clean (next build passes).
 - Seller page: new "Orders to send / in delivery" box at the very top of the seller page, above My account, with carrier/waybill fields, "I have handed it over", delivery-code confirm and history. The Deliveries tab is now "Delivery settings" (where you ship from, free local delivery). My Orders rows show each order's delivery step and a "Send this order" button that scrolls to the box. A build label at the bottom of the seller page shows which version is live.
 - Receipts: one combined receipt per marketplace checkout (every item with its price, subtotal, CHS service fee, delivery, TOTAL PAID). My Receipts lists one row per checkout; any item/delivery reference opens the same combined receipt (529_combined_checkout_receipt.sql.md).
+
+## 18 Oct 2026 (evening) - Real seller order management (replaces the one-tap "I have handed it over")
+- Tester feedback: a single hand-over button is not a marketplace. Also "Back" on the seller page went to the login page (it used browser history-back); now every seller screen has fixed links (My shop dashboard, All my orders, CHS Marketplace).
+- New seller screens: My orders (/vendor/orders) with counts (New, Packed, On the way, Delivered), money held by CHS / paid out / commission, filters, links to My total earnings / My sales / Commission paid; Order page (/vendor/orders/[id]) with what to pack, money on the order (goods value, CHS commission, what you receive), buyer first name and delivery address, delivery option the buyer chose, "I have packed all items", then who carries it: own rider/vehicle (name, phone, plate), courier/transport company (company, waybill, driver contact) or CHS centre, expected date, note, "Record dispatch", buyer-code confirmation for seller delivery, history, printable packing slip. Shop dashboard top shows a My orders summary.
+- Buyer sees who is bringing the order (rider/courier details, waybill, expected date); admin Deliveries shows the same. Database: 530_seller_order_management.sql.md.
+- Rendered and clicked through in a real browser with a simulated seller session and sample orders (pack -> dispatch -> history -> dashboard). Real login on the live site still to be tested by the team.
+
+## 18 Oct 2026 (night) - Damaged goods, claims, returns and refunds: audit and design
+- Owner asked how a buyer claims for damaged/defective goods, what the rider's role is, how admin and seller handle it, and for the Terms. Audit found the platform has only a one-box "Report a problem" and an admin whole-line refund (always deducting a processing fee); nothing on photos, deadlines, seller reply, partial refund, replacement, returns, rider role or Terms.
+- Two real defects fixed immediately (database live, buyer card in this zip): (1) after a problem was reported the buyer card still offered "I have received it", which would flip the order to delivered and tell the seller and admin payment could be released; (2) the seller was never told about a reported problem. Not yet fixed: no way to report a problem after delivery (needs the claims build).
+- Deliverable: CHS_DAMAGED_GOODS_CLAIMS_REFUNDS_DESIGN.pdf (10 pages): lifecycle, four evidence moments, rider statement link, fault and money rules with worked examples from the test orders, admin and seller handling, deadlines, abuse controls, settings, Terms term 48 (17 sub-clauses) and consequential changes, nine points for the barrister, phased build plan, ten decisions with recommended answers.
+- Terms V9 draft (md and in-app component) now carries term 48 (draft, for the barrister; V9 is not yet live). FAQ and guide entries deliberately NOT added until Phase 1 is built, so they never describe something that does not exist.
+- Next: Phase 1 build (claims tables, photo storage, buyer claim form, seller reply, admin queue/decision with refund preview, deadlines, notices, packing photos, rider statement link) after the owner confirms or changes the ten recommended decisions.
+
+## 18 Oct 2026 (late night) - Damaged-goods claims, Phase 1 BUILT (database live; screens in this zip)
+- Built exactly to CHS_DAMAGED_GOODS_CLAIMS_REFUNDS_DESIGN.pdf with the ten recommended decisions as defaults (all editable settings, claim_* keys): windows 48 h (visible damage, wrong, missing) / 7 days (hidden faults); seller reply 48 h (24 h at the door); buyer answers an offer in 48 h; CHS decides in 3 working days; second approver above ₦500,000; Delivery Protection Fund cap ₦200,000; early part-release refused before the 7-day window ends and when the seller's 90-day claim rate is above 3%.
+- Buyer: "Report a problem" per item (before delivery at the door, and after delivery inside the window): type, units, description, at least 2 photos, remedy wanted. Claim page /claims/[id] and list /claims; withdraw; accept or reject a seller offer; confirm a replacement. Delivery-code card now says "Check your goods first, then give this code".
+- Seller: reply Accept / Offer a fix (part refund or replacement) / Dispute with photos; send a one-time rider/courier statement link (five questions, no login, WhatsApp share); mark replacement sent; red claim banner on the order page and on My orders; packing photos at "I have packed all items" (2+ required when the order has fragile goods).
+- Admin: new Oversight tab "Claims" (needs-decision queue, overdue flag, seller claim rate), claim page with evidence, history, refund preview for each fault, decision with a written reason shown to both sides, second-admin approval, return-then-refund, replacement, reject; printable CHS decision notice.
+- Money: seller fault reduces the line in place and takes the amount back from the seller wallet (even if already released; any shortfall is recorded as a debt); CHS-arranged delivery fault: seller keeps payment, buyer refunded by CHS (Fund); no bank fee when seller or CHS at fault; delivery fee returned only when the whole shipment fails. Every release/refund function refuses while a claim is open. Hourly sweep handles silent sellers/buyers and overdue decisions.
+- Tested in rolled-back database runs (see 532_damaged_goods_claims_phase1.sql.md). Build label: "Build 18 Oct 2026 · 6".
+- Not yet built (Phase 2): replacement shipments with their own delivery code, return shipment/code and CHS-centre inspection, Fund ledger screen, seller claim-rate dashboard and warnings, category rules on listings. Terms term 48 and the barrister points still need the lawyer. FAQ/guide entries to be added after the team has tested.
+
+## 18 Oct 2026 (late night, 2) - Claims Phase 2 BUILT (database live; screens in this zip, Build 7)
+- Returns: when CHS decides "return first, then refund" it chooses the destination (CHS collection centre or back to the seller). The buyer sees a 6-digit return code, the address and a 7-day deadline; the receiver enters the code and describes the condition; CHS then approves the refund. Overdue returns are flagged.
+- Replacement: the buyer gets a 6-digit replacement code; the seller records rider/courier details when sending; the case closes when the buyer confirms or the seller enters the buyer's code at handover.
+- Breakage allowances for bulk goods (blocks 2%, tiles 3%, cement/iron rods/roofing 0%), editable by admin; the buyer form explains it and the refund preview shows it.
+- Seller claim-rate card on My orders; automatic warning above 3% and listing-review flag above 5% (admins notified).
+- Admin Claims tab > "Fund, rates & rules": Delivery Protection Fund (insurance collected + top-ups - paid, per-order cap), seller claim rates, breakage allowances, all claim settings editable.
+- Not done: change-of-mind returns opt-in per listing; automatic claim-rate action on listings (flag only); separate replacement shipment tracking (the code flow is used instead). Documents: 533_claims_phase2.sql.md.
+
+## 18 Oct 2026 (night) - Claims documentation
+- In-app FAQ: four new answers (buyer reporting and deadlines, how the refund is worked out, returns and replacements, seller side). In-app Guide: new 9.1 "Damaged, faulty, wrong or missing goods (claims)" for buyer, seller and admin.
+- New PDF CHS_CLAIMS_USER_GUIDE.pdf (also listed on the admin document site): the whole process, deadlines and refund rules on one document.
+
+
+## 18 Oct 2026 — Build 8: release a percentage for rent, property sales and rent-to-own
+- Admin can release a part (default up to 60% in total) of held rent, property-sale money, rent-to-own installments and the rent-to-own final payment before the normal release. Two taps, note recorded and shown to the owner (a reason is required for sales).
+- The balance is released later as before and pays only what is left, so the owner never gets paid twice.
+- Once a part is released, automatic refunds are refused (CHS finance must recover that part first). Rent with a tenant issue cannot be part-released.
+- Limits editable in platform settings: part_release_max_pct_rent / sale / rto. Every release is in part_release_log and the audit log.
+- SQL note: backend-v2/534_part_release_rent_sale_rto.sql.md
+
+
+## 18 Oct 2026 — Security hardening (database only)
+- Logged-out visitors can no longer call ~260 money, admin and internal functions (39 public-page functions remain). Signed-in users are unaffected. Details and how to undo one: backend-v2/535_revoke_anon_execute.sql.md
+- Test: log out and open the home page, a property page, a hotel page, a split-payment link, a tenant invite, verify-agent and verify-chs pages; all must still load. If any shows "permission denied for function", tell us the name.
+
+- PIN reset (forgot PIN) hardened: 5 wrong tries per phone per hour locks it for an hour, one generic error, admin/staff PINs cannot be reset this way, every reset audited. Needs the new zip deployed (the old forgot-PIN page would show "success" on a failed try). Test: forgot-pin with a wrong NIN 5 times -> locked message.
+
+
+## 18 Oct 2026 (evening) — FULL SECURITY AUDIT and fixes (database + edge functions live; page changes in this zip, Build 9)
+- Why: the owner asked for a final, complete tightening. Earlier "secure" statements were too strong; this audit was done by testing, not by reading. Full list, tests and undo notes: backend-v2/536_security_audit_18_oct_2026.sql.md. PDF for the team: CHS_SECURITY_AUDIT_18_OCT_2026.pdf.
+- Closed: users editing their own role/admin flag; direct writes to offers, bookings, tenancies, bank accounts, approvals, promotions, documents, inspections, quotes, disputes; forged notifications; the NULL-owner bug in ~106 functions; free promo credits; logged-out access to money/admin functions; forgot-PIN guessing; guarantor ID readable by anyone with the link; admin role injection at sign-up and in add-role; apply_admin_action callable by any user; webhook trusting credits/roadmap values instead of the amount paid; leaked internal secret (rotated, and removed from the SQL file); search_path pinned on 189 functions.
+- Changed behaviour users will notice: sending money to another user AND withdrawing to a bank now both require the Payment PIN (users without one must set it first).
+- Tested as a stranger in rolled-back runs: about 19,000 calls over 300+ functions and real ids, 78 read functions, and the table guards. Result: no remaining way found for a stranger to act on someone else's money or records. This is not a guarantee: see "NOT covered" in 536 (rate limits on lookups, outside penetration test, dashboard access hygiene).
+- Needs the new zip deployed for: forgot-PIN page, guarantor confirm page, admin guarantor document buttons. Build label: "Build 18 Oct 2026 · 9".
+
+
+## 18 Oct 2026 (night) — Security round 2: NIN hashed, rate limits, staff-admin holes (database + edge functions live; no new screens)
+- NIN is no longer stored as a number: only a keyed hash plus the last 4 digits. Forgot-PIN, sign-up duplicate check and agent badge check use the hash. Never delete the nin_pepper row in private_secrets.
+- Rate limits added: transfer recipient lookup (20/hour), bank-account name check (15/hour), biometric login lookup (10/hour per phone) and verify (10/hour per account).
+- Found and fixed: a staff admin could make themselves super admin; staff admins could change any platform setting; the admin "mark agent ID / manager credentials verified" buttons did nothing (no permission) and now work.
+- Money tables (wallets, ledger, withdrawals, rent, RTO, sale installments, commissions, remittances) cannot be written directly from the app by anyone, including super admins. Payment functions are unaffected.
+- Details, undo notes and what is still open: backend-v2/536_security_audit_18_oct_2026.sql.md (section L). PDF updated: CHS_SECURITY_AUDIT_18_OCT_2026.pdf.
+
+## 18 Oct 2026 (late) - Placeholder audit and fixes (Build 10)
+Asked: audit everything for placeholder/demo behaviour and make it real.
+- Reminders: dispatch_due_reminders now records per-channel results (scheduled_reminders.delivery_results), marks failed when email/SMS did not go, per-row error handling. send-multichannel-reminder v7 (RESEND_FROM secret; honest failure when no address/key).
+- Urgent-sale hotline dummy number removed (line hidden until a real number is set). "Area guide" coming-soon menu item removed.
+- Test data: is_test flag on profiles, properties, marketplace_vendors, marketplace_products (37 accounts, 840 properties, 9 vendors, 79 products). Hidden from real users and the public by a restrictive read policy; test accounts and admins still see it. Tested: real user 0, test user sees them, admin sees all. Nothing deleted.
+- Security alerts to super admins (role/staff/super-admin change, platform setting change, release >= N500,000, withdrawal burst/large withdrawal). Page /admin/health (super admin).
+- Found, NOT changed: Ahmed jimoh wallet N60,000,000 with no ledger record; waiting for owner decision.
+- Needs the user: Resend domain + RESEND_FROM, hotline number, VAT TIN/date, Paystack live confirmation, Termii sender/WhatsApp, KYC provider decision, lawyer for Terms V9.
+- PDFs: CHS_PLACEHOLDER_AUDIT_18_OCT_2026.pdf, CHS_SECURITY_CHECKLIST_18_OCT_2026.pdf.
+
+## 18 Oct 2026 (night) - Staff limits and test label
+- Staff admin direct writes limited by staff role on 84 tables (money/settings/bank details super admin only). Rolled-back attack run: user->admin blocked, user->super blocked, staff->super blocked, staff setting change blocked, user wallet change blocked.
+- Amber "TEST ACCOUNT" strip restored on every screen for flagged accounts (components/TestModeBanner.tsx; profiles.is_test).
+- Not done and cannot be done by us: an outside penetration test (needs an independent firm).

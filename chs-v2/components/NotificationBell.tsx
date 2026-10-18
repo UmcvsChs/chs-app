@@ -109,8 +109,8 @@ export default function NotificationBell() {
   function fallbackLink(n: Notification): string {
     const text = `${n.title} ${n.body}`.toLowerCase();
     const role = profile?.role || "";
-    // Seller notifications (orders, dispatch, delivery codes) always open the seller's Deliveries tab, never the buyer home.
-    if (/real order was placed|prepare this order|dispatch|delivery code|parcel/.test(text) && !/your order|your parcel/.test(text) && role !== "admin") return "/vendor?tab=deliveries";
+    // Seller notifications (orders, dispatch, delivery codes) always open the seller's orders screen, never the buyer home.
+    if (/real order was placed|prepare this order|dispatch|delivery code|parcel/.test(text) && !/your order|your parcel/.test(text) && role !== "admin") return "/vendor/orders";
     if (/rent-to-own|mortgage/.test(text)) return role === "admin" ? "/admin?tab=rtorequests" : role === "owner" ? "/owner" : "/rent-to-own";
     if (/wallet|withdraw|deposit|refund|released|payment|installment|earning/.test(text)) return "/wallet";
     return roleHome(role);

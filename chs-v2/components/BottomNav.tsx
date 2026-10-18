@@ -28,7 +28,6 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
     { icon: "📘", label: "Users Guide", href: "/guide" },
     { icon: "🏠", label: "My Shortlet Bookings", href: "/my-bookings" },
     { icon: "📝", label: "Property request", href: "/concierge" },
-    { icon: "🗺️", label: "Area guide", href: null, note: "Coming soon — was a placeholder in the original app too" },
     { icon: "❓", label: "Help & FAQs", href: "/faq" },
     { icon: "📞", label: "Contact us", href: "/contact" },
   ];
@@ -76,21 +75,11 @@ export default function BottomNav({ onSearchClick }: { onSearchClick?: () => voi
               <button onClick={() => setShowMore(false)} className="text-2xl text-gray-400">✕</button>
             </div>
             {MORE_ITEMS.map((item) => (
-              item.href ? (
-                <Link key={item.label} href={item.href} onClick={() => setShowMore(false)}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="text-sm text-chs-charcoal">{item.label}</span>
-                </Link>
-              ) : (
-                <div key={item.label} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 opacity-60">
-                  <span className="text-xl">{item.icon}</span>
-                  <div>
-                    <p className="text-sm text-chs-charcoal">{item.label}</p>
-                    <p className="text-[10px] text-gray-400">{item.note}</p>
-                  </div>
-                </div>
-              )
+              <Link key={item.label} href={item.href} onClick={() => setShowMore(false)}
+                className="flex items-center gap-3 px-4 py-3 border-b border-gray-50">
+                <span className="text-xl">{item.icon}</span>
+                <span className="text-sm text-chs-charcoal">{item.label}</span>
+              </Link>
             ))}
             {session && (
               <button onClick={handleLogout}

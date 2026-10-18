@@ -42,7 +42,7 @@ export default function ForgotPinPage() {
     }
 
     setSubmitting(true);
-    const { error: rpcError } = await supabase.rpc("reset_pin_with_nin_verification", {
+    const { data: resetData, error: rpcError } = await supabase.rpc("reset_pin_with_nin_verification", {
       p_phone: phone.trim(),
       p_nin: nin.trim(),
       p_new_pin: newPin,
@@ -51,6 +51,11 @@ export default function ForgotPinPage() {
 
     if (rpcError) {
       setError(rpcError.message);
+      return;
+    }
+    const res = resetData as { success?: boolean; message?: string } | null;
+    if (!res || res.success !== true) {
+      setError(res?.message || "We could not reset the PIN. Please try again or contact CHS support.");
       return;
     }
     setSuccess(true);

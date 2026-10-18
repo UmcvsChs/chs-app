@@ -1,0 +1,4 @@
+# 531 - A disputed order cannot be marked received; the seller is told about a problem (applied live 18 Oct 2026)
+- buyer_confirm_received: refuses when the shipment status is 'problem' ("You have an open problem report on this order... CHS is looking into it"). Before this, the buyer card still showed "I have received it" after a problem was reported, and one tap flipped the order to delivered and told the seller and admin that payment could be released.
+- buyer_report_problem: refuses a second report while one is open; now also notifies the seller (link /vendor/orders/<shipment id>) that payment for the order stays on hold until CHS decides. Before this only the admin was told.
+- Still missing (see CHS_DAMAGED_GOODS_CLAIMS_REFUNDS_DESIGN.pdf): a problem cannot be reported after an order is delivered (no UI path); no photos, deadlines, seller reply, partial refund, replacement, return, or rider role.

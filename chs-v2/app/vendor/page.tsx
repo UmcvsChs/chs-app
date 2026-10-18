@@ -231,7 +231,7 @@ export default function VendorDashboard() {
   return (
     <div className="min-h-screen zone-market-browse bg-[var(--zone-bg)] pb-10">
       <div className="bg-[var(--zone-accent)] text-white px-4 py-4">
-        <button onClick={() => router.back()} className="text-xs text-white/70">← Back</button>
+        <Link href="/marketplace" className="text-xs text-white/80">← CHS Marketplace</Link>
         <div className="flex justify-between items-center mt-1">
           <div>
             <div className="flex items-center gap-2"><h1 className="font-serif text-lg font-bold">{vendor.business_name}</h1><NotificationBell /></div>
@@ -245,7 +245,7 @@ export default function VendorDashboard() {
         </div>
       </div>
 
-      <VendorParcels onChanged={loadData} />
+      <VendorParcels />
 
       <VendorAccountTabs products={products} orders={directOrders} subscriptions={subscriptions} delivery={vendor as unknown as { city_id: number | null; area?: string | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }} onDeliverySaved={loadData} />
 
@@ -268,7 +268,7 @@ export default function VendorDashboard() {
                   <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                 </div>
                 <p className="font-semibold text-chs-charcoal mt-0.5">{formatNaira(o.amount)}</p>
-                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">💰 Paid — held in escrow until the goods are delivered. Send it from the <b>📦 Orders to send</b> box at the top of this page.</p>}
+                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">💰 Paid — held in escrow until the goods are delivered. Open it from <b>📦 My orders</b> at the top of this page to pack and send it.</p>}
                 {o.payment_status === "released" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Paid out, net of your real commission.</p>}
                 {o.payment_status === "refunded" && <p className="text-[10px] text-gray-500 font-semibold mt-1">↩ Refunded to the buyer.</p>}
               </div>

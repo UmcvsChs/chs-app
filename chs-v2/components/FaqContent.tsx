@@ -9,6 +9,22 @@ import Link from "next/link";
 // traces back to a real clause or a real, tested piece of CHS itself.
 const FAQ_ITEMS = [
   {
+    q: "Marketplace: the goods I received are damaged, faulty, wrong or missing. What do I do?",
+    a: "Do not give the 6-digit delivery code until you have checked the goods. If the rider is at your door and something is wrong, open My deliveries and tap Report a problem; the order stops and CHS keeps the seller's money. After delivery you can still report from the same order: damaged, wrong, missing or not-as-described within 48 hours, a hidden fault within 7 days. Choose the item, say how many units, describe it and add at least 2 clear photos. Nothing is paid out while the report is open. The seller has 48 hours to accept, offer a fix or dispute it; if they do not reply, or you cannot agree, CHS decides within 3 working days and writes the reason down for both sides.",
+  },
+  {
+    q: "Marketplace: how is my refund worked out?",
+    a: "For the affected goods you get the price back plus the CHS buyer commission on them. If the seller or CHS was at fault, no bank processing fee is taken. The delivery fee is returned only if the whole delivery failed. A refund is never automatic: CHS approves it, and a refund above ₦500,000 needs a second CHS approver. It goes into your CHS wallet and the decision notice shows every figure. For bulk goods such as blocks and tiles a small breakage allowance applies (for example 2% for blocks): the first few broken units are not refunded.",
+  },
+  {
+    q: "Marketplace: may I send the goods back, or ask for a replacement?",
+    a: "Yes, when the problem is real. You can ask for a refund, a replacement, or to return the goods for a refund. If CHS decides the goods must come back first, you get a 6-digit return code, the address (a CHS collection centre or the seller) and 7 days to hand them over; whoever receives them enters your code, and CHS then approves the refund. If a replacement is agreed you get a replacement code: give it to the rider only after you have checked the new goods. Change-of-mind returns are not covered unless the seller's listing says so.",
+  },
+  {
+    q: "Marketplace (sellers): a buyer reported a problem with my order. What happens?",
+    a: "You are notified and the claim opens from the notification or My orders. You have 48 hours (24 hours if the buyer refused at the door) to accept, offer part of the money back or a replacement, or dispute with your own photos. You can send your rider or courier a one-time link where they answer five short questions without logging in. Photos taken when you packed the goods (required for fragile items) protect you. While a claim is open the money for that order stays with CHS. If CHS decides the fault was yours, the refund is taken from your earnings, even money already released; if your wallet is short the rest is recorded and taken from future earnings. If the damage happened on a delivery CHS arranged, you keep your payment. Your claim rate over 90 days is shown on My orders: above 3% you are warned, above 5% CHS reviews your listings.",
+  },
+  {
     q: "I own a property. How do I ask CHS to manage it?",
     a: "List the property yourself (or open one you already listed), then go to My Properties and press Ask CHS to manage this property. Choose what CHS should manage it for (rent, shortlet, sale, hotel or commercial), say in what capacity you act, upload the documents CHS asks for, read the full terms and accept. You pay one CHS management fee, which replaces the standard owner-side fee. CHS checks your documents, and once the listing is verified and CHS approves, the property shows the Managed & Advertised by CHS stamp and gets a CHS tag. You can withdraw a pending request, or ask CHS to stop managing the property later.",
   },
@@ -243,6 +259,10 @@ const FAQ_ITEMS = [
   {
     q: "When does the seller get paid on the Marketplace?",
     a: "Your money stays in CHS escrow. The seller is paid after delivery is confirmed, by you, by the delivery code, by CHS, or automatically three days after the carrier reports delivery. CHS may release a percentage earlier by manual decision so the seller can fulfil your order. If something is wrong, tap 'Report a problem' and the payment stays on hold while CHS investigates.",
+  },
+  {
+    q: "Can CHS release part of the money early on rent, a property sale or rent-to-own?",
+    a: "Yes. Your money is always held by CHS first. As with shortlets and the Marketplace, an admin can, by hand, release a percentage (normally up to 60% in total) of the landlord's, seller's or owner's money early. Each release is written down with a note and the owner is told. The balance is released in the normal way and only the remainder is paid, so nobody is paid twice. If a part has already been released, a refund is not automatic: CHS finance must first recover that part. For rent, a part is never released while the tenant has an open issue.",
   },
   {
     q: "How do I buy several things from the Marketplace and pay?",

@@ -1,5 +1,6 @@
 "use client";
 
+import AdminPartRelease from "@/components/AdminPartRelease";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatNaira, formatDateTime } from "@/lib/format";
@@ -123,12 +124,15 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
           </div>
           <p className="text-[10px] text-gray-500 mb-2">Every mortgage installment reaches CHS first. Each one below is sitting with CHS and has not yet reached the owner&apos;s wallet.</p>
           {pending.map((p) => (
-            <div key={p.id} className="border-t border-gray-100 py-2 flex justify-between items-center gap-2">
+            <div key={p.id} className="border-t border-gray-100 py-2">
+            <div className="flex justify-between items-center gap-2">
               <div className="text-[11px] text-gray-700">
                 <p className="font-semibold text-chs-charcoal">{formatNaira(p.net_amount)} to {p.owner_name} <span className="font-normal text-gray-500">(paid {formatNaira(p.amount)} before commission)</span></p>
                 <p>{p.property_title} · from {p.buyer_name} · {p.agreement_ref} · {p.reference} · {formatDateTime(p.paid_at)}</p>
               </div>
               <button onClick={() => run(p.id, supabase.rpc("admin_release_rto_payment", { p_payment_id: p.id, p_note: null }))} disabled={busy === p.id} className="px-3 py-1.5 rounded-full bg-chs-charcoal text-white text-[11px] font-semibold disabled:opacity-50 whitespace-nowrap">Release to owner</button>
+              </div>
+              <AdminPartRelease kind="rto_payment" id={p.id} onDone={() => load()} />
             </div>
           ))}
         </div>
@@ -234,6 +238,7 @@ export default function AdminRtoPanel({ onChanged }: { onChanged?: () => void })
                 ) : (
                   <p className="mt-1.5 text-[11px] text-chs-red">Only a super admin can release the final payment.</p>
                 )}
+                {isSuper && <AdminPartRelease kind="rto_final" id={r.id} onDone={() => load()} />}
               </div>
             )}
             {r.status === "completed" && h && <p className="text-[11px] text-green-700 mt-1">Handover confirmed{h.confirmed_at ? ` on ${formatDateTime(h.confirmed_at)}` : ""}.</p>}

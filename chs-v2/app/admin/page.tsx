@@ -1,6 +1,7 @@
 "use client";
 
 import AdminDeliveries from "@/components/AdminDeliveries";
+import AdminClaims from "@/components/AdminClaims";
 import AdminListingReports from "@/components/AdminListingReports";
 import AdminChsStamp from "@/components/AdminChsStamp";
 import AdminAgentApproval from "@/components/AdminAgentApproval";
@@ -14,6 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Session } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { getFreshDocumentUrl } from "@/lib/storage";
 import { RentalApplication } from "@/types/rentalApplication";
 import { Dispute } from "@/types/dispute";
 import { CommunityFeedback } from "@/types/communityFeedback";
@@ -40,6 +42,7 @@ import AdminHotels from "@/components/AdminHotels";
 import AdminRtoPanel from "@/components/AdminRtoPanel";
 import AdminRelayActions from "@/components/AdminRelayActions";
 import AdminPercentRelease from "@/components/AdminPercentRelease";
+import AdminPartRelease from "@/components/AdminPartRelease";
 
 interface DeveloperApplication {
   id: string;
@@ -87,7 +90,7 @@ interface PendingProperty {
 
 const CAT_TAG: Record<string, string> = { shortlet: "🏠 Shortlet", hotel: "🏨 Hotel & Lodge", event: "🎉 Event Centre", other: "Hire" };
 
-export type Tab = "deliveries" | "vat" | "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
+export type Tab = "claims" | "deliveries" | "vat" | "hotelsview" | "eventcentres" | "hostreplies" | "servicesourcing" | "disruptions" | "hotelcontrols" | "walletsecurity" | "rtorequests" | "overview" | "analytics" | "finance" | "trace" | "auditlog" | "processedhistory" | "transactionlog" | "userregistry" | "conditionreports" | "escrowoversight" | "saleapprovals" | "liveness" | "buyerid" | "registrations" | "applications" | "offerreview" | "properties" | "listingreports" | "chsstamp" | "disputes" | "feedback" | "engage" | "vendors" | "referrals" | "faults" | "artisans" | "inspections" | "developers" | "tenantregisteroversight" | "shortletdeposits" | "shortletbookings" | "marketplacemoderation" | "platformearnings" | "staleoffers" | "notificationsfeed" | "subadminactivities" | "assignrole" | "staffreports" | "subadmindailyreports" | "subadminpanel" | "settings" | "superadminindex";
 
 // Real, new for the fuller ID verification: what a person told us
 // about themselves when submitting their ID, shown to the admin
@@ -2577,6 +2580,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
           { key: "tenantregisteroversight", label: "Tenant Register Oversight", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "marketplacemoderation", label: "Marketplace Moderation", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "deliveries", label: "📦 Deliveries & shipments", domain: "owner_buyer_tenant", group: "Oversight" },
+          { key: "claims", label: "⚠️ Claims (damaged / faulty goods)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelcontrols", label: "🏨 Hotel Controls (peak & cancellations)", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "disruptions", label: "⚠️ Disruptions & no-fault refunds", domain: "owner_buyer_tenant", group: "Oversight" },
           { key: "hotelsview", label: "🏨 Hotels & Lodges (live)", domain: "owner_buyer_tenant", group: "Financial" },
@@ -2979,6 +2983,16 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
               </div>
               <span className="text-chs-red text-lg">→</span>
             </Link>
+            {profile?.is_super_admin && (
+              <Link href="/admin/health"
+                className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-bold text-chs-charcoal">🛡️ Platform health</p>
+                  <p className="text-[10px] text-gray-400">Security alerts, message delivery results, real vs test data</p>
+                </div>
+                <span className="text-chs-red text-lg">→</span>
+              </Link>
+            )}
             <Link href="/admin/document-site"
               className="col-span-2 bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 flex items-center justify-between">
               <div>
@@ -3832,7 +3846,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                       </p>
                     )}
                     {app.guarantor_id_document_url && (
-                      <a href={app.guarantor_id_document_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">View guarantor&apos;s real, uploaded ID</a>
+                      <button type="button" onClick={async () => { const u = await getFreshDocumentUrl(app.guarantor_id_document_url as string); if (u) window.open(u, "_blank"); else setActionError("Could not open that file."); }} className="text-[10px] text-chs-red underline block text-left">View guarantor&apos;s real, uploaded ID</button>
                     )}
                     {/* Real, direct extension of the AVS automated
                         check to guarantor documents — the same real
@@ -3869,9 +3883,9 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                         admin can see at a glance whether it's still
                         genuinely within the required 90 days. */}
                     {app.guarantor_address_proof_url ? (
-                      <a href={app.guarantor_address_proof_url} target="_blank" rel="noreferrer" className="text-[10px] text-chs-red underline block">
+                      <button type="button" onClick={async () => { const u = await getFreshDocumentUrl(app.guarantor_address_proof_url as string); if (u) window.open(u, "_blank"); else setActionError("Could not open that file."); }} className="text-[10px] text-chs-red underline block text-left">
                         View guarantor&apos;s real {app.guarantor_address_proof_type || "proof of address"} ({app.guarantor_address_proof_date})
-                      </a>
+                      </button>
                     ) : (
                       <p className="text-[10px] text-gray-400">No real proof of address on file.</p>
                     )}
@@ -5053,6 +5067,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                     <button onClick={() => handleReleaseRent(r.id)} className="w-full mt-1.5 py-1 rounded-full bg-chs-charcoal text-white text-[10px] font-semibold">
                       Release now
                     </button>
+                    <AdminPartRelease kind="rent" id={r.id} />
                   </div>
                 );
               })
@@ -5087,6 +5102,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                     <button onClick={() => handleSaleRelease(offer.id, "platform_records")} className="py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">✓ Verified from platform records — release</button>
                     <button onClick={() => handleSaleRelease(offer.id, "phone_call")} className="py-1.5 rounded-full bg-chs-red text-white text-[10px] font-semibold">📞 Verified by phoning the buyer — release</button>
                   </div>
+                  <AdminPartRelease kind="sale" id={offer.id} onDone={() => loadData()} />
                   {offer.release_request_status === "pending" && (
                     <button onClick={() => handleSaleRejectRequest(offer.id)} className="w-full mt-1.5 py-1.5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-semibold">Decline the seller&apos;s request (reason required)</button>
                   )}
@@ -5436,6 +5452,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
         )}
 
         {activeTab === "deliveries" && <AdminDeliveries />}
+        {activeTab === "claims" && <AdminClaims />}
 
         {activeTab === "marketplacemoderation" && (
           <div>
@@ -5962,6 +5979,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                     { key: "tenantregisteroversight" as Tab, label: "Tenant Register Oversight" },
                     { key: "marketplacemoderation" as Tab, label: "Marketplace Moderation" },
                     { key: "deliveries" as Tab, label: "📦 Deliveries & shipments" },
+                    { key: "claims" as Tab, label: "⚠️ Claims (damaged / faulty goods)" },
                     { key: "hotelcontrols" as Tab, label: "Hotel Controls (peak & cancellations)" },
                     { key: "disruptions" as Tab, label: "Disruptions & no-fault refunds" },
                     { key: "hotelsview" as Tab, label: "Hotels & Lodges (live)" },

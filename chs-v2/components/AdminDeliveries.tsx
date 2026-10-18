@@ -114,6 +114,13 @@ function ShipRow({ s, onDone }: { s: Shipment; onDone: () => void }) {
         <span className="self-start text-[10px] font-bold px-2 py-0.5 rounded-full bg-chs-amber-light text-chs-amber-dark whitespace-nowrap">{STATUS_LABEL[s.status] || s.status}</span>
       </div>
       <p className="text-[10px] text-gray-500 mt-1">To: {s.dest_address}{s.eta_max ? ` · due ${new Date(s.eta_max).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}` : ""}</p>
+      {s.dispatch_method && (
+        <p className="text-[10px] bg-blue-50 border border-blue-100 rounded px-2 py-1 mt-1 text-chs-charcoal">
+          🚚 <b>{s.dispatch_method === "own_rider" ? "Seller's own rider" : s.dispatch_method === "courier" ? "Courier" : "CHS centre"}</b>
+          {s.carrier ? ` · ${s.carrier}` : ""}{s.rider_name ? ` · ${s.rider_name}${s.rider_phone ? ` ${s.rider_phone}` : ""}` : ""}{s.vehicle_plate ? ` · ${s.vehicle_plate}` : ""}{s.tracking_no ? ` · waybill ${s.tracking_no}` : ""}
+          {s.dispatched_at ? ` · dispatched ${new Date(s.dispatched_at).toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : ""}{s.dispatch_note ? ` · note: ${s.dispatch_note}` : ""}
+        </p>
+      )}
       {s.items.map((it) => <ReleaseRow key={it.order_id} it={it} shipStatus={s.status} onDone={onDone} />)}
       <div className="mt-2 grid grid-cols-2 gap-1.5">
         <select value={status} onChange={(e) => setStatus(e.target.value)} className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs">

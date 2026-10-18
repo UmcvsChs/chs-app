@@ -9,8 +9,17 @@ import { useAuth } from "@/contexts/AuthContext";
 // screen, the whole time.
 export default function TestModeBanner() {
   const router = useRouter();
-  const { testModeRole, setTestModeRole } = useAuth();
+  const { testModeRole, setTestModeRole, profile } = useAuth();
 
+  // A TEST/DEMO account (flagged in the database) always shows an amber
+  // strip on every screen, so nobody mistakes it for a real customer.
+  if (!testModeRole && profile?.is_test) {
+    return (
+      <div className="sticky top-0 z-[997] bg-amber-500 text-black text-[11px] font-bold px-4 py-1 text-center">
+        🧪 TEST ACCOUNT — practice data and test money, not a real customer
+      </div>
+    );
+  }
   if (!testModeRole) return null;
 
   return (

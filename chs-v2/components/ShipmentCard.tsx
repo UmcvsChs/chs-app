@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import ClaimForm from "./ClaimForm";
+import { STATUS_LABEL as CLAIM_STATUS, timeLeft } from "@/lib/claims";
 import { supabase } from "@/lib/supabase";
 import { formatNaira } from "@/lib/format";
 import { MODE_LABEL, STATUS_LABEL } from "@/lib/delivery";
 
-export interface ShipItem { order_id: string; reference: string; name: string; quantity: number; amount: number; payment_status: string; options: Record<string, string> | null; }
+export interface ShipItem { order_id: string; reference: string; name: string; quantity: number; amount: number; payment_status: string; options: Record<string, string> | null; unit_price?: number | null; vendor_commission?: number | null; vendor_paid?: number | null; }
 export interface ShipEvent { status: string; note: string | null; at: string; role: string | null; }
 export interface Shipment {
   id: string; reference: string; status: string; mode: string; km: number; band: string; weight_kg: number; delivery_fee: number; insurance_fee: number;
   eta_min: string | null; eta_max: string | null; carrier: string | null; tracking_no: string | null; delivered_at: string | null; delivered_how: string | null; created_at: string;
   dest_address: string | null; origin_area?: string | null; dest_area?: string | null; origin: string | null; dest: string | null; vendor: string; hub: { name: string; address: string | null; phone: string | null } | null;
-  delivery_code: string | null; items: ShipItem[]; events: ShipEvent[]; buyer?: string;
+  delivery_code: string | null; items: ShipItem[]; events: ShipEvent[]; buyer?: string | null;
+  dispatch_method?: string | null; rider_name?: string | null; rider_phone?: string | null; vehicle_plate?: string | null; packed_at?: string | null; dispatched_at?: string | null; dispatch_expected?: string | null; dispatch_note?: string | null;
 }
 
 const d = (x: string | null) => (x ? new Date(x).toLocaleDateString("en-NG", { day: "numeric", month: "short" }) : "");
@@ -44,9 +48,16 @@ export default function ShipmentCard({ s, onChanged }: { s: Shipment; onChanged:
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [problem, setProblem] = useState(false);
-  const [note, setNote] = useState("");
+  const [, setNote] = useState("");
+  const [nowMs] = useState(() => Date.now());
   const [confirming, setConfirming] = useState(false);
   const [showLog, setShowLog] = useState(false);
+  const [claims, setClaims] = useState<{ id: string; reference: string; status: string; product: string; needs_me: boolean; seller_due_at: string | null; shipment_id: string }[]>([]);
+  useEffect(() => {
+    let live = true;
+    supabase.rpc("get_my_marketplace_claims").then(({ data }) => { if (live) setClaims(((data as typeof claims) || []).filter((c) => c.shipment_id === s.id)); });
+    return () => { live = false; };
+  }, [s.id, s.status]);
 
   async function run(fn: string, args: Record<string, unknown>) {
     setBusy(true); setErr(null);
@@ -56,7 +67,7 @@ export default function ShipmentCard({ s, onChanged }: { s: Shipment; onChanged:
     setProblem(false); setConfirming(false); setNote(""); onChanged();
   }
   const open = !["delivered", "cancelled"].includes(s.status);
-  const canConfirm = open && s.status !== "awaiting_dispatch";
+  const canConfirm = open && s.status !== "awaiting_dispatch" && s.status !== "problem";
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-3">
@@ -74,12 +85,22 @@ export default function ShipmentCard({ s, onChanged }: { s: Shipment; onChanged:
       <p className="mt-2 text-[10px] text-gray-500">
         {MODE_LABEL[s.mode] || s.mode} · {s.delivery_fee + s.insurance_fee === 0 ? "free delivery" : `delivery ${formatNaira(s.delivery_fee + s.insurance_fee)}`}
         {s.eta_max && open ? ` · expected ${s.eta_min === s.eta_max ? d(s.eta_max) : `${d(s.eta_min)} to ${d(s.eta_max)}`}` : ""}
-        {s.carrier ? ` · carrier ${s.carrier}${s.tracking_no ? ` (${s.tracking_no})` : ""}` : ""}
       </p>
+      {s.dispatch_method && s.status !== "awaiting_dispatch" && (
+        <div className="mt-1.5 text-[11px] bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-2 text-chs-charcoal">
+          <p className="font-bold">🚚 Who is bringing it</p>
+          <p>{s.dispatch_method === "own_rider" ? "The seller's own rider / driver" : s.dispatch_method === "courier" ? "Courier / transport company" : "CHS collection centre"}{s.carrier && s.dispatch_method !== "chs_centre" ? `: ${s.carrier}` : ""}</p>
+          {s.rider_name && <p>Rider / driver: <b>{s.rider_name}</b>{s.rider_phone ? <> · <a href={`tel:${s.rider_phone}`} className="underline">{s.rider_phone}</a></> : null}{s.vehicle_plate ? ` · vehicle ${s.vehicle_plate}` : ""}</p>}
+          {s.tracking_no && <p>Waybill / tracking: <b>{s.tracking_no}</b></p>}
+          {s.dispatch_expected && <p>Seller expects it to arrive on <b>{d(s.dispatch_expected)}</b></p>}
+          {s.dispatch_note && <p className="text-gray-600">Note: {s.dispatch_note}</p>}
+        </div>
+      )}
+      {s.status === "awaiting_dispatch" && s.packed_at && <p className="mt-1.5 text-[11px] text-green-700 font-semibold">✓ The seller has packed your goods and is arranging dispatch.</p>}
       {s.mode === "hub_pickup" && s.hub && <p className="mt-1 text-[10px] bg-gray-50 rounded px-2 py-1 text-chs-charcoal">📍 Collect from: <b>{s.hub.name}</b>{s.hub.address ? `, ${s.hub.address}` : ""}{s.hub.phone ? ` · ${s.hub.phone}` : ""}. Bring your delivery code and a valid ID.</p>}
       {open && s.delivery_code && (
         <div className="mt-2 bg-chs-charcoal text-white rounded-lg px-3 py-2 text-center">
-          <p className="text-[10px] opacity-80">Your delivery code. Give it only when you hold your goods.</p>
+          <p className="text-[10px] opacity-80">Check your goods first, then give this code. If anything is wrong, do not give the code. Tap &quot;Report a problem&quot; instead.</p>
           <p className="text-xl font-bold tracking-[0.3em]">{s.delivery_code}</p>
         </div>
       )}
@@ -94,15 +115,24 @@ export default function ShipmentCard({ s, onChanged }: { s: Shipment; onChanged:
           <button onClick={() => { setProblem(true); setConfirming(false); }} className="px-3 py-2 rounded-full border border-gray-300 text-xs font-semibold text-gray-600">Report a problem</button>
         </div>
       )}
+      {s.status === "problem" && <p className="mt-2 text-[11px] text-chs-red font-semibold bg-red-50 rounded-lg px-2.5 py-2">⚠️ You reported a problem at the door. The payment to the seller stays on hold while the claim below is handled. You cannot mark this order as received until it is decided.</p>}
       {confirming && <p className="text-[10px] text-gray-500 mt-1">Confirming tells CHS to pay the seller. Only confirm when you have checked the goods.</p>}
-      {problem && (
-        <div className="mt-2 space-y-1.5">
-          <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="What went wrong? (damaged, missing, wrong item, not arrived…)" className="w-full px-2 py-1.5 rounded-lg border border-gray-200 text-xs" />
-          <div className="flex gap-2">
-            <button onClick={() => run("buyer_report_problem", { p_shipment: s.id, p_note: note })} disabled={busy || note.trim().length < 5} className="flex-1 py-2 rounded-full bg-chs-red text-white text-xs font-semibold disabled:opacity-50">Send to CHS</button>
-            <button onClick={() => setProblem(false)} className="px-3 py-2 text-xs text-gray-500">Cancel</button>
-          </div>
-          <p className="text-[10px] text-gray-500">Payment to the seller stays on hold while CHS looks into it.</p>
+      {problem && <ClaimForm s={s} onClose={() => setProblem(false)} />}
+      {s.status === "delivered" && s.delivered_at && !problem && nowMs < new Date(s.delivered_at).getTime() + 7 * 86400000 && (
+        <div className="mt-2">
+          <button onClick={() => setProblem(true)} className="px-3 py-2 rounded-full border border-gray-300 text-xs font-semibold text-gray-600">Report a problem with this order</button>
+          <p className="text-[10px] text-gray-500 mt-1">Damaged, wrong or missing items: within 48 hours of delivery. Faults that were not visible: within 7 days.</p>
+        </div>
+      )}
+      {claims.length > 0 && (
+        <div className="mt-2 space-y-1">
+          {claims.map((c) => (
+            <Link key={c.id} href={`/claims/${c.id}`} className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 border border-gray-100 px-2.5 py-2">
+              <span className="text-[11px] text-chs-charcoal"><b>{c.reference}</b> · {c.product}</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${(CLAIM_STATUS[c.status] || CLAIM_STATUS.open).cls}`}>{c.needs_me ? "Your answer needed" : (CLAIM_STATUS[c.status] || CLAIM_STATUS.open).text}</span>
+            </Link>
+          ))}
+          {claims.some((c) => c.status === "open" && c.seller_due_at) && <p className="text-[10px] text-gray-500">Seller reply due: {timeLeft(claims.find((c) => c.status === "open")?.seller_due_at)}</p>}
         </div>
       )}
       <button onClick={() => setShowLog(!showLog)} className="mt-2 text-[10px] text-gray-500 underline">{showLog ? "Hide history" : "Show full history"}</button>

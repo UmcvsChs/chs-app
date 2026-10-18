@@ -94,3 +94,55 @@ For each failed step note: the step number, what you saw, a screenshot.
 - Seller: red banner 'orders waiting for you to send' -> Deliveries / Dispatch tab -> enter carrier -> 'I have handed it over'. Buyer AND admin must receive a notification. My Orders rows show 'Send this order'.
 - Seller page bottom must read "Build 18 Oct 2026 · 4 ..." (proves the new version is live). Top of seller page shows "Orders to send" box with the dispatch button.
 - Buyer: buy 3+ items; My Receipts shows ONE row; the receipt lists every item with its price and a TOTAL PAID equal to the wallet debits.
+- Seller (08071000001, role Seller/Vendor/Service Provider): shop page bottom reads "Build 18 Oct 2026 · 5". Tap a notification -> My orders -> open order -> Pack -> choose own rider / courier / CHS centre, fill details -> Record dispatch. Buyer account must show who is bringing it; admin Deliveries must show the same. Back links never go to the login page.
+- Buyer: report a problem on a dispatched order, then confirm the order card no longer shows 'I have received it' and shows the red 'problem report is with CHS' note; the seller must receive a notification.
+
+## Damaged-goods claims, Phase 1 (18 Oct, Build 6)
+- Seller page bottom must read "Build 18 Oct 2026 · 6".
+- Buyer: on a delivered order tap "Report a problem with this order": choose item, type, units, describe, add 2 photos, send. You land on the claim page. Wallet unchanged. Seller and admin get a notification that opens the claim.
+- Seller: open the claim from the notification. Try Dispute (with a photo), then in another claim Offer a part refund; buyer accepts or rejects it on the claim page.
+- Seller: "Create a rider link" on the claim; open the link in a private window (no login), answer the questions, submit. The statement appears in the claim for all three; the link cannot be used twice.
+- Admin: Oversight > Claims. Open a claim, choose fault Seller, Refund; check the preview matches what the buyer gets; record decision with a reason. Buyer wallet credited, seller wallet reduced, order shows the reduced amount, decision notice prints.
+- Admin: a refund above ₦500,000 must ask for a second admin; the same admin cannot approve it.
+- While a claim is open, admin release-percentage / release / refund on that order must be refused with a clear message.
+- Seller packing: a fragile item needs 2 packing photos before "I have packed all items" works.
+- Door refusal: when the rider is "out for delivery", Report a problem; the order stops accepting the delivery code until CHS decides.
+
+## Claims Phase 2 (Build 7)
+- Seller page bottom reads "Build 18 Oct 2026 · 7".
+- Buyer reports damage on a bulk item (blocks): the form explains the breakage allowance. Admin preview: the allowance units are not refunded.
+- Admin decides "Return the goods first" with a destination. Buyer sees the return code and address; seller (or admin) enters the code and condition; admin approves the refund.
+- Replacement: seller records rider details; buyer sees the replacement code; seller enters it at handover; the claim closes.
+- Admin > Claims > "Fund, rates & rules": fund balance, add a top-up, edit an allowance and a setting.
+- Seller > My orders: claim-rate card appears once a claim exists.
+
+
+## Build 8 — release a percentage (rent, sales, rent-to-own)
+- [ ] Admin > held rent: "Release a percentage to the landlord" shows held amount and the limit; release 40% -> landlord wallet +40%, landlord notified.
+- [ ] Try another 30% -> refused (limit 60% in total). Then "Release now" -> landlord gets only the remainder (total = full rent).
+- [ ] Property sale: percentage needs a written reason; after it, normal release pays the remainder; refund of that sale is refused.
+- [ ] Rent-to-own installment and final payment (super admin): part release, then full release pays the remainder only.
+
+
+## Build 9 — Security test (do these with the team; each should be REFUSED unless it says "works")
+1. Log in as an ordinary tenant or buyer. In the app you cannot reach any admin page; typing /admin in the address bar shows no admin tools.
+2. Forgot PIN: enter the right phone with a wrong NIN 5 times — the 6th try (even with the right NIN) says wait an hour. Right phone + right NIN on a fresh number works.
+3. Withdraw to bank and send money to another user: both ask for the 6-digit Payment PIN. A user with no PIN is told to set one first (works once set).
+4. Owner uploads a property document: it shows "pending" until an admin verifies it (owner cannot mark it verified).
+5. Guarantor link: guarantor uploads ID and signs (works). Admin opens the guarantor ID from the application (works). Opening the old direct file link while logged out does not show the file.
+6. Logged out (private window): home, a property page, a hotel page, verify-agent, verify-chs, a tenant invite link and a split-payment link all still load.
+7. Buy promo credits and unlock a roadmap with a real Paystack test payment: both still work and credit the correct amount.
+8. Add a role to an existing account (agent/manager): works. There is no admin option.
+9. Admin: approve/reject something from the Approvals tab (works, a super admin is still required for the second approval).
+If anything that should work says "not allowed", send the exact message and screen to the developer; do not turn security off.
+
+10. (Round 2) Forgot PIN still works with the right NIN for an existing account. Registering a new account with a NIN already used says "An account already exists for this NIN".
+11. (Round 2) Admin: on an agent application press "Mark ID verified"; reload; it stays verified (it used to do nothing). As a staff (not super) admin you cannot open Settings and cannot change roles.
+12. (Round 2) Send money: typing recipient phone numbers more than 20 times in an hour shows "Too many look-ups". Bank link: more than 15 account checks in an hour shows "Too many account checks".
+
+## Build 10 tests (placeholder audit)
+13. Log in as an ordinary real account and open Properties/Marketplace: no Demo/TEST listings appear. Log in as a TEST account: they appear.
+14. Log in as super admin > Platform health: reminder results, test/real split, alerts show.
+15. Change any platform setting as super admin: an alert appears on Platform health and in notifications.
+16. Open a property marked urgent sale: no phone line shows while the hotline setting is empty.
+17. More menu: no "Area guide" entry.
