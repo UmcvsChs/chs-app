@@ -18,19 +18,6 @@ export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLoca
   const [min, setMin] = useState<number>(freeMin || 0);
   const [addr, setAddr] = useState(pickupAddress || "");
   const [msg, setMsg] = useState<string | null>(null);
-  const [ships, setShips] = useState<Shipment[]>([]);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [carrier, setCarrier] = useState<Record<string, string>>({});
-  const [track, setTrack] = useState<Record<string, string>>({});
-  const [code, setCode] = useState<Record<string, string>>({});
-  const [open, setOpen] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    const { data } = await supabase.rpc("get_vendor_shipments");
-    setShips((data as Shipment[]) || []);
-  }, []);
-  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
-    load(); }, [load]);
 
   async function save() {
     setMsg(null);
@@ -38,16 +25,6 @@ export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLoca
     const { error } = await supabase.rpc("vendor_set_delivery_terms", { p_city_id: city, p_free_local: free, p_free_min: min, p_pickup_address: addr, p_area: area });
     setMsg(error ? error.message : "Saved. Buyers see these terms straight away."); if (!error) onSaved();
   }
-  async function act(id: string, fn: string, args: Record<string, unknown>) {
-    setBusyId(id); setMsg(null);
-    const { error } = await supabase.rpc(fn, args);
-    setBusyId(null);
-    if (error) { setMsg(error.message); return; }
-    load();
-  }
-  const todo = ships.filter((s) => !["delivered", "cancelled"].includes(s.status));
-  const done = ships.filter((s) => ["delivered", "cancelled"].includes(s.status));
-
   return (
     <div className="space-y-3">
       <div className="bg-white rounded-xl border border-gray-100 p-3 space-y-2">
@@ -61,7 +38,43 @@ export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLoca
         {msg && <p className="text-[11px] text-chs-charcoal">{msg}</p>}
       </div>
 
-      <p className="text-xs font-bold text-chs-charcoal">📦 Parcels to hand over ({todo.length})</p>
+    </div>
+  );
+}
+
+// Every paid order the seller has to send, with the buttons to do it. Shown at the very top of the seller page.
+export function VendorParcels({ onChanged }: { onChanged?: () => void }) {
+  const [ships, setShips] = useState<Shipment[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [carrier, setCarrier] = useState<Record<string, string>>({});
+  const [track, setTrack] = useState<Record<string, string>>({});
+  const [code, setCode] = useState<Record<string, string>>({});
+  const [open, setOpen] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.rpc("get_vendor_shipments");
+    setShips((data as Shipment[]) || []); setLoaded(true);
+  }, []);
+  useEffect(() => { // eslint-disable-next-line react-hooks/set-state-in-effect
+    load(); }, [load]);
+
+  async function act(id: string, fn: string, args: Record<string, unknown>) {
+    setBusyId(id); setMsg(null);
+    const { error } = await supabase.rpc(fn, args);
+    setBusyId(null);
+    if (error) { setMsg(error.message); return; }
+    setMsg("Done. The buyer and CHS have been notified.");
+    load(); onChanged?.();
+  }
+  const todo = ships.filter((s) => !["delivered", "cancelled"].includes(s.status));
+  const done = ships.filter((s) => ["delivered", "cancelled"].includes(s.status));
+  if (!loaded || ships.length === 0) return null;
+
+  return (
+    <div id="orders-to-send" className="px-4 pt-4 space-y-3">
+      <p className="text-xs font-bold text-chs-charcoal">📦 Orders to send / in delivery ({todo.length})</p>
       {todo.length === 0 && <p className="text-[11px] text-gray-400">Nothing waiting. New paid orders appear here the moment they are placed.</p>}
       {[...todo, ...done].map((s) => {
         const active = !["delivered", "cancelled"].includes(s.status);
@@ -98,6 +111,7 @@ export default function VendorDeliveryPanel({ vendorCityId, vendorArea, freeLoca
           </div>
         );
       })}
+      {msg && <p className="text-[11px] font-semibold text-chs-charcoal bg-white rounded-lg border border-gray-100 px-3 py-2">{msg}</p>}
     </div>
   );
 }

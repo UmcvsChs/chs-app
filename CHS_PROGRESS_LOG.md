@@ -797,3 +797,8 @@ Problem: a 20-item cart from 8 sellers sent 56 notifications (a vendor and an ad
 - Cause: the seller account tabs had a Deliveries tab (parcels, carrier/waybill, "I have handed it over", delivery-code confirm) but its label fell through to "General Statistics", so sellers never found it. My Orders was view-only.
 - Fix: tab now reads "Deliveries / Dispatch (n)" with the number of parcels waiting; a red banner at the top of the seller account says "N orders are paid and waiting for you to send" and opens it; each order in My Orders shows its delivery step and a "Send this order" / "Open delivery" button.
 - Dispatch now notifies the admin team (link /admin?tab=deliveries) as well as the buyer (database, live).
+
+## 18 Oct 2026 (afternoon) - Seller dispatch box at top of page; one combined buyer receipt
+- Tester screenshot showed the live site still running the OLD seller screen (tab strip unchanged, no banner), so the previous two seller fixes were not deployed. Production build verified clean (next build passes).
+- Seller page: new "Orders to send / in delivery" box at the very top of the seller page, above My account, with carrier/waybill fields, "I have handed it over", delivery-code confirm and history. The Deliveries tab is now "Delivery settings" (where you ship from, free local delivery). My Orders rows show each order's delivery step and a "Send this order" button that scrolls to the box. A build label at the bottom of the seller page shows which version is live.
+- Receipts: one combined receipt per marketplace checkout (every item with its price, subtotal, CHS service fee, delivery, TOTAL PAID). My Receipts lists one row per checkout; any item/delivery reference opens the same combined receipt (529_combined_checkout_receipt.sql.md).

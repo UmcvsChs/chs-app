@@ -64,7 +64,6 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
     supabase.rpc("get_vendor_shipments").then(({ data }) => { if (live) setShips((data as Shipment[]) || []); });
     return () => { live = false; };
   }, [tab, orders]);
-  const toSend = ships.filter((x) => x.status === "awaiting_dispatch").length;
   const shipByOrder = useMemo(() => {
     const m: Record<string, Shipment> = {};
     ships.forEach((x) => x.items?.forEach((it) => { m[it.order_id] = x; }));
@@ -76,7 +75,7 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
       try {
         const want = new URLSearchParams(window.location.search).get("tab")?.toLowerCase();
         const hit = TABS.find((t) => t.toLowerCase() === want);
-        if (hit) setTab(hit);
+        if (hit && hit !== "Deliveries") setTab(hit);
       } catch { /* ignore */ }
     };
     read();
@@ -132,18 +131,12 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
 
   return (
     <div className="px-4 pt-4">
-      {toSend > 0 && (
-        <button type="button" onClick={() => setTab("Deliveries")} className="w-full mb-3 text-left bg-chs-red text-white rounded-xl px-3 py-2.5">
-          <p className="text-xs font-bold">📦 {toSend} {toSend === 1 ? "order is" : "orders are"} paid and waiting for you to send</p>
-          <p className="text-[10px] text-white/90">Tap here to hand over the goods and tell the buyer and CHS they are on the way →</p>
-        </button>
-      )}
       <p className="text-xs font-bold text-chs-charcoal mb-1.5">📒 My account</p>
       <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)}
             className={`shrink-0 text-[10px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap ${tab === t ? "bg-chs-charcoal text-white" : "bg-white border border-gray-200 text-gray-600"}`}>
-            {t === "Deliveries" ? `📦 Deliveries / Dispatch${toSend > 0 ? ` (${toSend})` : ""}` : t === "Stock" ? "My Stocks" : t === "Orders" ? "My Orders" : t === "Subscription" ? "My Subscription" : t === "Sales" ? "My Sales" : t === "Bids" ? "My Recent Bids" : t === "Earnings" ? "My Total Earnings" : t === "Commission" ? "Commission Paid" : "General Statistics"}
+            {t === "Deliveries" ? "⚙️ Delivery settings" : t === "Stock" ? "My Stocks" : t === "Orders" ? "My Orders" : t === "Subscription" ? "My Subscription" : t === "Sales" ? "My Sales" : t === "Bids" ? "My Recent Bids" : t === "Earnings" ? "My Total Earnings" : t === "Commission" ? "Commission Paid" : "General Statistics"}
           </button>
         ))}
       </div>
@@ -197,9 +190,9 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
                   {sh && (
                     <div className="flex items-center justify-between gap-2 pb-2 -mt-0.5 text-[11px]">
                       <span className="text-gray-600">Delivery: <b className="text-chs-charcoal">{STATUS_LABEL[sh.status] || sh.status}</b></span>
-                      <button type="button" onClick={() => setTab("Deliveries")}
+                      <button type="button" onClick={() => document.getElementById("orders-to-send")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                         className={`px-3 py-1 rounded-full font-semibold ${sh.status === "awaiting_dispatch" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-700"}`}>
-                        {sh.status === "awaiting_dispatch" ? "Send this order →" : "Open delivery →"}
+                        {sh.status === "awaiting_dispatch" ? "Send this order ↑" : "See delivery ↑"}
                       </button>
                     </div>
                   )}

@@ -25,6 +25,7 @@ export default function ReceiptsPanel({ embedded = false }: { embedded?: boolean
   const router = useRouter();
   const { session, profile, loading: authLoading } = useAuth();
   const [transactions, setTransactions] = useState<RealTransaction[]>([]);
+  const [checkouts, setCheckouts] = useState<{ reference: string; paid_at: string; lines: number; total: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,8 +41,11 @@ export default function ReceiptsPanel({ embedded = false }: { embedded?: boolean
       .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
       .limit(50)
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         setTransactions(data || []);
+        // One combined receipt per marketplace checkout instead of one per item
+        const { data: chk } = await supabase.rpc("get_my_checkout_receipts");
+        setCheckouts((chk as typeof checkouts) || []);
         setLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,10 +82,21 @@ export default function ReceiptsPanel({ embedded = false }: { embedded?: boolean
 )}
 
       <div className="px-4 py-4 space-y-2">
-        {transactions.length === 0 ? (
+        {checkouts.map((c) => (
+          <Link key={c.reference} href={`/receipt/${c.reference}`} className="block bg-white rounded-xl border border-gray-200 p-3">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-xs font-semibold text-chs-charcoal">🛒 Marketplace order · {c.lines} {c.lines === 1 ? "item" : "items"} (one receipt)</p>
+                <p className="text-[10px] text-gray-400">{formatDateTime(c.paid_at)} · {c.reference}</p>
+              </div>
+              <p className="text-sm font-bold text-chs-red">-{formatNaira(c.total)}</p>
+            </div>
+          </Link>
+        ))}
+        {transactions.length === 0 && checkouts.length === 0 ? (
           <p className="text-xs text-gray-400">No real transactions yet.</p>
         ) : (
-          transactions.map((t, i) => (
+          transactions.filter((t) => !(checkouts.length > 0 && t.direction === "debit" && /^(BUYPAY|DLV)-/i.test(t.reference))).map((t, i) => (
             <Link
               key={`${t.reference}-${i}`}
               href={`/receipt/${t.reference}`}

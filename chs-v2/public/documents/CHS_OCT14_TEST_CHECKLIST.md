@@ -92,3 +92,5 @@ For each failed step note: the step number, what you saw, a screenshot.
 - Login: sellers choose 'Seller / Vendor / Service Provider' in 'Log in as' (not Owner); buyers choose Buyer; admin chooses Admin.
 - Seller: tap the 'real order' / 'Prepare this order' notification -> must open Seller page on the Deliveries tab with the parcel and its dispatch button.
 - Seller: red banner 'orders waiting for you to send' -> Deliveries / Dispatch tab -> enter carrier -> 'I have handed it over'. Buyer AND admin must receive a notification. My Orders rows show 'Send this order'.
+- Seller page bottom must read "Build 18 Oct 2026 · 4 ..." (proves the new version is live). Top of seller page shows "Orders to send" box with the dispatch button.
+- Buyer: buy 3+ items; My Receipts shows ONE row; the receipt lists every item with its price and a TOTAL PAID equal to the wallet debits.

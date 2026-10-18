@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import InfoTip from "@/components/InfoTip";
 import { formatNaira, formatDateTime } from "@/lib/format";
+import CheckoutReceipt, { type CheckoutReceiptData } from "@/components/CheckoutReceipt";
 
 // Real, new page per direct client request: neither CHS nor its
 // agents/managers could issue a real receipt to a client for any
@@ -32,6 +33,7 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
   const [viewerIsPayee, setViewerIsPayee] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [combined, setCombined] = useState<CheckoutReceiptData | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -40,6 +42,9 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
       return;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
+    // A marketplace purchase (any of its item / delivery references) opens ONE combined receipt for the whole basket.
+    supabase.rpc("get_checkout_receipt", { p_reference: reference }).then(({ data: chk }) => {
+      if (chk && (chk as CheckoutReceiptData).lines) { setCombined(chk as CheckoutReceiptData); setLoading(false); return; }
     supabase.rpc("get_receipt_data", { p_reference: reference }).then(({ data, error: rpcError }) => {
       if (rpcError) {
         setError(rpcError.message);
@@ -49,12 +54,15 @@ export default function ReceiptPage({ params }: { params: Promise<{ reference: s
       }
       setLoading(false);
     });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, session, reference]);
 
   if (authLoading || loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-gray-400">Loading...</div>;
   }
+
+  if (combined) return <CheckoutReceipt data={combined} />;
 
   if (error) {
     return (

@@ -16,6 +16,8 @@ import { MarketplaceBundle } from "@/types/marketplaceBundle";
 import GuidePrompt from "@/components/GuidePrompt";
 import { formatNaira } from "@/lib/format";
 import VendorAccountTabs, { VendorSubscription } from "@/components/VendorAccountTabs";
+import { VendorParcels } from "@/components/VendorDeliveryPanel";
+import { BUILD_LABEL } from "@/lib/buildInfo";
 
 interface ProductWithQuotes extends MarketplaceProduct {
   quoteRequests: ServiceQuoteRequest[];
@@ -243,6 +245,8 @@ export default function VendorDashboard() {
         </div>
       </div>
 
+      <VendorParcels onChanged={loadData} />
+
       <VendorAccountTabs products={products} orders={directOrders} subscriptions={subscriptions} delivery={vendor as unknown as { city_id: number | null; area?: string | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }} onDeliverySaved={loadData} />
 
       <div className="px-4 py-4">
@@ -264,7 +268,7 @@ export default function VendorDashboard() {
                   <span className="text-[9px] font-bold text-white bg-chs-charcoal px-1.5 py-0.5 rounded-full">{o.reference_number}</span>
                 </div>
                 <p className="font-semibold text-chs-charcoal mt-0.5">{formatNaira(o.amount)}</p>
-                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">💰 Paid — held in escrow, pending CHS confirmation of delivery.</p>}
+                {o.payment_status === "held_escrow" && <p className="text-[10px] text-green-700 font-semibold mt-1">💰 Paid — held in escrow until the goods are delivered. Send it from the <b>📦 Orders to send</b> box at the top of this page.</p>}
                 {o.payment_status === "released" && <p className="text-[10px] text-green-700 font-semibold mt-1">✓ Paid out, net of your real commission.</p>}
                 {o.payment_status === "refunded" && <p className="text-[10px] text-gray-500 font-semibold mt-1">↩ Refunded to the buyer.</p>}
               </div>
@@ -386,6 +390,7 @@ export default function VendorDashboard() {
         </div>
       )}
       {showGuide && <GuidePrompt role="vendor" onDismiss={() => setShowGuide(false)} />}
+      <p className="text-center text-[9px] text-gray-400 pb-6">{BUILD_LABEL}</p>
     </div>
   );
 }
