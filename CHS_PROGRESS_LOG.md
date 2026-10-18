@@ -778,3 +778,11 @@ Built the legal review pack (PDF): CHS_LEGAL_1_ISSUES_FOR_BARRISTER.pdf lists 28
 
 ## 17 Oct 2026, FIX: quantity can now be typed (product sheet and cart)
 Bug found in testing: the quantity was a fixed number between - and + buttons, so buying 200 blocks meant 199 taps. Now it is a real box: tap or highlight the number, type it, and it is accepted at once (up to the stock, maximum 1,000 per line, which the database also enforces). - and + still work. The box is not overwritten while typing, so a slow price refresh cannot undo what you type; empty goes back to the last good number when you leave the box. Done in the product detail sheet and in the cart (new component QtyInput). The product sheet limit of 99 when stock is not set is now 1,000. Tested in a real browser: typing 200 gave 200 with a delayed refresh in between.
+
+## 17 Oct 2026, Notifications grouped: one order, one notification (migration 527)
+Problem: a 20-item cart from 8 sellers sent 56 notifications (a vendor and an admin alert for every line, then another pair for every parcel), filling the bell. Now: ONE summary notification to admins ("New marketplace order: 20 items from 8 sellers", listing each seller, its parcel number and every item with price), and ONE notification per seller listing only that seller's items. In the bell, a grouped notification shows its first line and "See all N items"; the first tap opens the list in place (and marks it read), then "Open" goes to the screen. Admin > Notifications feed shows the full list with line breaks. Tested: 9 notifications instead of 56. Single buy-now purchases are unchanged. NOT YET GROUPED (same idea, next candidates): several hotel rooms booked together, and other bulk actions that notify once per line.
+
+## 18 Oct 2026 - Seller login role reconciliation
+- Seller test accounts (08071000001-08) are normal accounts (profiles.role = buyer) that own a shop in marketplace_vendors. They are NOT Owner accounts. At login choose "Seller / Vendor / Service Provider" (opens /vendor).
+- Login screen: role button renamed from "Vendor / Service Provider" to "Seller / Vendor / Service Provider". If a seller picks another role, a clear message now says to choose the seller box.
+- CHS_TEST_STORE_LOGINS.pdf and CHS_TEST_STORE_GUIDE.pdf now state which "Log in as" box to choose for each account.

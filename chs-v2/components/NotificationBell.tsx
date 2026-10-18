@@ -21,6 +21,11 @@ export default function NotificationBell() {
   const [toast, setToast] = useState<Notification | null>(null);
   const limitRef = useRef(30);
   const [canMore, setCanMore] = useState(false);
+  // A grouped notification (one order with many items) lists its items on separate lines. It opens in place on the first tap.
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const isGroup = (n: Notification) => /\n•/.test(n.body || "");
+  const firstPart = (n: Notification) => (n.body || "").split("\n\n")[0];
+  const itemCount = (n: Notification) => ((n.body || "").match(/^•/gm) || []).length;
 
   async function loadNotifications() {
     if (!session) return;
@@ -163,7 +168,7 @@ export default function NotificationBell() {
               <p className="text-xs font-bold">🔔 {toast.title}</p>
               <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setToast(null); }} className="text-white/50 text-xs shrink-0">✕</button>
             </div>
-            <p className="text-[11px] text-white/70 mt-1">{toast.body}</p>
+            <p className="text-[11px] text-white/70 mt-1 whitespace-pre-line">{isGroup(toast) ? firstPart(toast) : toast.body}</p>
             <p className="text-[10px] text-chs-red font-semibold mt-1.5">Tap to view →</p>
           </div>
         </div>
@@ -203,15 +208,26 @@ export default function NotificationBell() {
                 <div
                   key={n.id}
                   className={`p-3 border-b border-gray-50 cursor-pointer ${n.read ? "bg-white" : "bg-chs-amber-light"}`}
-                  onClick={(e) => handleNotificationClick(e, n)}
+                  onClick={(e) => {
+                    if (isGroup(n) && expanded !== n.id) { e.stopPropagation(); if (!n.read) markAsRead(n.id); setExpanded(n.id); return; }
+                    if (isGroup(n)) { e.stopPropagation(); setExpanded(null); return; }
+                    handleNotificationClick(e, n);
+                  }}
                 >
                   <p className="text-xs font-semibold text-chs-charcoal">{n.title}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5">{n.body}</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5 whitespace-pre-line">{isGroup(n) && expanded !== n.id ? firstPart(n) : n.body}</p>
                   <p className="text-[9px] text-gray-400 mt-1">
                     Sent {formatDateTime(n.created_at)}
                     {n.read_at && <> · <span className="text-green-600">Read {formatDateTime(n.read_at)}</span></>}
                   </p>
-                  <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>
+                  {isGroup(n) ? (
+                    expanded === n.id ? (
+                      <div className="flex gap-3 mt-1.5">
+                        <button type="button" onClick={(e) => handleNotificationClick(e, n)} className="text-[10px] font-bold text-white bg-chs-red rounded-full px-3 py-1">Open →</button>
+                        <span className="text-[10px] text-gray-400 self-center">Tap here to fold</span>
+                      </div>
+                    ) : <p className="text-[9px] text-chs-red font-semibold mt-1">▸ See all {itemCount(n)} items</p>
+                  ) : <p className="text-[9px] text-chs-red font-semibold mt-1">Tap to view →</p>}
                 </div>
               ))
             )}

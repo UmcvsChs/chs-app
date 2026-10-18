@@ -5726,7 +5726,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
                     <p className="text-sm font-semibold text-chs-charcoal">{n.title}</p>
                     <span className="text-[9px] text-gray-400 whitespace-nowrap ml-2">{formatDateTime(n.created_at)}</span>
                   </div>
-                  <p className="text-xs text-gray-600 mt-0.5">{n.body}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 whitespace-pre-line">{n.body}</p>
                 </button>
               ))
             )}

@@ -22,7 +22,7 @@ const ROLE_OPTIONS = [
   { value: "admin", label: "Admin" },
   { value: "staff", label: "Staff" },
   { value: "artisan", label: "Artisan" },
-  { value: "vendor", label: "Vendor / Service Provider" },
+  { value: "vendor", label: "Seller / Vendor / Service Provider" },
 ];
 
 const ROLE_DISPLAY_NAMES: Record<string, string> = {
@@ -37,7 +37,7 @@ const ROLE_DISPLAY_NAMES: Record<string, string> = {
   admin: "Admin",
   staff: "Staff",
   artisan: "Artisan",
-  vendor: "Vendor / Service Provider",
+  vendor: "Seller / Vendor / Service Provider",
 };
 
 export default function LoginPage() {
@@ -111,6 +111,14 @@ export default function LoginPage() {
     const allRoles = [profile.role, ...(profile.secondary_roles || [])];
     if (!allRoles.includes(selectedRole)) {
       const realRoleNames = allRoles.map((r) => ROLE_DISPLAY_NAMES[r] || r).join(" or ");
+      // A seller's base account is a normal account; the shop lives in its own table. Point them to the right button.
+      const { data: shop } = await supabase.from("marketplace_vendors").select("id").eq("user_id", loginData.user.id).maybeSingle();
+      if (shop) {
+        setError(`This is a seller account. Please choose "Seller / Vendor / Service Provider" above, then log in again.`);
+        await supabase.auth.signOut();
+        setSubmitting(false);
+        return;
+      }
       setError(
         `Your account isn't registered as ${ROLE_DISPLAY_NAMES[selectedRole]} — it's registered as ${realRoleNames}. Please select that role instead.`
       );
