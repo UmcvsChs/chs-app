@@ -786,3 +786,14 @@ Problem: a 20-item cart from 8 sellers sent 56 notifications (a vendor and an ad
 - Seller test accounts (08071000001-08) are normal accounts (profiles.role = buyer) that own a shop in marketplace_vendors. They are NOT Owner accounts. At login choose "Seller / Vendor / Service Provider" (opens /vendor).
 - Login screen: role button renamed from "Vendor / Service Provider" to "Seller / Vendor / Service Provider". If a seller picks another role, a clear message now says to choose the seller box.
 - CHS_TEST_STORE_LOGINS.pdf and CHS_TEST_STORE_GUIDE.pdf now state which "Log in as" box to choose for each account.
+
+## 18 Oct 2026 - Seller notification "tap to view" went nowhere (fixed)
+- Cause 1: the "A real order was placed" notification was saved with no destination, so the bell fell back to the buyer home page (sellers are stored as buyers). Cause 2: even the dispatch notification (/vendor) opened the Stock tab; the Mark-dispatched / delivery-code actions are in the Deliveries tab.
+- Fix (database, live): order and dispatch notifications now link to /vendor?tab=deliveries; 11 existing seller notifications repaired (528_seller_notification_links.sql.md).
+- Fix (app): seller page opens the tab named in the link (also when already on the page); bell fallback sends seller-type notifications to the Deliveries tab.
+- Seller flow: Deliveries tab -> parcel -> hand over / mark dispatched -> buyer gives 6-digit code -> delivered -> admin releases a percentage (Admin > Oversight > Deliveries).
+
+## 18 Oct 2026 - Seller could not dispatch: Deliveries tab was mislabelled
+- Cause: the seller account tabs had a Deliveries tab (parcels, carrier/waybill, "I have handed it over", delivery-code confirm) but its label fell through to "General Statistics", so sellers never found it. My Orders was view-only.
+- Fix: tab now reads "Deliveries / Dispatch (n)" with the number of parcels waiting; a red banner at the top of the seller account says "N orders are paid and waiting for you to send" and opens it; each order in My Orders shows its delivery step and a "Send this order" / "Open delivery" button.
+- Dispatch now notifies the admin team (link /admin?tab=deliveries) as well as the buyer (database, live).

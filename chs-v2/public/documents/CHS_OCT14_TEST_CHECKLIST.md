@@ -90,3 +90,5 @@ For each failed step note: the step number, what you saw, a screenshot.
 ## Hotel in-house services (17 Oct)
 [ ] Host (Savannah Grand or Hilltop Lodge owner): Hotel operations > Services offered: add, edit, hide a service; leave a price empty. [ ] Hotel page shows "Services at this hotel", price only where entered. [ ] Guest with a booking: My bookings > Hotel services for your stay > reserve (no payment), withdraw. [ ] Host accepts and declines; guest is notified. [ ] Phone number in a note is refused. [ ] Check on a 360 px phone and on iPhone.
 - Login: sellers choose 'Seller / Vendor / Service Provider' in 'Log in as' (not Owner); buyers choose Buyer; admin chooses Admin.
+- Seller: tap the 'real order' / 'Prepare this order' notification -> must open Seller page on the Deliveries tab with the parcel and its dispatch button.
+- Seller: red banner 'orders waiting for you to send' -> Deliveries / Dispatch tab -> enter carrier -> 'I have handed it over'. Buyer AND admin must receive a notification. My Orders rows show 'Send this order'.

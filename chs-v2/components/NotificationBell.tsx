@@ -109,6 +109,8 @@ export default function NotificationBell() {
   function fallbackLink(n: Notification): string {
     const text = `${n.title} ${n.body}`.toLowerCase();
     const role = profile?.role || "";
+    // Seller notifications (orders, dispatch, delivery codes) always open the seller's Deliveries tab, never the buyer home.
+    if (/real order was placed|prepare this order|dispatch|delivery code|parcel/.test(text) && !/your order|your parcel/.test(text) && role !== "admin") return "/vendor?tab=deliveries";
     if (/rent-to-own|mortgage/.test(text)) return role === "admin" ? "/admin?tab=rtorequests" : role === "owner" ? "/owner" : "/rent-to-own";
     if (/wallet|withdraw|deposit|refund|released|payment|installment|earning/.test(text)) return "/wallet";
     return roleHome(role);
@@ -153,6 +155,8 @@ export default function NotificationBell() {
       // tool for "don't lose my place in a long list."
       const freshLink = link + (link.includes("?") ? "&" : "?") + "_n=" + Date.now();
       router.push(freshLink);
+      // lets a screen that is already open (e.g. the seller page) switch to the tab named in the link
+      setTimeout(() => window.dispatchEvent(new Event("chs:nav")), 150);
     }
   }
 

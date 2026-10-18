@@ -1,8 +1,11 @@
 "use client";
 
 import VendorDeliveryPanel from "@/components/VendorDeliveryPanel";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatNaira, formatDateTime } from "@/lib/format";
+import { supabase } from "@/lib/supabase";
+import { STATUS_LABEL } from "@/lib/delivery";
+import type { Shipment } from "@/components/ShipmentCard";
 import type { MarketplaceProduct } from "@/types/marketplace";
 import type { ServiceQuoteRequest } from "@/types/serviceQuoteRequest";
 
@@ -54,6 +57,33 @@ const Stat = ({ label, value, tone }: { label: string; value: string; tone?: str
 
 export default function VendorAccountTabs({ products, orders, subscriptions, delivery, onDeliverySaved }: { products: Product[]; orders: VendorOrder[]; subscriptions: VendorSubscription[]; delivery?: { city_id: number | null; area?: string | null; free_local_delivery: boolean; free_local_min_order: number; pickup_address: string | null }; onDeliverySaved?: () => void }) {
   const [tab, setTab] = useState<Tab>("Stock");
+  // The seller's parcels, so the page can say how many are waiting to be sent and show each order's delivery step.
+  const [ships, setShips] = useState<Shipment[]>([]);
+  useEffect(() => {
+    let live = true;
+    supabase.rpc("get_vendor_shipments").then(({ data }) => { if (live) setShips((data as Shipment[]) || []); });
+    return () => { live = false; };
+  }, [tab, orders]);
+  const toSend = ships.filter((x) => x.status === "awaiting_dispatch").length;
+  const shipByOrder = useMemo(() => {
+    const m: Record<string, Shipment> = {};
+    ships.forEach((x) => x.items?.forEach((it) => { m[it.order_id] = x; }));
+    return m;
+  }, [ships]);
+  // A notification can open a specific tab (e.g. /vendor?tab=deliveries), so a seller lands exactly where the action is.
+  useEffect(() => {
+    const read = () => {
+      try {
+        const want = new URLSearchParams(window.location.search).get("tab")?.toLowerCase();
+        const hit = TABS.find((t) => t.toLowerCase() === want);
+        if (hit) setTab(hit);
+      } catch { /* ignore */ }
+    };
+    read();
+    window.addEventListener("chs:nav", read);
+    window.addEventListener("popstate", read);
+    return () => { window.removeEventListener("chs:nav", read); window.removeEventListener("popstate", read); };
+  }, []);
   const [range, setRange] = useState<RangeKey>("30d");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -102,12 +132,18 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
 
   return (
     <div className="px-4 pt-4">
+      {toSend > 0 && (
+        <button type="button" onClick={() => setTab("Deliveries")} className="w-full mb-3 text-left bg-chs-red text-white rounded-xl px-3 py-2.5">
+          <p className="text-xs font-bold">📦 {toSend} {toSend === 1 ? "order is" : "orders are"} paid and waiting for you to send</p>
+          <p className="text-[10px] text-white/90">Tap here to hand over the goods and tell the buyer and CHS they are on the way →</p>
+        </button>
+      )}
       <p className="text-xs font-bold text-chs-charcoal mb-1.5">📒 My account</p>
       <div className="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)}
             className={`shrink-0 text-[10px] font-semibold px-3 py-1.5 rounded-full whitespace-nowrap ${tab === t ? "bg-chs-charcoal text-white" : "bg-white border border-gray-200 text-gray-600"}`}>
-            {t === "Stock" ? "My Stocks" : t === "Orders" ? "My Orders" : t === "Subscription" ? "My Subscription" : t === "Sales" ? "My Sales" : t === "Bids" ? "My Recent Bids" : t === "Earnings" ? "My Total Earnings" : t === "Commission" ? "Commission Paid" : "General Statistics"}
+            {t === "Deliveries" ? `📦 Deliveries / Dispatch${toSend > 0 ? ` (${toSend})` : ""}` : t === "Stock" ? "My Stocks" : t === "Orders" ? "My Orders" : t === "Subscription" ? "My Subscription" : t === "Sales" ? "My Sales" : t === "Bids" ? "My Recent Bids" : t === "Earnings" ? "My Total Earnings" : t === "Commission" ? "Commission Paid" : "General Statistics"}
           </button>
         ))}
       </div>
@@ -153,7 +189,23 @@ export default function VendorAccountTabs({ products, orders, subscriptions, del
         {tab === "Orders" && (
           <>
             <p className="text-[10px] text-gray-500 mb-1">Orders and paid quotes that came through CHS. Newest first.</p>
-            {ranged.length === 0 ? <Empty text="No orders in this period." /> : ranged.map((l) => <Row key={l.kind + l.id} l={l} />)}
+            {ranged.length === 0 ? <Empty text="No orders in this period." /> : ranged.map((l) => {
+              const sh = l.kind === "Order" ? shipByOrder[l.id] : undefined;
+              return (
+                <div key={l.kind + l.id}>
+                  <Row l={l} />
+                  {sh && (
+                    <div className="flex items-center justify-between gap-2 pb-2 -mt-0.5 text-[11px]">
+                      <span className="text-gray-600">Delivery: <b className="text-chs-charcoal">{STATUS_LABEL[sh.status] || sh.status}</b></span>
+                      <button type="button" onClick={() => setTab("Deliveries")}
+                        className={`px-3 py-1 rounded-full font-semibold ${sh.status === "awaiting_dispatch" ? "bg-chs-red text-white" : "bg-gray-100 text-gray-700"}`}>
+                        {sh.status === "awaiting_dispatch" ? "Send this order →" : "Open delivery →"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </>
         )}
 
