@@ -894,3 +894,10 @@ Found by the iPhone tester: inside the Marketplace there was no way back to the 
 
 ## 19 Oct 2026 - Separate staff/admin door (Build 14)
 Role picker removed from the public login: the account decides where the person lands; sellers and artisans go straight to their dashboard. Staff/admin accounts are refused on the public login (and biometric) with the same "Phone number or PIN is incorrect" message. New door /team-access (noindex, not linked anywhere, not in robots.txt): phone + PIN then the code screen. Not-signed-in visitors to /admin go to the home page, not the door. Start with the path; a subdomain can follow when a domain is chosen. Guide: CHS_TEAM_ACCESS_GUIDE.pdf. Note: app/robots.ts and the sitemap still use an old hard-coded Netlify address.
+
+## 19 Oct 2026 — Guides Vault (standing order)
+Built `CHS_GUIDES_VAULT/` (repo root) and `/mnt/user-data/outputs/CHS_GUIDES_VAULT.zip`: 47 guides in 6 folders with `00_INDEX.md`; newest is CHS_TEAM_ACCESS_GUIDE.pdf.
+**STANDING ORDER (owner, until app development is finished):** every time a new guide is created, copy it into the vault, add it to the list in the vault script and the index, rebuild the zip and send it. Files marked CONTAINS TEST LOGINS are for testers only.
+
+## 19 Oct 2026 — Build 15
+Owner feedback after deploy: customers missed the role choice. Restored a customer-only "Log in as" chip row (Buyer, Tenant, Owner, Host, Guest, Agent, Property Manager, Developer, Team member, Seller/Artisan) on /login; blank = main role; wrong role gives a clear message. Admin/staff still not on this page; they use /team-access.

@@ -10,6 +10,22 @@ import ChsLogo from "@/components/ChsLogo";
 import InfoTip from "@/components/InfoTip";
 import BiometricLogin from "@/components/BiometricLogin";
 
+// Customer roles only. Staff-of-CHS and admin are deliberately not here;
+// they use their own door at /team-access. "staff" below is the agent's or
+// property manager's own team member, which is an ordinary customer role.
+const LOGIN_ROLES: { value: string; label: string }[] = [
+  { value: "buyer", label: "Buyer" },
+  { value: "tenant", label: "Tenant" },
+  { value: "owner", label: "Owner" },
+  { value: "host", label: "Host" },
+  { value: "guest", label: "Guest" },
+  { value: "agent", label: "Agent" },
+  { value: "manager", label: "Property Manager" },
+  { value: "developer", label: "Developer" },
+  { value: "staff", label: "Team member" },
+  { value: "others", label: "Seller / Artisan" },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { setActiveRole, refreshProfile } = useAuth();
@@ -18,6 +34,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showBiometric, setShowBiometric] = useState(false);
+  const [chosenRole, setChosenRole] = useState<string>("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -63,8 +80,28 @@ export default function LoginPage() {
       return;
     }
 
-    // No role picker: the account decides where the person lands.
-    setActiveRole(profile.role);
+    const held: string[] = [profile.role, ...((profile.secondary_roles as string[] | null) ?? [])];
+    let shopRow = false, tradeRow = false;
+    {
+      const { data: shop } = await supabase.from("marketplace_vendors").select("id").eq("user_id", loginData.user.id).maybeSingle();
+      const { data: trade } = await supabase.from("artisans").select("id").eq("user_id", loginData.user.id).maybeSingle();
+      shopRow = !!shop; tradeRow = !!trade;
+    }
+    if (chosenRole === "others" && !shopRow && !tradeRow) {
+      await supabase.auth.signOut();
+      setError("This account is not registered as a Seller or Artisan. Choose the role you registered as, or link it from the link below.");
+      setSubmitting(false);
+      return;
+    }
+    if (chosenRole && chosenRole !== "others" && !held.includes(chosenRole)) {
+      await supabase.auth.signOut();
+      setError("This account is not registered as " + (LOGIN_ROLES.find((r) => r.value === chosenRole)?.label ?? chosenRole) + ". Choose the role you registered as, or add it with \"Link it here\" below.");
+      setSubmitting(false);
+      return;
+    }
+    // A chosen role wins; with none chosen the account's main role is used.
+    const landing = chosenRole && chosenRole !== "others" ? chosenRole : profile.role;
+    setActiveRole(landing);
     await refreshProfile();
 
     // The actual bug just found and fixed: every successful login was
@@ -85,14 +122,13 @@ export default function LoginPage() {
       staff: "/staff",
     };
     // Sellers and artisans have an ordinary base account; their shop or trade
-    // lives in its own record. Send them straight to it.
-    if (profile.role === "buyer") {
-      const { data: shop } = await supabase.from("marketplace_vendors").select("id").eq("user_id", loginData.user.id).maybeSingle();
-      if (shop) { router.push("/vendor"); return; }
-      const { data: trade } = await supabase.from("artisans").select("id").eq("user_id", loginData.user.id).maybeSingle();
-      if (trade) { router.push("/artisan"); return; }
+    // lives in its own record. Send them straight to it when they chose that
+    // role, or when they chose nothing and their main role is buyer.
+    if (chosenRole === "others" || (!chosenRole && profile.role === "buyer")) {
+      if (shopRow) { router.push("/vendor"); return; }
+      if (tradeRow) { router.push("/artisan"); return; }
     }
-    router.push(roleToPath[profile.role] || "/");
+    router.push(roleToPath[landing] || "/");
   }
 
   return (
@@ -124,6 +160,22 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="text-xs font-semibold text-gray-600">Log in as</label>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {LOGIN_ROLES.map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => { setChosenRole(chosenRole === r.value ? "" : r.value); setError(null); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 ${chosenRole === r.value ? "border-chs-red bg-chs-amber-light text-chs-charcoal" : "border-gray-200 bg-white text-gray-600"}`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">Pick the role you registered as. Not sure? Leave it blank and we will use your main role.</p>
+          </div>
           <div>
             <label className="text-xs font-semibold text-gray-600">Phone number</label>
             <input
