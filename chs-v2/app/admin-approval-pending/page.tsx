@@ -1,114 +1,57 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
-// The real waiting screen a sub-admin sees after a correct password —
-// their session exists, but genuinely can't be used for anything
-// admin-scoped until a super admin approves this specific login. See
-// backend-v2/50_wallet_fixes_and_admin_approval.sql for the real
-// enforcement (has_approved_admin_login).
-function AdminApprovalPendingContent() {
+// Every staff admin needs a one-time code from the super admin for each login.
+// The code is shown only to the super admin, who reads it out. It works once
+// and expires after 5 minutes. Three wrong tries lock the account. The
+// database enforces all of it: without a valid session no admin power exists.
+export default function AdminCodePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { session } = useAuth();
-  const code = searchParams.get("code") || "";
-
-  const [status, setStatus] = useState<"pending" | "approved" | "rejected" | "expired">("pending");
+  const [code, setCode] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [requested, setRequested] = useState(false);
 
   useEffect(() => {
     if (!session) return;
-
-    const interval = setInterval(async () => {
-      const { data: latestRequest } = await supabase
-        .from("admin_login_requests")
-        .select("status, expires_at")
-        .eq("admin_id", session.user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!latestRequest) return;
-
-      if (latestRequest.status === "approved") {
-        setStatus("approved");
-        clearInterval(interval);
-        setTimeout(() => router.push("/admin"), 1200);
-      } else if (latestRequest.status === "rejected") {
-        setStatus("rejected");
-        clearInterval(interval);
-      } else if (new Date(latestRequest.expires_at) < new Date()) {
-        setStatus("expired");
-        clearInterval(interval);
-      }
-    }, 3000); // real polling, every 3 seconds — no websocket needed for this
-
-    return () => clearInterval(interval);
+    supabase.rpc("admin_session_status").then(({ data }) => {
+      if (data === "active" || data === "super") router.push("/admin");
+    });
+    supabase.rpc("request_admin_code").then(() => setRequested(true));
   }, [session, router]);
+
+  async function submit() {
+    setBusy(true); setMsg("");
+    const { data } = await supabase.rpc("admin_enter_code", { p_code: code.trim() });
+    setBusy(false);
+    if (data === true) { router.push("/admin"); return; }
+    setCode("");
+    setMsg("Wrong code.");
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-6 bg-chs-charcoal">
-      <div className="max-w-sm">
-        {status === "pending" && (
-          <>
-            <p className="text-4xl mb-4">🔐</p>
-            <p className="text-lg font-semibold text-white mb-2">Waiting for approval</p>
-            <p className="text-sm text-white/60 mb-6">
-              A super admin has been notified of your login attempt and needs to approve it before you can continue.
-            </p>
-            {code && (
-              <div className="bg-white/10 rounded-xl px-6 py-4">
-                <p className="text-[10px] text-white/50 uppercase mb-1">Your code</p>
-                <p className="text-3xl font-bold text-white tracking-widest">{code}</p>
-                <p className="text-[10px] text-white/40 mt-2">
-                  If asked, read this code to the super admin to confirm it&apos;s really you.
-                </p>
-              </div>
-            )}
-          </>
-        )}
-        {status === "approved" && (
-          <>
-            <p className="text-4xl mb-4">✓</p>
-            <p className="text-lg font-semibold text-white mb-2">Approved — taking you in...</p>
-          </>
-        )}
-        {status === "rejected" && (
-          <>
-            <p className="text-4xl mb-4">✕</p>
-            <p className="text-lg font-semibold text-white mb-2">Login rejected</p>
-            <p className="text-sm text-white/60 mb-6">A super admin rejected this login attempt.</p>
-            <button onClick={() => { supabase.auth.signOut(); router.push("/login"); }}
-              className="text-sm font-semibold text-white underline">
-              Back to login
-            </button>
-          </>
-        )}
-        {status === "expired" && (
-          <>
-            <p className="text-4xl mb-4">⏱</p>
-            <p className="text-lg font-semibold text-white mb-2">This request expired</p>
-            <p className="text-sm text-white/60 mb-6">Please try logging in again.</p>
-            <button onClick={() => { supabase.auth.signOut(); router.push("/login"); }}
-              className="text-sm font-semibold text-white underline">
-              Back to login
-            </button>
-          </>
-        )}
+      <div className="max-w-sm w-full">
+        <p className="text-4xl mb-4">🔐</p>
+        <p className="text-lg font-semibold text-white mb-2">Enter your login code</p>
+        <p className="text-sm text-white/60 mb-5">
+          {requested ? "The super admin has been told you are logging in. " : ""}Ask the super admin for your one-time code. It works once and for 5 minutes.
+        </p>
+        <input inputMode="numeric" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+          placeholder="6-digit code" className="w-full text-center text-2xl tracking-[0.4em] px-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/30 mb-3" />
+        {msg && <p className="text-sm text-red-300 mb-3">{msg}</p>}
+        <button onClick={submit} disabled={busy || code.length !== 6} className="w-full py-3 rounded-full bg-chs-red text-white font-semibold disabled:opacity-40">
+          {busy ? "Checking..." : "Continue"}
+        </button>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push("/team-access"); }} className="mt-5 text-xs text-white/50 underline">
+          Back to login
+        </button>
       </div>
     </div>
-  );
-}
-
-// useSearchParams() requires a Suspense boundary for Next.js to
-// prerender this route — this is the real, standard fix, not a
-// workaround.
-export default function AdminApprovalPendingPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-chs-charcoal" />}>
-      <AdminApprovalPendingContent />
-    </Suspense>
   );
 }

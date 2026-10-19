@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         "/manager", "/artisan", "/vendor", "/login", "/register", "/link-account",
         "/edit-listing/", "/list-property", "/promote/", "/engage-chs",
         "/construction-roadmap", "/urgent-sale/", "/condition-report/",
-        "/accept-terms", "/admin-approval-pending", "/analytics/",
+        "/accept-terms", "/admin-approval-pending", "/admin-invite/", "/analytics/",
       ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,

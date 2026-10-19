@@ -882,3 +882,15 @@ Asked: audit everything for placeholder/demo behaviour and make it real.
 - Staff admin direct writes limited by staff role on 84 tables (money/settings/bank details super admin only). Rolled-back attack run: user->admin blocked, user->super blocked, staff->super blocked, staff setting change blocked, user wallet change blocked.
 - Amber "TEST ACCOUNT" strip restored on every screen for flagged accounts (components/TestModeBanner.tsx; profiles.is_test).
 - Not done and cannot be done by us: an outside penetration test (needs an independent firm).
+
+## 18 Oct 2026 (late night) - Admin access standing order recorded
+Team decision: admins only by 10-minute single-use invite link; every admin login needs a super-admin approval code (enforced in the database); 3 wrong codes lock; auto logout after 120 minutes inactive. Verified: the super admin is the only admin account. Spec in backend-v2/538_admin_access_standing_order.md. Not built yet.
+
+## 18 Oct 2026 (night) - Admin access gate BUILT (Build 12)
+Invite-only admins (10 minutes, single use, bound to phone), super-admin-issued 5-minute login codes enforced inside is_admin(), lock after 3 wrong tries, 120-minute idle logout, remove admin. Old promote-by-phone route switched off; database refuses any other route to admin. See backend-v2/538_admin_access_standing_order.md. Only the super admin exists as admin; the flow was tested end to end with a test account in rolled-back runs.
+
+## 19 Oct 2026 - Marketplace dead end fixed (Build 13)
+Found by the iPhone tester: inside the Marketplace there was no way back to the home page (no Back or Home link, no bottom menu, and the home-screen app has no browser Back button). Fixed: "← Home" on Marketplace and My deliveries; new components/PwaNavButtons.tsx shows round Back and Home buttons on every page except Home, Login and Register when the app runs from the home-screen icon. Pages also scanned for other dead ends (23 pages without their own Back link; covered by the global buttons).
+
+## 19 Oct 2026 - Separate staff/admin door (Build 14)
+Role picker removed from the public login: the account decides where the person lands; sellers and artisans go straight to their dashboard. Staff/admin accounts are refused on the public login (and biometric) with the same "Phone number or PIN is incorrect" message. New door /team-access (noindex, not linked anywhere, not in robots.txt): phone + PIN then the code screen. Not-signed-in visitors to /admin go to the home page, not the door. Start with the path; a subdomain can follow when a domain is chosen. Guide: CHS_TEAM_ACCESS_GUIDE.pdf. Note: app/robots.ts and the sitemap still use an old hard-coded Netlify address.

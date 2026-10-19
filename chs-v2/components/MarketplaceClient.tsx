@@ -141,6 +141,7 @@ export default function MarketplaceClient({ products, bundles }: { products: Mar
     <div className="min-h-screen zone-market-browse bg-[var(--zone-bg)]">
       <div className="bg-gradient-to-r from-chs-steel-blue via-chs-charcoal to-chs-amber text-white px-4 py-5 flex justify-between items-start">
         <div>
+          <Link href="/" className="inline-block text-[11px] text-white/80 mb-1">← Home</Link>
           <h1 className="font-serif text-xl font-bold">CHS Marketplace</h1>
           <p className="text-xs text-white/70">Products and services for your property</p>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import AdminDeliveries from "@/components/AdminDeliveries";
+import AdminTeamPanel from "@/components/AdminTeamPanel";
 import AdminClaims from "@/components/AdminClaims";
 import AdminListingReports from "@/components/AdminListingReports";
 import AdminChsStamp from "@/components/AdminChsStamp";
@@ -1436,11 +1437,6 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
   const [teamDailyReports, setTeamDailyReports] = useState<{ id: string; report_date: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; team_member: { full_name: string }[] | null; submitter: { full_name: string }[] | null }[]>([]);
   const [adminDailyReports, setAdminDailyReports] = useState<{ id: string; report_date: string; activities: string; transactions_handled: string | null; complaints_raised: string | null; staff_role_at_time: string | null; submitter: { full_name: string }[] | null }[]>([]);
   const [subAdminRoster, setSubAdminRoster] = useState<{ id: string; full_name: string; phone: string; staff_role: string | null; is_super_admin: boolean }[]>([]);
-  const [pendingLoginRequests, setPendingLoginRequests] = useState<{
-    id: string; admin_id: string; code: string; created_at: string;
-    profiles: { full_name: string; role: string }[] | null;
-  }[]>([]);
-  const [resolvingLoginId, setResolvingLoginId] = useState<string | null>(null);
 
   const [pendingActionRequests, setPendingActionRequests] = useState<{
     id: string; requested_by: string; domain: string; action_type: string;
@@ -1449,10 +1445,6 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
   }[]>([]);
   const [resolvingActionId, setResolvingActionId] = useState<string | null>(null);
 
-  const [assignContact, setAssignContact] = useState("");
-  const [assignRole, setAssignRole] = useState("customer_care");
-  const [assigning, setAssigning] = useState(false);
-  const [assignMessage, setAssignMessage] = useState<string | null>(null);
   const [feeSettings, setFeeSettings] = useState<ReferralFeeSetting[]>([]);
   const [owedFees, setOwedFees] = useState<ReferralFeeOwed[]>([]);
   const [agentReferrals, setAgentReferrals] = useState<{ id: string; masked_reference: string; stage: string; chs_commission: number | null; agent_share_pct: number | null; split_50_50: boolean; agent_payout: number | null; created_at: string }[]>([]);
@@ -1468,7 +1460,8 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
   useEffect(() => {
     if (authLoading) return;
     if (!session) {
-      router.push("/login");
+      // Not signed in: send to the public home page, never to the staff door.
+      router.push("/");
       return;
     }
     if (profile && profile.role !== "admin") {
@@ -1484,8 +1477,8 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
     // password, but no super-admin approval yet) could just type
     // /admin into the URL bar and skip the waiting screen entirely.
     if (profile?.role === "admin" && !profile.is_super_admin) {
-      supabase.rpc("has_approved_admin_login", { p_admin_id: session.user.id }).then(({ data: approved }) => {
-        if (!approved) {
+      supabase.rpc("admin_session_status").then(({ data: sessionStatus }) => {
+        if (sessionStatus !== "active") {
           router.push("/admin-approval-pending");
           return;
         }
@@ -1695,15 +1688,11 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
     // (RLS: admin_login_requests_own_read only shows their own), but
     // there's no reason to even ask unless they're the one who'd act.
     if (profile?.is_super_admin) {
-      const [loginRequestsRes, actionRequestsRes] = await Promise.all([
-        supabase.from("admin_login_requests")
-          .select("id, admin_id, code, created_at, profiles!admin_login_requests_admin_id_fkey(full_name, role)")
-          .eq("status", "pending").order("created_at", { ascending: false }),
+      const [actionRequestsRes] = await Promise.all([
         supabase.from("admin_action_requests")
           .select("id, requested_by, domain, action_type, target_id, proposed_changes, note, created_at, profiles!admin_action_requests_requested_by_fkey(full_name, staff_role)")
           .eq("status", "pending").order("created_at", { ascending: false }),
       ]);
-      setPendingLoginRequests((loginRequestsRes.data as typeof pendingLoginRequests) || []);
       setPendingActionRequests((actionRequestsRes.data as typeof pendingActionRequests) || []);
     }
 
@@ -1817,32 +1806,6 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
     if (!error) {
       setPendingActionRequests((prev) => prev.filter((r) => r.id !== requestId));
       loadData(); // real refresh — the underlying tab's data just changed
-    }
-  }
-
-  async function handleAssignStaffRole() {
-    if (!assignContact.trim()) return;
-    setAssigning(true);
-    setAssignMessage(null);
-    const { data, error } = await supabase.rpc("assign_staff_role", {
-      p_contact: assignContact.trim(),
-      p_staff_role: assignRole,
-    });
-    setAssigning(false);
-    if (error) {
-      setAssignMessage(error.message);
-      return;
-    }
-    setAssignMessage(`✓ ${data} is now the ${assignRole.replace(/_/g, " ")} admin.`);
-    setAssignContact("");
-  }
-
-  async function handleResolveLogin(requestId: string, approve: boolean) {
-    setResolvingLoginId(requestId);
-    const { error } = await supabase.rpc("resolve_admin_login", { p_request_id: requestId, p_approve: approve });
-    setResolvingLoginId(null);
-    if (!error) {
-      setPendingLoginRequests((prev) => prev.filter((r) => r.id !== requestId));
     }
   }
 
@@ -2874,31 +2837,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
               </div>
             )}
 
-            {profile?.is_super_admin && pendingLoginRequests.length > 0 && (
-              <div className="col-span-2 bg-red-50 border-2 border-red-200 rounded-xl p-4 space-y-3">
-                <p className="text-sm font-bold text-red-700">🔐 Admin logins awaiting your approval</p>
-                {pendingLoginRequests.map((req) => (
-                  <div key={req.id} className="bg-white rounded-lg p-3 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs font-semibold text-chs-charcoal">
-                        {req.profiles?.[0]?.full_name || "Unknown"} ({req.profiles?.[0]?.role})
-                      </p>
-                      <p className="text-[10px] text-gray-400">Code: <span className="font-bold tracking-widest">{req.code}</span></p>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button onClick={() => handleResolveLogin(req.id, true)} disabled={resolvingLoginId === req.id}
-                        className="px-3 py-1.5 rounded-full bg-green-600 text-white text-[10px] font-semibold disabled:opacity-50">
-                        Approve
-                      </button>
-                      <button onClick={() => handleResolveLogin(req.id, false)} disabled={resolvingLoginId === req.id}
-                        className="px-3 py-1.5 rounded-full bg-gray-300 text-gray-700 text-[10px] font-semibold disabled:opacity-50">
-                        Reject
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {profile?.is_super_admin && <AdminTeamPanel mode="requests" />}
             {profile?.is_super_admin && pendingActionRequests.length > 0 && (
               <div className="col-span-2 bg-amber-50 border-2 border-amber-200 rounded-xl p-4 space-y-3">
                 <p className="text-sm font-bold text-amber-800">⚠️ Sub-admin actions awaiting your sign-off</p>
@@ -5797,43 +5736,7 @@ function AdminDashboardInner({ startTab, updatedAt, onRefresh }: { startTab: Tab
               {investorGrantResult && <p className="text-xs text-green-700">{investorGrantResult}</p>}
             </div>
 
-            <div className="bg-[var(--zone-card)] rounded-xl border border-gray-100 p-4 space-y-2 mb-4">
-              <p className="text-sm font-bold text-chs-charcoal">👥 Assign an admin role</p>
-              <p className="text-[10px] text-gray-400">
-                The person must already have a real CHS account — this promotes their existing account, it doesn&apos;t create a new one.
-              </p>
-              <input type="text" value={assignContact} onChange={(e) => setAssignContact(e.target.value)}
-                placeholder="Their phone number or email"
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-              <select value={assignRole} onChange={(e) => setAssignRole(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white">
-                <option value="customer_care">Customer Care (disputes, feedback)</option>
-                <option value="registration_setup">Registration & Setup (approvals, face verification)</option>
-                <option value="owner_buyer_tenant">Owner/Buyer/Tenant (properties, applications, sales)</option>
-                <option value="agent_relations">Agent Relations (referral fees)</option>
-                <option value="artisan_dev_pm_vendor">Artisan/Developer/PM/Vendor</option>
-              </select>
-              {assignMessage && (
-                <p className={`text-xs rounded-lg px-3 py-2 ${assignMessage.startsWith("✓") ? "text-green-700 bg-green-50" : "text-chs-red bg-red-50"}`}>
-                  {assignMessage}
-                </p>
-              )}
-              <button onClick={async () => { await handleAssignStaffRole(); setSubAdminRoster([]); }} disabled={assigning}
-                className="w-full py-2.5 rounded-full bg-chs-charcoal text-white text-xs font-semibold disabled:opacity-50">
-                {assigning ? "Assigning..." : "Assign role"}
-              </button>
-            </div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase mb-1.5">Every real current sub-admin</p>
-            {subAdminRoster.filter((s) => !s.is_super_admin).length === 0 ? (
-              <p className="text-xs text-gray-400">No real sub-admins assigned yet.</p>
-            ) : (
-              subAdminRoster.filter((s) => !s.is_super_admin).map((s) => (
-                <div key={s.id} className="bg-white rounded-lg border border-gray-100 p-2.5 mb-1.5 flex justify-between items-center">
-                  <p className="text-xs text-chs-charcoal">{s.full_name} — {s.phone}</p>
-                  <span className="text-[9px] font-bold text-gray-500 capitalize">{s.staff_role?.replace(/_/g, " ") || "No domain"}</span>
-                </div>
-              ))
-            )}
+            {profile?.is_super_admin ? <AdminTeamPanel mode="full" /> : <p className="text-xs text-gray-500">Only the super admin manages admins.</p>}
           </div>
         )}
 

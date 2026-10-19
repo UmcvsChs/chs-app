@@ -57,6 +57,11 @@ export default function BiometricLogin({ onLoggedIn }: { onLoggedIn: () => void 
         admin: "/admin", owner: "/owner", host: "/host", agent: "/agent", manager: "/manager", tenant: "/tenant", buyer: "/my-offers", guest: "/guest", staff: "/staff", developer: "/developer",
       };
 
+      if (profile?.role === "admin") {
+        // Staff and admin accounts use their own separate door, never this one.
+        await supabase.auth.signOut();
+        throw new Error("Biometric login failed. Please use your phone number and PIN instead.");
+      }
       onLoggedIn();
       router.push(roleToPath[profile?.role || ""] || "/");
     } catch (e) {

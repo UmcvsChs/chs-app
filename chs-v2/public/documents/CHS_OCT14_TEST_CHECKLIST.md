@@ -146,3 +146,18 @@ If anything that should work says "not allowed", send the exact message and scre
 15. Change any platform setting as super admin: an alert appears on Platform health and in notifications.
 16. Open a property marked urgent sale: no phone line shows while the hotline setting is empty.
 17. More menu: no "Area guide" entry.
+
+## Build 12 tests (admin access)
+18. Super admin: Admin > Assign role tab > Invite an admin: enter the phone of an ordinary TEST account, create the link, open it on that account within 10 minutes and accept. A second open of the same link must fail. A link older than 10 minutes must fail.
+19. Log in as that new admin: the code screen appears. Super admin sees "Admins asking for a login code" on the dashboard and taps Issue code. Enter the code: admin dashboard opens only for that admin's area.
+20. Enter a wrong code 3 times: the account locks, even the right code is then refused until the super admin taps Unlock.
+21. Leave the staff admin idle for 120 minutes: next action logs out. Super admin is never asked for a code.
+22. Super admin taps Remove: the admin's access stops at once; their old code says Wrong code.
+
+## Build 13 test (iPhone)
+23. From the home-screen icon: open Marketplace, My deliveries, Wallet, My bookings, Saved: each must offer a way back (Back and Home round buttons at the bottom left, or the Home link).
+
+## Build 14 tests (login)
+24. Public login page: no role buttons. A buyer, tenant, owner each log in and land on their own dashboard. A seller account lands on the seller page.
+25. Log in on the PUBLIC page with the super admin phone and PIN: it must say "Phone number or PIN is incorrect" and stay logged out.
+26. Open /team-access with the super admin: goes to the admin dashboard. With a buyer account: "Phone number or PIN is incorrect".

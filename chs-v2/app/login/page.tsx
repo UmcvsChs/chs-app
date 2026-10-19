@@ -10,40 +10,9 @@ import ChsLogo from "@/components/ChsLogo";
 import InfoTip from "@/components/InfoTip";
 import BiometricLogin from "@/components/BiometricLogin";
 
-const ROLE_OPTIONS = [
-  { value: "buyer", label: "Buyer" },
-  { value: "guest", label: "Guest" },
-  { value: "tenant", label: "Tenant" },
-  { value: "owner", label: "Owner" },
-  { value: "host", label: "Host" },
-  { value: "developer", label: "Commercial Developer" },
-  { value: "agent", label: "Agent" },
-  { value: "manager", label: "Manager" },
-  { value: "admin", label: "Admin" },
-  { value: "staff", label: "Staff" },
-  { value: "artisan", label: "Artisan" },
-  { value: "vendor", label: "Seller / Vendor / Service Provider" },
-];
-
-const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  buyer: "Buyer",
-  guest: "Guest",
-  tenant: "Tenant",
-  owner: "Property Owner",
-  host: "Host",
-  developer: "Commercial Developer",
-  agent: "Agent",
-  manager: "Property Manager",
-  admin: "Admin",
-  staff: "Staff",
-  artisan: "Artisan",
-  vendor: "Seller / Vendor / Service Provider",
-};
-
 export default function LoginPage() {
   const router = useRouter();
   const { setActiveRole, refreshProfile } = useAuth();
-  const [selectedRole, setSelectedRole] = useState("buyer");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -71,27 +40,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Real, new fix per direct client request: someone who registered
-    // under "Others" and was approved as an Artisan or Vendor/Service
-    // Provider had no real way to log back in as themselves — their
-    // base account role is a real buyer-equivalent account (their
-    // artisan/vendor status lives in its own real table), so these two
-    // categories are checked there instead of the normal role column.
-    if (selectedRole === "artisan" || selectedRole === "vendor") {
-      const table = selectedRole === "artisan" ? "artisans" : "marketplace_vendors";
-      const { data: statusRow } = await supabase.from(table).select("verification_status").eq("user_id", loginData.user.id).maybeSingle();
-      if (!statusRow) {
-        setError(`No real ${ROLE_DISPLAY_NAMES[selectedRole]} application found on this account. If you haven't applied yet, do so from the homepage first.`);
-        await supabase.auth.signOut();
-        setSubmitting(false);
-        return;
-      }
-      setActiveRole(selectedRole);
-      await refreshProfile();
-      router.push(selectedRole === "artisan" ? "/artisan" : "/vendor");
-      return;
-    }
-
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("role, secondary_roles")
@@ -100,56 +48,24 @@ export default function LoginPage() {
 
     if (profileError || !profile) {
       setError("Login succeeded but your profile could not be loaded. Please contact CHS support.");
+      await supabase.auth.signOut();
       setSubmitting(false);
       return;
     }
 
-    // The real fix already proven in the original app: confirm the
-    // credentials genuinely belong to an account holding the SELECTED
-    // role, not just any account with that phone/PIN — including
-    // correctly supporting someone with more than one linked role.
-    const allRoles = [profile.role, ...(profile.secondary_roles || [])];
-    if (!allRoles.includes(selectedRole)) {
-      const realRoleNames = allRoles.map((r) => ROLE_DISPLAY_NAMES[r] || r).join(" or ");
-      // A seller's base account is a normal account; the shop lives in its own table. Point them to the right button.
-      const { data: shop } = await supabase.from("marketplace_vendors").select("id").eq("user_id", loginData.user.id).maybeSingle();
-      if (shop) {
-        setError(`This is a seller account. Please choose "Seller / Vendor / Service Provider" above, then log in again.`);
-        await supabase.auth.signOut();
-        setSubmitting(false);
-        return;
-      }
-      setError(
-        `Your account isn't registered as ${ROLE_DISPLAY_NAMES[selectedRole]} — it's registered as ${realRoleNames}. Please select that role instead.`
-      );
-      await supabase.auth.signOut(); // don't leave a session sitting around for a role that was never confirmed
+    // Staff and admin accounts never log in on this public page. They have
+    // their own separate door. Here they get exactly the same message as a
+    // wrong PIN, so nothing is revealed about what the account is.
+    if (profile.role === "admin") {
+      await supabase.auth.signOut();
+      setError("Phone number or PIN is incorrect.");
       setSubmitting(false);
       return;
     }
 
-    setActiveRole(selectedRole);
+    // No role picker: the account decides where the person lands.
+    setActiveRole(profile.role);
     await refreshProfile();
-
-    // Real login approval gate — a sub-admin (any role='admin' account
-    // that isn't the genuine super admin) can't reach the dashboard
-    // straight from a correct password alone anymore. This calls the
-    // real request_admin_login() function (see
-    // backend-v2/50_wallet_fixes_and_admin_approval.sql), which
-    // returns 'super_admin' immediately for the one real super admin,
-    // or creates a real pending approval request — with a real code —
-    // for anyone else.
-    if (selectedRole === "admin") {
-      const { data: approvalResult, error: approvalError } = await supabase.rpc("request_admin_login");
-      if (approvalError) {
-        setError("Could not start the admin login approval process. Please try again.");
-        setSubmitting(false);
-        return;
-      }
-      if (approvalResult !== "super_admin") {
-        router.push(`/admin-approval-pending?code=${approvalResult}`);
-        return;
-      }
-    }
 
     // The actual bug just found and fixed: every successful login was
     // sending everyone to the plain homepage, regardless of which real
@@ -158,7 +74,6 @@ export default function LoginPage() {
     // whole dashboard had vanished. Routes to the real, correct
     // dashboard for each role now.
     const roleToPath: Record<string, string> = {
-      admin: "/admin",
       owner: "/owner",
       host: "/host",
       agent: "/agent",
@@ -169,7 +84,15 @@ export default function LoginPage() {
       developer: "/developer",
       staff: "/staff",
     };
-    router.push(roleToPath[selectedRole] || "/");
+    // Sellers and artisans have an ordinary base account; their shop or trade
+    // lives in its own record. Send them straight to it.
+    if (profile.role === "buyer") {
+      const { data: shop } = await supabase.from("marketplace_vendors").select("id").eq("user_id", loginData.user.id).maybeSingle();
+      if (shop) { router.push("/vendor"); return; }
+      const { data: trade } = await supabase.from("artisans").select("id").eq("user_id", loginData.user.id).maybeSingle();
+      if (trade) { router.push("/artisan"); return; }
+    }
+    router.push(roleToPath[profile.role] || "/");
   }
 
   return (
@@ -199,24 +122,6 @@ export default function LoginPage() {
             🔐 Log in with Face ID / fingerprint instead<InfoTip term="biometric_login_face_id_fingerprint" />
           </button>
         )}
-
-        <p className="text-xs font-semibold text-chs-charcoal mb-2">Log in as</p>
-        <div className="grid grid-cols-3 gap-2 mb-5">
-          {ROLE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setSelectedRole(opt.value)}
-              className={`text-xs font-semibold py-2.5 rounded-lg border-2 transition-colors ${
-                selectedRole === opt.value
-                  ? "border-chs-red bg-chs-amber-light text-chs-charcoal"
-                  : "border-gray-200 bg-white text-gray-500"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div>

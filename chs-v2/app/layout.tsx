@@ -6,6 +6,8 @@ import TermsGate from "@/components/TermsGate";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SplashScreen from "@/components/SplashScreen";
 import TestModeBanner from "@/components/TestModeBanner";
+import AdminIdleGuard from "@/components/AdminIdleGuard";
+import PwaNavButtons from "@/components/PwaNavButtons";
 import PaymentSafetyNotice from "@/components/PaymentSafetyNotice";
 import DeviceRegistrar from "@/components/DeviceRegistrar";
 import TransactionPinGate from "@/components/TransactionPinGate";
@@ -77,6 +79,8 @@ export default function RootLayout({
           <SplashScreen />
           <AuthProvider>
             <TestModeBanner />
+            <AdminIdleGuard />
+            <PwaNavButtons />
             <PaymentSafetyNotice variant="bar" />
             <DeviceRegistrar />
             <TransactionPinGate />
